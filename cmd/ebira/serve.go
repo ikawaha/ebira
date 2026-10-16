@@ -1,0 +1,308 @@
+package main
+
+import (
+	"cmp"
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
+
+	genassistant "github.com/ikawaha/ebira/gen/assistant"
+	assistantsvr "github.com/ikawaha/ebira/gen/http/assistant/server"
+	notessvr "github.com/ikawaha/ebira/gen/http/notes/server"
+	mcpnotessvr "github.com/ikawaha/ebira/gen/jsonrpc/mcp_notes/server"
+	mcpnotes "github.com/ikawaha/ebira/gen/mcp_notes"
+	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/agent"
+	"github.com/ikawaha/ebira/internal/daemon"
+	"github.com/ikawaha/ebira/internal/httpguard"
+	"github.com/ikawaha/ebira/internal/index"
+	"github.com/ikawaha/ebira/internal/service"
+	"github.com/ikawaha/ebira/internal/store"
+	"github.com/ikawaha/ebira/internal/ui/web"
+	"github.com/ikawaha/ebira/internal/watch"
+	"goa.design/goa-ai/features/model/anthropic"
+	"goa.design/goa-ai/features/model/vertex"
+	"goa.design/goa-ai/runtime/agent/model"
+	goahttp "goa.design/goa/v3/http"
+	"google.golang.org/genai"
+)
+
+// serveOptions are the flags of ebira serve, which ebira server start passes
+// on to the server it starts.
+type serveOptions struct {
+	dataDir, addr, search, stopW, stopT, prov, model *string
+	watch                                            *bool
+}
+
+// newServeFlags defines the flags of ebira serve on a new flag set.
+func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	var (
+		dataDir = fs.String("data-dir", ".", "data directory: note YAML files and settings in notes/, the index in .ebira/")
+		addr    = fs.String("addr", "localhost:8080", "address to listen on")
+		search  = fs.String("search", "", "search mode: like, bigram, or ja (Japanese morphological analysis) (default: search in notes/"+store.ConfigFile+", else "+string(index.ModeBigram)+")")
+		watchF  = fs.Bool("watch", true, "watch the notes directory and update the index on changes")
+		stopW   = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
+		stopT   = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
+		prov    = fs.String("provider", "", "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
+		modelF  = fs.String("model", "", "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
+	)
+	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, watch: watchF}
+}
+
+// runServe runs the server in the foreground: the REST API (/notes, /search,
+// /sync), the assistant (POST /ask), the MCP server (POST /mcp), the web UI
+// (/ui/) and GET /health on the same port. One server runs per data
+// directory (see internal/daemon).
+func runServe(args []string) error {
+	fs, o := newServeFlags("serve")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected arguments: %v", fs.Args())
+	}
+	dataDir, addr, search, stopW, stopT, prov, modelF, watchF := o.dataDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
+	abs, err := filepath.Abs(*dataDir)
+	if err != nil {
+		return err
+	}
+	*dataDir = abs
+	stateDir := filepath.Join(*dataDir, ".ebira")
+	lock, err := daemon.Lock(stateDir)
+	if errors.Is(err, daemon.ErrRunning) {
+		return fmt.Errorf("%w (%s); see ebira server status", err, *dataDir)
+	}
+	if err != nil {
+		return err
+	}
+	if lock != nil {
+		defer lock.Close()
+	}
+
+	st, err := store.New(filepath.Join(*dataDir, "notes"))
+	if err != nil {
+		return err
+	}
+	conf, err := st.Config()
+	if err != nil {
+		return err
+	}
+	// The flag wins over the settings file, which the notes repository shares.
+	modeName, modeFrom := *search, "-search"
+	if modeName == "" {
+		modeName, modeFrom = conf.Search, st.ConfigPath()
+	}
+	if modeName == "" {
+		modeName, modeFrom = string(index.ModeBigram), "default"
+	}
+	mode, err := index.ParseMode(modeName)
+	if err != nil {
+		return fmt.Errorf("%s: %w", modeFrom, err)
+	}
+	// Stop lists: a flag's file, else the settings file, else (nil) the lists
+	// of kagome's ja filter. An empty list in the settings file means none.
+	cfg := index.Config{Mode: mode, StopWords: conf.StopWords, StopTags: conf.StopTags}
+	if *stopW != "" {
+		if cfg.StopWords, err = index.LoadWordList(*stopW); err != nil {
+			return err
+		}
+	}
+	if *stopT != "" {
+		if cfg.StopTags, err = index.LoadWordList(*stopT); err != nil {
+			return err
+		}
+	}
+	if mode != index.ModeJa && (cfg.StopWords != nil || cfg.StopTags != nil) {
+		slog.Warn("stop words and stop tags apply only to the ja search mode", "mode", mode)
+	}
+	if mode == index.ModeJa {
+		slog.Info("ja stop lists", "stop_words", stopListLog(cfg.StopWords), "stop_tags", stopListLog(cfg.StopTags))
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	moved, err := st.MigrateFlat()
+	if len(moved) > 0 {
+		slog.Info("moved notes into the inbox notebook", "ids", moved)
+	}
+	if err != nil {
+		return err
+	}
+	ix, err := index.Open(ctx, filepath.Join(stateDir, "index.sqlite"), cfg)
+	if err != nil {
+		return err
+	}
+	defer ix.Close()
+
+	svc := service.New(st, ix)
+	r, err := svc.Sync(ctx)
+	if err != nil {
+		return err
+	}
+	slog.Info("index synced", "mode", mode, "mode_from", modeFrom, "added", r.Added, "updated", r.Updated, "removed", r.Removed)
+	for _, e := range r.Errors {
+		slog.Warn("skip note", "error", e)
+	}
+	if *watchF {
+		go func() {
+			err := watch.Run(ctx, st.Dir(), store.Ext, 300*time.Millisecond, func() {
+				r, err := svc.Sync(ctx)
+				if err != nil {
+					slog.Error("sync failed", "error", err)
+					return
+				}
+				if r.Added+r.Updated+r.Removed > 0 {
+					slog.Info("index synced", "added", r.Added, "updated", r.Updated, "removed", r.Removed)
+				}
+				for _, e := range r.Errors {
+					slog.Warn("skip note", "error", e)
+				}
+			}, func(err error) { slog.Warn("watch error", "error", err) }, store.Trash)
+			if err != nil {
+				slog.Error("watch stopped", "error", err)
+			}
+		}()
+	}
+
+	asst, err := newAssistant(ctx, svc, *prov, *modelF)
+	if err != nil {
+		return err
+	}
+
+	// Only the REST API, which the UI uses, is marked as from people. MCP (and
+	// the assistant) are treated as AI, which cannot see private notebooks.
+	notesEndpoints := gennotes.NewEndpoints(svc)
+	notesEndpoints.Use(service.Person)
+	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil))
+
+	mux := goahttp.NewMuxer()
+	eh := func(ctx context.Context, w http.ResponseWriter, err error) {
+		slog.ErrorContext(ctx, "request failed", "error", err)
+	}
+	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
+	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
+	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(asst), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
+
+	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), DataDir: *dataDir, StartedAt: time.Now().UTC().Truncate(time.Second)}
+	root := http.NewServeMux()
+	root.Handle("GET /health", daemon.HealthHandler(state))
+	root.Handle(web.Prefix, web.Handler())
+	root.Handle("GET /{$}", http.RedirectHandler(web.Prefix, http.StatusFound))
+	root.Handle("/", mux)
+	listenHost, _, err := net.SplitHostPort(*addr)
+	if err != nil {
+		return fmt.Errorf("-addr: %w", err)
+	}
+
+	ln, err := net.Listen("tcp", *addr)
+	if err != nil {
+		return err
+	}
+	srv := &http.Server{Handler: httpguard.Guard(root, listenHost), ReadHeaderTimeout: 10 * time.Second}
+	srv.RegisterOnShutdown(svc.Close) // end event streams so that Shutdown does not wait for them
+	errc := make(chan error, 1)
+	go func() { errc <- srv.Serve(ln) }()
+	if err := daemon.WriteState(stateDir, state); err != nil {
+		return err
+	}
+	defer daemon.RemoveState(stateDir)
+	slog.Info("listening", "addr", "http://"+*addr, "ui", "http://"+*addr+web.Prefix, "mcp", "http://"+*addr+"/mcp", "version", state.Version, "pid", state.PID)
+
+	select {
+	case err := <-errc:
+		return err
+	case <-ctx.Done():
+	}
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+// Model providers of the assistant.
+const (
+	providerAnthropic = "anthropic"
+	providerGemini    = "gemini"
+)
+
+var defaultModels = map[string]string{
+	providerAnthropic: "claude-sonnet-5-5",
+	providerGemini:    "gemini-3.8-flash",
+}
+
+// newAssistant returns the assistant service: the agent on the model of
+// provider, or when no API key is set, a service that answers every question
+// with unavailable.
+func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, error) {
+	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
+	geminiKey := cmp.Or(os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
+	if provider == "" {
+		switch {
+		case anthropicKey != "":
+			provider = providerAnthropic
+		case geminiKey != "":
+			provider = providerGemini
+		default:
+			slog.Info("assistant disabled: set ANTHROPIC_API_KEY or GEMINI_API_KEY to enable POST /ask")
+			return agent.Unavailable{Reason: "the assistant is not configured: start the server with ANTHROPIC_API_KEY or GEMINI_API_KEY set"}, nil
+		}
+	}
+	if _, ok := defaultModels[provider]; !ok {
+		return nil, fmt.Errorf("unknown model provider %q (anthropic, gemini)", provider)
+	}
+	modelID = cmp.Or(modelID, defaultModels[provider])
+	var (
+		client model.Client
+		err    error
+	)
+	switch provider {
+	case providerAnthropic:
+		if anthropicKey == "" {
+			return nil, errors.New("the anthropic provider needs ANTHROPIC_API_KEY")
+		}
+		client, err = anthropic.NewFromAPIKey(anthropicKey, modelID)
+	case providerGemini:
+		if geminiKey == "" {
+			return nil, errors.New("the gemini provider needs GEMINI_API_KEY or GOOGLE_API_KEY")
+		}
+		// The vertex adapter takes the genai models service, which also serves
+		// the Gemini API (Google AI Studio keys).
+		var gc *genai.Client
+		gc, err = genai.NewClient(ctx, &genai.ClientConfig{APIKey: geminiKey, Backend: genai.BackendGeminiAPI})
+		if err == nil {
+			client, err = vertex.New(gc.Models, vertex.Options{DefaultModel: modelID})
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	a, err := agent.New(ctx, client, svc, agent.Config{Model: modelID})
+	if err != nil {
+		return nil, err
+	}
+	slog.Info("assistant enabled", "provider", provider, "model", modelID)
+	return a, nil
+}
+
+// stopListLog describes a stop list for the log.
+func stopListLog(list []string) string {
+	switch {
+	case list == nil:
+		return "default"
+	case len(list) == 0:
+		return "none"
+	}
+	return fmt.Sprintf("%d entries", len(list))
+}

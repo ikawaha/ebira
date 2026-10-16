@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ebira</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<script src="vendor/marked.umd.js" defer></script>
+<script src="vendor/purify.min.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <h1 class="logo">ebira</h1>
+  <form class="search" id="search-form" role="search">
+    <input id="q" type="search" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false">
+  </form>
+  <button type="button" id="ask-toggle" data-i18n-title="askToggleTitle" data-i18n="assistant"></button>
+  <span class="mode" id="mode" data-i18n-title="searchMode"></span>
+  <span class="status" id="status" data-i18n-title="eventsStatus"></span>
+</header>
+<main class="panes">
+  <nav class="pane notebooks" data-i18n-aria-label="notebooks">
+    <ul id="notebooks"></ul>
+  </nav>
+  <section class="pane list" data-i18n-aria-label="notes">
+    <div class="list-head">
+      <span id="list-info"></span>
+      <select id="sort" data-i18n-title="sortTitle">
+        <option value="order" data-i18n="sortOrder"></option>
+        <option value="created" data-i18n="sortCreated"></option>
+        <option value="updated" data-i18n="sortUpdated"></option>
+        <option value="title" data-i18n="title"></option>
+      </select>
+      <button type="button" id="new-note" data-i18n-title="newNoteTitle" data-i18n="newNote"></button>
+    </div>
+    <ul id="notes"></ul>
+  </section>
+  <article class="pane preview" id="preview" data-i18n-aria-label="preview">
+    <p class="empty" data-i18n="selectNote"></p>
+  </article>
+  <aside class="pane assistant" id="assistant" data-i18n-aria-label="assistant" hidden>
+    <div class="assistant-head">
+      <span data-i18n="assistant"></span>
+      <button type="button" id="ask-clear" data-i18n-title="askClearTitle" data-i18n="askClear"></button>
+      <button type="button" id="ask-close" data-i18n-title="closeTitle">×</button>
+    </div>
+    <div class="ask-log" id="ask-log"></div>
+    <form class="ask-form" id="ask-form">
+      <textarea id="ask-q" rows="3" maxlength="2000" data-i18n-placeholder="askPlaceholder"></textarea>
+      <div class="ask-actions">
+        <span class="hint" data-i18n="askHint"></span>
+        <button type="submit" class="primary" id="ask-send" data-i18n="send"></button>
+      </div>
+    </form>
+  </aside>
+</main>
+<dialog id="conflict">
+  <p data-i18n="conflictMessage"></p>
+  <form method="dialog" class="dialog-actions">
+    <button value="reload" data-i18n="conflictReload"></button>
+    <button value="overwrite" data-i18n="conflictOverwrite"></button>
+    <button value="cancel" autofocus data-i18n="conflictCancel"></button>
+  </form>
+</dialog>
+</body>
+</html>
