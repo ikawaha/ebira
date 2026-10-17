@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -35,17 +36,17 @@ func TestLock(t *testing.T) {
 
 func TestStateAndHealth(t *testing.T) {
 	dir := t.TempDir()
-	s := State{PID: os.Getpid(), Addr: "localhost:8080", Version: Version(), DataDir: dir, StartedAt: time.Now().UTC().Truncate(time.Second)}
+	s := State{PID: os.Getpid(), Addr: "localhost:8080", Version: Version(), DataDir: dir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: []string{"-addr=localhost:8080", "-watch=false"}}
 	if err := WriteState(dir, s); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := ReadState(dir); err != nil || got != s {
+	if got, err := ReadState(dir); err != nil || !reflect.DeepEqual(got, s) {
 		t.Errorf("ReadState = %+v, %v", got, err)
 	}
 	srv := httptest.NewServer(HealthHandler(s))
 	defer srv.Close()
 	got, err := Health(context.Background(), strings.TrimPrefix(srv.URL, "http://"))
-	if err != nil || got != s {
+	if err != nil || !reflect.DeepEqual(got, s) {
 		t.Errorf("Health = %+v, %v", got, err)
 	}
 	if err := RemoveState(dir); err != nil {

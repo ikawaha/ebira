@@ -43,6 +43,9 @@ type State struct {
 	Version   string    `json:"version"`
 	DataDir   string    `json:"data_dir"`
 	StartedAt time.Time `json:"started_at"`
+	// Flags are the flags of ebira serve other than -data-dir, so that
+	// ebira server restart starts the server again in the same way.
+	Flags []string `json:"flags,omitempty"`
 }
 
 // WriteState writes s to server.json in dir.

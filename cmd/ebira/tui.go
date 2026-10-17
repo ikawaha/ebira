@@ -82,7 +82,7 @@ func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out i
 	if s.Version == daemon.Version() {
 		return s.Addr, nil
 	}
-	fmt.Fprintf(out, "The server (pid %d) is from another build (server %s, this ebira %s).\nRestart it with this build? Its flags are not kept; settings come from notes/_ebira.yaml. [Y/n] ", s.PID, s.Version, daemon.Version())
+	fmt.Fprintf(out, "The server (pid %d) is from another build (server %s, this ebira %s).\nRestart it with this build? Its flags are kept; the environment, such as API keys, is the one of this ebira. [Y/n] ", s.PID, s.Version, daemon.Version())
 	answer, _ := bufio.NewReader(in).ReadString('\n')
 	if a := strings.ToLower(strings.TrimSpace(answer)); a != "" && a != "y" && a != "yes" {
 		return s.Addr, nil
@@ -90,7 +90,7 @@ func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out i
 	if err := stopServer(ctx, dir, out); err != nil {
 		return "", err
 	}
-	s, err = startServer(ctx, dir, s.Addr, []string{"-data-dir", dir, "-addr", s.Addr}, out)
+	s, err = startServer(ctx, dir, s.Addr, append([]string{"-data-dir", dir}, keptFlags(s)...), out)
 	if err != nil {
 		return "", err
 	}

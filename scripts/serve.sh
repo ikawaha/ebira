@@ -4,10 +4,13 @@
 # are written here and passed around; `op run` resolves them for the server
 # process alone and masks the keys in its output.
 #
-# Usage: scripts/serve.sh [start] [flags of ebira serve...]
+# Usage: scripts/serve.sh [start|restart] [flags of ebira serve...]
 #   scripts/serve.sh -model gemini-3.8-flash   run the server in the foreground
 #   scripts/serve.sh start                     start it in the background
 #                                              (ebira server start), with the keys
+#   scripts/serve.sh restart                   restart the background server
+#                                              (ebira server restart), with the
+#                                              keys and the flags it ran with
 #
 # The TUI (ebira) uses a server already running for the data directory, so
 # start the server with this script first to give the assistant its keys.
@@ -55,10 +58,12 @@ mkdir -p "$(dirname "$bin")"
 go -C "$repo" build -o "$bin" ./cmd/ebira
 
 cmd=(serve)
-if [ "${1-}" = start ]; then
-	cmd=(server start)
+case ${1-} in
+start | restart)
+	cmd=(server "$1")
 	shift
-fi
+	;;
+esac
 
 has_data=false
 for arg in "$@"; do

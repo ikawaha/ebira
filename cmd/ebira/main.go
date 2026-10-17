@@ -6,6 +6,7 @@
 //	ebira serve [flags]           run the server in the foreground
 //	ebira server start [flags]    start the server in the background
 //	ebira server stop [flags]     stop the server
+//	ebira server restart [flags]  restart the server in the background
 //	ebira server status [flags]   show the server's state
 //
 // One server runs per data directory; the server started in the background
@@ -25,6 +26,8 @@ const usage = `usage:
   ebira serve [flags]           run the server in the foreground
   ebira server start [flags]    start the server in the background (flags of serve)
   ebira server stop [flags]     stop the server
+  ebira server restart [flags]  restart the server in the background (flags of serve;
+                                without them, the flags of the running server)
   ebira server status [flags]   show the server's state
 
 Run a command with -h for its flags.

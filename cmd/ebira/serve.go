@@ -59,6 +59,28 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, watch: watchF}
 }
 
+// setFlags returns the flags set on fs other than -data-dir, as -name=value.
+// The files of -stopwords and -stoptags become absolute paths, so that the
+// flags work from another directory.
+func setFlags(fs *flag.FlagSet) []string {
+	var flags []string
+	fs.Visit(func(f *flag.Flag) {
+		v := f.Value.String()
+		switch f.Name {
+		case "data-dir":
+			return
+		case "stopwords", "stoptags":
+			if v != "" {
+				if abs, err := filepath.Abs(v); err == nil {
+					v = abs
+				}
+			}
+		}
+		flags = append(flags, "-"+f.Name+"="+v)
+	})
+	return flags
+}
+
 // runServe runs the server in the foreground: the REST API (/notes, /search,
 // /sync), the assistant (POST /ask), the MCP server (POST /mcp), the web UI
 // (/ui/) and GET /health on the same port. One server runs per data
@@ -193,7 +215,7 @@ func runServe(args []string) error {
 	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(asst), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
-	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), DataDir: *dataDir, StartedAt: time.Now().UTC().Truncate(time.Second)}
+	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), DataDir: *dataDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
 	root.Handle(web.Prefix, web.Handler())

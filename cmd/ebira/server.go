@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,15 +22,17 @@ const (
 	stopTimeout  = 15 * time.Second
 )
 
-// runServer runs ebira server start, stop or status.
+// runServer runs ebira server start, stop, restart or status.
 func runServer(args []string) error {
 	if len(args) == 0 {
-		return errors.New("ebira server needs start, stop or status")
+		return errors.New("ebira server needs start, stop, restart or status")
 	}
 	ctx := context.Background()
 	switch args[0] {
 	case "start":
 		return serverStart(ctx, args[1:])
+	case "restart":
+		return serverRestart(ctx, args[1:])
 	case "stop", "status":
 		fs := flag.NewFlagSet("server "+args[0], flag.ContinueOnError)
 		dataDir := fs.String("data-dir", ".", "data directory of the server")
@@ -45,7 +48,7 @@ func runServer(args []string) error {
 		}
 		return serverStatus(ctx, dir, os.Stdout)
 	}
-	return fmt.Errorf("unknown server command %q (start, stop or status)", args[0])
+	return fmt.Errorf("unknown server command %q (start, stop, restart or status)", args[0])
 }
 
 // serverStart starts ebira serve in the background with the flags of serve.
@@ -67,14 +70,71 @@ func serverStart(ctx context.Context, args []string) error {
 		fmt.Println("The server is already running.")
 		return serverStatus(ctx, dir, os.Stdout)
 	}
-	// The data directory goes as an absolute path; the other flags as given.
-	serveArgs := []string{"-data-dir", dir}
-	fs.Visit(func(f *flag.Flag) {
-		if f.Name != "data-dir" {
-			serveArgs = append(serveArgs, "-"+f.Name+"="+f.Value.String())
+	return startWithFlags(ctx, dir, setFlags(fs))
+}
+
+// serverRestart stops the server of the data directory, if it runs, and
+// starts it again in the background. Without flags other than -data-dir, the
+// flags of the stopped server are used again; the environment, such as the
+// API keys of the assistant, is the one of this command.
+func serverRestart(ctx context.Context, args []string) error {
+	fs, o := newServeFlags("server restart")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected arguments: %v", fs.Args())
+	}
+	dir, err := absDir(*o.dataDir)
+	if err != nil {
+		return err
+	}
+	flags := setFlags(fs)
+	sd := stateDir(dir)
+	running, err := daemon.Running(sd)
+	if err != nil {
+		return err
+	}
+	if running {
+		// server.json appears once the server listens.
+		st, err := daemon.ReadState(sd)
+		if err != nil {
+			if st, err = waitServer(ctx, dir, os.Stdout); err != nil {
+				return err
+			}
 		}
-	})
-	s, err := startServer(ctx, dir, *o.addr, serveArgs, os.Stdout)
+		if len(flags) == 0 {
+			flags = keptFlags(st)
+		}
+		if err := stopServer(ctx, dir, os.Stdout); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("The server is not running; starting it.")
+	}
+	return startWithFlags(ctx, dir, flags)
+}
+
+// keptFlags returns the flags to start the server of st again with. The
+// address is kept even when the flags do not name it, such as for a server of
+// an earlier build, which did not record its flags.
+func keptFlags(st daemon.State) []string {
+	flags := slices.Clone(st.Flags)
+	if !slices.ContainsFunc(flags, func(f string) bool { return strings.HasPrefix(f, "-addr=") }) {
+		flags = append(flags, "-addr="+st.Addr)
+	}
+	return flags
+}
+
+// startWithFlags starts the server of dir in the background with flags of
+// serve other than -data-dir, and prints where it runs.
+func startWithFlags(ctx context.Context, dir string, flags []string) error {
+	fs, o := newServeFlags("serve")
+	if err := fs.Parse(flags); err != nil {
+		return err
+	}
+	// The data directory goes as an absolute path.
+	s, err := startServer(ctx, dir, *o.addr, append([]string{"-data-dir", dir}, flags...), os.Stdout)
 	if err != nil {
 		return err
 	}
