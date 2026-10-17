@@ -95,7 +95,7 @@ func runServe(args []string) error {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
 	dataDir, addr, search, stopW, stopT, prov, modelF, watchF := o.dataDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
-	abs, err := filepath.Abs(*dataDir)
+	abs, err := dataDirOf(fs, *dataDir, false, nil, nil)
 	if err != nil {
 		return err
 	}

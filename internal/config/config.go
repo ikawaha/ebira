@@ -173,3 +173,34 @@ func base(env, def string) (string, error) {
 	}
 	return filepath.Join(home, def), nil
 }
+
+// SaveDataDir sets data_dir of the settings file to dir, creating the file
+// when it does not exist. dir under the home directory is written with ~.
+// The key is appended, so the rest of the file, with its comments, is kept;
+// the file must not have data_dir yet.
+func SaveDataDir(dir string) (string, error) {
+	p, err := Path()
+	if err != nil {
+		return "", err
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		if rel, err := filepath.Rel(home, dir); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			dir = filepath.Join("~", rel)
+		}
+	}
+	v, err := yaml.Marshal(map[string]string{"data_dir": dir})
+	if err != nil {
+		return "", err
+	}
+	b, err := os.ReadFile(p)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+	if len(b) > 0 && !bytes.HasSuffix(b, []byte("\n")) {
+		b = append(b, '\n')
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return "", err
+	}
+	return p, os.WriteFile(p, append(b, v...), 0o644)
+}

@@ -27,7 +27,11 @@ func runWeb(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
-	a, err := ensureServer(context.Background(), *dataDir, *addr, os.Stdin, os.Stdout)
+	dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+	if err != nil {
+		return err
+	}
+	a, err := ensureServer(context.Background(), dir, *addr, os.Stdin, os.Stdout)
 	if err != nil {
 		return err
 	}

@@ -153,3 +153,26 @@ func TestPrepare(t *testing.T) {
 		t.Errorf("%s: %q", DataDirFile, b)
 	}
 }
+
+func TestSaveDataDir(t *testing.T) {
+	home := setHome(t)
+	p, err := SaveDataDir(filepath.Join(home, "notes dir"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c, err := Load(); err != nil || c.DataDir != filepath.Join(home, "notes dir") {
+		t.Errorf("new file: %+v, %v", c, err)
+	}
+
+	// Other keys and comments are kept.
+	if err := os.WriteFile(p, []byte("# mine\naddr: localhost:9090"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SaveDataDir("/srv/notes"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(p)
+	if string(b) != "# mine\naddr: localhost:9090\ndata_dir: /srv/notes\n" {
+		t.Errorf("appended: %q", b)
+	}
+}

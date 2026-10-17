@@ -56,7 +56,9 @@ Run a command with -h for its flags.
 
 The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
 file of $EBIRA_CONFIG), gives the defaults of the flags: data_dir, addr, watch,
-provider and model. The index is kept in ~/.cache/ebira and the server's
+provider and model. Without -data-dir, data_dir and notes/ in the current
+directory, the commands that open the notes in a terminal ask where to keep
+them and how to search them, and set them up. The index is kept in ~/.cache/ebira and the server's
 state and log in ~/.local/state/ebira ($XDG_CACHE_HOME, $XDG_STATE_HOME).
 `
 

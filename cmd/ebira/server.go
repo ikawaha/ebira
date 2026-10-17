@@ -63,7 +63,7 @@ func serverStart(ctx context.Context, args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
-	dir, err := absDir(*o.dataDir)
+	dir, err := dataDirOf(fs, *o.dataDir, false, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -112,6 +112,9 @@ func serverRestart(ctx context.Context, args []string) error {
 			return err
 		}
 	} else {
+		if dir, err = dataDirOf(fs, *o.dataDir, false, nil, nil); err != nil {
+			return err
+		}
 		fmt.Println("The server is not running; starting it.")
 	}
 	return startWithFlags(ctx, dir, flags)

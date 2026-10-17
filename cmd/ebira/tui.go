@@ -40,7 +40,11 @@ func runTUI(args []string) error {
 
 	url := *server
 	if url == "" {
-		a, err := ensureServer(ctx, *dataDir, *addr, os.Stdin, os.Stdout)
+		dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+		if err != nil {
+			return err
+		}
+		a, err := ensureServer(ctx, dir, *addr, os.Stdin, os.Stdout)
 		if err != nil {
 			return err
 		}
