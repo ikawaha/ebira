@@ -11,7 +11,7 @@ import (
 func TestHandler(t *testing.T) {
 	srv := httptest.NewServer(Handler())
 	defer srv.Close()
-	for _, path := range []string{"/ui/", "/ui/app.js", "/ui/style.css", "/ui/vendor/marked.umd.js", "/ui/vendor/purify.min.js"} {
+	for _, path := range []string{"/ui/", "/ui/app.js", "/ui/style.css", "/ui/vendor/marked.umd.js", "/ui/vendor/purify.min.js", "/ui/vendor/katex/katex.min.js", "/ui/vendor/katex/katex.min.css", "/ui/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "/ui/vendor/mermaid.min.js"} {
 		res, err := http.Get(srv.URL + path)
 		if err != nil {
 			t.Fatal(err)

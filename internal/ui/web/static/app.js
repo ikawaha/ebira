@@ -216,10 +216,144 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 
+// Math and diagrams. The Markdown renderer leaves placeholders with the
+// source in data-src: $...$ and $$...$$ (outside code) and ```math blocks for
+// KaTeX, ```mermaid blocks for Mermaid. They are filled in after sanitizing,
+// loading the libraries only when a note needs them.
+
+// The source is percent-encoded: the sanitizer drops attributes that look
+// like markup, such as Mermaid's dashed arrow -->.
+const placeholder = (tag, cls, src) => `<${tag} class="${cls}" data-src="${encodeURIComponent(src)}"></${tag}>`;
+
+marked.use({
+  extensions: [
+    {
+      name: "mathBlock",
+      level: "block",
+      start: (src) => src.match(/^\$\$/m)?.index,
+      tokenizer(src) {
+        const m = /^\$\$([\s\S]+?)\$\$[ \t]*(?:\n|$)/.exec(src);
+        if (m) return { type: "mathBlock", raw: m[0], text: m[1].trim() };
+      },
+      renderer: (tok) => placeholder("div", "math math-display", tok.text) + "\n",
+    },
+    {
+      name: "mathInline",
+      level: "inline",
+      start: (src) => src.indexOf("$"),
+      // As in Pandoc: no space just inside the dollars, and no digit right
+      // after the closing one, so that prices such as $5 and $10 stay text.
+      tokenizer(src) {
+        const m = /^\$(?![\s$])((?:\\.|[^\\$\n])*?[^\s\\])\$(?!\d)/.exec(src);
+        if (m) return { type: "mathInline", raw: m[0], text: m[1] };
+      },
+      renderer: (tok) => placeholder("span", "math", tok.text),
+    },
+  ],
+  renderer: {
+    code(tok) {
+      if (tok.lang === "math") return placeholder("div", "math math-display", tok.text) + "\n";
+      if (tok.lang === "mermaid") return placeholder("div", "mermaid", tok.text) + "\n";
+      return false;
+    },
+  },
+});
+
+// loadScript loads a vendored script once.
+const loaded = {};
+function loadScript(src, css) {
+  if (!loaded[src]) {
+    if (css) document.head.append(Object.assign(document.createElement("link"), { rel: "stylesheet", href: css }));
+    loaded[src] = new Promise((resolve, reject) => {
+      const s = Object.assign(document.createElement("script"), { src, onload: resolve, onerror: () => reject(new Error(`cannot load ${src}`)) });
+      document.head.append(s);
+    });
+  }
+  return loaded[src];
+}
+
+function sourceOf(node) {
+  let src = node.dataset.src || "";
+  try {
+    src = decodeURIComponent(src);
+  } catch (_) { /* left as is */ }
+  return src.replace(/\uE000|\uE001/g, ""); // highlight markers
+}
+
+async function renderMath(el) {
+  const nodes = el.querySelectorAll(".math[data-src]");
+  if (!nodes.length) return;
+  try {
+    await loadScript("vendor/katex/katex.min.js", "vendor/katex/katex.min.css");
+  } catch (_) {
+    return; // the source stays hidden; nothing better to show
+  }
+  for (const node of nodes) {
+    // katex.render builds the nodes with the DOM, whose styles the CSP allows.
+    katex.render(sourceOf(node), node, { displayMode: node.classList.contains("math-display"), throwOnError: false });
+  }
+}
+
+let mermaidReady = null;
+let diagramSeq = 0;
+let diagramQueue = Promise.resolve();
+
+// renderDiagrams renders the diagrams in el. Mermaid cannot render two
+// diagrams at once, so the calls take turns.
+function renderDiagrams(el) {
+  if (!el.querySelector(".mermaid[data-src]")) return;
+  diagramQueue = diagramQueue.then(() => drawDiagrams(el), () => drawDiagrams(el));
+}
+
+async function drawDiagrams(el) {
+  const nodes = [...el.querySelectorAll(".mermaid[data-src]")].filter((n) => n.isConnected && !n.firstChild);
+  if (!nodes.length) return;
+  try {
+    mermaidReady ||= loadScript("vendor/mermaid.min.js").then(() => mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      htmlLabels: false,
+      theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
+    }));
+    await mermaidReady;
+  } catch (_) {
+    return;
+  }
+  for (const node of nodes) {
+    const src = sourceOf(node);
+    const id = `diagram-${++diagramSeq}`;
+    try {
+      // parse throws on a syntax error; render would also draw an error
+      // diagram into the page.
+      await mermaid.parse(src);
+      const { svg } = await mermaid.render(id, src);
+      // As an image, the SVG keeps its own styles, which the CSP would block
+      // in the page, and can run nothing.
+      const img = el.ownerDocument.createElement("img");
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      img.alt = src;
+      node.replaceChildren(img);
+    } catch (e) {
+      const pre = document.createElement("pre");
+      pre.className = "diagram-error";
+      pre.textContent = `${src}\n\n${e.message || e}`;
+      node.replaceChildren(pre);
+    } finally {
+      // render leaves its working element in the page when it fails.
+      document.getElementById(`d${id}`)?.remove();
+      document.getElementById(id)?.remove();
+    }
+  }
+}
+
 // renderBody renders the Markdown body into el, with the ranges highlighted.
 function renderBody(el, body, ranges) {
-  const html = marked.parse(markSource(body, ranges), { gfm: true });
-  el.innerHTML = DOMPurify.sanitize(html);
+  // A single newline is a line break, as in GitHub comments and Quiver.
+  const html = marked.parse(markSource(body, ranges), { gfm: true, breaks: true });
+  // No CSS from notes: the CSP allows inline styles for KaTeX and Mermaid.
+  el.innerHTML = DOMPurify.sanitize(html, { FORBID_TAGS: ["style"], FORBID_ATTR: ["style"] });
+  renderMath(el);
+  renderDiagrams(el);
   if (!ranges || !ranges.length) return;
   // Markers that ended up in attributes, such as a highlighted URL, which
   // marked percent-encodes, are dropped; those in text become <mark> elements.

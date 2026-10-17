@@ -14,11 +14,13 @@ var static embed.FS
 // Prefix is the path the web UI is served under.
 const Prefix = "/ui/"
 
-// contentSecurityPolicy lets the UI run only its own scripts and styles. Notes
-// are rendered as HTML after sanitizing, and this keeps scripts that slip
-// through from running. Images may come from anywhere over HTTPS, as notes
-// link them.
-const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+// contentSecurityPolicy lets the UI run only its own scripts. Notes are
+// rendered as HTML after sanitizing, and this keeps scripts that slip through
+// from running. Inline styles are allowed because the vendored KaTeX and
+// Mermaid set them; the sanitizer removes style elements and attributes from
+// notes, so that notes cannot add CSS. Images may come from anywhere over
+// HTTPS, as notes link them.
+const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 // Handler serves the web UI under Prefix.
 func Handler() http.Handler {
