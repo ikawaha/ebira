@@ -118,4 +118,18 @@ func TestRunNested(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	write("trash/work/c.yaml")
 	called("a note in the moved notebook")
+
+	// The files of a note in the trash are not a notebook: neither the
+	// directory nor its files are reported.
+	if err := os.Mkdir(filepath.Join(dir, "trash", "n1.assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(50 * time.Millisecond)
+	write("trash/n1.assets/a.png")
+	write("trash/n1.assets/b.yaml")
+	select {
+	case <-calls:
+		t.Error("fn was called for the files of a note")
+	case <-time.After(300 * time.Millisecond):
+	}
 }

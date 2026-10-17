@@ -3,6 +3,8 @@ package tui
 import (
 	"fmt"
 	"image/color"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -60,6 +62,22 @@ func (md *markdown) render(s string, width int) string {
 		return s
 	}
 	return strings.Trim(out, "\n")
+}
+
+// localImage matches a reference to an image of a note in a body: a path
+// relative to the note file, <id>.assets/<name>.
+var localImage = regexp.MustCompile(`!\[[^\]]*\]\(<?([a-z0-9][a-z0-9_-]{0,63})\.assets/([^)\s>]+)>?\)`)
+
+// showImages replaces the images of notes in a body, which a terminal cannot
+// show, with their names. Glamour would print the relative path as a link.
+func showImages(body string) string {
+	return localImage.ReplaceAllStringFunc(body, func(ref string) string {
+		name := localImage.FindStringSubmatch(ref)[2]
+		if u, err := url.PathUnescape(name); err == nil {
+			name = u
+		}
+		return "[image: " + name + "]"
+	})
 }
 
 const (
@@ -165,7 +183,7 @@ func (m *Model) renderPreview(keepOffset bool) {
 	b.WriteString("  " + m.th.style(m.th.dim).Render(strings.Join(meta, " · ")) + "\n")
 	b.WriteString("  " + m.th.style(m.th.border).Render(strings.Repeat("─", max(0, width-4))) + "\n")
 	header := strings.Count(b.String(), "\n")
-	body, lines := highlightANSI(m.md.render(m.note.Body, max(20, width-2)), highlightWords(m.note.Body, m.note.BodyHighlights), on)
+	body, lines := highlightANSI(m.md.render(showImages(m.note.Body), max(20, width-2)), highlightWords(m.note.Body, m.note.BodyHighlights), on)
 	b.WriteString(body)
 	m.matches = m.matches[:0]
 	for _, l := range lines {

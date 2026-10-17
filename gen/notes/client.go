@@ -9,6 +9,7 @@ package notes
 
 import (
 	"context"
+	"io"
 
 	goa "goa.design/goa/v3/pkg"
 )
@@ -36,12 +37,16 @@ type Client struct {
 	DeleteAiNoteEndpoint          goa.Endpoint
 	CreateAiNotebookEndpoint      goa.Endpoint
 	MakeNotebookPrivateEndpoint   goa.Endpoint
+	AddFileEndpoint               goa.Endpoint
+	GetFileEndpoint               goa.Endpoint
+	DeleteFileEndpoint            goa.Endpoint
+	CheckFilesEndpoint            goa.Endpoint
 	EventsEndpoint                goa.Endpoint
 	SyncEndpoint                  goa.Endpoint
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, createAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, events, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, createAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -64,6 +69,10 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		DeleteAiNoteEndpoint:          deleteAiNote,
 		CreateAiNotebookEndpoint:      createAiNotebook,
 		MakeNotebookPrivateEndpoint:   makeNotebookPrivate,
+		AddFileEndpoint:               addFile,
+		GetFileEndpoint:               getFile,
+		DeleteFileEndpoint:            deleteFile,
+		CheckFilesEndpoint:            checkFiles,
 		EventsEndpoint:                events,
 		SyncEndpoint:                  sync,
 	}
@@ -338,6 +347,56 @@ func (c *Client) CreateAiNotebook(ctx context.Context, p *CreateAiNotebookPayloa
 func (c *Client) MakeNotebookPrivate(ctx context.Context, p *MakeNotebookPrivatePayload) (err error) {
 	_, err = c.MakeNotebookPrivateEndpoint(ctx, p)
 	return
+}
+
+// AddFile calls the "add_file" endpoint of the "notes" service.
+// AddFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist
+//   - "bad_request" (type *goa.ServiceError): The file is not a supported image, or the note ID is used in more than one notebook
+//   - "too_large" (type *goa.ServiceError): The file is larger than 10 MB
+//   - error: internal error
+func (c *Client) AddFile(ctx context.Context, p *AddFilePayload, req io.ReadCloser) (res *NoteFile, err error) {
+	var ires any
+	ires, err = c.AddFileEndpoint(ctx, &AddFileRequestData{Payload: p, Body: req})
+	if err != nil {
+		return
+	}
+	return ires.(*NoteFile), nil
+}
+
+// GetFile calls the "get_file" endpoint of the "notes" service.
+// GetFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note or the file does not exist, or the file is not of an accepted type
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - error: internal error
+func (c *Client) GetFile(ctx context.Context, p *GetFilePayload) (res *GetFileResult, resp io.ReadCloser, err error) {
+	var ires any
+	ires, err = c.GetFileEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	o := ires.(*GetFileResponseData)
+	return o.Result, o.Body, nil
+}
+
+// DeleteFile calls the "delete_file" endpoint of the "notes" service.
+// DeleteFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note or the file does not exist
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - error: internal error
+func (c *Client) DeleteFile(ctx context.Context, p *DeleteFilePayload) (err error) {
+	_, err = c.DeleteFileEndpoint(ctx, p)
+	return
+}
+
+// CheckFiles calls the "check_files" endpoint of the "notes" service.
+func (c *Client) CheckFiles(ctx context.Context) (res *FileCheck, err error) {
+	var ires any
+	ires, err = c.CheckFilesEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(*FileCheck), nil
 }
 
 // Events calls the "events" endpoint of the "notes" service.

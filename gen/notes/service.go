@@ -12,7 +12,7 @@ import (
 	"context"
 	json "encoding/json"
 	fmt "fmt"
-	io "io"
+	"io"
 	sort "sort"
 	strconv "strconv"
 	utf8 "unicode/utf8"
@@ -98,6 +98,28 @@ type Service interface {
 	// Make a notebook private, so that AI clients can no longer see it or its
 	// notes. Only people can undo this.
 	MakeNotebookPrivate(context.Context, *MakeNotebookPrivatePayload) (err error)
+	// Add an image to a note. The request body is the file: a PNG, JPEG, GIF or
+	// WebP image of at most 10 MB, told by its content. The name is cleaned up
+	// (letters, digits, - and _), gets the extension of the type, and a suffix
+	// such as -2 when it is taken. Refer to the file from the body with the
+	// returned path.
+	AddFile(context.Context, *AddFilePayload, io.ReadCloser) (res *NoteFile, err error)
+	// Get a file of a note. The response body is the file. Only files of the
+	// accepted image types are served, told by their content.
+
+	// If body implements [io.WriterTo], that implementation will be used instead.
+	// Consider [goa.design/goa/v3/pkg.SkipResponseWriter] to adapt existing
+	// implementations.
+	GetFile(context.Context, *GetFilePayload) (res *GetFileResult, body io.ReadCloser, err error)
+	// Delete a file of a note. The body may still refer to it.
+	DeleteFile(context.Context, *DeleteFilePayload) (err error)
+	// Check the files of notes against the note bodies: list the files that no
+	// body refers to, which can be deleted with delete_file, and the references to
+	// files that do not exist. A reference is <id>.assets/<name> anywhere in a
+	// body, including in code, so that a file counts as used rather than not.
+	// Files added within the last hour are marked recent, as the note may still be
+	// being edited.
+	CheckFiles(context.Context) (res *FileCheck, err error)
 	// Stream note changes as Server-Sent Events. Events missed while disconnected
 	// are not replayed; the ready event sent on every (re)connection tells clients
 	// to reload the note list.
@@ -121,7 +143,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [23]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "create_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "events", "sync"}
+var MethodNames = [27]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "create_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -139,6 +161,23 @@ type EventsClientStream interface {
 	Recv() (*NoteEvent, error)
 	// RecvWithContext reads instances of "NoteEvent" from the stream with context.
 	RecvWithContext(context.Context) (*NoteEvent, error)
+}
+
+// AddFilePayload is the payload type of the notes service add_file method.
+type AddFilePayload struct {
+	// Note ID
+	ID string
+	// File name, such as the name of the uploaded file
+	Name string
+}
+
+type BrokenFileRef struct {
+	// ID of the note whose body has the reference
+	NoteID string
+	// Title of the note whose body has the reference
+	Title string
+	// The path referred to
+	Path string
 }
 
 // CreateAiNotePayload is the payload type of the notes service create_ai_note
@@ -202,6 +241,15 @@ type DeleteAiNotePayload struct {
 	Version string
 }
 
+// DeleteFilePayload is the payload type of the notes service delete_file
+// method.
+type DeleteFilePayload struct {
+	// Note ID
+	ID string
+	// File name
+	Name string
+}
+
 // DeleteNotebookPayload is the payload type of the notes service
 // delete_notebook method.
 type DeleteNotebookPayload struct {
@@ -223,6 +271,31 @@ type DeletePayload struct {
 type DeleteTrashedNotebookPayload struct {
 	// Notebook ID
 	ID string
+}
+
+// FileCheck is the result type of the notes service check_files method.
+type FileCheck struct {
+	// Files that no note body, including those in the trash, refers to, sorted by
+	// note and name
+	Unused []*UnusedFile
+	// References to files that do not exist, sorted by note and path
+	Broken []*BrokenFileRef
+}
+
+// GetFilePayload is the payload type of the notes service get_file method.
+type GetFilePayload struct {
+	// Note ID
+	ID string
+	// File name
+	Name string
+}
+
+// GetFileResult is the result type of the notes service get_file method.
+type GetFileResult struct {
+	// Content type of the file
+	ContentType string
+	// Size of the file in bytes
+	Length int64
 }
 
 // GetPayload is the payload type of the notes service get method.
@@ -311,6 +384,15 @@ type NoteEvent struct {
 	Type string
 	// Note ID (absent for ready and notebooks)
 	ID *string
+}
+
+// NoteFile is the result type of the notes service add_file method.
+type NoteFile struct {
+	// File name
+	Name string
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path string
 }
 
 // NoteList is the result type of the notes service list method.
@@ -482,6 +564,24 @@ type TrashedNotebook struct {
 	Count int
 }
 
+type UnusedFile struct {
+	// ID of the note holding the file
+	NoteID string
+	// Title of the note holding the file
+	Title string
+	// File name
+	Name string
+	// Path of the file relative to the note file
+	Path string
+	// Size in bytes
+	Size int64
+	// Last modification time of the file, usually when it was added
+	AddedAt string
+	// Whether the file was added within the last hour, such as to a note still
+	// being edited, whose body does not refer to it until saved
+	Recent bool
+}
+
 // UpdateAiNotePayload is the payload type of the notes service update_ai_note
 // method.
 type UpdateAiNotePayload struct {
@@ -541,6 +641,98 @@ func MakeForbidden(err error) *goa.ServiceError {
 	return goa.NewServiceError(err, "forbidden", false, false, false)
 }
 
+// MakeTooLarge builds a goa.ServiceError from an error.
+func MakeTooLarge(err error) *goa.ServiceError {
+	return goa.NewServiceError(err, "too_large", false, false, false)
+}
+
+// fileCheckInt64Transport stores JSON fields until they have been validated.
+type fileCheckInt64Transport int64
+
+// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
+// declared range. Decimal and exponent spellings do not change its value.
+func (value *fileCheckInt64Transport) UnmarshalJSON(data []byte) error {
+	number, err := rawjson.DecodeInteger[int64](data)
+	if err != nil {
+		return fmt.Errorf("decode fileCheckInt64Transport integer: %w", err)
+	}
+	*value = fileCheckInt64Transport(number)
+	return nil
+}
+
+// ValidatefileCheckInt64Transport checks decoded JSON before it becomes a service value.
+func ValidatefileCheckInt64Transport(value fileCheckInt64Transport) (err error) {
+
+	return err
+}
+
+// jsonBrokenFileRefTransport stores JSON fields until they have been validated.
+type jsonBrokenFileRefTransport struct {
+	// ID of the note whose body has the reference
+	NoteID *string `json:"note_id"`
+	// Title of the note whose body has the reference
+	Title *string `json:"title"`
+	// The path referred to
+	Path *string `json:"path"`
+}
+
+// validatejsonBrokenFileRefTransport checks decoded JSON before it becomes a service value.
+func validatejsonBrokenFileRefTransport(value *jsonBrokenFileRefTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.NoteID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note_id", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// jsonFileCheckTransport stores JSON fields until they have been validated.
+type jsonFileCheckTransport struct {
+	// Files that no note body, including those in the trash, refers to, sorted by
+	// note and name
+	Unused []*jsonUnusedFileTransport `json:"unused"`
+	// References to files that do not exist, sorted by note and path
+	Broken []*jsonBrokenFileRefTransport `json:"broken"`
+}
+
+// validatejsonFileCheckTransport checks decoded JSON before it becomes a service value.
+func validatejsonFileCheckTransport(value *jsonFileCheckTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Unused == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unused", "body"))
+	}
+	if value.Broken == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("broken", "body"))
+	}
+	for _, e := range value.Unused {
+		if e != nil {
+			if err2 := validatejsonUnusedFileTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range value.Broken {
+		if e != nil {
+			if err2 := validatejsonBrokenFileRefTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
 // jsonNoteEventTransport stores JSON fields until they have been validated.
 type jsonNoteEventTransport struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
@@ -566,6 +758,29 @@ func validatejsonNoteEventTransport(value *jsonNoteEventTransport) (err error) {
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// jsonNoteFileTransport stores JSON fields until they have been validated.
+type jsonNoteFileTransport struct {
+	// File name
+	Name *string `json:"name"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path *string `json:"path"`
+}
+
+// validatejsonNoteFileTransport checks decoded JSON before it becomes a service value.
+func validatejsonNoteFileTransport(value *jsonNoteFileTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
 	}
 	return err
 }
@@ -1016,6 +1231,60 @@ func validatejsonTrashedNotebookTransport(value *jsonTrashedNotebookTransport) (
 	return err
 }
 
+// jsonUnusedFileTransport stores JSON fields until they have been validated.
+type jsonUnusedFileTransport struct {
+	// ID of the note holding the file
+	NoteID *string `json:"note_id"`
+	// Title of the note holding the file
+	Title *string `json:"title"`
+	// File name
+	Name *string `json:"name"`
+	// Path of the file relative to the note file
+	Path *string `json:"path"`
+	// Size in bytes
+	Size *fileCheckInt64Transport `json:"size"`
+	// Last modification time of the file, usually when it was added
+	AddedAt *string `json:"added_at"`
+	// Whether the file was added within the last hour, such as to a note still
+	// being edited, whose body does not refer to it until saved
+	Recent *bool `json:"recent"`
+}
+
+// validatejsonUnusedFileTransport checks decoded JSON before it becomes a service value.
+func validatejsonUnusedFileTransport(value *jsonUnusedFileTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.NoteID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note_id", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if value.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", "body"))
+	}
+	if value.AddedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("added_at", "body"))
+	}
+	if value.Recent == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("recent", "body"))
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.AddedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.added_at", *value.AddedAt, goa.FormatDateTime))
+	}
+	return err
+}
+
 // noteIntTransport stores JSON fields until they have been validated.
 type noteIntTransport int
 
@@ -1153,6 +1422,50 @@ func (value *trashedNotebookIntTransport) UnmarshalJSON(data []byte) error {
 // ValidatetrashedNotebookIntTransport checks decoded JSON before it becomes a service value.
 func ValidatetrashedNotebookIntTransport(value trashedNotebookIntTransport) (err error) {
 
+	return err
+}
+
+// validateBrokenFileRefOriginal checks the original typed value before JSON conversion.
+func validateBrokenFileRefOriginal(value *BrokenFileRef) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	return err
+}
+
+// validateFileCheckOriginal checks the original typed value before JSON conversion.
+func validateFileCheckOriginal(value *FileCheck) (err error) {
+	if value.Unused == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unused", "value"))
+	}
+	if value.Broken == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("broken", "value"))
+	}
+	for _, e := range value.Unused {
+		if e != nil {
+			if err2 := validateUnusedFileOriginal(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range value.Broken {
+		if e != nil {
+			if err2 := validateBrokenFileRefOriginal2(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
+// validateUnusedFileOriginal checks the original typed value before JSON conversion.
+func validateUnusedFileOriginal(value *UnusedFile) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.added_at", value.AddedAt, goa.FormatDateTime))
+	return err
+}
+
+// validateBrokenFileRefOriginal2 checks the original typed value before JSON conversion.
+func validateBrokenFileRefOriginal2(value *BrokenFileRef) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	return err
 }
 
@@ -1310,6 +1623,157 @@ func validateTrashedNotebookOriginal(value *TrashedNotebook) (err error) {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"default", "collab", "drop", "private"}))
 	}
 	return err
+}
+
+// validateUnusedFileOriginal2 checks the original typed value before JSON conversion.
+func validateUnusedFileOriginal2(value *UnusedFile) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.added_at", value.AddedAt, goa.FormatDateTime))
+	return err
+}
+
+// EncodeBrokenFileRef turns a service value into JSON using the field names in the Goa design.
+func EncodeBrokenFileRef(in *BrokenFileRef) ([]byte, error) {
+	if err := checkBrokenFileRefValue(in); err != nil {
+		return nil, fmt.Errorf("encode BrokenFileRef JSON: %w", err)
+	}
+	if err := validateBrokenFileRefOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate BrokenFileRef value: %w", err)
+	}
+	var body *jsonBrokenFileRefTransport
+	{
+		body = &jsonBrokenFileRefTransport{
+			NoteID: &in.NoteID,
+			Title:  &in.Title,
+			Path:   &in.Path,
+		}
+	}
+	if err := validatejsonBrokenFileRefTransport(body); err != nil {
+		return nil, fmt.Errorf("validate BrokenFileRef JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode BrokenFileRef JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeBrokenFileRef checks JSON field names from the Goa design and returns a service value.
+func DecodeBrokenFileRef(data []byte) (out *BrokenFileRef, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode BrokenFileRef JSON: %w", err)
+	}
+	if err := validateBrokenFileRefJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode BrokenFileRef JSON: %w", err)
+	}
+	var body *jsonBrokenFileRefTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode BrokenFileRef JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode BrokenFileRef JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode BrokenFileRef JSON after first value: %w", err)
+	}
+	if err := validatejsonBrokenFileRefTransport(body); err != nil {
+		return out, fmt.Errorf("validate BrokenFileRef JSON: %w", err)
+	}
+	{
+		out = &BrokenFileRef{
+			NoteID: *body.NoteID,
+			Title:  *body.Title,
+			Path:   *body.Path,
+		}
+	}
+	return out, nil
+}
+
+// EncodeFileCheck turns a service value into JSON using the field names in the Goa design.
+func EncodeFileCheck(in *FileCheck) ([]byte, error) {
+	if err := checkFileCheckValue(in); err != nil {
+		return nil, fmt.Errorf("encode FileCheck JSON: %w", err)
+	}
+	if err := validateFileCheckOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate FileCheck value: %w", err)
+	}
+	var body *jsonFileCheckTransport
+	{
+		body = &jsonFileCheckTransport{}
+		body.Unused = make([]*jsonUnusedFileTransport, len(in.Unused))
+		for i, val := range in.Unused {
+			if val == nil {
+				body.Unused[i] = nil
+				continue
+			}
+			body.Unused[i] = encodeUnusedFileToUnusedFileTransport(val)
+		}
+		body.Broken = make([]*jsonBrokenFileRefTransport, len(in.Broken))
+		for i, val := range in.Broken {
+			if val == nil {
+				body.Broken[i] = nil
+				continue
+			}
+			body.Broken[i] = encodeBrokenFileRefToBrokenFileRefTransport(val)
+		}
+	}
+	if err := validatejsonFileCheckTransport(body); err != nil {
+		return nil, fmt.Errorf("validate FileCheck JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode FileCheck JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeFileCheck checks JSON field names from the Goa design and returns a service value.
+func DecodeFileCheck(data []byte) (out *FileCheck, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode FileCheck JSON: %w", err)
+	}
+	if err := validateFileCheckJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode FileCheck JSON: %w", err)
+	}
+	var body *jsonFileCheckTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode FileCheck JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode FileCheck JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode FileCheck JSON after first value: %w", err)
+	}
+	if err := validatejsonFileCheckTransport(body); err != nil {
+		return out, fmt.Errorf("validate FileCheck JSON: %w", err)
+	}
+	{
+		out = &FileCheck{}
+		out.Unused = make([]*UnusedFile, len(body.Unused))
+		for i, val := range body.Unused {
+			if val == nil {
+				out.Unused[i] = nil
+				continue
+			}
+			out.Unused[i] = decodeUnusedFileTransportToUnusedFile(val)
+		}
+		out.Broken = make([]*BrokenFileRef, len(body.Broken))
+		for i, val := range body.Broken {
+			if val == nil {
+				out.Broken[i] = nil
+				continue
+			}
+			out.Broken[i] = decodeBrokenFileRefTransportToBrokenFileRef(val)
+		}
+	}
+	return out, nil
 }
 
 // EncodeNote turns a service value into JSON using the field names in the Goa design.
@@ -1487,6 +1951,61 @@ func DecodeNoteEvent(data []byte) (out *NoteEvent, err error) {
 		out = &NoteEvent{
 			Type: *body.Type,
 			ID:   body.ID,
+		}
+	}
+	return out, nil
+}
+
+// EncodeNoteFile turns a service value into JSON using the field names in the Goa design.
+func EncodeNoteFile(in *NoteFile) ([]byte, error) {
+	if err := checkNoteFileValue(in); err != nil {
+		return nil, fmt.Errorf("encode NoteFile JSON: %w", err)
+	}
+	var body *jsonNoteFileTransport
+	{
+		body = &jsonNoteFileTransport{
+			Name: &in.Name,
+			Path: &in.Path,
+		}
+	}
+	if err := validatejsonNoteFileTransport(body); err != nil {
+		return nil, fmt.Errorf("validate NoteFile JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode NoteFile JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeNoteFile checks JSON field names from the Goa design and returns a service value.
+func DecodeNoteFile(data []byte) (out *NoteFile, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode NoteFile JSON: %w", err)
+	}
+	if err := validateNoteFileJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode NoteFile JSON: %w", err)
+	}
+	var body *jsonNoteFileTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode NoteFile JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode NoteFile JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode NoteFile JSON after first value: %w", err)
+	}
+	if err := validatejsonNoteFileTransport(body); err != nil {
+		return out, fmt.Errorf("validate NoteFile JSON: %w", err)
+	}
+	{
+		out = &NoteFile{
+			Name: *body.Name,
+			Path: *body.Path,
 		}
 	}
 	return out, nil
@@ -2072,6 +2591,85 @@ func DecodeTrashedNotebook(data []byte) (out *TrashedNotebook, err error) {
 	return out, nil
 }
 
+// EncodeUnusedFile turns a service value into JSON using the field names in the Goa design.
+func EncodeUnusedFile(in *UnusedFile) ([]byte, error) {
+	if err := checkUnusedFileValue(in); err != nil {
+		return nil, fmt.Errorf("encode UnusedFile JSON: %w", err)
+	}
+	if err := validateUnusedFileOriginal2(in); err != nil {
+		return nil, fmt.Errorf("validate UnusedFile value: %w", err)
+	}
+	var body *jsonUnusedFileTransport
+	{
+		body = &jsonUnusedFileTransport{
+			NoteID:  &in.NoteID,
+			Title:   &in.Title,
+			Name:    &in.Name,
+			Path:    &in.Path,
+			AddedAt: &in.AddedAt,
+			Recent:  &in.Recent,
+		}
+		size := fileCheckInt64Transport(in.Size)
+		body.Size = &size
+	}
+	if err := validatejsonUnusedFileTransport(body); err != nil {
+		return nil, fmt.Errorf("validate UnusedFile JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode UnusedFile JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeUnusedFile checks JSON field names from the Goa design and returns a service value.
+func DecodeUnusedFile(data []byte) (out *UnusedFile, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode UnusedFile JSON: %w", err)
+	}
+	if err := validateUnusedFileJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode UnusedFile JSON: %w", err)
+	}
+	var body *jsonUnusedFileTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode UnusedFile JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode UnusedFile JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode UnusedFile JSON after first value: %w", err)
+	}
+	if err := validatejsonUnusedFileTransport(body); err != nil {
+		return out, fmt.Errorf("validate UnusedFile JSON: %w", err)
+	}
+	{
+		out = &UnusedFile{
+			NoteID:  *body.NoteID,
+			Title:   *body.Title,
+			Name:    *body.Name,
+			Path:    *body.Path,
+			Size:    int64(*body.Size),
+			AddedAt: *body.AddedAt,
+			Recent:  *body.Recent,
+		}
+	}
+	return out, nil
+}
+
+func decodeBrokenFileRefTransportToBrokenFileRef(v *jsonBrokenFileRefTransport) *BrokenFileRef {
+	res := &BrokenFileRef{
+		NoteID: *v.NoteID,
+		Title:  *v.Title,
+		Path:   *v.Path,
+	}
+
+	return res
+}
+
 func decodeNoteSummaryTransportToNoteSummary(v *jsonNoteSummaryTransport) *NoteSummary {
 	res := &NoteSummary{
 		ID:              *v.ID,
@@ -2217,6 +2815,30 @@ func decodeTextRangeTransportToTextRange8(v *jsonTextRangeTransport) *TextRange 
 	res := &TextRange{
 		Start: int(*v.Start),
 		End:   int(*v.End),
+	}
+
+	return res
+}
+
+func decodeUnusedFileTransportToUnusedFile(v *jsonUnusedFileTransport) *UnusedFile {
+	res := &UnusedFile{
+		NoteID:  *v.NoteID,
+		Title:   *v.Title,
+		Name:    *v.Name,
+		Path:    *v.Path,
+		Size:    int64(*v.Size),
+		AddedAt: *v.AddedAt,
+		Recent:  *v.Recent,
+	}
+
+	return res
+}
+
+func encodeBrokenFileRefToBrokenFileRefTransport(v *BrokenFileRef) *jsonBrokenFileRefTransport {
+	res := &jsonBrokenFileRefTransport{
+		NoteID: &v.NoteID,
+		Title:  &v.Title,
+		Path:   &v.Path,
 	}
 
 	return res
@@ -2378,6 +3000,515 @@ func encodeTextRangeToTextRangeTransport8(v *TextRange) *jsonTextRangeTransport 
 	res.End = &end
 
 	return res
+}
+
+func encodeUnusedFileToUnusedFileTransport(v *UnusedFile) *jsonUnusedFileTransport {
+	res := &jsonUnusedFileTransport{
+		NoteID:  &v.NoteID,
+		Title:   &v.Title,
+		Name:    &v.Name,
+		Path:    &v.Path,
+		AddedAt: &v.AddedAt,
+		Recent:  &v.Recent,
+	}
+	size := fileCheckInt64Transport(v.Size)
+	res.Size = &size
+
+	return res
+}
+
+// validateBrokenFileRefJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBrokenFileRefJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "note_id":
+			if err := validateBrokenFileRefJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note whose body has the reference",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateBrokenFileRefJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The path referred to",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateBrokenFileRefJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title of the note whose body has the reference",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"note_id",
+				"path",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateBrokenFileRefJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBrokenFileRefJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateBrokenFileRefJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBrokenFileRefJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateBrokenFileRefJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBrokenFileRefJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "broken":
+			if err := validateFileCheckJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "References to files that do not exist, sorted by note and path",
+			); err != nil {
+				return err
+			}
+		case "unused":
+			if err := validateFileCheckJSONValue12(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Files that no note body, including those in the trash, refers to, sorted by note and name",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"broken",
+				"unused",
+			})
+		}
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateFileCheckJSONValue8(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "note_id":
+			if err := validateFileCheckJSONValue9(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note whose body has the reference",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateFileCheckJSONValue10(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The path referred to",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateFileCheckJSONValue11(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title of the note whose body has the reference",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"note_id",
+				"path",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue9(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue10(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue11(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue12(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateFileCheckJSONValue13(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue13(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "added_at":
+			if err := validateFileCheckJSONValue14(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Last modification time of the file, usually when it was added",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateFileCheckJSONValue15(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "note_id":
+			if err := validateFileCheckJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note holding the file",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateFileCheckJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the file relative to the note file",
+			); err != nil {
+				return err
+			}
+		case "recent":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the file was added within the last hour, such as to a note still being edited, whose body does not refer to it until saved",
+			); err != nil {
+				return err
+			}
+		case "size":
+			if err := validateFileCheckJSONValue6(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Size in bytes",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateFileCheckJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title of the note holding the file",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"added_at",
+				"name",
+				"note_id",
+				"path",
+				"recent",
+				"size",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue14(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue15(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue6(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateFileCheckJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileCheckJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
 }
 
 // validateNoteJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
@@ -2904,6 +4035,82 @@ func validateNoteEventJSONValue2(path string, value any, description string) err
 
 // validateNoteEventJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateNoteEventJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteFileJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteFileJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "name":
+			if err := validateNoteFileJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateNoteFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"name",
+				"path",
+			})
+		}
+	}
+	return nil
+}
+
+// validateNoteFileJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteFileJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteFileJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteFileJSONValue3(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -4978,6 +6185,202 @@ func validateTrashedNotebookJSONValue5(path string, value any, description strin
 	return nil
 }
 
+// validateUnusedFileJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "added_at":
+			if err := validateUnusedFileJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Last modification time of the file, usually when it was added",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateUnusedFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "note_id":
+			if err := validateUnusedFileJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note holding the file",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateUnusedFileJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the file relative to the note file",
+			); err != nil {
+				return err
+			}
+		case "recent":
+			if err := validateUnusedFileJSONValue6(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the file was added within the last hour, such as to a note still being edited, whose body does not refer to it until saved",
+			); err != nil {
+				return err
+			}
+		case "size":
+			if err := validateUnusedFileJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Size in bytes",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateUnusedFileJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title of the note holding the file",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"added_at",
+				"name",
+				"note_id",
+				"path",
+				"recent",
+				"size",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue6(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateUnusedFileJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUnusedFileJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
 // readStrictJSON checks syntax and nesting before walking for duplicate keys,
 // and preserves integer text for the generated type checks.
 func readStrictJSON(data []byte) (any, error) {
@@ -5125,6 +6528,137 @@ func generatedJSONChildPath(path, key string, _ bool) string {
 	return path + "[" + strconv.Quote(key) + "]"
 }
 
+// checkBrokenFileRefValue checks text and cycles before conversion.
+func checkBrokenFileRefValue(in *BrokenFileRef) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkBrokenFileRefBrokenFileRefValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkBrokenFileRefBrokenFileRefValue checks one generated value on the active path.
+func checkBrokenFileRefBrokenFileRefValue(in *BrokenFileRef, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.NoteID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+	}
+	return nil
+}
+
+// checkFileCheckValue checks text and cycles before conversion.
+func checkFileCheckValue(in *FileCheck) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkFileCheckFileCheckValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkFileCheckFileCheckValue checks one generated value on the active path.
+func checkFileCheckFileCheckValue(in *FileCheck, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		for index1, item1 := range in.Unused {
+			_ = index1
+			_ = item1
+			if err := checkFileCheckUnusedFileValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "unused", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
+		for index1, item1 := range in.Broken {
+			_ = index1
+			_ = item1
+			if err := checkFileCheckBrokenFileRefValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "broken", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkFileCheckUnusedFileValue checks one generated value on the active path.
+func checkFileCheckUnusedFileValue(in *UnusedFile, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.NoteID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+		if !utf8.ValidString(string(in.AddedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "added_at", false))
+		}
+	}
+	return nil
+}
+
+// checkFileCheckBrokenFileRefValue checks one generated value on the active path.
+func checkFileCheckBrokenFileRefValue(in *BrokenFileRef, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.NoteID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+	}
+	return nil
+}
+
 // checkNoteValue checks text and cycles before conversion.
 func checkNoteValue(in *Note) error {
 	if in == nil {
@@ -5254,6 +6788,39 @@ func checkNoteEventNoteEventValue(in *NoteEvent, field string, active map[any]bo
 			if !utf8.ValidString(string(*in.ID)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
 			}
+		}
+	}
+	return nil
+}
+
+// checkNoteFileValue checks text and cycles before conversion.
+func checkNoteFileValue(in *NoteFile) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkNoteFileNoteFileValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkNoteFileNoteFileValue checks one generated value on the active path.
+func checkNoteFileNoteFileValue(in *NoteFile, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
 		}
 	}
 	return nil
@@ -5746,6 +7313,48 @@ func checkTrashedNotebookTrashedNotebookValue(in *TrashedNotebook, field string,
 		}
 		if !utf8.ValidString(string(in.Kind)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "kind", false))
+		}
+	}
+	return nil
+}
+
+// checkUnusedFileValue checks text and cycles before conversion.
+func checkUnusedFileValue(in *UnusedFile) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkUnusedFileUnusedFileValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkUnusedFileUnusedFileValue checks one generated value on the active path.
+func checkUnusedFileUnusedFileValue(in *UnusedFile, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.NoteID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+		if !utf8.ValidString(string(in.AddedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "added_at", false))
 		}
 	}
 	return nil

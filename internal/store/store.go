@@ -348,10 +348,31 @@ func (s *Store) Move(id, to string) error {
 	if err := os.MkdirAll(filepath.Join(s.dir, to), 0o755); err != nil {
 		return err
 	}
-	return os.Rename(s.path(nb, id), s.path(to, id))
+	// The files of the note move with it.
+	from, dest := s.assetsDir(nb, id), s.assetsDir(to, id)
+	_, err = os.Stat(from)
+	hasFiles := err == nil
+	if hasFiles {
+		if _, err := os.Stat(dest); err == nil {
+			return fmt.Errorf("cannot move the files of note %s: %s exists", id, dest)
+		}
+	}
+	if err := os.Rename(s.path(nb, id), s.path(to, id)); err != nil {
+		return err
+	}
+	if hasFiles {
+		if err := os.Rename(from, dest); err != nil {
+			// Put the note back, so that it stays with its files.
+			if err2 := os.Rename(s.path(to, id), s.path(nb, id)); err2 != nil {
+				return errors.Join(err, err2)
+			}
+			return err
+		}
+	}
+	return nil
 }
 
-// Delete removes the note file.
+// Delete removes the note file and its files.
 func (s *Store) Delete(id string) error {
 	nb, err := s.locate(id)
 	if err != nil {
@@ -361,7 +382,10 @@ func (s *Store) Delete(id string) error {
 	if errors.Is(err, fs.ErrNotExist) {
 		return ErrNotFound
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(s.assetsDir(nb, id))
 }
 
 // MatchVersion reports whether the If-Match header value ifMatch matches the

@@ -558,3 +558,99 @@ func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string) (*n
 
 	return v, nil
 }
+
+// BuildAddFilePayload builds the payload for the notes add_file endpoint from
+// CLI flags.
+func BuildAddFilePayload(notesAddFileID *string, notesAddFileName *string) (*notes.AddFilePayload, error) {
+	var err error
+	var id string
+	{
+		if notesAddFileID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesAddFileID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var name string
+	{
+		if notesAddFileName == nil {
+			return nil, fmt.Errorf("missing required flag --name")
+		}
+		name = *notesAddFileName
+		if utf8.RuneCountInString(name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("name", name, utf8.RuneCountInString(name), 1, true))
+		}
+		if utf8.RuneCountInString(name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("name", name, utf8.RuneCountInString(name), 255, false))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	v := &notes.AddFilePayload{}
+	v.ID = id
+	v.Name = name
+
+	return v, nil
+}
+
+// BuildGetFilePayload builds the payload for the notes get_file endpoint from
+// CLI flags.
+func BuildGetFilePayload(notesGetFileID *string, notesGetFileName *string) (*notes.GetFilePayload, error) {
+	var err error
+	var id string
+	{
+		if notesGetFileID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesGetFileID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var name string
+	{
+		if notesGetFileName == nil {
+			return nil, fmt.Errorf("missing required flag --name")
+		}
+		name = *notesGetFileName
+	}
+	v := &notes.GetFilePayload{}
+	v.ID = id
+	v.Name = name
+
+	return v, nil
+}
+
+// BuildDeleteFilePayload builds the payload for the notes delete_file endpoint
+// from CLI flags.
+func BuildDeleteFilePayload(notesDeleteFileID *string, notesDeleteFileName *string) (*notes.DeleteFilePayload, error) {
+	var err error
+	var id string
+	{
+		if notesDeleteFileID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesDeleteFileID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var name string
+	{
+		if notesDeleteFileName == nil {
+			return nil, fmt.Errorf("missing required flag --name")
+		}
+		name = *notesDeleteFileName
+	}
+	v := &notes.DeleteFilePayload{}
+	v.ID = id
+	v.Name = name
+
+	return v, nil
+}

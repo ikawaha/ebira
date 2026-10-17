@@ -40,7 +40,7 @@ func NewClient(rawURL string) (*Clients, error) {
 	return &Clients{
 		Notes: gennotes.NewClient(c.List(), c.Get(), c.Create(), c.Update(), c.Delete(), c.Search(), c.Restore(), c.Move(), c.Notebooks(), c.Tags(), c.CreateNotebook(), c.SaveNotebook(), c.DeleteNotebook(), c.TrashedNotebooks(), c.RestoreNotebook(), c.DeleteTrashedNotebook(),
 			nil, nil, nil, nil, nil, // the methods for AI clients have no HTTP endpoints
-			c.Events(), c.Sync()),
+			c.AddFile(), c.GetFile(), c.DeleteFile(), c.CheckFiles(), c.Events(), c.Sync()),
 		Assistant: genassistant.NewClient(a.Ask()),
 	}, nil
 }

@@ -1264,6 +1264,275 @@ func EncodeDeleteTrashedNotebookError(encoder func(context.Context, http.Respons
 	}
 }
 
+// EncodeAddFileResponse returns an encoder for responses returned by the notes
+// add_file endpoint.
+func EncodeAddFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.NoteFile)
+		enc := encoder(ctx, w)
+		body := NewAddFileResponseBody(res)
+		w.WriteHeader(http.StatusCreated)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeAddFileRequest returns a decoder for requests sent to the notes
+// add_file endpoint.
+func DecodeAddFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.AddFilePayload, error) {
+	return func(r *http.Request) (*notes.AddFilePayload, error) {
+		var payload *notes.AddFilePayload
+		var (
+			id   string
+			name string
+			err  error
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		name = r.URL.Query().Get("name")
+		if name == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("name", "query string"))
+		}
+		if utf8.RuneCountInString(name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("name", name, utf8.RuneCountInString(name), 1, true))
+		}
+		if utf8.RuneCountInString(name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("name", name, utf8.RuneCountInString(name), 255, false))
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewAddFilePayload(id, name)
+
+		return payload, nil
+	}
+}
+
+// EncodeAddFileError returns an encoder for errors returned by the add_file
+// notes endpoint.
+func EncodeAddFileError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewAddFileNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewAddFileBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "too_large":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewAddFileTooLargeResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeGetFileResponse returns an encoder for responses returned by the notes
+// get_file endpoint.
+func EncodeGetFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.GetFileResult)
+		w.Header().Set("Content-Type", res.ContentType)
+		{
+			val := res.Length
+			lengths := strconv.FormatInt(val, 10)
+			w.Header().Set("Content-Length", lengths)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+
+// DecodeGetFileRequest returns a decoder for requests sent to the notes
+// get_file endpoint.
+func DecodeGetFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.GetFilePayload, error) {
+	return func(r *http.Request) (*notes.GetFilePayload, error) {
+		var payload *notes.GetFilePayload
+		var (
+			id   string
+			name string
+			err  error
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		name = params["name"]
+		if err != nil {
+			return payload, err
+		}
+		payload = NewGetFilePayload(id, name)
+
+		return payload, nil
+	}
+}
+
+// EncodeGetFileError returns an encoder for errors returned by the get_file
+// notes endpoint.
+func EncodeGetFileError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGetFileNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGetFileBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeDeleteFileResponse returns an encoder for responses returned by the
+// notes delete_file endpoint.
+func EncodeDeleteFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+}
+
+// DecodeDeleteFileRequest returns a decoder for requests sent to the notes
+// delete_file endpoint.
+func DecodeDeleteFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.DeleteFilePayload, error) {
+	return func(r *http.Request) (*notes.DeleteFilePayload, error) {
+		var payload *notes.DeleteFilePayload
+		var (
+			id   string
+			name string
+			err  error
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		name = params["name"]
+		if err != nil {
+			return payload, err
+		}
+		payload = NewDeleteFilePayload(id, name)
+
+		return payload, nil
+	}
+}
+
+// EncodeDeleteFileError returns an encoder for errors returned by the
+// delete_file notes endpoint.
+func EncodeDeleteFileError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteFileNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteFileBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeCheckFilesResponse returns an encoder for responses returned by the
+// notes check_files endpoint.
+func EncodeCheckFilesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.FileCheck)
+		enc := encoder(ctx, w)
+		body := NewCheckFilesResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
 // EncodeEventsResponse returns an encoder for responses returned by the notes
 // events endpoint.
 func EncodeEventsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1379,6 +1648,34 @@ func marshalNotesTrashedNotebookToTrashedNotebookResponse(v *notes.TrashedNotebo
 		Name:  v.Name,
 		Kind:  v.Kind,
 		Count: v.Count,
+	}
+
+	return res
+}
+
+// marshalNotesUnusedFileToUnusedFileResponseBody builds a value of type
+// *UnusedFileResponseBody from a value of type *notes.UnusedFile.
+func marshalNotesUnusedFileToUnusedFileResponseBody(v *notes.UnusedFile) *UnusedFileResponseBody {
+	res := &UnusedFileResponseBody{
+		NoteID:  v.NoteID,
+		Title:   v.Title,
+		Name:    v.Name,
+		Path:    v.Path,
+		Size:    v.Size,
+		AddedAt: v.AddedAt,
+		Recent:  v.Recent,
+	}
+
+	return res
+}
+
+// marshalNotesBrokenFileRefToBrokenFileRefResponseBody builds a value of type
+// *BrokenFileRefResponseBody from a value of type *notes.BrokenFileRef.
+func marshalNotesBrokenFileRefToBrokenFileRefResponseBody(v *notes.BrokenFileRef) *BrokenFileRefResponseBody {
+	res := &BrokenFileRefResponseBody{
+		NoteID: v.NoteID,
+		Title:  v.Title,
+		Path:   v.Path,
 	}
 
 	return res

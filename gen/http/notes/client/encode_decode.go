@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 
 	notes "github.com/ikawaha/ebira/gen/notes"
@@ -1814,6 +1815,420 @@ func DecodeDeleteTrashedNotebookResponse(decoder func(*http.Response) goahttp.De
 	}
 }
 
+// BuildAddFileRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "add_file" endpoint
+func (c *Client) BuildAddFileRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id   string
+		body io.Reader
+	)
+	{
+		rd, ok := v.(*notes.AddFileRequestData)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "add_file", "notes.AddFileRequestData", v)
+		}
+		p := rd.Payload
+		body = rd.Body
+		id = p.ID
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddFileNotesPath(id)}
+	req, err := http.NewRequest("POST", u.String(), body)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "add_file", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeAddFileRequest returns an encoder for requests sent to the notes
+// add_file server.
+func EncodeAddFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		data, ok := v.(*notes.AddFileRequestData)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "add_file", "*notes.AddFileRequestData", v)
+		}
+		p := data.Payload
+		values := req.URL.Query()
+		values.Add("name", p.Name)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeAddFileResponse returns a decoder for responses returned by the notes
+// add_file endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeAddFileResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "too_large" (type *goa.ServiceError): http.StatusRequestEntityTooLarge
+//   - error: internal error
+func DecodeAddFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "add_file", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusCreated:
+			var (
+				body AddFileResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			err = ValidateAddFileResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_file", err)
+			}
+			res := NewAddFileNoteFileCreated(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body AddFileNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			err = ValidateAddFileNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_file", err)
+			}
+			return nil, NewAddFileNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body AddFileBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			err = ValidateAddFileBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_file", err)
+			}
+			return nil, NewAddFileBadRequest(&body)
+		case http.StatusRequestEntityTooLarge:
+			var (
+				body AddFileTooLargeResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			err = ValidateAddFileTooLargeResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_file", err)
+			}
+			return nil, NewAddFileTooLarge(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "add_file", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// // BuildAddFileStreamPayload creates a streaming endpoint request payload from
+// the method payload and the path to the file to be streamed
+func BuildAddFileStreamPayload(payload any, fpath string) (*notes.AddFileRequestData, error) {
+	f, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	return &notes.AddFileRequestData{
+		Payload: payload.(*notes.AddFilePayload),
+		Body:    f,
+	}, nil
+}
+
+// BuildGetFileRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "get_file" endpoint
+func (c *Client) BuildGetFileRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id   string
+		name string
+	)
+	{
+		p, ok := v.(*notes.GetFilePayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "get_file", "*notes.GetFilePayload", v)
+		}
+		id = p.ID
+		name = p.Name
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GetFileNotesPath(id, name)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "get_file", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeGetFileResponse returns a decoder for responses returned by the notes
+// get_file endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeGetFileResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - error: internal error
+func DecodeGetFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				contentType string
+				length      int64
+				err         error
+			)
+			contentTypeRaw := resp.Header.Get("Content-Type")
+			if contentTypeRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("content_type", "header"))
+			}
+			contentType = contentTypeRaw
+			{
+				lengthRaw := resp.Header.Get("Content-Length")
+				if lengthRaw == "" {
+					return nil, goahttp.ErrValidationError("notes", "get_file", goa.MissingFieldError("length", "header"))
+				}
+				v, err2 := strconv.ParseInt(lengthRaw, 10, 64)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("length", lengthRaw, "integer"))
+				}
+				length = v
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get_file", err)
+			}
+			res := NewGetFileResultOK(contentType, length)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body GetFileNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get_file", err)
+			}
+			err = ValidateGetFileNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get_file", err)
+			}
+			return nil, NewGetFileNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body GetFileBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get_file", err)
+			}
+			err = ValidateGetFileBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get_file", err)
+			}
+			return nil, NewGetFileBadRequest(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get_file", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "get_file", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildDeleteFileRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "delete_file" endpoint
+func (c *Client) BuildDeleteFileRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id   string
+		name string
+	)
+	{
+		p, ok := v.(*notes.DeleteFilePayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "delete_file", "*notes.DeleteFilePayload", v)
+		}
+		id = p.ID
+		name = p.Name
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteFileNotesPath(id, name)}
+	req, err := http.NewRequest("DELETE", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "delete_file", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeDeleteFileResponse returns a decoder for responses returned by the
+// notes delete_file endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeDeleteFileResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - error: internal error
+func DecodeDeleteFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_file", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "delete_file", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		case http.StatusNotFound:
+			var (
+				body DeleteFileNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_file", err)
+			}
+			err = ValidateDeleteFileNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_file", err)
+			}
+			return nil, NewDeleteFileNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body DeleteFileBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_file", err)
+			}
+			err = ValidateDeleteFileBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_file", err)
+			}
+			return nil, NewDeleteFileBadRequest(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_file", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "delete_file", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildCheckFilesRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "check_files" endpoint
+func (c *Client) BuildCheckFilesRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: CheckFilesNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "check_files", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeCheckFilesResponse returns a decoder for responses returned by the
+// notes check_files endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+func DecodeCheckFilesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "check_files", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "check_files", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body CheckFilesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "check_files", err)
+			}
+			err = ValidateCheckFilesResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "check_files", err)
+			}
+			res := NewCheckFilesFileCheckOK(&body)
+			return res, nil
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "check_files", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "check_files", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildEventsRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "events" endpoint
 func (c *Client) BuildEventsRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -2029,6 +2444,34 @@ func unmarshalTrashedNotebookResponseToNotesTrashedNotebook(v *TrashedNotebookRe
 		Name:  *v.Name,
 		Kind:  *v.Kind,
 		Count: *v.Count,
+	}
+
+	return res
+}
+
+// unmarshalUnusedFileResponseBodyToNotesUnusedFile builds a value of type
+// *notes.UnusedFile from a value of type *UnusedFileResponseBody.
+func unmarshalUnusedFileResponseBodyToNotesUnusedFile(v *UnusedFileResponseBody) *notes.UnusedFile {
+	res := &notes.UnusedFile{
+		NoteID:  *v.NoteID,
+		Title:   *v.Title,
+		Name:    *v.Name,
+		Path:    *v.Path,
+		Size:    *v.Size,
+		AddedAt: *v.AddedAt,
+		Recent:  *v.Recent,
+	}
+
+	return res
+}
+
+// unmarshalBrokenFileRefResponseBodyToNotesBrokenFileRef builds a value of
+// type *notes.BrokenFileRef from a value of type *BrokenFileRefResponseBody.
+func unmarshalBrokenFileRefResponseBodyToNotesBrokenFileRef(v *BrokenFileRefResponseBody) *notes.BrokenFileRef {
+	res := &notes.BrokenFileRef{
+		NoteID: *v.NoteID,
+		Title:  *v.Title,
+		Path:   *v.Path,
 	}
 
 	return res

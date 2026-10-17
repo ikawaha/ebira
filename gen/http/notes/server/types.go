@@ -363,6 +363,26 @@ type RestoreNotebookResponseBody struct {
 	Sort string `form:"sort" json:"sort" xml:"sort"`
 }
 
+// AddFileResponseBody is the type of the "notes" service "add_file" endpoint
+// HTTP response body.
+type AddFileResponseBody struct {
+	// File name
+	Name string `form:"name" json:"name" xml:"name"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path string `form:"path" json:"path" xml:"path"`
+}
+
+// CheckFilesResponseBody is the type of the "notes" service "check_files"
+// endpoint HTTP response body.
+type CheckFilesResponseBody struct {
+	// Files that no note body, including those in the trash, refers to, sorted by
+	// note and name
+	Unused []*UnusedFileResponseBody `form:"unused" json:"unused" xml:"unused"`
+	// References to files that do not exist, sorted by note and path
+	Broken []*BrokenFileRefResponseBody `form:"broken" json:"broken" xml:"broken"`
+}
+
 // EventsResponseBody is the type of the "notes" service "events" endpoint HTTP
 // response body.
 type EventsResponseBody struct {
@@ -894,6 +914,132 @@ type DeleteTrashedNotebookBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// AddFileNotFoundResponseBody is the type of the "notes" service "add_file"
+// endpoint HTTP response body for the "not_found" error.
+type AddFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// AddFileBadRequestResponseBody is the type of the "notes" service "add_file"
+// endpoint HTTP response body for the "bad_request" error.
+type AddFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// AddFileTooLargeResponseBody is the type of the "notes" service "add_file"
+// endpoint HTTP response body for the "too_large" error.
+type AddFileTooLargeResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GetFileNotFoundResponseBody is the type of the "notes" service "get_file"
+// endpoint HTTP response body for the "not_found" error.
+type GetFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GetFileBadRequestResponseBody is the type of the "notes" service "get_file"
+// endpoint HTTP response body for the "bad_request" error.
+type GetFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteFileNotFoundResponseBody is the type of the "notes" service
+// "delete_file" endpoint HTTP response body for the "not_found" error.
+type DeleteFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteFileBadRequestResponseBody is the type of the "notes" service
+// "delete_file" endpoint HTTP response body for the "bad_request" error.
+type DeleteFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // NoteSummaryResponseBody is used to define fields on response body types.
 type NoteSummaryResponseBody struct {
 	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
@@ -977,6 +1123,35 @@ type TrashedNotebookResponse struct {
 	Kind string `form:"kind" json:"kind" xml:"kind"`
 	// Number of notes
 	Count int `form:"count" json:"count" xml:"count"`
+}
+
+// UnusedFileResponseBody is used to define fields on response body types.
+type UnusedFileResponseBody struct {
+	// ID of the note holding the file
+	NoteID string `form:"note_id" json:"note_id" xml:"note_id"`
+	// Title of the note holding the file
+	Title string `form:"title" json:"title" xml:"title"`
+	// File name
+	Name string `form:"name" json:"name" xml:"name"`
+	// Path of the file relative to the note file
+	Path string `form:"path" json:"path" xml:"path"`
+	// Size in bytes
+	Size int64 `form:"size" json:"size" xml:"size"`
+	// Last modification time of the file, usually when it was added
+	AddedAt string `form:"added_at" json:"added_at" xml:"added_at"`
+	// Whether the file was added within the last hour, such as to a note still
+	// being edited, whose body does not refer to it until saved
+	Recent bool `form:"recent" json:"recent" xml:"recent"`
+}
+
+// BrokenFileRefResponseBody is used to define fields on response body types.
+type BrokenFileRefResponseBody struct {
+	// ID of the note whose body has the reference
+	NoteID string `form:"note_id" json:"note_id" xml:"note_id"`
+	// Title of the note whose body has the reference
+	Title string `form:"title" json:"title" xml:"title"`
+	// The path referred to
+	Path string `form:"path" json:"path" xml:"path"`
 }
 
 // NewListResponseBody builds the HTTP response body from the result of the
@@ -1330,6 +1505,47 @@ func NewRestoreNotebookResponseBody(res *notes.Notebook) *RestoreNotebookRespons
 		Reserved: res.Reserved,
 		Kind:     res.Kind,
 		Sort:     res.Sort,
+	}
+	return body
+}
+
+// NewAddFileResponseBody builds the HTTP response body from the result of the
+// "add_file" endpoint of the "notes" service.
+func NewAddFileResponseBody(res *notes.NoteFile) *AddFileResponseBody {
+	body := &AddFileResponseBody{
+		Name: res.Name,
+		Path: res.Path,
+	}
+	return body
+}
+
+// NewCheckFilesResponseBody builds the HTTP response body from the result of
+// the "check_files" endpoint of the "notes" service.
+func NewCheckFilesResponseBody(res *notes.FileCheck) *CheckFilesResponseBody {
+	body := &CheckFilesResponseBody{}
+	if res.Unused != nil {
+		body.Unused = make([]*UnusedFileResponseBody, len(res.Unused))
+		for i, val := range res.Unused {
+			if val == nil {
+				body.Unused[i] = nil
+				continue
+			}
+			body.Unused[i] = marshalNotesUnusedFileToUnusedFileResponseBody(val)
+		}
+	} else {
+		body.Unused = []*UnusedFileResponseBody{}
+	}
+	if res.Broken != nil {
+		body.Broken = make([]*BrokenFileRefResponseBody, len(res.Broken))
+		for i, val := range res.Broken {
+			if val == nil {
+				body.Broken[i] = nil
+				continue
+			}
+			body.Broken[i] = marshalNotesBrokenFileRefToBrokenFileRefResponseBody(val)
+		}
+	} else {
+		body.Broken = []*BrokenFileRefResponseBody{}
 	}
 	return body
 }
@@ -1757,6 +1973,104 @@ func NewDeleteTrashedNotebookBadRequestResponseBody(res *goa.ServiceError) *Dele
 	return body
 }
 
+// NewAddFileNotFoundResponseBody builds the HTTP response body from the result
+// of the "add_file" endpoint of the "notes" service.
+func NewAddFileNotFoundResponseBody(res *goa.ServiceError) *AddFileNotFoundResponseBody {
+	body := &AddFileNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewAddFileBadRequestResponseBody builds the HTTP response body from the
+// result of the "add_file" endpoint of the "notes" service.
+func NewAddFileBadRequestResponseBody(res *goa.ServiceError) *AddFileBadRequestResponseBody {
+	body := &AddFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewAddFileTooLargeResponseBody builds the HTTP response body from the result
+// of the "add_file" endpoint of the "notes" service.
+func NewAddFileTooLargeResponseBody(res *goa.ServiceError) *AddFileTooLargeResponseBody {
+	body := &AddFileTooLargeResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGetFileNotFoundResponseBody builds the HTTP response body from the result
+// of the "get_file" endpoint of the "notes" service.
+func NewGetFileNotFoundResponseBody(res *goa.ServiceError) *GetFileNotFoundResponseBody {
+	body := &GetFileNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGetFileBadRequestResponseBody builds the HTTP response body from the
+// result of the "get_file" endpoint of the "notes" service.
+func NewGetFileBadRequestResponseBody(res *goa.ServiceError) *GetFileBadRequestResponseBody {
+	body := &GetFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteFileNotFoundResponseBody builds the HTTP response body from the
+// result of the "delete_file" endpoint of the "notes" service.
+func NewDeleteFileNotFoundResponseBody(res *goa.ServiceError) *DeleteFileNotFoundResponseBody {
+	body := &DeleteFileNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteFileBadRequestResponseBody builds the HTTP response body from the
+// result of the "delete_file" endpoint of the "notes" service.
+func NewDeleteFileBadRequestResponseBody(res *goa.ServiceError) *DeleteFileBadRequestResponseBody {
+	body := &DeleteFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewListPayload builds a notes service list endpoint payload.
 func NewListPayload(notebook *string, tag *string, limit int, offset int, trashedNotebook *string, sort *string) *notes.ListPayload {
 	v := &notes.ListPayload{}
@@ -1916,6 +2230,33 @@ func NewRestoreNotebookPayload(id string) *notes.RestoreNotebookPayload {
 func NewDeleteTrashedNotebookPayload(id string) *notes.DeleteTrashedNotebookPayload {
 	v := &notes.DeleteTrashedNotebookPayload{}
 	v.ID = id
+
+	return v
+}
+
+// NewAddFilePayload builds a notes service add_file endpoint payload.
+func NewAddFilePayload(id string, name string) *notes.AddFilePayload {
+	v := &notes.AddFilePayload{}
+	v.ID = id
+	v.Name = name
+
+	return v
+}
+
+// NewGetFilePayload builds a notes service get_file endpoint payload.
+func NewGetFilePayload(id string, name string) *notes.GetFilePayload {
+	v := &notes.GetFilePayload{}
+	v.ID = id
+	v.Name = name
+
+	return v
+}
+
+// NewDeleteFilePayload builds a notes service delete_file endpoint payload.
+func NewDeleteFilePayload(id string, name string) *notes.DeleteFilePayload {
+	v := &notes.DeleteFilePayload{}
+	v.ID = id
+	v.Name = name
 
 	return v
 }

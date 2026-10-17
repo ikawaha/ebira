@@ -90,15 +90,18 @@ async function loadMessages() {
 
 // API
 
-async function api(path, { method = "GET", params, body, ifMatch, signal } = {}) {
+// api calls the REST API. body is sent as JSON; raw, such as a File, as is.
+async function api(path, { method = "GET", params, body, raw, ifMatch, signal } = {}) {
   const url = new URL(path, location.origin);
   for (const [k, v] of Object.entries(params || {})) {
     if (v !== null && v !== undefined && v !== "") url.searchParams.set(k, v);
   }
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (raw !== undefined) headers["Content-Type"] = "application/octet-stream";
   if (ifMatch) headers["If-Match"] = ifMatch;
-  const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
+  const payload = raw !== undefined ? raw : body === undefined ? undefined : JSON.stringify(body);
+  const res = await fetch(url, { method, headers, body: payload, signal });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try {
@@ -182,11 +185,34 @@ function noteLink(href) {
   }
 }
 
+// FILE_PATH matches the path of a file of a note as the body refers to it,
+// relative to the note file: <id>.assets/<name>.
+const FILE_PATH = /^([a-z0-9][a-z0-9_-]{0,63})\.assets\/([^/?#]+)$/;
+
+// fileURL returns the API URL of the file a body refers to with path, or null
+// for another path.
+function fileURL(path) {
+  const m = FILE_PATH.exec(path.replace(MARKERS_IN_ATTR, ""));
+  if (!m) return null;
+  let name;
+  try {
+    name = decodeURIComponent(m[2]); // marked percent-encodes
+  } catch (_) {
+    return null;
+  }
+  return `${noteURL(m[1])}/files/${encodeURIComponent(name)}`;
+}
+
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   // Links to notes open in this page; the others in a new tab.
   if (node.tagName === "A" && node.hasAttribute("href") && !noteLink(node.getAttribute("href"))) {
     node.setAttribute("target", "_blank");
     node.setAttribute("rel", "noopener noreferrer");
+  }
+  // The files of notes are served by the API.
+  if (node.tagName === "IMG" && node.hasAttribute("src")) {
+    const url = fileURL(node.getAttribute("src"));
+    if (url) node.setAttribute("src", url);
   }
 });
 
@@ -871,6 +897,18 @@ function startEdit(note) {
   f.body.placeholder = t("bodyPlaceholder");
   f.body.spellcheck = false;
   f.body.value = note ? note.body : "";
+  f.body.addEventListener("paste", (e) => {
+    if (hasFiles(e.clipboardData) && addImages(e.clipboardData.files)) e.preventDefault();
+  });
+  f.body.addEventListener("dragover", (e) => {
+    if (hasFiles(e.dataTransfer)) e.preventDefault();
+  });
+  f.body.addEventListener("drop", (e) => {
+    if (!hasFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    f.body.focus();
+    addImages(e.dataTransfer.files);
+  });
   f.rendered = el("div", "body editor-preview");
   f.rendered.hidden = true;
   f.banner = el("div", "banner");
@@ -951,6 +989,53 @@ function togglePreview() {
   if (!ed.preview) f.body.focus();
 }
 
+// hasFiles reports whether a paste or a drop carries files.
+function hasFiles(dt) {
+  return !!dt && [...dt.types].includes("Files");
+}
+
+// addImages uploads the images among files to the note being edited and
+// inserts references to them at the cursor. It returns false when there is no
+// image, so that the paste goes on as usual. A new note has no files until it
+// is saved.
+function addImages(files) {
+  const ed = state.editing;
+  const images = [...files].filter((f) => f.type.startsWith("image/"));
+  if (!ed || !images.length) return false;
+  if (!ed.note) {
+    editorMessage(t("imageSaveFirst"), true);
+    return true;
+  }
+  uploadImages(ed, images);
+  return true;
+}
+
+async function uploadImages(ed, images) {
+  const f = ed.elems;
+  editorMessage(t("imageUploading", { n: images.length }));
+  const refs = [];
+  const errors = [];
+  for (const file of images) {
+    const name = file.name || "image.png";
+    try {
+      const res = await api(`${noteURL(ed.note.id)}/files`, { method: "POST", params: { name }, raw: file });
+      const alt = res.name.replace(/\.[^.]+$/, "");
+      refs.push(`![${alt}](${res.path})`);
+    } catch (e) {
+      errors.push(t("imageFailed", { name, error: e.message }));
+    }
+  }
+  if (state.editing !== ed) return; // closed meanwhile; the files stay with the note
+  if (refs.length) {
+    const ta = f.body;
+    const before = ta.value.slice(0, ta.selectionStart);
+    const sep = before && !before.endsWith("\n") ? "\n" : "";
+    ta.setRangeText(sep + refs.join("\n") + "\n", ta.selectionStart, ta.selectionEnd, "end");
+    ta.dispatchEvent(new Event("input"));
+  }
+  editorMessage(errors.join(" ") || t("imageAdded", { n: refs.length }), errors.length > 0);
+}
+
 function editorMessage(text, isError) {
   const msg = state.editing?.elems.msg;
   if (!msg) return;
@@ -1026,6 +1111,97 @@ async function saveFailed(e) {
   editorMessage(t("saveFailed", { error: e.message }), true);
 }
 
+// Check of the files of notes: the files no note refers to, which can be
+// deleted, and the references to files that do not exist.
+
+function formatSize(n) {
+  if (n >= 1 << 20) return `${(n / (1 << 20)).toFixed(1)} MB`;
+  if (n >= 1 << 10) return `${(n / (1 << 10)).toFixed(1)} KB`;
+  return `${n} B`;
+}
+
+// noteAnchor returns a link that opens note id and closes the dialog d.
+function noteAnchor(id, title, d) {
+  const a = el("a", "", title || t("untitled"));
+  a.href = `/ui/#note/${encodeURIComponent(id)}`;
+  a.addEventListener("click", () => d.close());
+  return a;
+}
+
+async function openFilesCheck(message) {
+  const d = $("files-check");
+  d.replaceChildren(el("p", "", t("filesChecking")));
+  if (!d.open) d.showModal();
+  let res;
+  try {
+    res = await api("/files/check");
+  } catch (e) {
+    d.replaceChildren(filesCheckHead(d), el("p", "error", t("filesCheckFailed", { error: e.message })));
+    return;
+  }
+  renderFilesCheck(d, res, message);
+}
+
+function filesCheckHead(d) {
+  return el("div", "files-head", el("h2", "", t("filesCheck")), button("×", () => d.close(), { title: t("closeTitle") }));
+}
+
+function renderFilesCheck(d, res, message) {
+  const parts = [filesCheckHead(d)];
+  if (message) parts.push(el("p", message.error ? "error" : "msg", message.text));
+
+  const unused = el("section", "", el("h3", "", t("filesUnused", { n: res.unused.length })));
+  const boxes = [];
+  if (!res.unused.length) {
+    unused.append(el("p", "empty", t("filesNoUnused")));
+  } else {
+    const ul = el("ul", "files-list");
+    for (const f of res.unused) {
+      const cb = el("input");
+      cb.type = "checkbox";
+      cb.checked = !f.recent; // a recent file may belong to a note being edited
+      boxes.push({ cb, f });
+      const img = el("img", "thumb");
+      img.src = `${noteURL(f.note_id)}/files/${encodeURIComponent(f.name)}`;
+      img.alt = f.name;
+      img.loading = "lazy";
+      const meta = el("span", "files-meta", `${formatSize(f.size)} · ${formatTime(f.added_at)} · `, noteAnchor(f.note_id, f.title, d));
+      if (f.recent) meta.append(" · ", el("span", "recent", t("filesRecent")));
+      ul.append(el("li", "", el("label", "", cb, img, el("span", "files-info", el("span", "files-name", f.name), meta))));
+    }
+    unused.append(ul, el("div", "files-actions", button(t("filesDelete"), () => deleteUnusedFiles(boxes), { cls: "primary" })));
+  }
+  parts.push(unused);
+
+  const broken = el("section", "", el("h3", "", t("filesBroken", { n: res.broken.length })));
+  if (!res.broken.length) {
+    broken.append(el("p", "empty", t("filesNoBroken")));
+  } else {
+    const ul = el("ul", "files-list broken");
+    for (const b of res.broken) ul.append(el("li", "", el("code", "", b.path), " · ", noteAnchor(b.note_id, b.title, d)));
+    broken.append(ul);
+  }
+  parts.push(broken);
+  d.replaceChildren(...parts);
+}
+
+async function deleteUnusedFiles(boxes) {
+  const chosen = boxes.filter((b) => b.cb.checked).map((b) => b.f);
+  if (!chosen.length || !confirm(t("filesConfirmDelete", { n: chosen.length }))) return;
+  const errors = [];
+  for (const f of chosen) {
+    try {
+      await api(`${noteURL(f.note_id)}/files/${encodeURIComponent(f.name)}`, { method: "DELETE" });
+    } catch (e) {
+      errors.push(t("filesDeleteFailed", { path: f.path, error: e.message }));
+    }
+  }
+  const deleted = chosen.length - errors.length;
+  openFilesCheck(errors.length
+    ? { text: [t("filesDeleted", { n: deleted }), ...errors].join(" "), error: true }
+    : { text: t("filesDeleted", { n: deleted }) });
+}
+
 function askConflict() {
   const d = $("conflict");
   d.returnValue = "cancel";
@@ -1043,6 +1219,14 @@ function noteChangedElsewhere(type) {
     ? t("bannerDeleted")
     : t("bannerChanged");
   b.hidden = false;
+}
+
+// A file dropped outside the editor would make the browser leave the page to
+// show it.
+for (const type of ["dragover", "drop"]) {
+  window.addEventListener(type, (e) => {
+    if (hasFiles(e.dataTransfer) && !e.defaultPrevented) e.preventDefault();
+  });
 }
 
 window.addEventListener("beforeunload", (e) => {
@@ -1111,6 +1295,30 @@ async function ask(question) {
 }
 
 $("ask-toggle").addEventListener("click", () => toggleAssistant());
+// Settings menu: the gear at the bottom of the left column.
+
+function toggleSettings(open = $("settings-menu").hidden) {
+  $("settings-menu").hidden = !open;
+  $("settings").setAttribute("aria-expanded", String(open));
+  if (open) $("settings-menu").querySelector("button").focus();
+}
+
+$("settings").addEventListener("click", () => toggleSettings());
+$("settings-menu").addEventListener("click", (e) => {
+  if (e.target.closest("button")) toggleSettings(false);
+});
+document.addEventListener("click", (e) => {
+  if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
+});
+$("settings-menu").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleSettings(false);
+    $("settings").focus();
+  }
+});
+$("files-check-open").addEventListener("click", () => openFilesCheck());
 $("ask-close").addEventListener("click", () => toggleAssistant(false));
 $("ask-clear").addEventListener("click", () => {
   askController?.abort();
@@ -1174,7 +1382,7 @@ $("search-form").addEventListener("submit", (e) => e.preventDefault());
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open) return;
+  if ($("conflict").open || $("files-check").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

@@ -20,7 +20,8 @@ import (
 // whose immediate subdirectories are watched as well.
 //
 // Changes are files with the extension ext in a subdirectory, and
-// subdirectories being created, removed or renamed. Bursts of events, such as
+// subdirectories being created, removed or renamed. Directories with an
+// extension, such as those holding the files of a note, are not watched. Bursts of events, such as
 // those from a git pull, result in a single call. Run blocks until ctx is done.
 // Watcher errors are passed to onErr.
 func Run(ctx context.Context, dir, ext string, debounce time.Duration, fn func(), onErr func(error), nested ...string) error {
@@ -60,7 +61,7 @@ func Run(ctx context.Context, dir, ext string, debounce time.Duration, fn func()
 				// A subdirectory was created, removed or renamed, or a file
 				// directly in a parent changed. Those directly under dir are
 				// not notes; those in a nested parent (the trash) are.
-				if ev.Op.Has(fsnotify.Create) {
+				if ev.Op.Has(fsnotify.Create) && !skipped(filepath.Base(ev.Name)) {
 					if fi, err := os.Stat(ev.Name); err == nil && fi.IsDir() {
 						if err := watchTree(w, ev.Name); err != nil {
 							onErr(err)
@@ -101,7 +102,7 @@ func watchTree(w *fsnotify.Watcher, dir string) error {
 		return err
 	}
 	for _, e := range entries {
-		if e.IsDir() && !hidden(e.Name()) {
+		if e.IsDir() && !hidden(e.Name()) && !skipped(e.Name()) {
 			if err := w.Add(filepath.Join(dir, e.Name())); err != nil {
 				return err
 			}
@@ -111,3 +112,8 @@ func watchTree(w *fsnotify.Watcher, dir string) error {
 }
 
 func hidden(name string) bool { return strings.HasPrefix(name, ".") }
+
+// skipped reports whether a directory is not watched: one with an extension,
+// such as the files of a note (<id>.assets), which holds no notes. Notebook
+// names have no dots.
+func skipped(name string) bool { return filepath.Ext(name) != "" }

@@ -19,6 +19,11 @@ import (
 //     (http.CrossOriginProtection, which checks Sec-Fetch-Site and Origin).
 //     Reads from other origins are not readable by their pages anyway, as the
 //     server sends no CORS headers.
+//   - Responses carry Cross-Origin-Resource-Policy: same-origin, so that
+//     pages of other sites cannot load them either, such as the images of
+//     notes with <img>, whose sizes they could read; and
+//     X-Content-Type-Options: nosniff, so that the browser does not guess
+//     another content type.
 //
 // Requests without these browser headers, such as from the TUI, curl and MCP
 // clients, pass.
@@ -37,6 +42,9 @@ func Guard(next http.Handler, listenHost string) http.Handler {
 			http.Error(w, "unexpected Host header", http.StatusMisdirectedRequest)
 			return
 		}
+		h := w.Header()
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
+		h.Set("X-Content-Type-Options", "nosniff")
 		protected.ServeHTTP(w, r)
 	})
 }

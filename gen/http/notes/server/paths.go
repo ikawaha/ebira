@@ -89,6 +89,26 @@ func DeleteTrashedNotebookNotesPath(id string) string {
 	return fmt.Sprintf("/trash/notebooks/%v", id)
 }
 
+// AddFileNotesPath returns the URL path to the notes service add_file HTTP endpoint.
+func AddFileNotesPath(id string) string {
+	return fmt.Sprintf("/notes/%v/files", id)
+}
+
+// GetFileNotesPath returns the URL path to the notes service get_file HTTP endpoint.
+func GetFileNotesPath(id string, name string) string {
+	return fmt.Sprintf("/notes/%v/files/%v", id, name)
+}
+
+// DeleteFileNotesPath returns the URL path to the notes service delete_file HTTP endpoint.
+func DeleteFileNotesPath(id string, name string) string {
+	return fmt.Sprintf("/notes/%v/files/%v", id, name)
+}
+
+// CheckFilesNotesPath returns the URL path to the notes service check_files HTTP endpoint.
+func CheckFilesNotesPath() string {
+	return "/files/check"
+}
+
 // EventsNotesPath returns the URL path to the notes service events HTTP endpoint.
 func EventsNotesPath() string {
 	return "/events"

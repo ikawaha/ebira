@@ -27,6 +27,12 @@
       <button type="button" role="tab" data-side="tags" data-i18n="tags" data-i18n-title="sideTitle"></button>
     </div>
     <ul id="notebooks"></ul>
+    <div class="side-foot">
+      <button type="button" id="settings" class="gear" aria-haspopup="menu" aria-expanded="false" aria-controls="settings-menu" data-i18n-title="settings" data-i18n-aria-label="settings">⚙</button>
+      <div class="menu" id="settings-menu" role="menu" hidden>
+        <button type="button" role="menuitem" id="files-check-open" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
+      </div>
+    </div>
   </nav>
   <section class="pane list" data-i18n-aria-label="notes">
     <div class="list-head">
@@ -68,5 +74,6 @@
     <button value="cancel" autofocus data-i18n="conflictCancel"></button>
   </form>
 </dialog>
+<dialog id="files-check" class="files-check" data-i18n-aria-label="filesCheck"></dialog>
 </body>
 </html>

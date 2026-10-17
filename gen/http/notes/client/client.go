@@ -14,6 +14,7 @@ import (
 	"mime"
 	"net/http"
 
+	notes "github.com/ikawaha/ebira/gen/notes"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )
@@ -76,6 +77,22 @@ type Client struct {
 	// delete_trashed_notebook endpoint.
 	DeleteTrashedNotebookDoer goahttp.Doer
 
+	// AddFile Doer is the HTTP client used to make requests to the add_file
+	// endpoint.
+	AddFileDoer goahttp.Doer
+
+	// GetFile Doer is the HTTP client used to make requests to the get_file
+	// endpoint.
+	GetFileDoer goahttp.Doer
+
+	// DeleteFile Doer is the HTTP client used to make requests to the delete_file
+	// endpoint.
+	DeleteFileDoer goahttp.Doer
+
+	// CheckFiles Doer is the HTTP client used to make requests to the check_files
+	// endpoint.
+	CheckFilesDoer goahttp.Doer
+
 	// Events Doer is the HTTP client used to make requests to the events endpoint.
 	EventsDoer goahttp.Doer
 
@@ -118,6 +135,10 @@ func NewClient(
 		TrashedNotebooksDoer:      doer,
 		RestoreNotebookDoer:       doer,
 		DeleteTrashedNotebookDoer: doer,
+		AddFileDoer:               doer,
+		GetFileDoer:               doer,
+		DeleteFileDoer:            doer,
+		CheckFilesDoer:            doer,
 		EventsDoer:                doer,
 		SyncDoer:                  doer,
 		RestoreResponseBody:       restoreBody,
@@ -482,6 +503,94 @@ func (c *Client) DeleteTrashedNotebook() goa.Endpoint {
 		resp, err := c.DeleteTrashedNotebookDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "delete_trashed_notebook", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// AddFile returns an endpoint that makes HTTP requests to the notes service
+// add_file server.
+func (c *Client) AddFile() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeAddFileRequest(c.encoder)
+		decodeResponse = DecodeAddFileResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildAddFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.AddFileDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "add_file", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// GetFile returns an endpoint that makes HTTP requests to the notes service
+// get_file server.
+func (c *Client) GetFile() goa.Endpoint {
+	var (
+		decodeResponse = DecodeGetFileResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildGetFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.GetFileDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "get_file", err)
+		}
+		res, err := decodeResponse(resp)
+		if err != nil {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				return nil, errors.Join(err, goahttp.ErrDecodingError("notes", "get_file", closeErr))
+			}
+			return nil, err
+		}
+		return &notes.GetFileResponseData{Result: res.(*notes.GetFileResult), Body: resp.Body}, nil
+	}
+}
+
+// DeleteFile returns an endpoint that makes HTTP requests to the notes service
+// delete_file server.
+func (c *Client) DeleteFile() goa.Endpoint {
+	var (
+		decodeResponse = DecodeDeleteFileResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildDeleteFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.DeleteFileDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "delete_file", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// CheckFiles returns an endpoint that makes HTTP requests to the notes service
+// check_files server.
+func (c *Client) CheckFiles() goa.Endpoint {
+	var (
+		decodeResponse = DecodeCheckFilesResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildCheckFilesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.CheckFilesDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "check_files", err)
 		}
 		return decodeResponse(resp)
 	}

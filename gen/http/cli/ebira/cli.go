@@ -24,7 +24,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|events|sync)",
+		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|add-file|get-file|delete-file|check-files|events|sync)",
 		"assistant ask",
 	}
 }
@@ -128,6 +128,21 @@ func ParseEndpoint(
 		notesDeleteTrashedNotebookFlags  = flag.NewFlagSet("delete-trashed-notebook", flag.ExitOnError)
 		notesDeleteTrashedNotebookIDFlag = new(cliStringFlag)
 
+		notesAddFileFlags      = flag.NewFlagSet("add-file", flag.ExitOnError)
+		notesAddFileIDFlag     = new(cliStringFlag)
+		notesAddFileNameFlag   = new(cliStringFlag)
+		notesAddFileStreamFlag = new(cliStringFlag)
+
+		notesGetFileFlags    = flag.NewFlagSet("get-file", flag.ExitOnError)
+		notesGetFileIDFlag   = new(cliStringFlag)
+		notesGetFileNameFlag = new(cliStringFlag)
+
+		notesDeleteFileFlags    = flag.NewFlagSet("delete-file", flag.ExitOnError)
+		notesDeleteFileIDFlag   = new(cliStringFlag)
+		notesDeleteFileNameFlag = new(cliStringFlag)
+
+		notesCheckFilesFlags = flag.NewFlagSet("check-files", flag.ExitOnError)
+
 		notesEventsFlags = flag.NewFlagSet("events", flag.ExitOnError)
 
 		notesSyncFlags = flag.NewFlagSet("sync", flag.ExitOnError)
@@ -163,6 +178,13 @@ func ParseEndpoint(
 	notesDeleteNotebookFlags.Var(notesDeleteNotebookIDFlag, "id", "Notebook ID")
 	notesRestoreNotebookFlags.Var(notesRestoreNotebookIDFlag, "id", "Notebook ID")
 	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookIDFlag, "id", "Notebook ID")
+	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID")
+	notesAddFileFlags.Var(notesAddFileNameFlag, "name", "")
+	notesAddFileFlags.Var(notesAddFileStreamFlag, "stream", "path to file containing the streamed request body")
+	notesGetFileFlags.Var(notesGetFileIDFlag, "id", "Note ID")
+	notesGetFileFlags.Var(notesGetFileNameFlag, "name", "File name")
+	notesDeleteFileFlags.Var(notesDeleteFileIDFlag, "id", "Note ID")
+	notesDeleteFileFlags.Var(notesDeleteFileNameFlag, "name", "File name")
 	assistantAskFlags.Var(assistantAskBodyFlag, "body", "")
 
 	notesFlags.Usage = notesUsage
@@ -182,6 +204,10 @@ func ParseEndpoint(
 	notesTrashedNotebooksFlags.Usage = notesTrashedNotebooksUsage
 	notesRestoreNotebookFlags.Usage = notesRestoreNotebookUsage
 	notesDeleteTrashedNotebookFlags.Usage = notesDeleteTrashedNotebookUsage
+	notesAddFileFlags.Usage = notesAddFileUsage
+	notesGetFileFlags.Usage = notesGetFileUsage
+	notesDeleteFileFlags.Usage = notesDeleteFileUsage
+	notesCheckFilesFlags.Usage = notesCheckFilesUsage
 	notesEventsFlags.Usage = notesEventsUsage
 	notesSyncFlags.Usage = notesSyncUsage
 
@@ -272,6 +298,18 @@ func ParseEndpoint(
 			case "delete-trashed-notebook":
 				epf = notesDeleteTrashedNotebookFlags
 
+			case "add-file":
+				epf = notesAddFileFlags
+
+			case "get-file":
+				epf = notesGetFileFlags
+
+			case "delete-file":
+				epf = notesDeleteFileFlags
+
+			case "check-files":
+				epf = notesCheckFilesFlags
+
 			case "events":
 				epf = notesEventsFlags
 
@@ -356,6 +394,24 @@ func ParseEndpoint(
 			case "delete-trashed-notebook":
 				endpoint = c.DeleteTrashedNotebook()
 				data, err = notesc.BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookIDFlag.value)
+			case "add-file":
+				endpoint = c.AddFile()
+				data, err = notesc.BuildAddFilePayload(notesAddFileIDFlag.value, notesAddFileNameFlag.value)
+				if err == nil {
+					if notesAddFileStreamFlag.value == nil {
+						err = fmt.Errorf("missing required flag --stream")
+					} else {
+						data, err = notesc.BuildAddFileStreamPayload(data, *notesAddFileStreamFlag.value)
+					}
+				}
+			case "get-file":
+				endpoint = c.GetFile()
+				data, err = notesc.BuildGetFilePayload(notesGetFileIDFlag.value, notesGetFileNameFlag.value)
+			case "delete-file":
+				endpoint = c.DeleteFile()
+				data, err = notesc.BuildDeleteFilePayload(notesDeleteFileIDFlag.value, notesDeleteFileNameFlag.value)
+			case "check-files":
+				endpoint = c.CheckFiles()
 			case "events":
 				endpoint = c.Events()
 			case "sync":
@@ -398,6 +454,10 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
 	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.`)
 	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes.`)
+	fmt.Fprintln(os.Stderr, `    add-file: Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.`)
+	fmt.Fprintln(os.Stderr, `    get-file: Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.`)
+	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it.`)
+	fmt.Fprintln(os.Stderr, `    check-files: Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.`)
 	fmt.Fprintln(os.Stderr, `    events: Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
 	fmt.Fprintln(os.Stderr, `    sync: Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
 	fmt.Fprintln(os.Stderr)
@@ -716,6 +776,84 @@ func notesDeleteTrashedNotebookUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"inbox\"")
+}
+
+func notesAddFileUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes add-file", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -name STRING")
+	fmt.Fprint(os.Stderr, " -stream STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -name STRING: `)
+	fmt.Fprintln(os.Stderr, `    -stream STRING: path to file containing the streamed request body`)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes add-file --id \"be4c1193735ee1\" --name \"Screen Shot.png\" --stream \"goa.png\"")
+}
+
+func notesGetFileUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes get-file", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -name STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -name STRING: File name`)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get-file --id \"be4c1193735ee1\" --name \"screenshot.png\"")
+}
+
+func notesDeleteFileUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes delete-file", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -name STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Delete a file of a note. The body may still refer to it.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -name STRING: File name`)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-file --id \"be4c1193735ee1\" --name \"screenshot.png\"")
+}
+
+func notesCheckFilesUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes check-files", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes check-files")
 }
 
 func notesEventsUsage() {

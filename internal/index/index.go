@@ -410,6 +410,26 @@ func notebookCond(notebook string, exclude []string) (string, []any) {
 	return `n.notebook NOT IN (?` + strings.Repeat(", ?", len(args)-1) + `)`, args
 }
 
+// Bodies calls fn with the ID, title and body of every note, including those
+// in the trash, in no particular order.
+func (ix *Index) Bodies(ctx context.Context, fn func(id, title, body string) error) error {
+	rows, err := ix.db.QueryContext(ctx, `SELECT id, title, body FROM notes`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, title, body string
+		if err := rows.Scan(&id, &title, &body); err != nil {
+			return err
+		}
+		if err := fn(id, title, body); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
+}
+
 // Counts returns the number of notes per notebook. The count of the trash is
 // of the notes deleted on their own (see TrashedNotebookCounts).
 func (ix *Index) Counts(ctx context.Context) (map[string]int, error) {

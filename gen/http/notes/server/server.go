@@ -8,7 +8,9 @@
 package server
 
 import (
+	"bufio"
 	"context"
+	"io"
 	"net/http"
 
 	notes "github.com/ikawaha/ebira/gen/notes"
@@ -35,6 +37,10 @@ type Server struct {
 	TrashedNotebooks      http.Handler
 	RestoreNotebook       http.Handler
 	DeleteTrashedNotebook http.Handler
+	AddFile               http.Handler
+	GetFile               http.Handler
+	DeleteFile            http.Handler
+	CheckFiles            http.Handler
 	Events                http.Handler
 	Sync                  http.Handler
 }
@@ -82,6 +88,10 @@ func New(
 			{"TrashedNotebooks", "GET", "/trash/notebooks"},
 			{"RestoreNotebook", "POST", "/trash/notebooks/{id}/restore"},
 			{"DeleteTrashedNotebook", "DELETE", "/trash/notebooks/{id}"},
+			{"AddFile", "POST", "/notes/{id}/files"},
+			{"GetFile", "GET", "/notes/{id}/files/{name}"},
+			{"DeleteFile", "DELETE", "/notes/{id}/files/{name}"},
+			{"CheckFiles", "GET", "/files/check"},
 			{"Events", "GET", "/events"},
 			{"Sync", "POST", "/sync"},
 		},
@@ -101,6 +111,10 @@ func New(
 		TrashedNotebooks:      NewTrashedNotebooksHandler(e.TrashedNotebooks, mux, decoder, encoder, errhandler, formatter),
 		RestoreNotebook:       NewRestoreNotebookHandler(e.RestoreNotebook, mux, decoder, encoder, errhandler, formatter),
 		DeleteTrashedNotebook: NewDeleteTrashedNotebookHandler(e.DeleteTrashedNotebook, mux, decoder, encoder, errhandler, formatter),
+		AddFile:               NewAddFileHandler(e.AddFile, mux, decoder, encoder, errhandler, formatter),
+		GetFile:               NewGetFileHandler(e.GetFile, mux, decoder, encoder, errhandler, formatter),
+		DeleteFile:            NewDeleteFileHandler(e.DeleteFile, mux, decoder, encoder, errhandler, formatter),
+		CheckFiles:            NewCheckFilesHandler(e.CheckFiles, mux, decoder, encoder, errhandler, formatter),
 		Events:                NewEventsHandler(e.Events, mux, decoder, encoder, errhandler, formatter),
 		Sync:                  NewSyncHandler(e.Sync, mux, decoder, encoder, errhandler, formatter),
 	}
@@ -127,6 +141,10 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.TrashedNotebooks = m(s.TrashedNotebooks)
 	s.RestoreNotebook = m(s.RestoreNotebook)
 	s.DeleteTrashedNotebook = m(s.DeleteTrashedNotebook)
+	s.AddFile = m(s.AddFile)
+	s.GetFile = m(s.GetFile)
+	s.DeleteFile = m(s.DeleteFile)
+	s.CheckFiles = m(s.CheckFiles)
 	s.Events = m(s.Events)
 	s.Sync = m(s.Sync)
 }
@@ -152,6 +170,10 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountTrashedNotebooksHandler(mux, h.TrashedNotebooks)
 	MountRestoreNotebookHandler(mux, h.RestoreNotebook)
 	MountDeleteTrashedNotebookHandler(mux, h.DeleteTrashedNotebook)
+	MountAddFileHandler(mux, h.AddFile)
+	MountGetFileHandler(mux, h.GetFile)
+	MountDeleteFileHandler(mux, h.DeleteFile)
+	MountCheckFilesHandler(mux, h.CheckFiles)
 	MountEventsHandler(mux, h.Events)
 	MountSyncHandler(mux, h.Sync)
 }
@@ -981,6 +1003,247 @@ func NewDeleteTrashedNotebookHandler(
 			return
 		}
 		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountAddFileHandler configures the mux to serve the "notes" service
+// "add_file" endpoint.
+func MountAddFileHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/notes/{id}/files", f)
+}
+
+// NewAddFileHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "add_file" endpoint.
+func NewAddFileHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeAddFileRequest(mux, decoder)
+		encodeResponse = EncodeAddFileResponse(encoder)
+		encodeError    = EncodeAddFileError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "add_file")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		data := &notes.AddFileRequestData{Payload: payload, Body: r.Body}
+		res, err := endpoint(ctx, data)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountGetFileHandler configures the mux to serve the "notes" service
+// "get_file" endpoint.
+func MountGetFileHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/notes/{id}/files/{name}", f)
+}
+
+// NewGetFileHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "get_file" endpoint.
+func NewGetFileHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeGetFileRequest(mux, decoder)
+		encodeResponse = EncodeGetFileResponse(encoder)
+		encodeError    = EncodeGetFileError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "get_file")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		o := res.(*notes.GetFileResponseData)
+		defer o.Body.Close()
+		if wt, ok := o.Body.(io.WriterTo); ok {
+			if err := encodeResponse(ctx, w, o.Result); err != nil {
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+				return
+			}
+			n, err := wt.WriteTo(w)
+			if err != nil {
+				if n == 0 {
+					if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+						errhandler(ctx, w, err)
+					}
+				} else {
+					http.NewResponseController(w).Flush()
+					panic(http.ErrAbortHandler) // too late to write an error
+				}
+			}
+			return
+		}
+		// handle immediate read error like a returned error
+		buf := bufio.NewReader(o.Body)
+		if _, err := buf.Peek(1); err != nil && err != io.EOF {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, o.Result); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if _, err := io.Copy(w, buf); err != nil {
+			http.NewResponseController(w).Flush()
+			panic(http.ErrAbortHandler) // too late to write an error
+		}
+	})
+}
+
+// MountDeleteFileHandler configures the mux to serve the "notes" service
+// "delete_file" endpoint.
+func MountDeleteFileHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("DELETE", "/notes/{id}/files/{name}", f)
+}
+
+// NewDeleteFileHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "delete_file" endpoint.
+func NewDeleteFileHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeDeleteFileRequest(mux, decoder)
+		encodeResponse = EncodeDeleteFileResponse(encoder)
+		encodeError    = EncodeDeleteFileError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "delete_file")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountCheckFilesHandler configures the mux to serve the "notes" service
+// "check_files" endpoint.
+func MountCheckFilesHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/files/check", f)
+}
+
+// NewCheckFilesHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "check_files" endpoint.
+func NewCheckFilesHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		encodeResponse = EncodeCheckFilesResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "check_files")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		var err error
+		res, err := endpoint(ctx, nil)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)

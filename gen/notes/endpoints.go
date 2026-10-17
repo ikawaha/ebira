@@ -9,6 +9,7 @@ package notes
 
 import (
 	"context"
+	"io"
 
 	goa "goa.design/goa/v3/pkg"
 )
@@ -36,8 +37,30 @@ type Endpoints struct {
 	DeleteAiNote          goa.Endpoint
 	CreateAiNotebook      goa.Endpoint
 	MakeNotebookPrivate   goa.Endpoint
+	AddFile               goa.Endpoint
+	GetFile               goa.Endpoint
+	DeleteFile            goa.Endpoint
+	CheckFiles            goa.Endpoint
 	Events                goa.Endpoint
 	Sync                  goa.Endpoint
+}
+
+// AddFileRequestData holds both the payload and the HTTP request body reader
+// of the "add_file" method.
+type AddFileRequestData struct {
+	// Payload is the method payload.
+	Payload *AddFilePayload
+	// Body streams the HTTP request body.
+	Body io.ReadCloser
+}
+
+// GetFileResponseData holds both the result and the HTTP response body reader
+// of the "get_file" method.
+type GetFileResponseData struct {
+	// Result is the method result.
+	Result *GetFileResult
+	// Body streams the HTTP response body.
+	Body io.ReadCloser
 }
 
 // EventsEndpointInput holds both the payload and the server stream of the
@@ -71,6 +94,10 @@ func NewEndpoints(s Service) *Endpoints {
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
 		MakeNotebookPrivate:   NewMakeNotebookPrivateEndpoint(s),
+		AddFile:               NewAddFileEndpoint(s),
+		GetFile:               NewGetFileEndpoint(s),
+		DeleteFile:            NewDeleteFileEndpoint(s),
+		CheckFiles:            NewCheckFilesEndpoint(s),
 		Events:                NewEventsEndpoint(s),
 		Sync:                  NewSyncEndpoint(s),
 	}
@@ -99,6 +126,10 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.DeleteAiNote = m(e.DeleteAiNote)
 	e.CreateAiNotebook = m(e.CreateAiNotebook)
 	e.MakeNotebookPrivate = m(e.MakeNotebookPrivate)
+	e.AddFile = m(e.AddFile)
+	e.GetFile = m(e.GetFile)
+	e.DeleteFile = m(e.DeleteFile)
+	e.CheckFiles = m(e.CheckFiles)
 	e.Events = m(e.Events)
 	e.Sync = m(e.Sync)
 }
@@ -287,6 +318,45 @@ func NewMakeNotebookPrivateEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*MakeNotebookPrivatePayload)
 		return nil, s.MakeNotebookPrivate(ctx, p)
+	}
+}
+
+// NewAddFileEndpoint returns an endpoint function that calls the method
+// "add_file" of service "notes".
+func NewAddFileEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*AddFileRequestData)
+		return s.AddFile(ctx, ep.Payload, ep.Body)
+	}
+}
+
+// NewGetFileEndpoint returns an endpoint function that calls the method
+// "get_file" of service "notes".
+func NewGetFileEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*GetFilePayload)
+		res, body, err := s.GetFile(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		return &GetFileResponseData{Result: res, Body: body}, nil
+	}
+}
+
+// NewDeleteFileEndpoint returns an endpoint function that calls the method
+// "delete_file" of service "notes".
+func NewDeleteFileEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*DeleteFilePayload)
+		return nil, s.DeleteFile(ctx, p)
+	}
+}
+
+// NewCheckFilesEndpoint returns an endpoint function that calls the method
+// "check_files" of service "notes".
+func NewCheckFilesEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.CheckFiles(ctx)
 	}
 }
 

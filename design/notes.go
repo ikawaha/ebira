@@ -83,6 +83,46 @@ var TagCount = Type("TagCount", func() {
 	RequiredAttribute("count", Int, "Number of notes with the tag")
 })
 
+// NoteFile is a file of a note, such as an image.
+var NoteFile = Type("NoteFile", func() {
+	RequiredAttribute("name", String, "File name", func() {
+		Example("screenshot.png")
+	})
+	RequiredAttribute("path", String, "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)", func() {
+		Example("be4c1193735ee1.assets/screenshot.png")
+	})
+})
+
+// UnusedFile is a file of a note that no note body refers to.
+var UnusedFile = Type("UnusedFile", func() {
+	RequiredAttribute("note_id", String, "ID of the note holding the file", noteIDDSL)
+	RequiredAttribute("title", String, "Title of the note holding the file")
+	RequiredAttribute("name", String, "File name", func() {
+		Example("screenshot.png")
+	})
+	RequiredAttribute("path", String, "Path of the file relative to the note file", func() {
+		Example("be4c1193735ee1.assets/screenshot.png")
+	})
+	RequiredAttribute("size", Int64, "Size in bytes")
+	RequiredAttribute("added_at", String, "Last modification time of the file, usually when it was added", timeDSL)
+	RequiredAttribute("recent", Boolean, "Whether the file was added within the last hour, such as to a note still being edited, whose body does not refer to it until saved")
+})
+
+// BrokenFileRef is a reference in a note body to a file that does not exist.
+var BrokenFileRef = Type("BrokenFileRef", func() {
+	RequiredAttribute("note_id", String, "ID of the note whose body has the reference", noteIDDSL)
+	RequiredAttribute("title", String, "Title of the note whose body has the reference")
+	RequiredAttribute("path", String, "The path referred to", func() {
+		Example("be4c1193735ee1.assets/screenshot.png")
+	})
+})
+
+// FileCheck is the result of checking the files of notes against the bodies.
+var FileCheck = Type("FileCheck", func() {
+	RequiredAttribute("unused", ArrayOf(UnusedFile), "Files that no note body, including those in the trash, refers to, sorted by note and name")
+	RequiredAttribute("broken", ArrayOf(BrokenFileRef), "References to files that do not exist, sorted by note and path")
+})
+
 // NoteList is a page of a note list.
 var NoteList = Type("NoteList", func() {
 	RequiredAttribute("total", Int, "Number of notes in the whole list, regardless of limit and offset")
@@ -144,7 +184,9 @@ var _ = Service("notes", func() {
 	//   - They may make any notebook they can see private at any time
 	//     (make_notebook_private), which only takes access away from them.
 	// Never add Tool to create_notebook or save_notebook, which set any kind,
-	// or to create, update and delete, which are for people. TestMCPTools in
+	// or to create, update and delete, which are for people. The files of
+	// notes (add_file, get_file, delete_file, check_files) are for people too
+	// for now. TestMCPTools in
 	// internal/service lists the allowed tools.
 	MCP("ebira", "0.1.0")
 	JSONRPC(func() { POST("/mcp") })
@@ -554,6 +596,87 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The notebook does not exist, or is not in the notebook list of the client")
 		Error("bad_request", ErrorResult, "The notebook is the trash")
 		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this")
+	})
+
+	// The files of a note, such as images, are kept next to the note file in
+	// notes/<notebook>/<id>.assets/ and move with the note.
+	Method("add_file", func() {
+		Description("Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("name", String, "File name, such as the name of the uploaded file", func() {
+				MinLength(1)
+				MaxLength(255)
+				Example("Screen Shot.png")
+			})
+		})
+		Result(NoteFile)
+		Error("not_found", ErrorResult, "The note does not exist")
+		Error("bad_request", ErrorResult, "The file is not a supported image, or the note ID is used in more than one notebook")
+		Error("too_large", ErrorResult, "The file is larger than 10 MB")
+		HTTP(func() {
+			POST("/notes/{id}/files")
+			Param("name")
+			SkipRequestBodyEncodeDecode()
+			Response(StatusCreated)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+			Response("too_large", StatusRequestEntityTooLarge)
+		})
+	})
+
+	Method("get_file", func() {
+		Description("Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("name", String, "File name", func() {
+				Example("screenshot.png")
+			})
+		})
+		Result(func() {
+			RequiredAttribute("content_type", String, "Content type of the file", func() {
+				Example("image/png")
+			})
+			RequiredAttribute("length", Int64, "Size of the file in bytes")
+		})
+		Error("not_found", ErrorResult, "The note or the file does not exist, or the file is not of an accepted type")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		HTTP(func() {
+			GET("/notes/{id}/files/{name}")
+			SkipResponseBodyEncodeDecode()
+			Response(StatusOK, func() {
+				Header("content_type:Content-Type")
+				Header("length:Content-Length")
+			})
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("delete_file", func() {
+		Description("Delete a file of a note. The body may still refer to it.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("name", String, "File name", func() {
+				Example("screenshot.png")
+			})
+		})
+		Error("not_found", ErrorResult, "The note or the file does not exist")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		HTTP(func() {
+			DELETE("/notes/{id}/files/{name}")
+			Response(StatusNoContent)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("check_files", func() {
+		Description("Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.")
+		Result(FileCheck)
+		HTTP(func() {
+			GET("/files/check")
+		})
 	})
 
 	Method("events", func() {

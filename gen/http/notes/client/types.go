@@ -349,6 +349,26 @@ type RestoreNotebookResponseBody struct {
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
 }
 
+// AddFileResponseBody is the type of the "notes" service "add_file" endpoint
+// HTTP response body.
+type AddFileResponseBody struct {
+	// File name
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+}
+
+// CheckFilesResponseBody is the type of the "notes" service "check_files"
+// endpoint HTTP response body.
+type CheckFilesResponseBody struct {
+	// Files that no note body, including those in the trash, refers to, sorted by
+	// note and name
+	Unused []*UnusedFileResponseBody `form:"unused,omitempty" json:"unused,omitempty" xml:"unused,omitempty"`
+	// References to files that do not exist, sorted by note and path
+	Broken []*BrokenFileRefResponseBody `form:"broken,omitempty" json:"broken,omitempty" xml:"broken,omitempty"`
+}
+
 // EventsResponseBody is the type of the "notes" service "events" endpoint HTTP
 // response body.
 type EventsResponseBody struct {
@@ -880,6 +900,132 @@ type DeleteTrashedNotebookBadRequestResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// AddFileNotFoundResponseBody is the type of the "notes" service "add_file"
+// endpoint HTTP response body for the "not_found" error.
+type AddFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// AddFileBadRequestResponseBody is the type of the "notes" service "add_file"
+// endpoint HTTP response body for the "bad_request" error.
+type AddFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// AddFileTooLargeResponseBody is the type of the "notes" service "add_file"
+// endpoint HTTP response body for the "too_large" error.
+type AddFileTooLargeResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// GetFileNotFoundResponseBody is the type of the "notes" service "get_file"
+// endpoint HTTP response body for the "not_found" error.
+type GetFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// GetFileBadRequestResponseBody is the type of the "notes" service "get_file"
+// endpoint HTTP response body for the "bad_request" error.
+type GetFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeleteFileNotFoundResponseBody is the type of the "notes" service
+// "delete_file" endpoint HTTP response body for the "not_found" error.
+type DeleteFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeleteFileBadRequestResponseBody is the type of the "notes" service
+// "delete_file" endpoint HTTP response body for the "bad_request" error.
+type DeleteFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // NoteSummaryResponseBody is used to define fields on response body types.
 type NoteSummaryResponseBody struct {
 	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
@@ -963,6 +1109,35 @@ type TrashedNotebookResponse struct {
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// Number of notes
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+}
+
+// UnusedFileResponseBody is used to define fields on response body types.
+type UnusedFileResponseBody struct {
+	// ID of the note holding the file
+	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// Title of the note holding the file
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// File name
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Path of the file relative to the note file
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// Size in bytes
+	Size *int64 `form:"size,omitempty" json:"size,omitempty" xml:"size,omitempty"`
+	// Last modification time of the file, usually when it was added
+	AddedAt *string `form:"added_at,omitempty" json:"added_at,omitempty" xml:"added_at,omitempty"`
+	// Whether the file was added within the last hour, such as to a note still
+	// being edited, whose body does not refer to it until saved
+	Recent *bool `form:"recent,omitempty" json:"recent,omitempty" xml:"recent,omitempty"`
+}
+
+// BrokenFileRefResponseBody is used to define fields on response body types.
+type BrokenFileRefResponseBody struct {
+	// ID of the note whose body has the reference
+	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// Title of the note whose body has the reference
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// The path referred to
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
 }
 
 // NewCreateRequestBody builds the HTTP request body from the payload of the
@@ -1792,6 +1967,153 @@ func NewDeleteTrashedNotebookBadRequest(body *DeleteTrashedNotebookBadRequestRes
 	return v
 }
 
+// NewAddFileNoteFileCreated builds a "notes" service "add_file" endpoint
+// result from a HTTP "Created" response.
+func NewAddFileNoteFileCreated(body *AddFileResponseBody) *notes.NoteFile {
+	v := &notes.NoteFile{
+		Name: *body.Name,
+		Path: *body.Path,
+	}
+
+	return v
+}
+
+// NewAddFileNotFound builds a notes service add_file endpoint not_found error.
+func NewAddFileNotFound(body *AddFileNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewAddFileBadRequest builds a notes service add_file endpoint bad_request
+// error.
+func NewAddFileBadRequest(body *AddFileBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewAddFileTooLarge builds a notes service add_file endpoint too_large error.
+func NewAddFileTooLarge(body *AddFileTooLargeResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewGetFileResultOK builds a "notes" service "get_file" endpoint result from
+// a HTTP "OK" response.
+func NewGetFileResultOK(contentType string, length int64) *notes.GetFileResult {
+	v := &notes.GetFileResult{}
+	v.ContentType = contentType
+	v.Length = length
+
+	return v
+}
+
+// NewGetFileNotFound builds a notes service get_file endpoint not_found error.
+func NewGetFileNotFound(body *GetFileNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewGetFileBadRequest builds a notes service get_file endpoint bad_request
+// error.
+func NewGetFileBadRequest(body *GetFileBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeleteFileNotFound builds a notes service delete_file endpoint not_found
+// error.
+func NewDeleteFileNotFound(body *DeleteFileNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeleteFileBadRequest builds a notes service delete_file endpoint
+// bad_request error.
+func NewDeleteFileBadRequest(body *DeleteFileBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewCheckFilesFileCheckOK builds a "notes" service "check_files" endpoint
+// result from a HTTP "OK" response.
+func NewCheckFilesFileCheckOK(body *CheckFilesResponseBody) *notes.FileCheck {
+	v := &notes.FileCheck{}
+	v.Unused = make([]*notes.UnusedFile, len(body.Unused))
+	for i, val := range body.Unused {
+		if val == nil {
+			v.Unused[i] = nil
+			continue
+		}
+		v.Unused[i] = unmarshalUnusedFileResponseBodyToNotesUnusedFile(val)
+	}
+	v.Broken = make([]*notes.BrokenFileRef, len(body.Broken))
+	for i, val := range body.Broken {
+		if val == nil {
+			v.Broken[i] = nil
+			continue
+		}
+		v.Broken[i] = unmarshalBrokenFileRefResponseBodyToNotesBrokenFileRef(val)
+	}
+
+	return v
+}
+
 // NewEventsNoteEventOK builds a "notes" service "events" endpoint result from
 // a HTTP "OK" response.
 func NewEventsNoteEventOK(body *EventsResponseBody) *notes.NoteEvent {
@@ -2294,6 +2616,44 @@ func ValidateRestoreNotebookResponseBody(body *RestoreNotebookResponseBody) (err
 	if body.Sort != nil {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
+		}
+	}
+	return
+}
+
+// ValidateAddFileResponseBody runs the validations defined on
+// AddFileResponseBody
+func ValidateAddFileResponseBody(body *AddFileResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	return
+}
+
+// ValidateCheckFilesResponseBody runs the validations defined on
+// CheckFilesResponseBody
+func ValidateCheckFilesResponseBody(body *CheckFilesResponseBody) (err error) {
+	if body.Unused == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unused", "body"))
+	}
+	if body.Broken == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("broken", "body"))
+	}
+	for _, e := range body.Unused {
+		if e != nil {
+			if err2 := validateUnusedFileResponseBody(e, "body.unused[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.Broken {
+		if e != nil {
+			if err2 := validateBrokenFileRefResponseBody(e, "body.broken[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 	return
@@ -3004,6 +3364,174 @@ func ValidateDeleteTrashedNotebookBadRequestResponseBody(body *DeleteTrashedNote
 	return
 }
 
+// ValidateAddFileNotFoundResponseBody runs the validations defined on
+// AddFileNotFoundResponseBody
+func ValidateAddFileNotFoundResponseBody(body *AddFileNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateAddFileBadRequestResponseBody runs the validations defined on
+// AddFileBadRequestResponseBody
+func ValidateAddFileBadRequestResponseBody(body *AddFileBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateAddFileTooLargeResponseBody runs the validations defined on
+// AddFileTooLargeResponseBody
+func ValidateAddFileTooLargeResponseBody(body *AddFileTooLargeResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateGetFileNotFoundResponseBody runs the validations defined on
+// GetFileNotFoundResponseBody
+func ValidateGetFileNotFoundResponseBody(body *GetFileNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateGetFileBadRequestResponseBody runs the validations defined on
+// GetFileBadRequestResponseBody
+func ValidateGetFileBadRequestResponseBody(body *GetFileBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeleteFileNotFoundResponseBody runs the validations defined on
+// DeleteFileNotFoundResponseBody
+func ValidateDeleteFileNotFoundResponseBody(body *DeleteFileNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeleteFileBadRequestResponseBody runs the validations defined on
+// DeleteFileBadRequestResponseBody
+func ValidateDeleteFileBadRequestResponseBody(body *DeleteFileBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateNoteSummaryResponseBody runs the validations defined on NoteSummary
 func ValidateNoteSummaryResponseBody(body *NoteSummaryResponseBody) (err error) {
 	if body.ID == nil {
@@ -3292,6 +3820,107 @@ func validateTrashedNotebookResponse(body *TrashedNotebookResponse, path string)
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
 		}
+	}
+	return
+}
+
+// ValidateUnusedFileResponseBody runs the validations defined on UnusedFile
+func ValidateUnusedFileResponseBody(body *UnusedFileResponseBody) (err error) {
+	if body.NoteID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note_id", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", "body"))
+	}
+	if body.AddedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("added_at", "body"))
+	}
+	if body.Recent == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("recent", "body"))
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.AddedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.added_at", *body.AddedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// validateUnusedFileResponseBody checks UnusedFile and reports errors using
+// the path supplied by its caller
+func validateUnusedFileResponseBody(body *UnusedFileResponseBody, path string) (err error) {
+	if body.NoteID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note_id", path))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", path))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", path))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", path))
+	}
+	if body.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", path))
+	}
+	if body.AddedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("added_at", path))
+	}
+	if body.Recent == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("recent", path))
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.AddedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".added_at", *body.AddedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// ValidateBrokenFileRefResponseBody runs the validations defined on
+// BrokenFileRef
+func ValidateBrokenFileRefResponseBody(body *BrokenFileRefResponseBody) (err error) {
+	if body.NoteID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note_id", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// validateBrokenFileRefResponseBody checks BrokenFileRef and reports errors
+// using the path supplied by its caller
+func validateBrokenFileRefResponseBody(body *BrokenFileRefResponseBody, path string) (err error) {
+	if body.NoteID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note_id", path))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", path))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", path))
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }

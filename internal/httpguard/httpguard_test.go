@@ -41,6 +41,14 @@ func TestGuard(t *testing.T) {
 			if rec.Code != tt.want {
 				t.Errorf("status = %d, want %d", rec.Code, tt.want)
 			}
+			if rec.Code == http.StatusNoContent {
+				if got := rec.Header().Get("Cross-Origin-Resource-Policy"); got != "same-origin" {
+					t.Errorf("Cross-Origin-Resource-Policy = %q", got)
+				}
+				if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+					t.Errorf("X-Content-Type-Options = %q", got)
+				}
+			}
 		})
 	}
 }

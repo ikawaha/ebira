@@ -77,6 +77,46 @@ paths:
                                             - notebooks
                                 required:
                                     - data
+    /files/check:
+        get:
+            tags:
+                - notes
+            summary: check_files notes
+            description: 'Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.'
+            operationId: notes#check_files
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FileCheck'
+                            example:
+                                broken:
+                                    - note_id: be4c1193735ee1
+                                      path: be4c1193735ee1.assets/screenshot.png
+                                      title: Aut eligendi aperiam soluta sunt impedit nihil.
+                                    - note_id: be4c1193735ee1
+                                      path: be4c1193735ee1.assets/screenshot.png
+                                      title: Aut eligendi aperiam soluta sunt impedit nihil.
+                                    - note_id: be4c1193735ee1
+                                      path: be4c1193735ee1.assets/screenshot.png
+                                      title: Aut eligendi aperiam soluta sunt impedit nihil.
+                                unused:
+                                    - added_at: "2026-10-16T09:30:00Z"
+                                      name: screenshot.png
+                                      note_id: be4c1193735ee1
+                                      path: be4c1193735ee1.assets/screenshot.png
+                                      recent: false
+                                      size: 4123840254599638639
+                                      title: Nesciunt nisi velit sed.
+                                    - added_at: "2026-10-16T09:30:00Z"
+                                      name: screenshot.png
+                                      note_id: be4c1193735ee1
+                                      path: be4c1193735ee1.assets/screenshot.png
+                                      recent: false
+                                      size: 4123840254599638639
+                                      title: Nesciunt nisi velit sed.
     /notebooks:
         get:
             tags:
@@ -874,6 +914,217 @@ paths:
                                 name: precondition_failed
                                 temporary: false
                                 timeout: false
+    /notes/{id}/files:
+        post:
+            tags:
+                - notes
+            summary: add_file notes
+            description: 'Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.'
+            operationId: notes#add_file
+            parameters:
+                - name: name
+                  in: query
+                  description: File name, such as the name of the uploaded file
+                  allowEmptyValue: true
+                  required: true
+                  schema:
+                    type: string
+                    description: File name, such as the name of the uploaded file
+                    example: Screen Shot.png
+                    minLength: 1
+                    maxLength: 255
+                  example: Screen Shot.png
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Note ID
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+            responses:
+                "201":
+                    description: Created response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NoteFile'
+                            example:
+                                name: screenshot.png
+                                path: be4c1193735ee1.assets/screenshot.png
+                "400":
+                    description: 'bad_request: The file is not a supported image, or the note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "413":
+                    description: 'too_large: The file is larger than 10 MB'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: too_large
+                                temporary: false
+                                timeout: false
+    /notes/{id}/files/{name}:
+        delete:
+            tags:
+                - notes
+            summary: delete_file notes
+            description: Delete a file of a note. The body may still refer to it.
+            operationId: notes#delete_file
+            parameters:
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Note ID
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+                - name: name
+                  in: path
+                  description: File name
+                  required: true
+                  schema:
+                    type: string
+                    description: File name
+                    example: screenshot.png
+                  example: screenshot.png
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note or the file does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+        get:
+            tags:
+                - notes
+            summary: get_file notes
+            description: Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.
+            operationId: notes#get_file
+            parameters:
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Note ID
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+                - name: name
+                  in: path
+                  description: File name
+                  required: true
+                  schema:
+                    type: string
+                    description: File name
+                    example: screenshot.png
+                  example: screenshot.png
+            responses:
+                "200":
+                    description: OK response.
+                    headers:
+                        Content-Length:
+                            description: Size of the file in bytes
+                            schema:
+                                type: integer
+                                description: Size of the file in bytes
+                                example: 3161703728662159589
+                                format: int64
+                            example: 3161703728662159589
+                        Content-Type:
+                            description: Content type of the file
+                            schema:
+                                type: string
+                                description: Content type of the file
+                                example: image/png
+                            example: image/png
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note or the file does not exist, or the file is not of an accepted type'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
     /notes/{id}/move:
         post:
             tags:
@@ -1468,6 +1719,30 @@ components:
                 answer: Quia molestiae nesciunt qui dignissimos vel.
             required:
                 - answer
+        BrokenFileRef:
+            type: object
+            properties:
+                note_id:
+                    type: string
+                    description: ID of the note whose body has the reference
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                path:
+                    type: string
+                    description: The path referred to
+                    example: be4c1193735ee1.assets/screenshot.png
+                title:
+                    type: string
+                    description: Title of the note whose body has the reference
+                    example: Aut eligendi aperiam soluta sunt impedit nihil.
+            example:
+                note_id: be4c1193735ee1
+                path: be4c1193735ee1.assets/screenshot.png
+                title: Aut eligendi aperiam soluta sunt impedit nihil.
+            required:
+                - note_id
+                - title
+                - path
         CreateNotebookRequestBody:
             type: object
             properties:
@@ -1587,6 +1862,73 @@ components:
                 - temporary
                 - timeout
                 - fault
+        FileCheck:
+            type: object
+            properties:
+                broken:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BrokenFileRef'
+                    description: References to files that do not exist, sorted by note and path
+                    example:
+                        - note_id: be4c1193735ee1
+                          path: be4c1193735ee1.assets/screenshot.png
+                          title: Aut eligendi aperiam soluta sunt impedit nihil.
+                        - note_id: be4c1193735ee1
+                          path: be4c1193735ee1.assets/screenshot.png
+                          title: Aut eligendi aperiam soluta sunt impedit nihil.
+                        - note_id: be4c1193735ee1
+                          path: be4c1193735ee1.assets/screenshot.png
+                          title: Aut eligendi aperiam soluta sunt impedit nihil.
+                unused:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/UnusedFile'
+                    description: Files that no note body, including those in the trash, refers to, sorted by note and name
+                    example:
+                        - added_at: "2026-10-16T09:30:00Z"
+                          name: screenshot.png
+                          note_id: be4c1193735ee1
+                          path: be4c1193735ee1.assets/screenshot.png
+                          recent: false
+                          size: 4123840254599638639
+                          title: Nesciunt nisi velit sed.
+                        - added_at: "2026-10-16T09:30:00Z"
+                          name: screenshot.png
+                          note_id: be4c1193735ee1
+                          path: be4c1193735ee1.assets/screenshot.png
+                          recent: false
+                          size: 4123840254599638639
+                          title: Nesciunt nisi velit sed.
+            example:
+                broken:
+                    - note_id: be4c1193735ee1
+                      path: be4c1193735ee1.assets/screenshot.png
+                      title: Aut eligendi aperiam soluta sunt impedit nihil.
+                    - note_id: be4c1193735ee1
+                      path: be4c1193735ee1.assets/screenshot.png
+                      title: Aut eligendi aperiam soluta sunt impedit nihil.
+                    - note_id: be4c1193735ee1
+                      path: be4c1193735ee1.assets/screenshot.png
+                      title: Aut eligendi aperiam soluta sunt impedit nihil.
+                unused:
+                    - added_at: "2026-10-16T09:30:00Z"
+                      name: screenshot.png
+                      note_id: be4c1193735ee1
+                      path: be4c1193735ee1.assets/screenshot.png
+                      recent: false
+                      size: 4123840254599638639
+                      title: Nesciunt nisi velit sed.
+                    - added_at: "2026-10-16T09:30:00Z"
+                      name: screenshot.png
+                      note_id: be4c1193735ee1
+                      path: be4c1193735ee1.assets/screenshot.png
+                      recent: false
+                      size: 4123840254599638639
+                      title: Nesciunt nisi velit sed.
+            required:
+                - unused
+                - broken
         MoveRequestBody:
             type: object
             properties:
@@ -1744,6 +2086,23 @@ components:
                 type: updated
             required:
                 - type
+        NoteFile:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: File name
+                    example: screenshot.png
+                path:
+                    type: string
+                    description: Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)
+                    example: be4c1193735ee1.assets/screenshot.png
+            example:
+                name: screenshot.png
+                path: be4c1193735ee1.assets/screenshot.png
+            required:
+                - name
+                - path
         NoteList:
             type: object
             properties:
@@ -2413,6 +2772,56 @@ components:
                 - name
                 - kind
                 - count
+        UnusedFile:
+            type: object
+            properties:
+                added_at:
+                    type: string
+                    description: Last modification time of the file, usually when it was added
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                name:
+                    type: string
+                    description: File name
+                    example: screenshot.png
+                note_id:
+                    type: string
+                    description: ID of the note holding the file
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                path:
+                    type: string
+                    description: Path of the file relative to the note file
+                    example: be4c1193735ee1.assets/screenshot.png
+                recent:
+                    type: boolean
+                    description: Whether the file was added within the last hour, such as to a note still being edited, whose body does not refer to it until saved
+                    example: false
+                size:
+                    type: integer
+                    description: Size in bytes
+                    example: 4123840254599638639
+                    format: int64
+                title:
+                    type: string
+                    description: Title of the note holding the file
+                    example: Nesciunt nisi velit sed.
+            example:
+                added_at: "2026-10-16T09:30:00Z"
+                name: screenshot.png
+                note_id: be4c1193735ee1
+                path: be4c1193735ee1.assets/screenshot.png
+                recent: false
+                size: 4123840254599638639
+                title: Nesciunt nisi velit sed.
+            required:
+                - note_id
+                - title
+                - name
+                - path
+                - size
+                - added_at
+                - recent
         UpdateRequestBody:
             type: object
             properties:
