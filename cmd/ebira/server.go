@@ -6,12 +6,15 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
 )
 
@@ -35,7 +38,7 @@ func runServer(args []string) error {
 		return serverRestart(ctx, args[1:])
 	case "stop", "status":
 		fs := flag.NewFlagSet("server "+args[0], flag.ContinueOnError)
-		dataDir := fs.String("data-dir", ".", "data directory of the server")
+		dataDir := fs.String("data-dir", defaultDataDir(), "data directory of the server")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -64,7 +67,7 @@ func serverStart(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	if running, err := daemon.Running(stateDir(dir)); err != nil {
+	if _, running, err := serverDir(dir); err != nil {
 		return err
 	} else if running {
 		fmt.Println("The server is already running.")
@@ -90,8 +93,7 @@ func serverRestart(ctx context.Context, args []string) error {
 		return err
 	}
 	flags := setFlags(fs)
-	sd := stateDir(dir)
-	running, err := daemon.Running(sd)
+	sd, running, err := serverDir(dir)
 	if err != nil {
 		return err
 	}
@@ -145,8 +147,11 @@ func startWithFlags(ctx context.Context, dir string, flags []string) error {
 // startServer starts ebira serve with serveArgs in the background and waits
 // until it answers on addr.
 func startServer(ctx context.Context, dir, addr string, serveArgs []string, out io.Writer) (daemon.State, error) {
-	sd := stateDir(dir)
-	if err := os.MkdirAll(sd, 0o755); err != nil {
+	sd, err := stateDir(dir)
+	if err != nil {
+		return daemon.State{}, err
+	}
+	if err := config.Prepare(sd, dir); err != nil {
 		return daemon.State{}, err
 	}
 	exe, err := os.Executable()
@@ -183,19 +188,20 @@ func startServer(ctx context.Context, dir, addr string, serveArgs []string, out 
 // waitServer waits until the running server of dir answers, as it may still
 // be starting, and returns its state.
 func waitServer(ctx context.Context, dir string, out io.Writer) (daemon.State, error) {
-	sd := stateDir(dir)
 	deadline := time.Now().Add(startTimeout)
 	noticed := false
 	for {
+		sd, running, err := serverDir(dir)
+		if err != nil {
+			return daemon.State{}, err
+		}
 		// server.json appears once the server listens.
 		if st, err := daemon.ReadState(sd); err == nil {
 			if s, err := daemon.Health(ctx, st.Addr); err == nil && s.PID == st.PID {
 				return s, nil
 			}
 		}
-		if running, err := daemon.Running(sd); err != nil {
-			return daemon.State{}, err
-		} else if !running {
+		if !running {
 			return daemon.State{}, errors.New("the server stopped")
 		}
 		if time.Now().After(deadline) {
@@ -211,8 +217,7 @@ func waitServer(ctx context.Context, dir string, out io.Writer) (daemon.State, e
 
 // stopServer stops the server of dir and waits until it has shut down.
 func stopServer(ctx context.Context, dir string, out io.Writer) error {
-	sd := stateDir(dir)
-	running, err := daemon.Running(sd)
+	sd, running, err := serverDir(dir)
 	if err != nil {
 		return err
 	}
@@ -244,8 +249,7 @@ func stopServer(ctx context.Context, dir string, out io.Writer) error {
 
 // serverStatus prints the state of the server of dir.
 func serverStatus(ctx context.Context, dir string, out io.Writer) error {
-	sd := stateDir(dir)
-	running, err := daemon.Running(sd)
+	sd, running, err := serverDir(dir)
 	if err != nil {
 		return err
 	}
@@ -276,8 +280,71 @@ func absDir(dataDir string) (string, error) {
 	return filepath.Abs(dataDir)
 }
 
-// stateDir returns the state directory of the data directory dir.
-func stateDir(dir string) string { return filepath.Join(dir, ".ebira") }
+// stateDir returns the state directory of the data directory dir: the
+// server's lock, server.json and log.
+func stateDir(dir string) (string, error) { return config.StateDir(dir) }
+
+// legacyDir returns the directory in the data directory dir where earlier
+// builds kept the state and the index.
+func legacyDir(dir string) string { return filepath.Join(dir, ".ebira") }
+
+// legacyFiles are the files that earlier builds kept in legacyDir.
+var legacyFiles = []string{
+	daemon.LockFile, daemon.StateFile, daemon.LogFile,
+	"index.sqlite", "index.sqlite-wal", "index.sqlite-shm", "index.sqlite-journal",
+}
+
+// removeLegacyDir removes legacyDir of the data directory dir when it holds
+// only the files of earlier builds; the index is built again in the cache
+// directory. It fails while a server of an earlier build runs there, so that
+// two servers do not run for one data directory.
+func removeLegacyDir(dir string) error {
+	old := legacyDir(dir)
+	entries, err := os.ReadDir(old)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if running, err := daemon.Running(old); err != nil {
+		return err
+	} else if running {
+		return fmt.Errorf("%w (%s, by an earlier build); stop it with ebira server stop", daemon.ErrRunning, dir)
+	}
+	for _, e := range entries {
+		if !slices.Contains(legacyFiles, e.Name()) {
+			slog.Warn("not removing the directory of earlier builds, which has other files", "dir", old, "file", e.Name())
+			return nil
+		}
+	}
+	if err := os.RemoveAll(old); err != nil {
+		return err
+	}
+	slog.Info("removed the directory of earlier builds; the index is now in the cache directory", "dir", old)
+	return nil
+}
+
+// serverDir returns the state directory of the server of the data directory
+// dir and whether the server runs. A server of an earlier build, which kept
+// its state in legacyDir, is found too, so that it can be stopped or
+// restarted with this build.
+func serverDir(dir string) (string, bool, error) {
+	sd, err := stateDir(dir)
+	if err != nil {
+		return "", false, err
+	}
+	if running, err := daemon.Running(sd); err != nil || running {
+		return sd, running, err
+	}
+	old := legacyDir(dir)
+	if running, err := daemon.Running(old); err != nil {
+		return "", false, err
+	} else if running {
+		return old, true, nil
+	}
+	return sd, false, nil
+}
 
 // tail returns the last n lines of the file at path.
 func tail(path string, n int) string {

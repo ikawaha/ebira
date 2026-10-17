@@ -13,14 +13,31 @@
 //
 // One server runs per data directory; the server started in the background
 // keeps running after the TUI exits or the browser closes.
+//
+// The settings file (see internal/config) gives the defaults of the flags,
+// such as the data directory.
 package main
 
 import (
+	"cmp"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/ikawaha/ebira/internal/config"
 )
+
+// settings is the settings file, read by run before the flags.
+var settings config.Config
+
+// defaultDataDir returns the default of -data-dir: data_dir of the settings
+// file, else the current directory.
+func defaultDataDir() string { return cmp.Or(settings.DataDir, ".") }
+
+// defaultAddr returns the default of -addr: addr of the settings file, else
+// localhost:8080.
+func defaultAddr() string { return cmp.Or(settings.Addr, "localhost:8080") }
 
 const usage = `usage:
   ebira [flags]                 open the TUI, starting the server in the background if needed
@@ -36,6 +53,11 @@ const usage = `usage:
   ebira import [flags] path...  import Markdown files, and the images they refer to, as notes
 
 Run a command with -h for its flags.
+
+The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
+file of $EBIRA_CONFIG), gives the defaults of the flags: data_dir, addr, watch,
+provider and model. The index is kept in ~/.cache/ebira and the server's
+state and log in ~/.local/state/ebira ($XDG_CACHE_HOME, $XDG_STATE_HOME).
 `
 
 func main() {
@@ -49,6 +71,14 @@ func main() {
 }
 
 func run(args []string) error {
+	if len(args) > 0 && args[0] == "help" {
+		fmt.Print(usage)
+		return nil
+	}
+	var err error
+	if settings, err = config.Load(); err != nil {
+		return err
+	}
 	if len(args) > 0 {
 		switch args[0] {
 		case "web":
@@ -61,9 +91,6 @@ func run(args []string) error {
 			return runFiles(args[1:])
 		case "import":
 			return runImport(args[1:])
-		case "help":
-			fmt.Print(usage)
-			return nil
 		}
 	}
 	return runTUI(args)

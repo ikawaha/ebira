@@ -28,8 +28,8 @@ import (
 func runImport(args []string) error {
 	fs := flag.NewFlagSet("import", flag.ContinueOnError)
 	var (
-		dataDir  = fs.String("data-dir", ".", "data directory whose server is used, started in the background if needed")
-		addr     = fs.String("addr", "localhost:8080", "address of a server started for the import")
+		dataDir  = fs.String("data-dir", defaultDataDir(), "data directory whose server is used, started in the background if needed")
+		addr     = fs.String("addr", defaultAddr(), "address of a server started for the import")
 		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
 		notebook = fs.String("notebook", "", "notebook ID to import into (default inbox)")
 		force    = fs.Bool("force", false, "import files whose content was imported before")

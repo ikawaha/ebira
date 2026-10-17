@@ -15,8 +15,9 @@
 # The TUI (ebira) uses a server already running for the data directory, so
 # start the server with this script first to give the assistant its keys.
 #
-# Without -data-dir, the data of the repository is used: notes/ and .ebira/ at its
-# top, both ignored by git.
+# Without -data-dir, the data of the repository is used: notes/ at its top,
+# ignored by git. The index and the server's state are outside the data
+# directory (see ebira help).
 #
 # Environment:
 #   EBIRA_GEMINI_REF     secret reference of the Gemini API key

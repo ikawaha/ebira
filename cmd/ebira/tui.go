@@ -20,8 +20,8 @@ import (
 func runTUI(args []string) error {
 	fs := flag.NewFlagSet("ebira", flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", ".", "data directory whose server the TUI uses, started in the background if needed")
-		addr    = fs.String("addr", "localhost:8080", "address of a server started for the TUI")
+		dataDir = fs.String("data-dir", defaultDataDir(), "data directory whose server the TUI uses, started in the background if needed")
+		addr    = fs.String("addr", defaultAddr(), "address of a server started for the TUI")
 		server  = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
 		light   = fs.Bool("light", false, "use colors for a light terminal background")
 	)
@@ -64,7 +64,7 @@ func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out i
 	if err != nil {
 		return "", err
 	}
-	running, err := daemon.Running(stateDir(dir))
+	_, running, err := serverDir(dir)
 	if err != nil {
 		return "", err
 	}

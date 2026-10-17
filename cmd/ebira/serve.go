@@ -22,6 +22,7 @@ import (
 	mcpnotes "github.com/ikawaha/ebira/gen/mcp_notes"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/agent"
+	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
 	"github.com/ikawaha/ebira/internal/httpguard"
 	"github.com/ikawaha/ebira/internal/index"
@@ -47,14 +48,14 @@ type serveOptions struct {
 func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", ".", "data directory: note YAML files and settings in notes/, the index in .ebira/")
-		addr    = fs.String("addr", "localhost:8080", "address to listen on")
+		dataDir = fs.String("data-dir", defaultDataDir(), "data directory: note YAML files and settings in notes/ (default: data_dir of the settings file, else the current directory)")
+		addr    = fs.String("addr", defaultAddr(), "address to listen on")
 		search  = fs.String("search", "", "search mode: like, bigram, or ja (Japanese morphological analysis) (default: search in notes/"+store.ConfigFile+", else "+string(index.ModeBigram)+")")
-		watchF  = fs.Bool("watch", true, "watch the notes directory and update the index on changes")
+		watchF  = fs.Bool("watch", settings.Watch == nil || *settings.Watch, "watch the notes directory and update the index on changes")
 		stopW   = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		stopT   = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
-		prov    = fs.String("provider", "", "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
-		modelF  = fs.String("model", "", "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
+		prov    = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
+		modelF  = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
 	)
 	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, watch: watchF}
 }
@@ -99,7 +100,13 @@ func runServe(args []string) error {
 		return err
 	}
 	*dataDir = abs
-	stateDir := filepath.Join(*dataDir, ".ebira")
+	stateDir, err := config.StateDir(*dataDir)
+	if err != nil {
+		return err
+	}
+	if err := config.Prepare(stateDir, *dataDir); err != nil {
+		return err
+	}
 	lock, err := daemon.Lock(stateDir)
 	if errors.Is(err, daemon.ErrRunning) {
 		return fmt.Errorf("%w (%s); see ebira server status", err, *dataDir)
@@ -109,6 +116,16 @@ func runServe(args []string) error {
 	}
 	if lock != nil {
 		defer lock.Close()
+	}
+	if err := removeLegacyDir(*dataDir); err != nil {
+		return err
+	}
+	cacheDir, err := config.CacheDir(*dataDir)
+	if err != nil {
+		return err
+	}
+	if err := config.Prepare(cacheDir, *dataDir); err != nil {
+		return err
 	}
 
 	st, err := store.New(filepath.Join(*dataDir, "notes"))
@@ -160,7 +177,7 @@ func runServe(args []string) error {
 	if err != nil {
 		return err
 	}
-	ix, err := index.Open(ctx, filepath.Join(stateDir, "index.sqlite"), cfg)
+	ix, err := index.Open(ctx, filepath.Join(cacheDir, "index.sqlite"), cfg)
 	if err != nil {
 		return err
 	}

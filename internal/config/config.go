@@ -1,0 +1,175 @@
+// Package config reads the settings file of the ebira commands and computes
+// where their files go, following the XDG Base Directory Specification on
+// macOS as on Linux:
+//
+//   - the settings file: $XDG_CONFIG_HOME/ebira/config.yaml (~/.config), or
+//     the file named by $EBIRA_CONFIG.
+//   - the state of a data directory (the server's lock, server.json and log):
+//     $XDG_STATE_HOME/ebira/<name>-<hash>/ (~/.local/state).
+//   - the cache of a data directory (the index): $XDG_CACHE_HOME/ebira/index/<name>-<hash>/
+//     (~/.cache).
+//
+// <name> is the base name of the data directory and <hash> the first 12 hex
+// digits of the SHA-256 of its absolute path with symbolic links resolved.
+// Each of those directories has a file data-dir with that path.
+//
+// The settings file holds the settings of this machine and user. The
+// settings shared with the notes, such as the search mode, are in
+// notes/_ebira.yaml instead (see internal/store), and secrets in neither.
+package config
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
+
+// Env names the environment variable that replaces the path of the settings
+// file.
+const Env = "EBIRA_CONFIG"
+
+// DataDirFile is the file in a state or cache directory with the path of its
+// data directory.
+const DataDirFile = "data-dir"
+
+// Config is the settings file. Unset values are zero; the commands use them
+// as the defaults of their flags.
+type Config struct {
+	// DataDir is the default data directory. ~ and paths relative to the
+	// settings file are resolved by Load.
+	DataDir string `yaml:"data_dir"`
+	// Addr is the address the server listens on.
+	Addr string `yaml:"addr"`
+	// Watch tells whether the server watches the notes directory.
+	Watch *bool `yaml:"watch"`
+	// Provider and Model choose the model of the assistant.
+	Provider string `yaml:"provider"`
+	Model    string `yaml:"model"`
+}
+
+// Path returns the path of the settings file.
+func Path() (string, error) {
+	if p := os.Getenv(Env); p != "" {
+		return p, nil
+	}
+	d, err := base("XDG_CONFIG_HOME", ".config")
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, "ebira", "config.yaml"), nil
+}
+
+// Load reads the settings file. A missing file is an empty Config; an unknown
+// key is an error, so that a misspelled one is not ignored.
+func Load() (Config, error) {
+	var c Config
+	p, err := Path()
+	if err != nil {
+		return c, err
+	}
+	b, err := os.ReadFile(p)
+	if errors.Is(err, fs.ErrNotExist) {
+		return c, nil
+	}
+	if err != nil {
+		return c, err
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(b))
+	dec.KnownFields(true)
+	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) { // io.EOF: an empty file
+		return c, fmt.Errorf("%s: %w", p, err)
+	}
+	if c.DataDir != "" {
+		if c.DataDir, err = resolve(c.DataDir, filepath.Dir(p)); err != nil {
+			return c, fmt.Errorf("%s: data_dir: %w", p, err)
+		}
+	}
+	return c, nil
+}
+
+// resolve expands a leading ~ of path and makes it absolute against dir.
+func resolve(path, dir string) (string, error) {
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		path = filepath.Join(home, path[1:])
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(dir, path)
+	}
+	return filepath.Clean(path), nil
+}
+
+// StateDir returns the state directory of the data directory dataDir.
+func StateDir(dataDir string) (string, error) {
+	d, err := base("XDG_STATE_HOME", filepath.Join(".local", "state"))
+	if err != nil {
+		return "", err
+	}
+	return under(filepath.Join(d, "ebira"), dataDir)
+}
+
+// CacheDir returns the cache directory of the data directory dataDir.
+func CacheDir(dataDir string) (string, error) {
+	d, err := base("XDG_CACHE_HOME", ".cache")
+	if err != nil {
+		return "", err
+	}
+	return under(filepath.Join(d, "ebira", "index"), dataDir)
+}
+
+// Prepare creates dir, a directory of StateDir or CacheDir, and writes the
+// path of its data directory to DataDirFile in it.
+func Prepare(dir, dataDir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	p := filepath.Join(dir, DataDirFile)
+	want := dataDir + "\n"
+	if b, err := os.ReadFile(p); err == nil && string(b) == want {
+		return nil
+	}
+	return os.WriteFile(p, []byte(want), 0o644)
+}
+
+// under returns the directory of dataDir under root.
+func under(root, dataDir string) (string, error) {
+	abs, err := filepath.Abs(dataDir)
+	if err != nil {
+		return "", err
+	}
+	// Two paths of the same directory share its server and index.
+	if r, err := filepath.EvalSymlinks(abs); err == nil {
+		abs = r
+	}
+	name := filepath.Base(abs)
+	if name == string(filepath.Separator) {
+		name = "root"
+	}
+	sum := sha256.Sum256([]byte(abs))
+	return filepath.Join(root, name+"-"+hex.EncodeToString(sum[:])[:12]), nil
+}
+
+// base returns the directory of the XDG variable env, or home/def when it is
+// unset or not absolute, as the specification says.
+func base(env, def string) (string, error) {
+	if d := os.Getenv(env); filepath.IsAbs(d) {
+		return d, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, def), nil
+}

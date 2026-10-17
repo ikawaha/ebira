@@ -17,8 +17,8 @@ import (
 func runWeb(args []string) error {
 	fs := flag.NewFlagSet("web", flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", ".", "data directory whose server the web UI uses, started in the background if needed")
-		addr    = fs.String("addr", "localhost:8080", "address of a server started for the web UI")
+		dataDir = fs.String("data-dir", defaultDataDir(), "data directory whose server the web UI uses, started in the background if needed")
+		addr    = fs.String("addr", defaultAddr(), "address of a server started for the web UI")
 		noOpen  = fs.Bool("no-open", false, "only print the URL, without opening the browser")
 	)
 	if err := fs.Parse(args); err != nil {

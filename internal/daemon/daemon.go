@@ -2,7 +2,8 @@
 // directory: the TUI starts it when it is not running, and it keeps running
 // after the TUI exits, so that MCP clients and the web UI can use it.
 //
-// The files are in the state directory, <data-dir>/.ebira:
+// The files are in the state directory of the data directory (see
+// config.StateDir):
 //   - server.lock: held with flock by the running server, so that a second
 //     server for the same data directory fails to start. The OS releases it
 //     when the process ends, so a stale file needs no cleaning.
