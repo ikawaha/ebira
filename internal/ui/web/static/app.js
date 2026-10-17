@@ -365,9 +365,10 @@ async function moveNotebook(id, before) {
 }
 
 function selectNotebook(id) {
+  if (id === state.notebook) return;
   state.notebook = id;
   renderNotebooks();
-  loadNotes({ chosen: true });
+  loadNotes({ chosen: true, first: true });
 }
 
 // Notes
@@ -380,9 +381,14 @@ let loadSeq = 0; // drops responses of requests overtaken by later ones
 // note just moved elsewhere stays in view.
 let checkSelection = false;
 
-async function loadNotes({ chosen = false } = {}) {
+// pickFirst is set when the user chooses a notebook: the preview then shows
+// the first note of the new list, as in the TUI.
+let pickFirst = false;
+
+async function loadNotes({ chosen = false, first = false } = {}) {
   if (chosen) {
     checkSelection = true;
+    pickFirst = first;
     state.want = LIST_PAGE; // a new list starts with one page
   }
   state.want ||= LIST_PAGE;
@@ -434,6 +440,16 @@ async function loadNotes({ chosen = false } = {}) {
 function applySelectionCheck() {
   if (!checkSelection || state.editing) return;
   checkSelection = false;
+  if (pickFirst) {
+    pickFirst = false;
+    const first = state.notes[0]?.id ?? null;
+    if (first !== state.selected) {
+      state.selected = first;
+      markSelected();
+      loadNote();
+      return;
+    }
+  }
   if (state.selected && !state.notes.some((n) => n.id === state.selected)) {
     state.selected = null;
     loadNote();
