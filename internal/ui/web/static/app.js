@@ -346,6 +346,8 @@ function renderNotebooks() {
     li.append(el("span", "count", String(count)));
     if (!state.tag && state.notebook === id) li.classList.add("active");
     li.addEventListener("click", () => selectNotebook(id));
+    li.dataset.notebook = id;
+    acceptImport(li, id);
     return li;
   };
   for (const nb of state.notebooks) {
@@ -1222,11 +1224,138 @@ function noteChangedElsewhere(type) {
 }
 
 // A file dropped outside the editor would make the browser leave the page to
-// show it.
+// show it. Markdown files dropped there are imported into the notebook shown.
 for (const type of ["dragover", "drop"]) {
   window.addEventListener(type, (e) => {
-    if (hasFiles(e.dataTransfer) && !e.defaultPrevented) e.preventDefault();
+    if (!hasFiles(e.dataTransfer) || e.defaultPrevented) return;
+    e.preventDefault();
+    if (type === "drop") importMarkdown(e.dataTransfer.files, importNotebook());
   });
+}
+
+// Import of Markdown files: dropped on the page or on a notebook, or chosen
+// from the settings menu. Images chosen with them are sent along when a file
+// refers to them by name.
+
+const MARKDOWN_FILE = /\.(md|markdown)$/i;
+
+// importNotebook returns the notebook to import into: the one shown, else
+// the inbox.
+function importNotebook() {
+  return state.notebook && state.notebook !== "trash" && !state.tag ? state.notebook : "inbox";
+}
+
+// acceptImport lets Markdown files be dropped on the notebook row li. The
+// trash takes none.
+function acceptImport(li, id) {
+  li.addEventListener("dragover", (e) => {
+    if (!hasFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    if (id === "trash") {
+      e.dataTransfer.dropEffect = "none";
+      return;
+    }
+    li.classList.add("drop-into");
+  });
+  li.addEventListener("dragleave", () => li.classList.remove("drop-into"));
+  li.addEventListener("drop", (e) => {
+    li.classList.remove("drop-into");
+    if (!hasFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    if (id !== "trash") importMarkdown(e.dataTransfer.files, id);
+  });
+}
+
+// imageRefs returns the relative paths of the images a Markdown file refers
+// to, as internal/importer finds them.
+function imageRefs(md) {
+  const refs = new Set();
+  for (const re of [/!\[[^\]]*\]\(\s*(<[^>\n]*>|[^)\s]+)/g, /<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)/gi]) {
+    for (const m of md.matchAll(re)) {
+      const p = m[1].replace(/^<|>$/g, "");
+      if (p && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p) && !/^[/#\\]/.test(p)) refs.add(p);
+    }
+  }
+  return [...refs];
+}
+
+function fileBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).replace(/^[^,]*,/, ""));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+function baseName(ref) {
+  const name = ref.split("/").pop();
+  try {
+    return decodeURIComponent(name);
+  } catch (_) {
+    return name;
+  }
+}
+
+// importMarkdown imports the Markdown files among files into notebook and
+// shows the outcome. It returns false when there is no Markdown file.
+async function importMarkdown(files, notebook) {
+  const all = [...files];
+  const docs = all.filter((f) => MARKDOWN_FILE.test(f.name));
+  if (!docs.length) return false;
+  const images = all.filter((f) => f.type.startsWith("image/"));
+  const d = $("import-result");
+  d.replaceChildren(el("p", "", t("importing", { n: docs.length })));
+  if (!d.open) d.showModal();
+  const results = [];
+  for (const f of docs) {
+    let content;
+    try {
+      content = new TextDecoder("utf-8", { fatal: true }).decode(await f.arrayBuffer());
+    } catch (_) {
+      results.push({ file: f.name, error: t("importNotUTF8") });
+      continue;
+    }
+    try {
+      const sent = [];
+      for (const ref of imageRefs(content)) {
+        const img = images.find((i) => i.name === baseName(ref));
+        if (img) sent.push({ ref, name: img.name, content: await fileBase64(img) });
+      }
+      const modified = new Date(f.lastModified).toISOString().replace(/\.\d+Z$/, "Z");
+      const res = await api("/import", { method: "POST", body: { notebook, name: f.name, content, modified_at: modified, files: sent } });
+      results.push({ file: f.name, res });
+    } catch (e) {
+      results.push({ file: f.name, error: e.message });
+    }
+  }
+  renderImportResults(d, results, notebook);
+  loadNotebooks().catch(() => {});
+  loadNotes();
+  return true;
+}
+
+function renderImportResults(d, results, notebook) {
+  const count = (pred) => results.filter(pred).length;
+  const created = count((r) => r.res?.status === "created");
+  const skipped = count((r) => r.res?.status === "skipped");
+  const head = el("div", "files-head", el("h2", "", t("importTitle")), button("×", () => d.close(), { title: t("closeTitle") }));
+  const summary = el("p", "", t("importSummary", { notebook: notebookName(notebook), created, skipped, failed: results.length - created - skipped }));
+  const ul = el("ul", "files-list import-list");
+  for (const r of results) {
+    const li = el("li", "", el("span", "files-name", r.file), " · ");
+    if (r.error) {
+      li.append(el("span", "failed", t("importFailed", { error: r.error })));
+    } else if (r.res.status === "created") {
+      li.append(t("importCreated"), " ", noteAnchor(r.res.note.id, r.res.note.title, d));
+    } else {
+      li.append(t("importSkipped"), " ", noteAnchor(r.res.duplicate_of, t("importExisting"), d));
+    }
+    const warnings = r.res?.warnings || [];
+    if (warnings.length) li.append(el("ul", "warnings", ...warnings.map((w) => el("li", "", w))));
+    ul.append(li);
+  }
+  d.replaceChildren(head, summary, ul);
 }
 
 window.addEventListener("beforeunload", (e) => {
@@ -1319,6 +1448,12 @@ $("settings-menu").addEventListener("keydown", (e) => {
   }
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
+$("import-open").addEventListener("click", () => $("import-input").click());
+$("import-input").addEventListener("change", (e) => {
+  const files = [...e.target.files];
+  e.target.value = ""; // the same files can be chosen again
+  importMarkdown(files, importNotebook());
+});
 $("ask-close").addEventListener("click", () => toggleAssistant(false));
 $("ask-clear").addEventListener("click", () => {
   askController?.abort();
@@ -1382,7 +1517,7 @@ $("search-form").addEventListener("submit", (e) => e.preventDefault());
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open) return;
+  if ($("conflict").open || $("files-check").open || $("import-result").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

@@ -8,6 +8,8 @@
 package client
 
 import (
+	"unicode/utf8"
+
 	notes "github.com/ikawaha/ebira/gen/notes"
 	goa "goa.design/goa/v3/pkg"
 )
@@ -84,6 +86,26 @@ type SaveNotebookRequestBody struct {
 	// created and updated are newest first, and title is by code point, ignoring
 	// case and width
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
+}
+
+// ImportRequestBody is the type of the "notes" service "import" endpoint HTTP
+// request body.
+type ImportRequestBody struct {
+	// Notebook to put the note in (default inbox; not trash)
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// File name of the Markdown file, the title when the file gives none
+	Name string `form:"name" json:"name" xml:"name"`
+	// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
+	// (a list or comma-separated), created (or date) and updated times; its other
+	// keys are kept in the note file. Without a title, the first heading of level
+	// 1 is the title, else the file name
+	Content string `form:"content" json:"content" xml:"content"`
+	// Modification time of the file, for the times the front matter does not give
+	ModifiedAt *string `form:"modified_at,omitempty" json:"modified_at,omitempty" xml:"modified_at,omitempty"`
+	// Images the file refers to
+	Files []*ImportFileRequestBody `form:"files,omitempty" json:"files,omitempty" xml:"files,omitempty"`
+	// Import even if the same content was imported before
+	Force *bool `form:"force,omitempty" json:"force,omitempty" xml:"force,omitempty"`
 }
 
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
@@ -347,6 +369,19 @@ type RestoreNotebookResponseBody struct {
 	// come by creation time, newest first), created and updated are newest first,
 	// and title is by code point, ignoring case and width
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
+}
+
+// ImportResponseBody is the type of the "notes" service "import" endpoint HTTP
+// response body.
+type ImportResponseBody struct {
+	// created, or skipped when a file with the same content was imported before
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+	// The note created
+	Note *NoteResponseBody `form:"note,omitempty" json:"note,omitempty" xml:"note,omitempty"`
+	// When skipped: the note imported from the same content before
+	DuplicateOf *string `form:"duplicate_of,omitempty" json:"duplicate_of,omitempty" xml:"duplicate_of,omitempty"`
+	// What could not be converted as is, such as images left out
+	Warnings []string `form:"warnings,omitempty" json:"warnings,omitempty" xml:"warnings,omitempty"`
 }
 
 // AddFileResponseBody is the type of the "notes" service "add_file" endpoint
@@ -900,6 +935,24 @@ type DeleteTrashedNotebookBadRequestResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// ImportBadRequestResponseBody is the type of the "notes" service "import"
+// endpoint HTTP response body for the "bad_request" error.
+type ImportBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // AddFileNotFoundResponseBody is the type of the "notes" service "add_file"
 // endpoint HTTP response body for the "not_found" error.
 type AddFileNotFoundResponseBody struct {
@@ -1111,6 +1164,40 @@ type TrashedNotebookResponse struct {
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
 }
 
+// NoteResponseBody is used to define fields on response body types.
+type NoteResponseBody struct {
+	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+	// unique across notebooks
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook (directory) the note is in
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Title
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Tags
+	Tags []string `form:"tags,omitempty" json:"tags,omitempty" xml:"tags,omitempty"`
+	// Creation time
+	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
+	// Last update time
+	UpdatedAt *string `form:"updated_at,omitempty" json:"updated_at,omitempty" xml:"updated_at,omitempty"`
+	// For a note of a notebook deleted as a whole: the ID of that notebook, which
+	// is in the trash. notebook is then trash, and restoring the note puts it back
+	// into that notebook
+	TrashedNotebook *string `form:"trashed_notebook,omitempty" json:"trashed_notebook,omitempty" xml:"trashed_notebook,omitempty"`
+	// Who created the note: ai for a note created by an AI client
+	// (create_ai_note); absent for people
+	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Body in Markdown
+	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
+	// Strong entity tag of the note file. Sent as the ETag header over HTTP
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+	// Notebook the note was in before it was moved to the trash
+	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// Ranges of the title matched by the query of get, sorted and not overlapping
+	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
+	// Ranges of the body matched by the query of get, sorted and not overlapping
+	BodyHighlights []*TextRangeResponseBody `form:"body_highlights,omitempty" json:"body_highlights,omitempty" xml:"body_highlights,omitempty"`
+}
+
 // UnusedFileResponseBody is used to define fields on response body types.
 type UnusedFileResponseBody struct {
 	// ID of the note holding the file
@@ -1138,6 +1225,17 @@ type BrokenFileRefResponseBody struct {
 	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
 	// The path referred to
 	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+}
+
+// ImportFileRequestBody is used to define fields on request body types.
+type ImportFileRequestBody struct {
+	// Path of the image as the Markdown file refers to it, one of the paths the
+	// file refers to
+	Ref string `form:"ref" json:"ref" xml:"ref"`
+	// File name
+	Name string `form:"name" json:"name" xml:"name"`
+	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	Content []byte `form:"content" json:"content" xml:"content"`
 }
 
 // NewCreateRequestBody builds the HTTP request body from the payload of the
@@ -1209,6 +1307,29 @@ func NewSaveNotebookRequestBody(p *notes.SaveNotebookPayload) *SaveNotebookReque
 		Order: p.Order,
 		Kind:  p.Kind,
 		Sort:  p.Sort,
+	}
+	return body
+}
+
+// NewImportRequestBody builds the HTTP request body from the payload of the
+// "import" endpoint of the "notes" service.
+func NewImportRequestBody(p *notes.ImportPayload) *ImportRequestBody {
+	body := &ImportRequestBody{
+		Notebook:   p.Notebook,
+		Name:       p.Name,
+		Content:    p.Content,
+		ModifiedAt: p.ModifiedAt,
+		Force:      p.Force,
+	}
+	if p.Files != nil {
+		body.Files = make([]*ImportFileRequestBody, len(p.Files))
+		for i, val := range p.Files {
+			if val == nil {
+				body.Files[i] = nil
+				continue
+			}
+			body.Files[i] = marshalNotesImportFileToImportFileRequestBody(val)
+		}
 	}
 	return body
 }
@@ -1967,6 +2088,38 @@ func NewDeleteTrashedNotebookBadRequest(body *DeleteTrashedNotebookBadRequestRes
 	return v
 }
 
+// NewImportResultOK builds a "notes" service "import" endpoint result from a
+// HTTP "OK" response.
+func NewImportResultOK(body *ImportResponseBody) *notes.ImportResult {
+	v := &notes.ImportResult{
+		Status:      *body.Status,
+		DuplicateOf: body.DuplicateOf,
+	}
+	if body.Note != nil {
+		v.Note = unmarshalNoteResponseBodyToNotesNote(body.Note)
+	}
+	v.Warnings = make([]string, len(body.Warnings))
+	for i, val := range body.Warnings {
+		v.Warnings[i] = val
+	}
+
+	return v
+}
+
+// NewImportBadRequest builds a notes service import endpoint bad_request error.
+func NewImportBadRequest(body *ImportBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewAddFileNoteFileCreated builds a "notes" service "add_file" endpoint
 // result from a HTTP "Created" response.
 func NewAddFileNoteFileCreated(body *AddFileResponseBody) *notes.NoteFile {
@@ -2617,6 +2770,30 @@ func ValidateRestoreNotebookResponseBody(body *RestoreNotebookResponseBody) (err
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
+	}
+	return
+}
+
+// ValidateImportResponseBody runs the validations defined on ImportResponseBody
+func ValidateImportResponseBody(body *ImportResponseBody) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "body"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "created" || *body.Status == "skipped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"created", "skipped"}))
+		}
+	}
+	if body.Note != nil {
+		if err2 := validateNoteResponseBody(body.Note, "body.note"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.DuplicateOf != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *body.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }
@@ -3364,6 +3541,30 @@ func ValidateDeleteTrashedNotebookBadRequestResponseBody(body *DeleteTrashedNote
 	return
 }
 
+// ValidateImportBadRequestResponseBody runs the validations defined on
+// ImportBadRequestResponseBody
+func ValidateImportBadRequestResponseBody(body *ImportBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateAddFileNotFoundResponseBody runs the validations defined on
 // AddFileNotFoundResponseBody
 func ValidateAddFileNotFoundResponseBody(body *AddFileNotFoundResponseBody) (err error) {
@@ -3824,6 +4025,139 @@ func validateTrashedNotebookResponse(body *TrashedNotebookResponse, path string)
 	return
 }
 
+// ValidateNoteResponseBody runs the validations defined on Note
+func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "body"))
+	}
+	if body.CreatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if body.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedBy != nil {
+		if !(*body.CreatedBy == "ai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if body.TrashedFrom != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	for _, e := range body.TitleHighlights {
+		if e != nil {
+			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.BodyHighlights {
+		if e != nil {
+			if err2 := validateTextRangeResponseBody(e, "body.body_highlights[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// validateNoteResponseBody checks Note and reports errors using the path
+// supplied by its caller
+func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", path))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", path))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", path))
+	}
+	if body.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", path))
+	}
+	if body.CreatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", path))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", path))
+	}
+	if body.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", path))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", path))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".created_at", *body.CreatedAt, goa.FormatDateTime))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedBy != nil {
+		if !(*body.CreatedBy == "ai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if body.TrashedFrom != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	for _, e := range body.TitleHighlights {
+		if e != nil {
+			if err2 := validateTextRangeResponseBody(e, path+".title_highlights[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.BodyHighlights {
+		if e != nil {
+			if err2 := validateTextRangeResponseBody(e, path+".body_highlights[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
 // ValidateUnusedFileResponseBody runs the validations defined on UnusedFile
 func ValidateUnusedFileResponseBody(body *UnusedFileResponseBody) (err error) {
 	if body.NoteID == nil {
@@ -3921,6 +4255,35 @@ func validateBrokenFileRefResponseBody(body *BrokenFileRefResponseBody, path str
 	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateImportFileRequestBody runs the validations defined on ImportFile
+func ValidateImportFileRequestBody(body *ImportFileRequestBody) (err error) {
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if utf8.RuneCountInString(body.Name) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 1, true))
+	}
+	if utf8.RuneCountInString(body.Name) > 255 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 255, false))
+	}
+	return
+}
+
+// validateImportFileRequestBody checks ImportFile and reports errors using the
+// path supplied by its caller
+func validateImportFileRequestBody(body *ImportFileRequestBody, path string) (err error) {
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", path))
+	}
+	if utf8.RuneCountInString(body.Name) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(path+".name", body.Name, utf8.RuneCountInString(body.Name), 1, true))
+	}
+	if utf8.RuneCountInString(body.Name) > 255 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(path+".name", body.Name, utf8.RuneCountInString(body.Name), 255, false))
 	}
 	return
 }

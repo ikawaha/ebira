@@ -32,7 +32,9 @@ type Client struct {
 	TrashedNotebooksEndpoint      goa.Endpoint
 	RestoreNotebookEndpoint       goa.Endpoint
 	DeleteTrashedNotebookEndpoint goa.Endpoint
+	ImportEndpoint                goa.Endpoint
 	CreateAiNoteEndpoint          goa.Endpoint
+	ImportAiNoteEndpoint          goa.Endpoint
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
 	CreateAiNotebookEndpoint      goa.Endpoint
@@ -46,7 +48,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, createAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -64,7 +66,9 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		TrashedNotebooksEndpoint:      trashedNotebooks,
 		RestoreNotebookEndpoint:       restoreNotebook,
 		DeleteTrashedNotebookEndpoint: deleteTrashedNotebook,
+		ImportEndpoint:                import_,
 		CreateAiNoteEndpoint:          createAiNote,
+		ImportAiNoteEndpoint:          importAiNote,
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
 		CreateAiNotebookEndpoint:      createAiNotebook,
@@ -280,6 +284,19 @@ func (c *Client) DeleteTrashedNotebook(ctx context.Context, p *DeleteTrashedNote
 	return
 }
 
+// Import calls the "import" endpoint of the "notes" service.
+// Import may return the following errors:
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash or invalid, or the file is too large
+//   - error: internal error
+func (c *Client) Import(ctx context.Context, p *ImportPayload) (res *ImportResult, err error) {
+	var ires any
+	ires, err = c.ImportEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*ImportResult), nil
+}
+
 // CreateAiNote calls the "create_ai_note" endpoint of the "notes" service.
 // CreateAiNote may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The ID is given for a drop notebook, or the notebook is invalid
@@ -293,6 +310,20 @@ func (c *Client) CreateAiNote(ctx context.Context, p *CreateAiNotePayload) (res 
 		return
 	}
 	return ires.(*Note), nil
+}
+
+// ImportAiNote calls the "import_ai_note" endpoint of the "notes" service.
+// ImportAiNote may return the following errors:
+//   - "bad_request" (type *goa.ServiceError): The notebook is invalid, or the file is too large
+//   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab or drop kind
+//   - error: internal error
+func (c *Client) ImportAiNote(ctx context.Context, p *ImportAiNotePayload) (res *ImportResult, err error) {
+	var ires any
+	ires, err = c.ImportAiNoteEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*ImportResult), nil
 }
 
 // UpdateAiNote calls the "update_ai_note" endpoint of the "notes" service.

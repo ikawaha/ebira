@@ -37,6 +37,7 @@ type Server struct {
 	TrashedNotebooks      http.Handler
 	RestoreNotebook       http.Handler
 	DeleteTrashedNotebook http.Handler
+	Import                http.Handler
 	AddFile               http.Handler
 	GetFile               http.Handler
 	DeleteFile            http.Handler
@@ -88,6 +89,7 @@ func New(
 			{"TrashedNotebooks", "GET", "/trash/notebooks"},
 			{"RestoreNotebook", "POST", "/trash/notebooks/{id}/restore"},
 			{"DeleteTrashedNotebook", "DELETE", "/trash/notebooks/{id}"},
+			{"Import", "POST", "/import"},
 			{"AddFile", "POST", "/notes/{id}/files"},
 			{"GetFile", "GET", "/notes/{id}/files/{name}"},
 			{"DeleteFile", "DELETE", "/notes/{id}/files/{name}"},
@@ -111,6 +113,7 @@ func New(
 		TrashedNotebooks:      NewTrashedNotebooksHandler(e.TrashedNotebooks, mux, decoder, encoder, errhandler, formatter),
 		RestoreNotebook:       NewRestoreNotebookHandler(e.RestoreNotebook, mux, decoder, encoder, errhandler, formatter),
 		DeleteTrashedNotebook: NewDeleteTrashedNotebookHandler(e.DeleteTrashedNotebook, mux, decoder, encoder, errhandler, formatter),
+		Import:                NewImportHandler(e.Import, mux, decoder, encoder, errhandler, formatter),
 		AddFile:               NewAddFileHandler(e.AddFile, mux, decoder, encoder, errhandler, formatter),
 		GetFile:               NewGetFileHandler(e.GetFile, mux, decoder, encoder, errhandler, formatter),
 		DeleteFile:            NewDeleteFileHandler(e.DeleteFile, mux, decoder, encoder, errhandler, formatter),
@@ -141,6 +144,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.TrashedNotebooks = m(s.TrashedNotebooks)
 	s.RestoreNotebook = m(s.RestoreNotebook)
 	s.DeleteTrashedNotebook = m(s.DeleteTrashedNotebook)
+	s.Import = m(s.Import)
 	s.AddFile = m(s.AddFile)
 	s.GetFile = m(s.GetFile)
 	s.DeleteFile = m(s.DeleteFile)
@@ -170,6 +174,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountTrashedNotebooksHandler(mux, h.TrashedNotebooks)
 	MountRestoreNotebookHandler(mux, h.RestoreNotebook)
 	MountDeleteTrashedNotebookHandler(mux, h.DeleteTrashedNotebook)
+	MountImportHandler(mux, h.Import)
 	MountAddFileHandler(mux, h.AddFile)
 	MountGetFileHandler(mux, h.GetFile)
 	MountDeleteFileHandler(mux, h.DeleteFile)
@@ -994,6 +999,59 @@ func NewDeleteTrashedNotebookHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "delete_trashed_notebook")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountImportHandler configures the mux to serve the "notes" service "import"
+// endpoint.
+func MountImportHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/import", f)
+}
+
+// NewImportHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "import" endpoint.
+func NewImportHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeImportRequest(mux, decoder)
+		encodeResponse = EncodeImportResponse(encoder)
+		encodeError    = EncodeImportError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "import")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

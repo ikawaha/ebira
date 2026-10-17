@@ -82,6 +82,44 @@ paths:
                             - broken
             schemes:
                 - http
+    /import:
+        post:
+            tags:
+                - notes
+            summary: import notes
+            description: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.
+            operationId: notes#import
+            parameters:
+                - name: ImportRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesImportRequestBody'
+                    required:
+                        - name
+                        - content
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/ImportResult'
+                        required:
+                            - status
+                            - warnings
+                "400":
+                    description: 'bad_request: The notebook is the trash or invalid, or the file is too large'
+                    schema:
+                        $ref: '#/definitions/NotesImportBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
     /notebooks:
         get:
             tags:
@@ -1270,6 +1308,99 @@ definitions:
         required:
             - unused
             - broken
+    ImportFile:
+        title: ImportFile
+        type: object
+        properties:
+            content:
+                type: string
+                description: 'The image: PNG, JPEG, GIF or WebP, at most 10 MB'
+                example: Tm9iaXMgbm9zdHJ1bS4=
+                format: byte
+            name:
+                type: string
+                description: File name
+                example: photo.png
+                minLength: 1
+                maxLength: 255
+            ref:
+                type: string
+                description: Path of the image as the Markdown file refers to it, one of the paths the file refers to
+                example: images/photo.png
+        example:
+            content: Tm9iaXMgbm9zdHJ1bS4=
+            name: photo.png
+            ref: images/photo.png
+        required:
+            - ref
+            - name
+            - content
+    ImportResult:
+        title: ImportResult
+        type: object
+        properties:
+            duplicate_of:
+                type: string
+                description: 'When skipped: the note imported from the same content before'
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            note:
+                $ref: '#/definitions/Note'
+            status:
+                type: string
+                description: created, or skipped when a file with the same content was imported before
+                example: skipped
+                enum:
+                    - created
+                    - skipped
+            warnings:
+                type: array
+                items:
+                    type: string
+                    example: Quo rem cumque est.
+                description: What could not be converted as is, such as images left out
+                example:
+                    - Quo rem cumque est.
+                    - Error illum repellat.
+        example:
+            duplicate_of: be4c1193735ee1
+            note:
+                body: Et libero.
+                body_highlights:
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                created_at: "2026-10-16T09:30:00Z"
+                created_by: ai
+                id: be4c1193735ee1
+                notebook: inbox
+                tags:
+                    - DB
+                    - postgres
+                title: Get the CREATE TABLE statement
+                title_highlights:
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                trashed_from: inbox
+                trashed_notebook: inbox
+                updated_at: "2026-10-16T09:30:00Z"
+                version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
+            status: skipped
+            warnings:
+                - Quo rem cumque est.
+                - Error illum repellat.
+        required:
+            - status
+            - warnings
     Note:
         title: Note
         type: object
@@ -2757,6 +2888,112 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesImportBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesImportRequestBody:
+        title: NotesImportRequestBody
+        type: object
+        properties:
+            content:
+                type: string
+                description: The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name
+                example: fsn
+                maxLength: 5242880
+            files:
+                type: array
+                items:
+                    $ref: '#/definitions/ImportFile'
+                description: Images the file refers to
+                example:
+                    - content: Tm9iaXMgbm9zdHJ1bS4=
+                      name: photo.png
+                      ref: images/photo.png
+                    - content: Tm9iaXMgbm9zdHJ1bS4=
+                      name: photo.png
+                      ref: images/photo.png
+                    - content: Tm9iaXMgbm9zdHJ1bS4=
+                      name: photo.png
+                      ref: images/photo.png
+            force:
+                type: boolean
+                description: Import even if the same content was imported before
+                example: true
+            modified_at:
+                type: string
+                description: Modification time of the file, for the times the front matter does not give
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            name:
+                type: string
+                description: File name of the Markdown file, the title when the file gives none
+                example: meeting.md
+                minLength: 1
+                maxLength: 255
+            notebook:
+                type: string
+                description: Notebook to put the note in (default inbox; not trash)
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+        example:
+            content: fsn
+            files:
+                - content: Tm9iaXMgbm9zdHJ1bS4=
+                  name: photo.png
+                  ref: images/photo.png
+                - content: Tm9iaXMgbm9zdHJ1bS4=
+                  name: photo.png
+                  ref: images/photo.png
+                - content: Tm9iaXMgbm9zdHJ1bS4=
+                  name: photo.png
+                  ref: images/photo.png
+            force: true
+            modified_at: "2026-10-16T09:30:00Z"
+            name: meeting.md
+            notebook: inbox
+        required:
+            - name
+            - content
     NotesListBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object

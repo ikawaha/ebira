@@ -14,8 +14,8 @@ import (
 // in private notebooks and the trash, write only notes in notebooks of the collab
 // kind (*_ai_note), may create a new collab notebook (create_ai_notebook) and may
 // make a notebook private (make_notebook_private). The methods that set any
-// kind (create_notebook, save_notebook) and the create, update and delete
-// methods for people must never become MCP tools. A new tool fails this test on
+// kind (create_notebook, save_notebook) and the create, update, delete and
+// import methods for people must never become MCP tools. A new tool fails this test on
 // purpose: add it to the list only after checking that it keeps these rules.
 func TestMCPTools(t *testing.T) {
 	svc, _ := newTestService(t)
@@ -30,8 +30,8 @@ func TestMCPTools(t *testing.T) {
 	}
 	slices.Sort(got)
 	want := []string{
-		"create_ai_note", "create_ai_notebook", "delete_ai_note", "get_note", "list_notebooks",
-		"list_notes", "list_tags", "make_notebook_private", "search_notes", "update_ai_note",
+		"create_ai_note", "create_ai_notebook", "delete_ai_note", "get_note", "import_ai_note",
+		"list_notebooks", "list_notes", "list_tags", "make_notebook_private", "search_notes", "update_ai_note",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("MCP tools = %v, want %v", got, want)

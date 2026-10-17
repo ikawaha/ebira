@@ -247,6 +247,60 @@ func ValidateGetNoteResultTransport(body *GetNoteResultTransport) (err error) {
 	return
 }
 
+// ValidateImportAiNotePayloadTransport runs the validations defined on ImportAiNotePayloadTransport.
+func ValidateImportAiNotePayloadTransport(body *ImportAiNotePayloadTransport) (err error) {
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*body.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
+		}
+	}
+	if body.Content != nil {
+		if utf8.RuneCountInString(*body.Content) > 5242880 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *body.Content, utf8.RuneCountInString(*body.Content), 5242880, false))
+		}
+	}
+	return
+}
+
+// ValidateImportAiNoteResultTransport runs the validations defined on ImportAiNoteResultTransport.
+func ValidateImportAiNoteResultTransport(body *ImportAiNoteResultTransport) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "body"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "created" || *body.Status == "skipped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"created", "skipped"}))
+		}
+	}
+	if body.Note != nil {
+		if err2 := ValidateNoteTransport(body.Note); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.DuplicateOf != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *body.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
 // ValidateListNotebooksResultTransport runs the validations defined on ListNotebooksResultTransport.
 func ValidateListNotebooksResultTransport(body ListNotebooksResultTransport) (err error) {
 	for _, e := range body {
@@ -523,6 +577,72 @@ func ValidateNoteSummaryTransport(body *NoteSummaryTransport) (err error) {
 		}
 	}
 	for _, e := range body.SnippetHighlights {
+		if e != nil {
+			if err2 := ValidateTextRangeTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateNoteTransport runs the validations defined on NoteTransport.
+func ValidateNoteTransport(body *NoteTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "body"))
+	}
+	if body.CreatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if body.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedBy != nil {
+		if !(*body.CreatedBy == "ai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if body.TrashedFrom != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	for _, e := range body.TitleHighlights {
+		if e != nil {
+			if err2 := ValidateTextRangeTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.BodyHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)

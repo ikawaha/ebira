@@ -1264,6 +1264,77 @@ func EncodeDeleteTrashedNotebookError(encoder func(context.Context, http.Respons
 	}
 }
 
+// EncodeImportResponse returns an encoder for responses returned by the notes
+// import endpoint.
+func EncodeImportResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.ImportResult)
+		enc := encoder(ctx, w)
+		body := NewImportResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeImportRequest returns a decoder for requests sent to the notes import
+// endpoint.
+func DecodeImportRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.ImportPayload, error) {
+	return func(r *http.Request) (*notes.ImportPayload, error) {
+		var payload *notes.ImportPayload
+		var (
+			body ImportRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateImportRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewImportPayload(&body)
+
+		return payload, nil
+	}
+}
+
+// EncodeImportError returns an encoder for errors returned by the import notes
+// endpoint.
+func EncodeImportError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewImportBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeAddFileResponse returns an encoder for responses returned by the notes
 // add_file endpoint.
 func EncodeAddFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1648,6 +1719,65 @@ func marshalNotesTrashedNotebookToTrashedNotebookResponse(v *notes.TrashedNotebo
 		Name:  v.Name,
 		Kind:  v.Kind,
 		Count: v.Count,
+	}
+
+	return res
+}
+
+// unmarshalImportFileRequestBodyToNotesImportFile builds a value of type
+// *notes.ImportFile from a value of type *ImportFileRequestBody.
+func unmarshalImportFileRequestBodyToNotesImportFile(v *ImportFileRequestBody) *notes.ImportFile {
+	res := &notes.ImportFile{
+		Ref:     *v.Ref,
+		Name:    *v.Name,
+		Content: v.Content,
+	}
+
+	return res
+}
+
+// marshalNotesNoteToNoteResponseBody builds a value of type *NoteResponseBody
+// from a value of type *notes.Note.
+func marshalNotesNoteToNoteResponseBody(v *notes.Note) *NoteResponseBody {
+	res := &NoteResponseBody{
+		ID:              v.ID,
+		Notebook:        v.Notebook,
+		Title:           v.Title,
+		CreatedAt:       v.CreatedAt,
+		UpdatedAt:       v.UpdatedAt,
+		TrashedNotebook: v.TrashedNotebook,
+		CreatedBy:       v.CreatedBy,
+		Body:            v.Body,
+		Version:         v.Version,
+		TrashedFrom:     v.TrashedFrom,
+	}
+	if v.Tags != nil {
+		res.Tags = make([]string, len(v.Tags))
+		for i, val := range v.Tags {
+			res.Tags[i] = val
+		}
+	} else {
+		res.Tags = []string{}
+	}
+	if v.TitleHighlights != nil {
+		res.TitleHighlights = make([]*TextRangeResponseBody, len(v.TitleHighlights))
+		for i, val := range v.TitleHighlights {
+			if val == nil {
+				res.TitleHighlights[i] = nil
+				continue
+			}
+			res.TitleHighlights[i] = marshalNotesTextRangeToTextRangeResponseBody(val)
+		}
+	}
+	if v.BodyHighlights != nil {
+		res.BodyHighlights = make([]*TextRangeResponseBody, len(v.BodyHighlights))
+		for i, val := range v.BodyHighlights {
+			if val == nil {
+				res.BodyHighlights[i] = nil
+				continue
+			}
+			res.BodyHighlights[i] = marshalNotesTextRangeToTextRangeResponseBody(val)
+		}
 	}
 
 	return res

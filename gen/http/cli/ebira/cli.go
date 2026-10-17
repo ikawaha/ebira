@@ -24,7 +24,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|add-file|get-file|delete-file|check-files|events|sync)",
+		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|import|add-file|get-file|delete-file|check-files|events|sync)",
 		"assistant ask",
 	}
 }
@@ -128,6 +128,9 @@ func ParseEndpoint(
 		notesDeleteTrashedNotebookFlags  = flag.NewFlagSet("delete-trashed-notebook", flag.ExitOnError)
 		notesDeleteTrashedNotebookIDFlag = new(cliStringFlag)
 
+		notesImportFlags    = flag.NewFlagSet("import", flag.ExitOnError)
+		notesImportBodyFlag = new(cliStringFlag)
+
 		notesAddFileFlags      = flag.NewFlagSet("add-file", flag.ExitOnError)
 		notesAddFileIDFlag     = new(cliStringFlag)
 		notesAddFileNameFlag   = new(cliStringFlag)
@@ -178,6 +181,7 @@ func ParseEndpoint(
 	notesDeleteNotebookFlags.Var(notesDeleteNotebookIDFlag, "id", "Notebook ID")
 	notesRestoreNotebookFlags.Var(notesRestoreNotebookIDFlag, "id", "Notebook ID")
 	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookIDFlag, "id", "Notebook ID")
+	notesImportFlags.Var(notesImportBodyFlag, "body", "")
 	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID")
 	notesAddFileFlags.Var(notesAddFileNameFlag, "name", "")
 	notesAddFileFlags.Var(notesAddFileStreamFlag, "stream", "path to file containing the streamed request body")
@@ -204,6 +208,7 @@ func ParseEndpoint(
 	notesTrashedNotebooksFlags.Usage = notesTrashedNotebooksUsage
 	notesRestoreNotebookFlags.Usage = notesRestoreNotebookUsage
 	notesDeleteTrashedNotebookFlags.Usage = notesDeleteTrashedNotebookUsage
+	notesImportFlags.Usage = notesImportUsage
 	notesAddFileFlags.Usage = notesAddFileUsage
 	notesGetFileFlags.Usage = notesGetFileUsage
 	notesDeleteFileFlags.Usage = notesDeleteFileUsage
@@ -297,6 +302,9 @@ func ParseEndpoint(
 
 			case "delete-trashed-notebook":
 				epf = notesDeleteTrashedNotebookFlags
+
+			case "import":
+				epf = notesImportFlags
 
 			case "add-file":
 				epf = notesAddFileFlags
@@ -394,6 +402,9 @@ func ParseEndpoint(
 			case "delete-trashed-notebook":
 				endpoint = c.DeleteTrashedNotebook()
 				data, err = notesc.BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookIDFlag.value)
+			case "import":
+				endpoint = c.Import()
+				data, err = notesc.BuildImportPayload(notesImportBodyFlag.value)
 			case "add-file":
 				endpoint = c.AddFile()
 				data, err = notesc.BuildAddFilePayload(notesAddFileIDFlag.value, notesAddFileNameFlag.value)
@@ -454,6 +465,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
 	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.`)
 	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes.`)
+	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.`)
 	fmt.Fprintln(os.Stderr, `    add-file: Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.`)
 	fmt.Fprintln(os.Stderr, `    get-file: Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.`)
 	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it.`)
@@ -776,6 +788,24 @@ func notesDeleteTrashedNotebookUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"inbox\"")
+}
+
+func notesImportUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes import", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes import --body '{\n      \"content\": \"fsn\",\n      \"files\": [\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         }\n      ],\n      \"force\": true,\n      \"modified_at\": \"2026-10-16T09:30:00Z\",\n      \"name\": \"meeting.md\",\n      \"notebook\": \"inbox\"\n   }'")
 }
 
 func notesAddFileUsage() {

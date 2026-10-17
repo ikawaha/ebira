@@ -447,6 +447,216 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 	return err
 }
 
+// ImportAiNotePayloadTransport stores JSON fields until they have been validated.
+type ImportAiNotePayloadTransport struct {
+	// ID of a notebook of the collab or drop kind
+	Notebook *string `json:"notebook"`
+	// File name of the Markdown file, the title when the file gives none
+	Name *string `json:"name"`
+	// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
+	// (a list or comma-separated), created (or date) and updated times; its other
+	// keys are kept in the note file. Without a title, the first heading of level
+	// 1 is the title, else the file name
+	Content *string `json:"content"`
+}
+
+// ValidateImportAiNotePayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateImportAiNotePayloadTransport(value *ImportAiNotePayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Name != nil {
+		if utf8.RuneCountInString(*value.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
+		}
+	}
+	if value.Content != nil {
+		if utf8.RuneCountInString(*value.Content) > 5242880 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *value.Content, utf8.RuneCountInString(*value.Content), 5242880, false))
+		}
+	}
+	return err
+}
+
+// ImportAiNoteResultNoteTransport stores JSON fields until they have been validated.
+type ImportAiNoteResultNoteTransport struct {
+	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+	// unique across notebooks
+	ID *string `json:"id"`
+	// Notebook (directory) the note is in
+	Notebook *string `json:"notebook"`
+	// Title
+	Title *string `json:"title"`
+	// Tags
+	Tags []string `json:"tags"`
+	// Creation time
+	CreatedAt *string `json:"created_at"`
+	// Last update time
+	UpdatedAt *string `json:"updated_at"`
+	// For a note of a notebook deleted as a whole: the ID of that notebook, which
+	// is in the trash. notebook is then trash, and restoring the note puts it back
+	// into that notebook
+	TrashedNotebook *string `json:"trashed_notebook,omitempty"`
+	// Who created the note: ai for a note created by an AI client
+	// (create_ai_note); absent for people
+	CreatedBy *string `json:"created_by,omitempty"`
+	// Body in Markdown
+	Body *string `json:"body"`
+	// Strong entity tag of the note file. Sent as the ETag header over HTTP
+	Version *string `json:"version"`
+	// Notebook the note was in before it was moved to the trash
+	TrashedFrom *string `json:"trashed_from,omitempty"`
+	// Ranges of the title matched by the query of get, sorted and not overlapping
+	TitleHighlights []*ImportAiNoteResultTextRangeTransport `json:"title_highlights,omitempty"`
+	// Ranges of the body matched by the query of get, sorted and not overlapping
+	BodyHighlights []*ImportAiNoteResultTextRangeTransport `json:"body_highlights,omitempty"`
+}
+
+// ValidateImportAiNoteResultNoteTransport checks decoded JSON before it becomes a service value.
+func ValidateImportAiNoteResultNoteTransport(value *ImportAiNoteResultNoteTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "body"))
+	}
+	if value.CreatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
+	}
+	if value.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if value.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
+	}
+	if value.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.CreatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *value.CreatedAt, goa.FormatDateTime))
+	}
+	if value.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
+	}
+	if value.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.CreatedBy != nil {
+		if !(*value.CreatedBy == "ai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if value.TrashedFrom != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	for _, e := range value.TitleHighlights {
+		if e != nil {
+			if err2 := ValidateImportAiNoteResultTextRangeTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range value.BodyHighlights {
+		if e != nil {
+			if err2 := ValidateImportAiNoteResultTextRangeTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
+// ImportAiNoteResultTextRangeTransport stores JSON fields until they have been validated.
+type ImportAiNoteResultTextRangeTransport struct {
+	// Offset of the first character
+	Start *int `json:"start"`
+	// Offset just past the last character
+	End *int `json:"end"`
+}
+
+// ValidateImportAiNoteResultTextRangeTransport checks decoded JSON before it becomes a service value.
+func ValidateImportAiNoteResultTextRangeTransport(value *ImportAiNoteResultTextRangeTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Start == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("start", "body"))
+	}
+	if value.End == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("end", "body"))
+	}
+	return err
+}
+
+// ImportAiNoteResultTransport stores JSON fields until they have been validated.
+type ImportAiNoteResultTransport struct {
+	// created, or skipped when a file with the same content was imported before
+	Status *string `json:"status"`
+	// The note created
+	Note *ImportAiNoteResultNoteTransport `json:"note,omitempty"`
+	// When skipped: the note imported from the same content before
+	DuplicateOf *string `json:"duplicate_of,omitempty"`
+	// What could not be converted as is, such as images left out
+	Warnings []string `json:"warnings"`
+}
+
+// ValidateImportAiNoteResultTransport checks decoded JSON before it becomes a service value.
+func ValidateImportAiNoteResultTransport(value *ImportAiNoteResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if value.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "body"))
+	}
+	if value.Status != nil {
+		if !(*value.Status == "created" || *value.Status == "skipped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *value.Status, []any{"created", "skipped"}))
+		}
+	}
+	if value.Note != nil {
+		if err2 := ValidateImportAiNoteResultNoteTransport(value.Note); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if value.DuplicateOf != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *value.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // ListPayloadIntTransport stores JSON fields until they have been validated.
 type ListPayloadIntTransport int
 
@@ -1433,6 +1643,59 @@ func EncodeGetResult(in *notes.Note) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeImportAiNotePayload checks JSON field names from the Goa design and returns a service value.
+func DecodeImportAiNotePayload(data []byte) (out *notes.ImportAiNotePayload, err error) {
+	var body *ImportAiNotePayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ImportAiNotePayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ImportAiNotePayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ImportAiNotePayload JSON after first value: %w", err)
+	}
+	if err := ValidateImportAiNotePayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate ImportAiNotePayload JSON: %w", err)
+	}
+	{
+		out = &notes.ImportAiNotePayload{
+			Notebook: *body.Notebook,
+			Name:     *body.Name,
+			Content:  *body.Content,
+		}
+	}
+	return out, nil
+}
+
+// EncodeImportAiNoteResult turns a service value into JSON using the field names in the Goa design.
+func EncodeImportAiNoteResult(in *notes.ImportResult) ([]byte, error) {
+	var body *ImportAiNoteResultTransport
+	{
+		body = &ImportAiNoteResultTransport{
+			Status:      &in.Status,
+			DuplicateOf: in.DuplicateOf,
+		}
+		if in.Note != nil {
+			body.Note = encodeNoteToImportAiNoteResultNoteTransport(in.Note)
+		}
+		body.Warnings = make([]string, len(in.Warnings))
+		for i, val := range in.Warnings {
+			body.Warnings[i] = val
+		}
+	}
+	if err := ValidateImportAiNoteResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ImportAiNoteResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ImportAiNoteResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // DecodeListPayload checks JSON field names from the Goa design and returns a service value.
 func DecodeListPayload(data []byte) (out *notes.ListPayload, err error) {
 	var body *ListPayloadTransport
@@ -1819,6 +2082,47 @@ func encodeNoteSummaryToSearchResultNoteSummaryTransport(v *notes.NoteSummary) *
 	return res
 }
 
+func encodeNoteToImportAiNoteResultNoteTransport(v *notes.Note) *ImportAiNoteResultNoteTransport {
+	res := &ImportAiNoteResultNoteTransport{
+		ID:              &v.ID,
+		Notebook:        &v.Notebook,
+		Title:           &v.Title,
+		CreatedAt:       &v.CreatedAt,
+		UpdatedAt:       &v.UpdatedAt,
+		TrashedNotebook: v.TrashedNotebook,
+		CreatedBy:       v.CreatedBy,
+		Body:            &v.Body,
+		Version:         &v.Version,
+		TrashedFrom:     v.TrashedFrom,
+	}
+	res.Tags = make([]string, len(v.Tags))
+	for i, val := range v.Tags {
+		res.Tags[i] = val
+	}
+	if v.TitleHighlights != nil {
+		res.TitleHighlights = make([]*ImportAiNoteResultTextRangeTransport, len(v.TitleHighlights))
+		for i, val := range v.TitleHighlights {
+			if val == nil {
+				res.TitleHighlights[i] = nil
+				continue
+			}
+			res.TitleHighlights[i] = encodeTextRangeToImportAiNoteResultTextRangeTransport(val)
+		}
+	}
+	if v.BodyHighlights != nil {
+		res.BodyHighlights = make([]*ImportAiNoteResultTextRangeTransport, len(v.BodyHighlights))
+		for i, val := range v.BodyHighlights {
+			if val == nil {
+				res.BodyHighlights[i] = nil
+				continue
+			}
+			res.BodyHighlights[i] = encodeTextRangeToImportAiNoteResultTextRangeTransport2(val)
+		}
+	}
+
+	return res
+}
+
 func encodeNotebookToNotebooksResultNotebookTransport(v *notes.Notebook) *NotebooksResultNotebookTransport {
 	res := &NotebooksResultNotebookTransport{
 		ID:       &v.ID,
@@ -1871,6 +2175,24 @@ func encodeTextRangeToGetResultTextRangeTransport(v *notes.TextRange) *GetResult
 
 func encodeTextRangeToGetResultTextRangeTransport2(v *notes.TextRange) *GetResultTextRangeTransport {
 	res := &GetResultTextRangeTransport{
+		Start: &v.Start,
+		End:   &v.End,
+	}
+
+	return res
+}
+
+func encodeTextRangeToImportAiNoteResultTextRangeTransport(v *notes.TextRange) *ImportAiNoteResultTextRangeTransport {
+	res := &ImportAiNoteResultTextRangeTransport{
+		Start: &v.Start,
+		End:   &v.End,
+	}
+
+	return res
+}
+
+func encodeTextRangeToImportAiNoteResultTextRangeTransport2(v *notes.TextRange) *ImportAiNoteResultTextRangeTransport {
+	res := &ImportAiNoteResultTextRangeTransport{
 		Start: &v.Start,
 		End:   &v.End,
 	}

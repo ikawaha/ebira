@@ -144,7 +144,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 6 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by
+const schemaVersion = 7 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -260,14 +260,14 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	// An update keeps the note's seq, and so its rowid in the full-text tables.
 	var seq int64
 	if err := tx.QueryRowContext(ctx, `
-INSERT INTO notes (id, notebook, trashed_notebook, title, tags, body, created_at, updated_at, sort_key, title_key, created_by, file_mtime, file_size)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO notes (id, notebook, trashed_notebook, title, tags, body, created_at, updated_at, sort_key, title_key, created_by, import_hash, file_mtime, file_size)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO UPDATE SET
 	notebook = excluded.notebook, trashed_notebook = excluded.trashed_notebook, title = excluded.title, tags = excluded.tags, body = excluded.body,
 	created_at = excluded.created_at, updated_at = excluded.updated_at, sort_key = excluded.sort_key, title_key = excluded.title_key,
-	created_by = excluded.created_by, file_mtime = excluded.file_mtime, file_size = excluded.file_size
+	created_by = excluded.created_by, import_hash = excluded.import_hash, file_mtime = excluded.file_mtime, file_size = excluded.file_size
 RETURNING seq`,
-		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, f.ModTime.UnixNano(), f.Size,
+		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.ImportHash, f.ModTime.UnixNano(), f.Size,
 	).Scan(&seq); err != nil {
 		return err
 	}
@@ -408,6 +408,30 @@ func notebookCond(notebook string, exclude []string) (string, []any) {
 		args = append(args, nb)
 	}
 	return `n.notebook NOT IN (?` + strings.Repeat(", ?", len(args)-1) + `)`, args
+}
+
+// ImportedNote returns the ID of a note imported from a file with the hash,
+// outside the notebooks in exclude, and whether there is one. The trash
+// counts unless excluded, so that a file is not imported again after its
+// note was deleted.
+func (ix *Index) ImportedNote(ctx context.Context, hash string, exclude ...string) (string, bool, error) {
+	if hash == "" {
+		return "", false, nil
+	}
+	q := `SELECT id FROM notes WHERE import_hash = ?`
+	args := []any{hash}
+	if len(exclude) > 0 {
+		q += ` AND notebook NOT IN (?` + strings.Repeat(", ?", len(exclude)-1) + `)`
+		for _, nb := range exclude {
+			args = append(args, nb)
+		}
+	}
+	var id string
+	err := ix.db.QueryRowContext(ctx, q+` ORDER BY created_at, id LIMIT 1`, args...).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	return id, err == nil, err
 }
 
 // Bodies calls fn with the ID, title and body of every note, including those

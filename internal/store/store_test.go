@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestSaveKeepsComments(t *testing.T) {
@@ -420,5 +422,57 @@ func TestInboxDefaultKind(t *testing.T) {
 	}
 	if m, _ := s.NotebookMeta(Inbox); m.Kind != KindDrop {
 		t.Errorf("kind of a collab inbox = %q, want drop", m.Kind)
+	}
+}
+
+func TestCreateWithExtra(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fm yaml.Node
+	if err := yaml.Unmarshal([]byte("author: me # comment\ncreated_by: person\nbody: x\naliases: [a]\n"), &fm); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	n := &Note{ID: "imp", Notebook: Inbox, Title: "取り込み", CreatedAt: at, UpdatedAt: at, Body: "本文\n",
+		ImportedFrom: "memo.md", ImportHash: "sha256:abc", Extra: fm.Content[0].Content}
+	if err := s.Create(n); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, Inbox, "imp.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The keys of the note itself in Extra are ignored.
+	want := `title: 取り込み
+tags: []
+created_at: 2026-04-01T00:00:00Z
+updated_at: 2026-04-01T00:00:00Z
+author: me # comment
+aliases: [a]
+imported_from: memo.md
+import_hash: sha256:abc
+body: |
+  本文
+`
+	if got := string(b); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+	got, err := s.Load("imp")
+	if err != nil || got.ImportedFrom != "memo.md" || got.ImportHash != "sha256:abc" || got.CreatedBy != "" {
+		t.Fatalf("Load = %+v, %v", got, err)
+	}
+	// Saving keeps the keys.
+	got.Body = "変更\n"
+	if err := s.Save(got); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(filepath.Join(dir, Inbox, "imp.yaml"))
+	for _, k := range []string{"author: me # comment", "imported_from: memo.md", "import_hash: sha256:abc"} {
+		if !strings.Contains(string(b), k) {
+			t.Errorf("after Save, %q is missing:\n%s", k, b)
+		}
 	}
 }

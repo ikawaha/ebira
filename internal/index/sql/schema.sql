@@ -19,12 +19,14 @@ CREATE TABLE IF NOT EXISTS notes (
 	sort_key   INTEGER NOT NULL, -- key of the manual order (store.Note.SortKey), highest first
 	title_key  TEXT NOT NULL,    -- title for sorting by title: NFKC, lower-cased
 	created_by TEXT NOT NULL DEFAULT '', -- ai for a note created by an AI client (store.Note.CreatedBy)
+	import_hash TEXT NOT NULL DEFAULT '', -- hash of the file the note was imported from (store.Note.ImportHash)
 	file_mtime INTEGER NOT NULL, -- used by Sync to skip unchanged files
 	file_size  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS notes_updated_at ON notes (updated_at);
 CREATE INDEX IF NOT EXISTS notes_created_at ON notes (created_at);
 CREATE INDEX IF NOT EXISTS notes_notebook ON notes (notebook, sort_key);
+CREATE INDEX IF NOT EXISTS notes_import_hash ON notes (import_hash) WHERE import_hash != '';
 
 CREATE TABLE IF NOT EXISTS note_tags (
 	id  TEXT NOT NULL REFERENCES notes (id) ON DELETE CASCADE,

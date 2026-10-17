@@ -77,6 +77,9 @@ type Client struct {
 	// delete_trashed_notebook endpoint.
 	DeleteTrashedNotebookDoer goahttp.Doer
 
+	// Import Doer is the HTTP client used to make requests to the import endpoint.
+	ImportDoer goahttp.Doer
+
 	// AddFile Doer is the HTTP client used to make requests to the add_file
 	// endpoint.
 	AddFileDoer goahttp.Doer
@@ -135,6 +138,7 @@ func NewClient(
 		TrashedNotebooksDoer:      doer,
 		RestoreNotebookDoer:       doer,
 		DeleteTrashedNotebookDoer: doer,
+		ImportDoer:                doer,
 		AddFileDoer:               doer,
 		GetFileDoer:               doer,
 		DeleteFileDoer:            doer,
@@ -503,6 +507,30 @@ func (c *Client) DeleteTrashedNotebook() goa.Endpoint {
 		resp, err := c.DeleteTrashedNotebookDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "delete_trashed_notebook", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// Import returns an endpoint that makes HTTP requests to the notes service
+// import server.
+func (c *Client) Import() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeImportRequest(c.encoder)
+		decodeResponse = DecodeImportResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildImportRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.ImportDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "import", err)
 		}
 		return decodeResponse(resp)
 	}

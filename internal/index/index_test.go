@@ -427,3 +427,49 @@ func TestSchemaUpgrade(t *testing.T) {
 		t.Errorf("notes has no seq: %v", err)
 	}
 }
+
+func TestImportedNote(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	st, err := store.New(filepath.Join(dir, "notes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)
+	for _, n := range []*store.Note{
+		{ID: "a", Notebook: "work", Title: "a", CreatedAt: now, UpdatedAt: now, ImportHash: "sha256:1"},
+		{ID: "b", Notebook: store.Trash, Title: "b", CreatedAt: now, UpdatedAt: now, ImportHash: "sha256:2"},
+		{ID: "c", Notebook: "secret", Title: "c", CreatedAt: now, UpdatedAt: now, ImportHash: "sha256:3"},
+		{ID: "d", Notebook: "work", Title: "d", CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := st.Create(n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ix, err := Open(ctx, filepath.Join(dir, "index.sqlite"), Config{Mode: ModeBigram})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ix.Close()
+	if _, err := ix.Sync(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		hash    string
+		exclude []string
+		want    string
+	}{
+		{"sha256:1", nil, "a"},
+		{"sha256:2", nil, "b"}, // the trash counts
+		{"sha256:2", []string{store.Trash}, ""},
+		{"sha256:3", []string{store.Trash, "secret"}, ""},
+		{"sha256:9", nil, ""},
+		{"", nil, ""}, // notes not imported have no hash
+	}
+	for _, tt := range tests {
+		id, ok, err := ix.ImportedNote(ctx, tt.hash, tt.exclude...)
+		if err != nil || id != tt.want || ok != (tt.want != "") {
+			t.Errorf("ImportedNote(%q, %v) = %q, %v, %v; want %q", tt.hash, tt.exclude, id, ok, err, tt.want)
+		}
+	}
+}

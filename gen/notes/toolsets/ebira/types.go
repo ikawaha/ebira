@@ -130,6 +130,29 @@ type (
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRange
 	}
+	// ImportAiNotePayload defines the JSON payload for the ebira.import_ai_note tool.
+	ImportAiNotePayload = struct {
+		// ID of a notebook of the collab or drop kind
+		Notebook string
+		// File name of the Markdown file, the title when the file gives none
+		Name string
+		// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
+		// (a list or comma-separated), created (or date) and updated times; its other
+		// keys are kept in the note file. Without a title, the first heading of level
+		// 1 is the title, else the file name
+		Content string
+	}
+	// ImportAiNoteResult defines the JSON result for the ebira.import_ai_note tool.
+	ImportAiNoteResult = struct {
+		// created, or skipped when a file with the same content was imported before
+		Status string
+		// The note created
+		Note *Note
+		// When skipped: the note imported from the same content before
+		DuplicateOf *string
+		// What could not be converted as is, such as images left out
+		Warnings []string
+	}
 	// ListNotebooksPayload defines the JSON payload for the ebira.list_notebooks tool.
 	ListNotebooksPayload = struct {
 	}
@@ -210,6 +233,39 @@ type (
 	}
 	// UpdateAiNoteResult defines the JSON result for the ebira.update_ai_note tool.
 	UpdateAiNoteResult = struct {
+		// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+		// unique across notebooks
+		ID string
+		// Notebook (directory) the note is in
+		Notebook string
+		// Title
+		Title string
+		// Tags
+		Tags []string
+		// Creation time
+		CreatedAt string
+		// Last update time
+		UpdatedAt string
+		// For a note of a notebook deleted as a whole: the ID of that notebook, which
+		// is in the trash. notebook is then trash, and restoring the note puts it back
+		// into that notebook
+		TrashedNotebook *string
+		// Who created the note: ai for a note created by an AI client
+		// (create_ai_note); absent for people
+		CreatedBy *string
+		// Body in Markdown
+		Body string
+		// Strong entity tag of the note file. Sent as the ETag header over HTTP
+		Version string
+		// Notebook the note was in before it was moved to the trash
+		TrashedFrom *string
+		// Ranges of the title matched by the query of get, sorted and not overlapping
+		TitleHighlights []*TextRange
+		// Ranges of the body matched by the query of get, sorted and not overlapping
+		BodyHighlights []*TextRange
+	}
+	// Note is a nested type used by the generated JSON contract.
+	Note = struct {
 		// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
 		// unique across notebooks
 		ID string

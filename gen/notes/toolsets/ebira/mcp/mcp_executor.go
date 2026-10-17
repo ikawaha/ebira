@@ -31,6 +31,8 @@ func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 			return runtime.ExecuteMCPTool(ctx, caller, call, "delete_ai_note", genebira.SpecDeleteAiNote())
 		case genebira.GetNote:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "get_note", genebira.SpecGetNote())
+		case genebira.ImportAiNote:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "import_ai_note", genebira.SpecImportAiNote())
 		case genebira.ListNotebooks:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "list_notebooks", genebira.SpecListNotebooks())
 		case genebira.ListNotes:

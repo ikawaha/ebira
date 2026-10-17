@@ -1815,6 +1815,103 @@ func DecodeDeleteTrashedNotebookResponse(decoder func(*http.Response) goahttp.De
 	}
 }
 
+// BuildImportRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "import" endpoint
+func (c *Client) BuildImportRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ImportNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "import", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeImportRequest returns an encoder for requests sent to the notes import
+// server.
+func EncodeImportRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.ImportPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "import", "*notes.ImportPayload", v)
+		}
+		body := NewImportRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "import", err)
+		}
+		return nil
+	}
+}
+
+// DecodeImportResponse returns a decoder for responses returned by the notes
+// import endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeImportResponse may return the following errors:
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - error: internal error
+func DecodeImportResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "import", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "import", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body ImportResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "import", err)
+			}
+			err = ValidateImportResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "import", err)
+			}
+			res := NewImportResultOK(&body)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				body ImportBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "import", err)
+			}
+			err = ValidateImportBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "import", err)
+			}
+			return nil, NewImportBadRequest(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "import", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "import", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildAddFileRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "add_file" endpoint
 func (c *Client) BuildAddFileRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -2444,6 +2541,73 @@ func unmarshalTrashedNotebookResponseToNotesTrashedNotebook(v *TrashedNotebookRe
 		Name:  *v.Name,
 		Kind:  *v.Kind,
 		Count: *v.Count,
+	}
+
+	return res
+}
+
+// marshalNotesImportFileToImportFileRequestBody builds a value of type
+// *ImportFileRequestBody from a value of type *notes.ImportFile.
+func marshalNotesImportFileToImportFileRequestBody(v *notes.ImportFile) *ImportFileRequestBody {
+	res := &ImportFileRequestBody{
+		Ref:     v.Ref,
+		Name:    v.Name,
+		Content: v.Content,
+	}
+
+	return res
+}
+
+// marshalImportFileRequestBodyToNotesImportFile builds a value of type
+// *notes.ImportFile from a value of type *ImportFileRequestBody.
+func marshalImportFileRequestBodyToNotesImportFile(v *ImportFileRequestBody) *notes.ImportFile {
+	res := &notes.ImportFile{
+		Ref:     v.Ref,
+		Name:    v.Name,
+		Content: v.Content,
+	}
+
+	return res
+}
+
+// unmarshalNoteResponseBodyToNotesNote builds a value of type *notes.Note from
+// a value of type *NoteResponseBody.
+func unmarshalNoteResponseBodyToNotesNote(v *NoteResponseBody) *notes.Note {
+	res := &notes.Note{
+		ID:              *v.ID,
+		Notebook:        *v.Notebook,
+		Title:           *v.Title,
+		CreatedAt:       *v.CreatedAt,
+		UpdatedAt:       *v.UpdatedAt,
+		TrashedNotebook: v.TrashedNotebook,
+		CreatedBy:       v.CreatedBy,
+		Body:            *v.Body,
+		Version:         *v.Version,
+		TrashedFrom:     v.TrashedFrom,
+	}
+	res.Tags = make([]string, len(v.Tags))
+	for i, val := range v.Tags {
+		res.Tags[i] = val
+	}
+	if v.TitleHighlights != nil {
+		res.TitleHighlights = make([]*notes.TextRange, len(v.TitleHighlights))
+		for i, val := range v.TitleHighlights {
+			if val == nil {
+				res.TitleHighlights[i] = nil
+				continue
+			}
+			res.TitleHighlights[i] = unmarshalTextRangeResponseBodyToNotesTextRange(val)
+		}
+	}
+	if v.BodyHighlights != nil {
+		res.BodyHighlights = make([]*notes.TextRange, len(v.BodyHighlights))
+		for i, val := range v.BodyHighlights {
+			if val == nil {
+				res.BodyHighlights[i] = nil
+				continue
+			}
+			res.BodyHighlights[i] = unmarshalTextRangeResponseBodyToNotesTextRange(val)
+		}
 	}
 
 	return res

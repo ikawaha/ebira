@@ -32,7 +32,9 @@ type Endpoints struct {
 	TrashedNotebooks      goa.Endpoint
 	RestoreNotebook       goa.Endpoint
 	DeleteTrashedNotebook goa.Endpoint
+	Import                goa.Endpoint
 	CreateAiNote          goa.Endpoint
+	ImportAiNote          goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
 	CreateAiNotebook      goa.Endpoint
@@ -89,7 +91,9 @@ func NewEndpoints(s Service) *Endpoints {
 		TrashedNotebooks:      NewTrashedNotebooksEndpoint(s),
 		RestoreNotebook:       NewRestoreNotebookEndpoint(s),
 		DeleteTrashedNotebook: NewDeleteTrashedNotebookEndpoint(s),
+		Import:                NewImportEndpoint(s),
 		CreateAiNote:          NewCreateAiNoteEndpoint(s),
+		ImportAiNote:          NewImportAiNoteEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
@@ -121,7 +125,9 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.TrashedNotebooks = m(e.TrashedNotebooks)
 	e.RestoreNotebook = m(e.RestoreNotebook)
 	e.DeleteTrashedNotebook = m(e.DeleteTrashedNotebook)
+	e.Import = m(e.Import)
 	e.CreateAiNote = m(e.CreateAiNote)
+	e.ImportAiNote = m(e.ImportAiNote)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
 	e.CreateAiNotebook = m(e.CreateAiNotebook)
@@ -276,12 +282,30 @@ func NewDeleteTrashedNotebookEndpoint(s Service) goa.Endpoint {
 	}
 }
 
+// NewImportEndpoint returns an endpoint function that calls the method
+// "import" of service "notes".
+func NewImportEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ImportPayload)
+		return s.Import(ctx, p)
+	}
+}
+
 // NewCreateAiNoteEndpoint returns an endpoint function that calls the method
 // "create_ai_note" of service "notes".
 func NewCreateAiNoteEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*CreateAiNotePayload)
 		return s.CreateAiNote(ctx, p)
+	}
+}
+
+// NewImportAiNoteEndpoint returns an endpoint function that calls the method
+// "import_ai_note" of service "notes".
+func NewImportAiNoteEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ImportAiNotePayload)
+		return s.ImportAiNote(ctx, p)
 	}
 }
 

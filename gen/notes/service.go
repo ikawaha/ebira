@@ -77,12 +77,24 @@ type Service interface {
 	RestoreNotebook(context.Context, *RestoreNotebookPayload) (res *Notebook, err error)
 	// Permanently delete a notebook in the trash with its notes.
 	DeleteTrashedNotebook(context.Context, *DeleteTrashedNotebookPayload) (err error)
+	// Import a Markdown file as a new note with a random ID. A file whose content
+	// was imported before, even if the note is in the trash, is skipped unless
+	// force is set. Images the file refers to by relative paths can be sent with
+	// it; they are added to the note and the body refers to them.
+	Import(context.Context, *ImportPayload) (res *ImportResult, err error)
 	// Create a note in a notebook of the collab kind, which people share with AI,
 	// or add one to a notebook of the drop kind, such as an inbox, whose notes AI
 	// clients cannot see and therefore cannot update or delete. Other notebooks
 	// are read-only for AI clients: use list_notebooks to find the notebooks whose
 	// kind is collab or drop. The note is marked as created by AI (created_by).
 	CreateAiNote(context.Context, *CreateAiNotePayload) (res *Note, err error)
+	// Import a Markdown file as a new note in a notebook of the collab or drop
+	// kind, as create_ai_note does, converting it as people's imports do: the
+	// front matter gives the title, tags and times, and its other keys are kept.
+	// Images cannot be imported; their links are left as they are. A file whose
+	// content was imported before into a notebook visible to AI clients is
+	// skipped. The note is marked as created by AI.
+	ImportAiNote(context.Context, *ImportAiNotePayload) (res *ImportResult, err error)
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
 	// people meanwhile are not overwritten. Setting notebook moves the note to
@@ -143,7 +155,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [27]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "create_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "sync"}
+var MethodNames = [29]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -304,6 +316,61 @@ type GetPayload struct {
 	ID string
 	// Search query to highlight
 	Q *string
+}
+
+// ImportAiNotePayload is the payload type of the notes service import_ai_note
+// method.
+type ImportAiNotePayload struct {
+	// ID of a notebook of the collab or drop kind
+	Notebook string
+	// File name of the Markdown file, the title when the file gives none
+	Name string
+	// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
+	// (a list or comma-separated), created (or date) and updated times; its other
+	// keys are kept in the note file. Without a title, the first heading of level
+	// 1 is the title, else the file name
+	Content string
+}
+
+type ImportFile struct {
+	// Path of the image as the Markdown file refers to it, one of the paths the
+	// file refers to
+	Ref string
+	// File name
+	Name string
+	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	Content []byte
+}
+
+// ImportPayload is the payload type of the notes service import method.
+type ImportPayload struct {
+	// Notebook to put the note in (default inbox; not trash)
+	Notebook *string
+	// File name of the Markdown file, the title when the file gives none
+	Name string
+	// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
+	// (a list or comma-separated), created (or date) and updated times; its other
+	// keys are kept in the note file. Without a title, the first heading of level
+	// 1 is the title, else the file name
+	Content string
+	// Modification time of the file, for the times the front matter does not give
+	ModifiedAt *string
+	// Images the file refers to
+	Files []*ImportFile
+	// Import even if the same content was imported before
+	Force *bool
+}
+
+// ImportResult is the result type of the notes service import method.
+type ImportResult struct {
+	// created, or skipped when a file with the same content was imported before
+	Status string
+	// The note created
+	Note *Note
+	// When skipped: the note imported from the same content before
+	DuplicateOf *string
+	// What could not be converted as is, such as images left out
+	Warnings []string
 }
 
 // ListPayload is the payload type of the notes service list method.
@@ -666,6 +733,26 @@ func ValidatefileCheckInt64Transport(value fileCheckInt64Transport) (err error) 
 	return err
 }
 
+// importResultIntTransport stores JSON fields until they have been validated.
+type importResultIntTransport int
+
+// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
+// declared range. Decimal and exponent spellings do not change its value.
+func (value *importResultIntTransport) UnmarshalJSON(data []byte) error {
+	number, err := rawjson.DecodeInteger[int](data)
+	if err != nil {
+		return fmt.Errorf("decode importResultIntTransport integer: %w", err)
+	}
+	*value = importResultIntTransport(number)
+	return nil
+}
+
+// ValidateimportResultIntTransport checks decoded JSON before it becomes a service value.
+func ValidateimportResultIntTransport(value importResultIntTransport) (err error) {
+
+	return err
+}
+
 // jsonBrokenFileRefTransport stores JSON fields until they have been validated.
 type jsonBrokenFileRefTransport struct {
 	// ID of the note whose body has the reference
@@ -729,6 +816,81 @@ func validatejsonFileCheckTransport(value *jsonFileCheckTransport) (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return err
+}
+
+// jsonImportFileTransport stores JSON fields until they have been validated.
+type jsonImportFileTransport struct {
+	// Path of the image as the Markdown file refers to it, one of the paths the
+	// file refers to
+	Ref *string `json:"ref"`
+	// File name
+	Name *string `json:"name"`
+	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	Content []byte `json:"content"`
+}
+
+// validatejsonImportFileTransport checks decoded JSON before it becomes a service value.
+func validatejsonImportFileTransport(value *jsonImportFileTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Ref == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ref", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if value.Name != nil {
+		if utf8.RuneCountInString(*value.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
+		}
+	}
+	return err
+}
+
+// jsonImportResultTransport stores JSON fields until they have been validated.
+type jsonImportResultTransport struct {
+	// created, or skipped when a file with the same content was imported before
+	Status *string `json:"status"`
+	// The note created
+	Note *jsonNoteTransport `json:"note,omitempty"`
+	// When skipped: the note imported from the same content before
+	DuplicateOf *string `json:"duplicate_of,omitempty"`
+	// What could not be converted as is, such as images left out
+	Warnings []string `json:"warnings"`
+}
+
+// validatejsonImportResultTransport checks decoded JSON before it becomes a service value.
+func validatejsonImportResultTransport(value *jsonImportResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if value.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "body"))
+	}
+	if value.Status != nil {
+		if !(*value.Status == "created" || *value.Status == "skipped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *value.Status, []any{"created", "skipped"}))
+		}
+	}
+	if value.Note != nil {
+		if err2 := validatejsonNoteTransport(value.Note); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if value.DuplicateOf != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *value.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -1172,9 +1334,9 @@ func validatejsonTagCountTransport(value *jsonTagCountTransport) (err error) {
 // jsonTextRangeTransport stores JSON fields until they have been validated.
 type jsonTextRangeTransport struct {
 	// Offset of the first character
-	Start *noteIntTransport `json:"start"`
+	Start *importResultIntTransport `json:"start"`
 	// Offset just past the last character
-	End *noteIntTransport `json:"end"`
+	End *importResultIntTransport `json:"end"`
 }
 
 // validatejsonTextRangeTransport checks decoded JSON before it becomes a service value.
@@ -1282,26 +1444,6 @@ func validatejsonUnusedFileTransport(value *jsonUnusedFileTransport) (err error)
 	if value.AddedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.added_at", *value.AddedAt, goa.FormatDateTime))
 	}
-	return err
-}
-
-// noteIntTransport stores JSON fields until they have been validated.
-type noteIntTransport int
-
-// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
-// declared range. Decimal and exponent spellings do not change its value.
-func (value *noteIntTransport) UnmarshalJSON(data []byte) error {
-	number, err := rawjson.DecodeInteger[int](data)
-	if err != nil {
-		return fmt.Errorf("decode noteIntTransport integer: %w", err)
-	}
-	*value = noteIntTransport(number)
-	return nil
-}
-
-// ValidatenoteIntTransport checks decoded JSON before it becomes a service value.
-func ValidatenoteIntTransport(value noteIntTransport) (err error) {
-
 	return err
 }
 
@@ -1469,8 +1611,64 @@ func validateBrokenFileRefOriginal2(value *BrokenFileRef) (err error) {
 	return err
 }
 
+// validateImportFileOriginal checks the original typed value before JSON conversion.
+func validateImportFileOriginal(value *ImportFile) (err error) {
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "value"))
+	}
+	if utf8.RuneCountInString(value.Name) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("value.name", value.Name, utf8.RuneCountInString(value.Name), 1, true))
+	}
+	if utf8.RuneCountInString(value.Name) > 255 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("value.name", value.Name, utf8.RuneCountInString(value.Name), 255, false))
+	}
+	return err
+}
+
+// validateImportResultOriginal checks the original typed value before JSON conversion.
+func validateImportResultOriginal(value *ImportResult) (err error) {
+	if value.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "value"))
+	}
+	if !(value.Status == "created" || value.Status == "skipped") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.status", value.Status, []any{"created", "skipped"}))
+	}
+	if value.Note != nil {
+		if err2 := validateNoteOriginal(value.Note); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if value.DuplicateOf != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.duplicate_of", *value.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // validateNoteOriginal checks the original typed value before JSON conversion.
 func validateNoteOriginal(value *Note) (err error) {
+	if value.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
+	}
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
+	if value.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.CreatedBy != nil {
+		if !(*value.CreatedBy == "ai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if value.TrashedFrom != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// validateNoteOriginal2 checks the original typed value before JSON conversion.
+func validateNoteOriginal2(value *Note) (err error) {
 	if value.Tags == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
 	}
@@ -1776,12 +1974,144 @@ func DecodeFileCheck(data []byte) (out *FileCheck, err error) {
 	return out, nil
 }
 
+// EncodeImportFile turns a service value into JSON using the field names in the Goa design.
+func EncodeImportFile(in *ImportFile) ([]byte, error) {
+	if err := checkImportFileValue(in); err != nil {
+		return nil, fmt.Errorf("encode ImportFile JSON: %w", err)
+	}
+	if err := validateImportFileOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate ImportFile value: %w", err)
+	}
+	var body *jsonImportFileTransport
+	{
+		body = &jsonImportFileTransport{
+			Ref:     &in.Ref,
+			Name:    &in.Name,
+			Content: in.Content,
+		}
+	}
+	if err := validatejsonImportFileTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ImportFile JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ImportFile JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeImportFile checks JSON field names from the Goa design and returns a service value.
+func DecodeImportFile(data []byte) (out *ImportFile, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ImportFile JSON: %w", err)
+	}
+	if err := validateImportFileJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ImportFile JSON: %w", err)
+	}
+	var body *jsonImportFileTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ImportFile JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ImportFile JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ImportFile JSON after first value: %w", err)
+	}
+	if err := validatejsonImportFileTransport(body); err != nil {
+		return out, fmt.Errorf("validate ImportFile JSON: %w", err)
+	}
+	{
+		out = &ImportFile{
+			Ref:     *body.Ref,
+			Name:    *body.Name,
+			Content: body.Content,
+		}
+	}
+	return out, nil
+}
+
+// EncodeImportResult turns a service value into JSON using the field names in the Goa design.
+func EncodeImportResult(in *ImportResult) ([]byte, error) {
+	if err := checkImportResultValue(in); err != nil {
+		return nil, fmt.Errorf("encode ImportResult JSON: %w", err)
+	}
+	if err := validateImportResultOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate ImportResult value: %w", err)
+	}
+	var body *jsonImportResultTransport
+	{
+		body = &jsonImportResultTransport{
+			Status:      &in.Status,
+			DuplicateOf: in.DuplicateOf,
+		}
+		if in.Note != nil {
+			body.Note = encodeNoteToNoteTransport(in.Note)
+		}
+		body.Warnings = make([]string, len(in.Warnings))
+		for i, val := range in.Warnings {
+			body.Warnings[i] = val
+		}
+	}
+	if err := validatejsonImportResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ImportResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ImportResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeImportResult checks JSON field names from the Goa design and returns a service value.
+func DecodeImportResult(data []byte) (out *ImportResult, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ImportResult JSON: %w", err)
+	}
+	if err := validateImportResultJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ImportResult JSON: %w", err)
+	}
+	var body *jsonImportResultTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ImportResult JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ImportResult JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ImportResult JSON after first value: %w", err)
+	}
+	if err := validatejsonImportResultTransport(body); err != nil {
+		return out, fmt.Errorf("validate ImportResult JSON: %w", err)
+	}
+	{
+		out = &ImportResult{
+			Status:      *body.Status,
+			DuplicateOf: body.DuplicateOf,
+		}
+		if body.Note != nil {
+			out.Note = decodeNoteTransportToNote(body.Note)
+		}
+		out.Warnings = make([]string, len(body.Warnings))
+		for i, val := range body.Warnings {
+			out.Warnings[i] = val
+		}
+	}
+	return out, nil
+}
+
 // EncodeNote turns a service value into JSON using the field names in the Goa design.
 func EncodeNote(in *Note) ([]byte, error) {
 	if err := checkNoteValue(in); err != nil {
 		return nil, fmt.Errorf("encode Note JSON: %w", err)
 	}
-	if err := validateNoteOriginal(in); err != nil {
+	if err := validateNoteOriginal2(in); err != nil {
 		return nil, fmt.Errorf("validate Note value: %w", err)
 	}
 	var body *jsonNoteTransport
@@ -1809,7 +2139,7 @@ func EncodeNote(in *Note) ([]byte, error) {
 					body.TitleHighlights[i] = nil
 					continue
 				}
-				body.TitleHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+				body.TitleHighlights[i] = encodeTextRangeToTextRangeTransport3(val)
 			}
 		}
 		if in.BodyHighlights != nil {
@@ -1819,7 +2149,7 @@ func EncodeNote(in *Note) ([]byte, error) {
 					body.BodyHighlights[i] = nil
 					continue
 				}
-				body.BodyHighlights[i] = encodeTextRangeToTextRangeTransport2(val)
+				body.BodyHighlights[i] = encodeTextRangeToTextRangeTransport4(val)
 			}
 		}
 	}
@@ -1881,7 +2211,7 @@ func DecodeNote(data []byte) (out *Note, err error) {
 					out.TitleHighlights[i] = nil
 					continue
 				}
-				out.TitleHighlights[i] = decodeTextRangeTransportToTextRange(val)
+				out.TitleHighlights[i] = decodeTextRangeTransportToTextRange3(val)
 			}
 		}
 		if body.BodyHighlights != nil {
@@ -1891,7 +2221,7 @@ func DecodeNote(data []byte) (out *Note, err error) {
 					out.BodyHighlights[i] = nil
 					continue
 				}
-				out.BodyHighlights[i] = decodeTextRangeTransportToTextRange2(val)
+				out.BodyHighlights[i] = decodeTextRangeTransportToTextRange4(val)
 			}
 		}
 	}
@@ -2114,7 +2444,7 @@ func EncodeNoteSummary(in *NoteSummary) ([]byte, error) {
 					body.TitleHighlights[i] = nil
 					continue
 				}
-				body.TitleHighlights[i] = encodeTextRangeToTextRangeTransport5(val)
+				body.TitleHighlights[i] = encodeTextRangeToTextRangeTransport7(val)
 			}
 		}
 		if in.SnippetHighlights != nil {
@@ -2124,7 +2454,7 @@ func EncodeNoteSummary(in *NoteSummary) ([]byte, error) {
 					body.SnippetHighlights[i] = nil
 					continue
 				}
-				body.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport6(val)
+				body.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport8(val)
 			}
 		}
 	}
@@ -2184,7 +2514,7 @@ func DecodeNoteSummary(data []byte) (out *NoteSummary, err error) {
 					out.TitleHighlights[i] = nil
 					continue
 				}
-				out.TitleHighlights[i] = decodeTextRangeTransportToTextRange5(val)
+				out.TitleHighlights[i] = decodeTextRangeTransportToTextRange7(val)
 			}
 		}
 		if body.SnippetHighlights != nil {
@@ -2194,7 +2524,7 @@ func DecodeNoteSummary(data []byte) (out *NoteSummary, err error) {
 					out.SnippetHighlights[i] = nil
 					continue
 				}
-				out.SnippetHighlights[i] = decodeTextRangeTransportToTextRange6(val)
+				out.SnippetHighlights[i] = decodeTextRangeTransportToTextRange8(val)
 			}
 		}
 	}
@@ -2480,9 +2810,9 @@ func EncodeTextRange(in *TextRange) ([]byte, error) {
 	var body *jsonTextRangeTransport
 	{
 		body = &jsonTextRangeTransport{}
-		start := noteIntTransport(in.Start)
+		start := importResultIntTransport(in.Start)
 		body.Start = &start
-		end := noteIntTransport(in.End)
+		end := importResultIntTransport(in.End)
 		body.End = &end
 	}
 	if err := validatejsonTextRangeTransport(body); err != nil {
@@ -2692,7 +3022,7 @@ func decodeNoteSummaryTransportToNoteSummary(v *jsonNoteSummaryTransport) *NoteS
 				res.TitleHighlights[i] = nil
 				continue
 			}
-			res.TitleHighlights[i] = decodeTextRangeTransportToTextRange3(val)
+			res.TitleHighlights[i] = decodeTextRangeTransportToTextRange5(val)
 		}
 	}
 	if v.SnippetHighlights != nil {
@@ -2702,7 +3032,7 @@ func decodeNoteSummaryTransportToNoteSummary(v *jsonNoteSummaryTransport) *NoteS
 				res.SnippetHighlights[i] = nil
 				continue
 			}
-			res.SnippetHighlights[i] = decodeTextRangeTransportToTextRange4(val)
+			res.SnippetHighlights[i] = decodeTextRangeTransportToTextRange6(val)
 		}
 	}
 
@@ -2731,7 +3061,7 @@ func decodeNoteSummaryTransportToNoteSummary2(v *jsonNoteSummaryTransport) *Note
 				res.TitleHighlights[i] = nil
 				continue
 			}
-			res.TitleHighlights[i] = decodeTextRangeTransportToTextRange7(val)
+			res.TitleHighlights[i] = decodeTextRangeTransportToTextRange9(val)
 		}
 	}
 	if v.SnippetHighlights != nil {
@@ -2741,7 +3071,48 @@ func decodeNoteSummaryTransportToNoteSummary2(v *jsonNoteSummaryTransport) *Note
 				res.SnippetHighlights[i] = nil
 				continue
 			}
-			res.SnippetHighlights[i] = decodeTextRangeTransportToTextRange8(val)
+			res.SnippetHighlights[i] = decodeTextRangeTransportToTextRange10(val)
+		}
+	}
+
+	return res
+}
+
+func decodeNoteTransportToNote(v *jsonNoteTransport) *Note {
+	res := &Note{
+		ID:              *v.ID,
+		Notebook:        *v.Notebook,
+		Title:           *v.Title,
+		CreatedAt:       *v.CreatedAt,
+		UpdatedAt:       *v.UpdatedAt,
+		TrashedNotebook: v.TrashedNotebook,
+		CreatedBy:       v.CreatedBy,
+		Body:            *v.Body,
+		Version:         *v.Version,
+		TrashedFrom:     v.TrashedFrom,
+	}
+	res.Tags = make([]string, len(v.Tags))
+	for i, val := range v.Tags {
+		res.Tags[i] = val
+	}
+	if v.TitleHighlights != nil {
+		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
+		for i, val := range v.TitleHighlights {
+			if val == nil {
+				res.TitleHighlights[i] = nil
+				continue
+			}
+			res.TitleHighlights[i] = decodeTextRangeTransportToTextRange(val)
+		}
+	}
+	if v.BodyHighlights != nil {
+		res.BodyHighlights = make([]*TextRange, len(v.BodyHighlights))
+		for i, val := range v.BodyHighlights {
+			if val == nil {
+				res.BodyHighlights[i] = nil
+				continue
+			}
+			res.BodyHighlights[i] = decodeTextRangeTransportToTextRange2(val)
 		}
 	}
 
@@ -2749,6 +3120,15 @@ func decodeNoteSummaryTransportToNoteSummary2(v *jsonNoteSummaryTransport) *Note
 }
 
 func decodeTextRangeTransportToTextRange(v *jsonTextRangeTransport) *TextRange {
+	res := &TextRange{
+		Start: int(*v.Start),
+		End:   int(*v.End),
+	}
+
+	return res
+}
+
+func decodeTextRangeTransportToTextRange10(v *jsonTextRangeTransport) *TextRange {
 	res := &TextRange{
 		Start: int(*v.Start),
 		End:   int(*v.End),
@@ -2820,6 +3200,15 @@ func decodeTextRangeTransportToTextRange8(v *jsonTextRangeTransport) *TextRange 
 	return res
 }
 
+func decodeTextRangeTransportToTextRange9(v *jsonTextRangeTransport) *TextRange {
+	res := &TextRange{
+		Start: int(*v.Start),
+		End:   int(*v.End),
+	}
+
+	return res
+}
+
 func decodeUnusedFileTransportToUnusedFile(v *jsonUnusedFileTransport) *UnusedFile {
 	res := &UnusedFile{
 		NoteID:  *v.NoteID,
@@ -2866,7 +3255,7 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *jsonNoteSummaryTra
 				res.TitleHighlights[i] = nil
 				continue
 			}
-			res.TitleHighlights[i] = encodeTextRangeToTextRangeTransport3(val)
+			res.TitleHighlights[i] = encodeTextRangeToTextRangeTransport5(val)
 		}
 	}
 	if v.SnippetHighlights != nil {
@@ -2876,7 +3265,7 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *jsonNoteSummaryTra
 				res.SnippetHighlights[i] = nil
 				continue
 			}
-			res.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport4(val)
+			res.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport6(val)
 		}
 	}
 
@@ -2905,7 +3294,7 @@ func encodeNoteSummaryToNoteSummaryTransport2(v *NoteSummary) *jsonNoteSummaryTr
 				res.TitleHighlights[i] = nil
 				continue
 			}
-			res.TitleHighlights[i] = encodeTextRangeToTextRangeTransport7(val)
+			res.TitleHighlights[i] = encodeTextRangeToTextRangeTransport9(val)
 		}
 	}
 	if v.SnippetHighlights != nil {
@@ -2915,7 +3304,48 @@ func encodeNoteSummaryToNoteSummaryTransport2(v *NoteSummary) *jsonNoteSummaryTr
 				res.SnippetHighlights[i] = nil
 				continue
 			}
-			res.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport8(val)
+			res.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport10(val)
+		}
+	}
+
+	return res
+}
+
+func encodeNoteToNoteTransport(v *Note) *jsonNoteTransport {
+	res := &jsonNoteTransport{
+		ID:              &v.ID,
+		Notebook:        &v.Notebook,
+		Title:           &v.Title,
+		CreatedAt:       &v.CreatedAt,
+		UpdatedAt:       &v.UpdatedAt,
+		TrashedNotebook: v.TrashedNotebook,
+		CreatedBy:       v.CreatedBy,
+		Body:            &v.Body,
+		Version:         &v.Version,
+		TrashedFrom:     v.TrashedFrom,
+	}
+	res.Tags = make([]string, len(v.Tags))
+	for i, val := range v.Tags {
+		res.Tags[i] = val
+	}
+	if v.TitleHighlights != nil {
+		res.TitleHighlights = make([]*jsonTextRangeTransport, len(v.TitleHighlights))
+		for i, val := range v.TitleHighlights {
+			if val == nil {
+				res.TitleHighlights[i] = nil
+				continue
+			}
+			res.TitleHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+		}
+	}
+	if v.BodyHighlights != nil {
+		res.BodyHighlights = make([]*jsonTextRangeTransport, len(v.BodyHighlights))
+		for i, val := range v.BodyHighlights {
+			if val == nil {
+				res.BodyHighlights[i] = nil
+				continue
+			}
+			res.BodyHighlights[i] = encodeTextRangeToTextRangeTransport2(val)
 		}
 	}
 
@@ -2924,9 +3354,19 @@ func encodeNoteSummaryToNoteSummaryTransport2(v *NoteSummary) *jsonNoteSummaryTr
 
 func encodeTextRangeToTextRangeTransport(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
+	res.End = &end
+
+	return res
+}
+
+func encodeTextRangeToTextRangeTransport10(v *TextRange) *jsonTextRangeTransport {
+	res := &jsonTextRangeTransport{}
+	start := importResultIntTransport(v.Start)
+	res.Start = &start
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2934,9 +3374,9 @@ func encodeTextRangeToTextRangeTransport(v *TextRange) *jsonTextRangeTransport {
 
 func encodeTextRangeToTextRangeTransport2(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2944,9 +3384,9 @@ func encodeTextRangeToTextRangeTransport2(v *TextRange) *jsonTextRangeTransport 
 
 func encodeTextRangeToTextRangeTransport3(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2954,9 +3394,9 @@ func encodeTextRangeToTextRangeTransport3(v *TextRange) *jsonTextRangeTransport 
 
 func encodeTextRangeToTextRangeTransport4(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2964,9 +3404,9 @@ func encodeTextRangeToTextRangeTransport4(v *TextRange) *jsonTextRangeTransport 
 
 func encodeTextRangeToTextRangeTransport5(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2974,9 +3414,9 @@ func encodeTextRangeToTextRangeTransport5(v *TextRange) *jsonTextRangeTransport 
 
 func encodeTextRangeToTextRangeTransport6(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2984,9 +3424,9 @@ func encodeTextRangeToTextRangeTransport6(v *TextRange) *jsonTextRangeTransport 
 
 func encodeTextRangeToTextRangeTransport7(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -2994,9 +3434,19 @@ func encodeTextRangeToTextRangeTransport7(v *TextRange) *jsonTextRangeTransport 
 
 func encodeTextRangeToTextRangeTransport8(v *TextRange) *jsonTextRangeTransport {
 	res := &jsonTextRangeTransport{}
-	start := noteIntTransport(v.Start)
+	start := importResultIntTransport(v.Start)
 	res.Start = &start
-	end := noteIntTransport(v.End)
+	end := importResultIntTransport(v.End)
+	res.End = &end
+
+	return res
+}
+
+func encodeTextRangeToTextRangeTransport9(v *TextRange) *jsonTextRangeTransport {
+	res := &jsonTextRangeTransport{}
+	start := importResultIntTransport(v.Start)
+	res.Start = &start
+	end := importResultIntTransport(v.End)
 	res.End = &end
 
 	return res
@@ -3497,6 +3947,700 @@ func validateFileCheckJSONValue6(path string, value any, description string) err
 
 // validateFileCheckJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateFileCheckJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportFileJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportFileJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "content":
+			if err := validateImportFileJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The image: PNG, JPEG, GIF or WebP, at most 10 MB",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "ref":
+			if err := validateImportFileJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the image as the Markdown file refers to it, one of the paths the file refers to",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"content",
+				"name",
+				"ref",
+			})
+		}
+	}
+	return nil
+}
+
+// validateImportFileJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportFileJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportFileJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportFileJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportFileJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportFileJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "duplicate_of":
+			if err := validateImportResultJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When skipped: the note imported from the same content before",
+			); err != nil {
+				return err
+			}
+		case "note":
+			if err := validateImportResultJSONValue13(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The note created",
+			); err != nil {
+				return err
+			}
+		case "status":
+			if err := validateImportResultJSONValue14(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "created, or skipped when a file with the same content was imported before",
+			); err != nil {
+				return err
+			}
+		case "warnings":
+			if err := validateImportResultJSONValue15(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "What could not be converted as is, such as images left out",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"duplicate_of",
+				"note",
+				"status",
+				"warnings",
+			})
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue13(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "body":
+			if err := validateImportResultJSONValue17(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Body in Markdown",
+			); err != nil {
+				return err
+			}
+		case "body_highlights":
+			if err := validateImportResultJSONValue18(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Ranges of the body matched by the query of get, sorted and not overlapping",
+			); err != nil {
+				return err
+			}
+		case "created_at":
+			if err := validateImportResultJSONValue22(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Creation time",
+			); err != nil {
+				return err
+			}
+		case "created_by":
+			if err := validateImportResultJSONValue23(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateImportResultJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateImportResultJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook (directory) the note is in",
+			); err != nil {
+				return err
+			}
+		case "tags":
+			if err := validateImportResultJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Tags",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateImportResultJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title",
+			); err != nil {
+				return err
+			}
+		case "title_highlights":
+			if err := validateImportResultJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Ranges of the title matched by the query of get, sorted and not overlapping",
+			); err != nil {
+				return err
+			}
+		case "trashed_from":
+			if err := validateImportResultJSONValue9(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook the note was in before it was moved to the trash",
+			); err != nil {
+				return err
+			}
+		case "trashed_notebook":
+			if err := validateImportResultJSONValue10(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook",
+			); err != nil {
+				return err
+			}
+		case "updated_at":
+			if err := validateImportResultJSONValue11(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Last update time",
+			); err != nil {
+				return err
+			}
+		case "version":
+			if err := validateImportResultJSONValue12(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Strong entity tag of the note file. Sent as the ETag header over HTTP",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"body",
+				"body_highlights",
+				"created_at",
+				"created_by",
+				"id",
+				"notebook",
+				"tags",
+				"title",
+				"title_highlights",
+				"trashed_from",
+				"trashed_notebook",
+				"updated_at",
+				"version",
+			})
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue17 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue17(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue18 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue18(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateImportResultJSONValue19(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue19 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue19(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "end":
+			if err := validateImportResultJSONValue20(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Offset just past the last character",
+			); err != nil {
+				return err
+			}
+		case "start":
+			if err := validateImportResultJSONValue21(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Offset of the first character",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"end",
+				"start",
+			})
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue20 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue20(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue21 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue21(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue22 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue22(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue23 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue23(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateImportResultJSONValue6(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue6(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateImportResultJSONValue19(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue9(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue10(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue11(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue12(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue14(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateImportResultJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue15(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateImportResultJSONValue16(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue16 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue16(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6655,6 +7799,171 @@ func checkFileCheckBrokenFileRefValue(in *BrokenFileRef, field string, active ma
 		if !utf8.ValidString(string(in.Path)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
 		}
+	}
+	return nil
+}
+
+// checkImportFileValue checks text and cycles before conversion.
+func checkImportFileValue(in *ImportFile) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkImportFileImportFileValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkImportFileImportFileValue checks one generated value on the active path.
+func checkImportFileImportFileValue(in *ImportFile, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Ref)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "ref", false))
+		}
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+	}
+	return nil
+}
+
+// checkImportResultValue checks text and cycles before conversion.
+func checkImportResultValue(in *ImportResult) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkImportResultImportResultValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkImportResultImportResultValue checks one generated value on the active path.
+func checkImportResultImportResultValue(in *ImportResult, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Status)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "status", false))
+		}
+		if err := checkImportResultNoteValue(in.Note, generatedJSONChildPath(field, "note", false), active); err != nil {
+			return err
+		}
+		if in.DuplicateOf != nil {
+			if !utf8.ValidString(string(*in.DuplicateOf)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "duplicate_of", false))
+			}
+		}
+		for index1, item1 := range in.Warnings {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "warnings", false), strconv.Itoa(index1), true))
+			}
+		}
+	}
+	return nil
+}
+
+// checkImportResultNoteValue checks one generated value on the active path.
+func checkImportResultNoteValue(in *Note, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.ID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
+		}
+		if !utf8.ValidString(string(in.Notebook)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "notebook", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		for index1, item1 := range in.Tags {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "tags", false), strconv.Itoa(index1), true))
+			}
+		}
+		if !utf8.ValidString(string(in.CreatedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "created_at", false))
+		}
+		if !utf8.ValidString(string(in.UpdatedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "updated_at", false))
+		}
+		if in.TrashedNotebook != nil {
+			if !utf8.ValidString(string(*in.TrashedNotebook)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "trashed_notebook", false))
+			}
+		}
+		if in.CreatedBy != nil {
+			if !utf8.ValidString(string(*in.CreatedBy)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "created_by", false))
+			}
+		}
+		if !utf8.ValidString(string(in.Body)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "body", false))
+		}
+		if !utf8.ValidString(string(in.Version)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "version", false))
+		}
+		if in.TrashedFrom != nil {
+			if !utf8.ValidString(string(*in.TrashedFrom)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "trashed_from", false))
+			}
+		}
+		for index1, item1 := range in.TitleHighlights {
+			_ = index1
+			_ = item1
+			if err := checkImportResultTextRangeValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "title_highlights", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
+		for index1, item1 := range in.BodyHighlights {
+			_ = index1
+			_ = item1
+			if err := checkImportResultTextRangeValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "body_highlights", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkImportResultTextRangeValue checks one generated value on the active path.
+func checkImportResultTextRangeValue(in *TextRange, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
 	}
 	return nil
 }

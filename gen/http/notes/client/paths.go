@@ -89,6 +89,11 @@ func DeleteTrashedNotebookNotesPath(id string) string {
 	return fmt.Sprintf("/trash/notebooks/%v", id)
 }
 
+// ImportNotesPath returns the URL path to the notes service import HTTP endpoint.
+func ImportNotesPath() string {
+	return "/import"
+}
+
 // AddFileNotesPath returns the URL path to the notes service add_file HTTP endpoint.
 func AddFileNotesPath(id string) string {
 	return fmt.Sprintf("/notes/%v/files", id)

@@ -151,6 +151,35 @@ type (
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRangeTransport `json:"body_highlights,omitempty"`
 	}
+	// ImportAiNotePayloadTransport is the internal JSON transport type for ImportAiNotePayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ImportAiNotePayloadTransport struct {
+		// ID of a notebook of the collab or drop kind
+		Notebook *string `json:"notebook"`
+		// File name of the Markdown file, the title when the file gives none
+		Name *string `json:"name"`
+		// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
+		// (a list or comma-separated), created (or date) and updated times; its other
+		// keys are kept in the note file. Without a title, the first heading of level
+		// 1 is the title, else the file name
+		Content *string `json:"content"`
+	}
+	// ImportAiNoteResultTransport is the internal JSON transport type for ImportAiNoteResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ImportAiNoteResultTransport struct {
+		// created, or skipped when a file with the same content was imported before
+		Status *string `json:"status"`
+		// The note created
+		Note *NoteTransport `json:"note,omitempty"`
+		// When skipped: the note imported from the same content before
+		DuplicateOf *string `json:"duplicate_of,omitempty"`
+		// What could not be converted as is, such as images left out
+		Warnings []string `json:"warnings"`
+	}
 	// ListNotebooksPayloadTransport is the internal JSON transport type for ListNotebooksPayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -328,6 +357,42 @@ type (
 		// Ranges of the snippet matched by the query, sorted and not overlapping
 		// (search only)
 		SnippetHighlights []*TextRangeTransport `json:"snippet_highlights,omitempty"`
+	}
+	// NoteTransport is the internal JSON transport type for NoteTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	NoteTransport struct {
+		// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+		// unique across notebooks
+		ID *string `json:"id"`
+		// Notebook (directory) the note is in
+		Notebook *string `json:"notebook"`
+		// Title
+		Title *string `json:"title"`
+		// Tags
+		Tags []string `json:"tags"`
+		// Creation time
+		CreatedAt *string `json:"created_at"`
+		// Last update time
+		UpdatedAt *string `json:"updated_at"`
+		// For a note of a notebook deleted as a whole: the ID of that notebook, which
+		// is in the trash. notebook is then trash, and restoring the note puts it back
+		// into that notebook
+		TrashedNotebook *string `json:"trashed_notebook,omitempty"`
+		// Who created the note: ai for a note created by an AI client
+		// (create_ai_note); absent for people
+		CreatedBy *string `json:"created_by,omitempty"`
+		// Body in Markdown
+		Body *string `json:"body"`
+		// Strong entity tag of the note file. Sent as the ETag header over HTTP
+		Version *string `json:"version"`
+		// Notebook the note was in before it was moved to the trash
+		TrashedFrom *string `json:"trashed_from,omitempty"`
+		// Ranges of the title matched by the query of get, sorted and not overlapping
+		TitleHighlights []*TextRangeTransport `json:"title_highlights,omitempty"`
+		// Ranges of the body matched by the query of get, sorted and not overlapping
+		BodyHighlights []*TextRangeTransport `json:"body_highlights,omitempty"`
 	}
 	// NotebookTransport is the internal JSON transport type for NotebookTransport.
 	// It lives in the toolset-local http package and is used only for JSON

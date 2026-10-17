@@ -123,6 +123,42 @@ var FileCheck = Type("FileCheck", func() {
 	RequiredAttribute("broken", ArrayOf(BrokenFileRef), "References to files that do not exist, sorted by note and path")
 })
 
+// ImportFile is an image of a Markdown file to import, referred to from it by
+// a relative path.
+var ImportFile = Type("ImportFile", func() {
+	RequiredAttribute("ref", String, "Path of the image as the Markdown file refers to it, one of the paths the file refers to", func() {
+		Example("images/photo.png")
+	})
+	RequiredAttribute("name", String, "File name", func() {
+		MinLength(1)
+		MaxLength(255)
+		Example("photo.png")
+	})
+	RequiredAttribute("content", Bytes, "The image: PNG, JPEG, GIF or WebP, at most 10 MB")
+})
+
+// ImportResult is the outcome of importing a Markdown file.
+var ImportResult = Type("ImportResult", func() {
+	RequiredAttribute("status", String, "created, or skipped when a file with the same content was imported before", func() {
+		Enum("created", "skipped")
+	})
+	Attribute("note", Note, "The note created")
+	Attribute("duplicate_of", String, "When skipped: the note imported from the same content before", noteIDDSL)
+	RequiredAttribute("warnings", ArrayOf(String), "What could not be converted as is, such as images left out")
+})
+
+// importContent is the Markdown file of an import.
+var importContent = func() {
+	RequiredAttribute("name", String, "File name of the Markdown file, the title when the file gives none", func() {
+		MinLength(1)
+		MaxLength(255)
+		Example("meeting.md")
+	})
+	RequiredAttribute("content", String, "The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name", func() {
+		MaxLength(5 << 20)
+	})
+}
+
 // NoteList is a page of a note list.
 var NoteList = Type("NoteList", func() {
 	RequiredAttribute("total", Int, "Number of notes in the whole list, regardless of limit and offset")
@@ -177,14 +213,14 @@ var _ = Service("notes", func() {
 	//   - AI clients read notes except in drop and private notebooks and the
 	//     trash.
 	//   - They write only notes in notebooks of the collab kind (*_ai_note), and
-	//     may add notes to notebooks of the drop kind (create_ai_note), whose
-	//     notes they cannot see.
+	//     may add notes to notebooks of the drop kind (create_ai_note,
+	//     import_ai_note), whose notes they cannot see.
 	//   - They may create a new notebook of the collab kind (create_ai_notebook),
 	//     but not turn an existing notebook into one.
 	//   - They may make any notebook they can see private at any time
 	//     (make_notebook_private), which only takes access away from them.
 	// Never add Tool to create_notebook or save_notebook, which set any kind,
-	// or to create, update and delete, which are for people. The files of
+	// or to create, update, delete and import, which are for people. The files of
 	// notes (add_file, get_file, delete_file, check_files) are for people too
 	// for now. TestMCPTools in
 	// internal/service lists the allowed tools.
@@ -519,6 +555,24 @@ var _ = Service("notes", func() {
 		})
 	})
 
+	Method("import", func() {
+		Description("Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.")
+		Payload(func() {
+			Attribute("notebook", String, "Notebook to put the note in (default inbox; not trash)", notebookIDDSL)
+			importContent()
+			Attribute("modified_at", String, "Modification time of the file, for the times the front matter does not give", timeDSL)
+			Attribute("files", ArrayOf(ImportFile), "Images the file refers to")
+			Attribute("force", Boolean, "Import even if the same content was imported before")
+		})
+		Result(ImportResult)
+		Error("bad_request", ErrorResult, "The notebook is the trash or invalid, or the file is too large")
+		HTTP(func() {
+			POST("/import")
+			Response(StatusOK)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
 	// The methods for AI clients write only notes in notebooks of the collab kind,
 	// so that notes written by people stay read-only for them, and add notes to
 	// notebooks of the drop kind. They are exposed as MCP tools only; people
@@ -539,6 +593,18 @@ var _ = Service("notes", func() {
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
 		Error("already_exists", ErrorResult, "A note with the ID exists")
 		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only")
+	})
+
+	Method("import_ai_note", func() {
+		Description("Import a Markdown file as a new note in a notebook of the collab or drop kind, as create_ai_note does, converting it as people's imports do: the front matter gives the title, tags and times, and its other keys are kept. Images cannot be imported; their links are left as they are. A file whose content was imported before into a notebook visible to AI clients is skipped. The note is marked as created by AI.")
+		Payload(func() {
+			RequiredAttribute("notebook", String, "ID of a notebook of the collab or drop kind", notebookIDDSL)
+			importContent()
+		})
+		Result(ImportResult)
+		Error("bad_request", ErrorResult, "The notebook is invalid, or the file is too large")
+		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
+		Tool("import_ai_note", "Import a Markdown file, with its front matter, as a new note in a notebook shared with AI (kind collab) or of the drop kind")
 	})
 
 	Method("update_ai_note", func() {

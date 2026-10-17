@@ -254,9 +254,27 @@ func (a *MCPAdapter) invokeMCPMethod5(ctx context.Context, payload *notes.Create
 	return result, nil
 }
 
-// invokeMCPMethod6 sends validated input to the configured UpdateAiNote endpoint
+// invokeMCPMethod6 sends validated input to the configured ImportAiNote endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod6(ctx context.Context, payload *notes.UpdateAiNotePayload) (*notes.Note, error) {
+func (a *MCPAdapter) invokeMCPMethod6(ctx context.Context, payload *notes.ImportAiNotePayload) (*notes.ImportResult, error) {
+	// The original endpoint middleware observes its authored service and method.
+	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+	ctx = context.WithValue(ctx, goa.MethodKey, "import_ai_note")
+	raw, err := a.endpoints.ImportAiNote(ctx, payload)
+	var zero *notes.ImportResult
+	if err != nil {
+		return zero, err
+	}
+	result, ok := raw.(*notes.ImportResult)
+	if !ok {
+		return zero, &endpointResultError{method: "ImportAiNote"}
+	}
+	return result, nil
+}
+
+// invokeMCPMethod7 sends validated input to the configured UpdateAiNote endpoint
+// and returns its declared result. An unexpected Go type is an internal error.
+func (a *MCPAdapter) invokeMCPMethod7(ctx context.Context, payload *notes.UpdateAiNotePayload) (*notes.Note, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "update_ai_note")
@@ -272,9 +290,9 @@ func (a *MCPAdapter) invokeMCPMethod6(ctx context.Context, payload *notes.Update
 	return result, nil
 }
 
-// invokeMCPMethod7 sends validated input to the configured DeleteAiNote endpoint
+// invokeMCPMethod8 sends validated input to the configured DeleteAiNote endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod7(ctx context.Context, payload *notes.DeleteAiNotePayload) error {
+func (a *MCPAdapter) invokeMCPMethod8(ctx context.Context, payload *notes.DeleteAiNotePayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "delete_ai_note")
@@ -282,9 +300,9 @@ func (a *MCPAdapter) invokeMCPMethod7(ctx context.Context, payload *notes.Delete
 	return err
 }
 
-// invokeMCPMethod8 sends validated input to the configured CreateAiNotebook endpoint
+// invokeMCPMethod9 sends validated input to the configured CreateAiNotebook endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod8(ctx context.Context, payload *notes.CreateAiNotebookPayload) (*notes.Notebook, error) {
+func (a *MCPAdapter) invokeMCPMethod9(ctx context.Context, payload *notes.CreateAiNotebookPayload) (*notes.Notebook, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "create_ai_notebook")
@@ -300,9 +318,9 @@ func (a *MCPAdapter) invokeMCPMethod8(ctx context.Context, payload *notes.Create
 	return result, nil
 }
 
-// invokeMCPMethod9 sends validated input to the configured MakeNotebookPrivate endpoint
+// invokeMCPMethod10 sends validated input to the configured MakeNotebookPrivate endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod9(ctx context.Context, payload *notes.MakeNotebookPrivatePayload) error {
+func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.MakeNotebookPrivatePayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "make_notebook_private")
@@ -356,6 +374,12 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 			Annotations:  &ToolAnnotations{ReadOnlyHint: boolPtr(true)},
 			InputSchema:  json.RawMessage("{\"$defs\":{\"GetPayload\":{\"properties\":{\"id\":{\"description\":\"Note ID\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight\",\"type\":\"string\"}},\"required\":[\"id\"],\"title\":\"GetPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight\",\"type\":\"string\"}},\"required\":[\"id\"],\"title\":\"GetPayload\",\"type\":\"object\"}"),
 			OutputSchema: json.RawMessage("{\"$defs\":{\"Note\":{\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"}"),
+		},
+		{
+			Name:         "import_ai_note",
+			Description:  stringPtr("Import a Markdown file, with its front matter, as a new note in a notebook shared with AI (kind collab) or of the drop kind"),
+			InputSchema:  json.RawMessage("{\"$defs\":{\"ImportAiNotePayload\":{\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"title\":\"ImportAiNotePayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"title\":\"ImportAiNotePayload\",\"type\":\"object\"}"),
+			OutputSchema: json.RawMessage("{\"$defs\":{\"ImportResult\":{\"properties\":{\"duplicate_of\":{\"description\":\"When skipped: the note imported from the same content before\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"note\":{\"$ref\":\"#/$defs/Note\",\"description\":\"The note created\"},\"status\":{\"description\":\"created, or skipped when a file with the same content was imported before\",\"enum\":[\"created\",\"skipped\"],\"type\":\"string\"},\"warnings\":{\"description\":\"What could not be converted as is, such as images left out\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"status\",\"warnings\"],\"title\":\"ImportResult\",\"type\":\"object\"},\"Note\":{\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"duplicate_of\":{\"description\":\"When skipped: the note imported from the same content before\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"note\":{\"$ref\":\"#/$defs/Note\",\"description\":\"The note created\"},\"status\":{\"description\":\"created, or skipped when a file with the same content was imported before\",\"enum\":[\"created\",\"skipped\"],\"type\":\"string\"},\"warnings\":{\"description\":\"What could not be converted as is, such as images left out\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"status\",\"warnings\"],\"title\":\"ImportResult\",\"type\":\"object\"}"),
 		},
 		{
 			Name:         "list_notebooks",
@@ -459,7 +483,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod8(ctx, payload)
+		result, err := a.invokeMCPMethod9(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -489,7 +513,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod7(ctx, payload)
+		err = a.invokeMCPMethod8(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -520,6 +544,36 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 			return toolCallError(failure.err.Error()), nil
 		}
 		encoded, err := mcpcodec.EncodeGetResult(result)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, goa.PermanentError("internal_error", "%s", err.Error())
+		}
+		return &ToolsCallResult{Outcome: NewToolsCallOutcomeComplete(&ToolsCallCompleteResult{
+			Meta:              resultMeta(),
+			Content:           []*ContentItem{},
+			StructuredContent: json.RawMessage(encoded),
+		})}, nil
+	case "import_ai_note":
+		arguments := p.Arguments
+		if len(arguments) == 0 {
+			arguments = json.RawMessage("{}")
+		}
+		payload, err := mcpcodec.DecodeImportAiNotePayload(arguments)
+		if err != nil {
+			return toolCallError("invalid arguments: " + err.Error()), nil
+		}
+		result, err := a.invokeMCPMethod6(ctx, payload)
+		if err != nil {
+			failure := a.mapError(err, isEndpointFault(err))
+			span.RecordError(failure.err)
+			span.SetStatus(codes.Error, failure.err.Error())
+			if failure.internal {
+				return nil, failure.err
+			}
+			return toolCallError(failure.err.Error()), nil
+		}
+		encoded, err := mcpcodec.EncodeImportAiNoteResult(result)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -624,7 +678,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod9(ctx, payload)
+		err = a.invokeMCPMethod10(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -674,7 +728,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod6(ctx, payload)
+		result, err := a.invokeMCPMethod7(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)

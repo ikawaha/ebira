@@ -63,7 +63,16 @@ type Note struct {
 	// people can tell such notes apart, such as in an inbox of the drop kind;
 	// empty for people.
 	CreatedBy string `yaml:"created_by,omitempty"`
-	Body      string `yaml:"body"`
+	// ImportedFrom is the name of the file a note was imported from, and
+	// ImportHash a hash of its content, to tell a file imported before.
+	ImportedFrom string `yaml:"imported_from,omitempty"`
+	ImportHash   string `yaml:"import_hash,omitempty"`
+	Body         string `yaml:"body"`
+	// Extra holds more keys for a new note file, such as the front matter of
+	// an imported file: pairs of key and value nodes. Keys of the note itself
+	// are ignored, and so is Extra when the file exists, whose other keys are
+	// kept as they are.
+	Extra []*yaml.Node `yaml:"-"`
 	// TrashedNotebook is set for a note in a notebook deleted as a whole: the
 	// ID of that notebook, which is kept as trash/<id>. Notebook is then Trash.
 	TrashedNotebook string `yaml:"-"`
@@ -753,6 +762,20 @@ func encode(old []byte, n *Note) ([]byte, error) {
 	} else {
 		unset(m, "order")
 	}
+	if len(old) == 0 {
+		for i := 0; i+1 < len(n.Extra); i += 2 {
+			if k := n.Extra[i].Value; !slices.Contains(noteKeys, k) && !has(m, k) {
+				setBefore(m, k, n.Extra[i+1], "body")
+			}
+		}
+	}
+	for _, kv := range []struct{ key, value string }{{"imported_from", n.ImportedFrom}, {"import_hash", n.ImportHash}} {
+		if kv.value != "" {
+			setBefore(m, kv.key, str(kv.value, 0), "body")
+		} else {
+			unset(m, kv.key)
+		}
+	}
 	if n.CreatedBy != "" {
 		setBefore(m, "created_by", str(n.CreatedBy, 0), "body")
 	} else {
@@ -806,6 +829,19 @@ func setBefore(m *yaml.Node, key string, v *yaml.Node, next string) {
 		}
 	}
 	set(m, key, v)
+}
+
+// noteKeys are the keys of note files that Note sets.
+var noteKeys = []string{"title", "tags", "created_at", "updated_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "body"}
+
+// has reports whether the mapping node m has key.
+func has(m *yaml.Node, key string) bool {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return true
+		}
+	}
+	return false
 }
 
 // unset removes key from the mapping node m.

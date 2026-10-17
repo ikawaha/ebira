@@ -9,6 +9,7 @@
 //	ebira server restart [flags]  restart the server in the background
 //	ebira server status [flags]   show the server's state
 //	ebira files check [flags]     list the unused files of notes and the broken references to files
+//	ebira import [flags] path...  import Markdown files as notes
 //
 // One server runs per data directory; the server started in the background
 // keeps running after the TUI exits or the browser closes.
@@ -32,6 +33,7 @@ const usage = `usage:
   ebira server status [flags]   show the server's state
   ebira files check [flags]     list the unused files of notes, such as images, and the
                                 broken references to files (-delete deletes the unused ones)
+  ebira import [flags] path...  import Markdown files, and the images they refer to, as notes
 
 Run a command with -h for its flags.
 `
@@ -57,6 +59,8 @@ func run(args []string) error {
 			return runServer(args[1:])
 		case "files":
 			return runFiles(args[1:])
+		case "import":
+			return runImport(args[1:])
 		case "help":
 			fmt.Print(usage)
 			return nil
