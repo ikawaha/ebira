@@ -121,6 +121,10 @@ mark.current { background: var(--mark-current); }
 .menu[hidden] { display: none; }
 .menu button { border: none; background: none; color: var(--fg); font: inherit; font-size: 13px; text-align: left; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
 .menu button:hover, .menu button:focus-visible { background: var(--bg-hover); outline: none; }
+.menu .menu-sep { height: 1px; margin: 4px 0; background: var(--border); }
+.menu .menu-label { padding: 4px 10px 2px; font-size: 12px; color: var(--fg-muted); }
+.menu button[role="menuitemradio"]::before { content: ""; display: inline-block; width: 1.2em; }
+.menu button[aria-checked="true"]::before { content: "\2713"; }
 .notebooks li {
   display: flex;
   align-items: center;

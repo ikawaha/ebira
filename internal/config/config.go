@@ -54,6 +54,8 @@ type Config struct {
 	// Provider and Model choose the model of the assistant.
 	Provider string `yaml:"provider"`
 	Model    string `yaml:"model"`
+	// Lang is the language of the web UI, such as en or ja.
+	Lang string `yaml:"lang"`
 }
 
 // Path returns the path of the settings file.
@@ -174,23 +176,25 @@ func base(env, def string) (string, error) {
 	return filepath.Join(home, def), nil
 }
 
-// SaveDataDir sets data_dir of the settings file to dir, creating the file
-// when it does not exist. dir under the home directory is written with ~.
-// The key is appended, so the rest of the file, with its comments, is kept;
-// the file must not have data_dir yet.
-func SaveDataDir(dir string) (string, error) {
+// Save adds the set values of c, data_dir and lang, to the settings file,
+// creating the file when it does not exist. A data directory under the home
+// directory is written with ~. The keys are appended, so the rest of the
+// file, with its comments, is kept; the file must not have them yet.
+func Save(c Config) (string, error) {
 	p, err := Path()
 	if err != nil {
 		return "", err
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		if rel, err := filepath.Rel(home, dir); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			dir = filepath.Join("~", rel)
+	var add []byte
+	for _, kv := range [][2]string{{"data_dir", homeRel(c.DataDir)}, {"lang", c.Lang}} {
+		if kv[1] == "" {
+			continue
 		}
-	}
-	v, err := yaml.Marshal(map[string]string{"data_dir": dir})
-	if err != nil {
-		return "", err
+		v, err := yaml.Marshal(map[string]string{kv[0]: kv[1]})
+		if err != nil {
+			return "", err
+		}
+		add = append(add, v...)
 	}
 	b, err := os.ReadFile(p)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -202,5 +206,17 @@ func SaveDataDir(dir string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return "", err
 	}
-	return p, os.WriteFile(p, append(b, v...), 0o644)
+	return p, os.WriteFile(p, append(b, add...), 0o644)
+}
+
+// homeRel returns path with the home directory written as ~.
+func homeRel(path string) string {
+	home, err := os.UserHomeDir()
+	if path == "" || err != nil {
+		return path
+	}
+	if rel, err := filepath.Rel(home, path); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.Join("~", rel)
+	}
+	return path
 }

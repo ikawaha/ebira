@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -19,9 +20,10 @@ func setupEnv(t *testing.T) string {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv(config.Env, "")
-	old := settings
-	settings = config.Config{}
-	t.Cleanup(func() { settings = old })
+	t.Setenv("LANG", "ja_JP.UTF-8")
+	old, oldFlags := settings, setupFlags
+	settings, setupFlags = config.Config{}, nil
+	t.Cleanup(func() { settings, setupFlags = old, oldFlags })
 	return home
 }
 
@@ -81,8 +83,8 @@ func TestSetup(t *testing.T) {
 	cwd := t.TempDir()
 	var out strings.Builder
 
-	// All defaults: ~/ebira, ja, saved.
-	dir, err := setup(cwd, strings.NewReader("\n\n\n\n"), &out)
+	// All defaults: ~/ebira, ja search, ja for $LANG, saved.
+	dir, err := setup(cwd, strings.NewReader("\n\n\n\n\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
@@ -94,14 +96,14 @@ func TestSetup(t *testing.T) {
 		t.Errorf("_ebira.yaml: %q, %v", b, err)
 	}
 	b, err = os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml"))
-	if err != nil || string(b) != "data_dir: ~/ebira\n" {
+	if err != nil || string(b) != "data_dir: ~/ebira\nlang: ja\n" {
 		t.Errorf("config.yaml: %q, %v", b, err)
 	}
 	if c, err := config.Load(); err != nil || c.DataDir != dir {
 		t.Errorf("Load: %+v, %v", c, err)
 	}
-	if settings.DataDir != dir {
-		t.Errorf("settings.DataDir: %s", settings.DataDir)
+	if settings.DataDir != dir || settings.Lang != "ja" || setupFlags != nil {
+		t.Errorf("settings: %+v, flags %v", settings, setupFlags)
 	}
 }
 
@@ -110,8 +112,9 @@ func TestSetupAnswers(t *testing.T) {
 	cwd := t.TempDir()
 	var out strings.Builder
 
-	// A relative directory, bigram, not saved; a wrong answer is asked again.
-	dir, err := setup(cwd, strings.NewReader("my notes\nmaybe\nn\nno\ny\n"), &out)
+	// A relative directory, bigram, en, not saved; a wrong answer is asked
+	// again.
+	dir, err := setup(cwd, strings.NewReader("my notes\nmaybe\nn\nfr\nEN\nno\ny\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
@@ -121,7 +124,10 @@ func TestSetupAnswers(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(dir, "notes", "_ebira.yaml")); string(b) != "search: bigram\n" {
 		t.Errorf("_ebira.yaml: %q", b)
 	}
-	if !strings.Contains(out.String(), "Answer y or n.") {
+	if !slices.Equal(setupFlags, []string{"-lang", "en"}) {
+		t.Errorf("flags of the server: %v", setupFlags)
+	}
+	if !strings.Contains(out.String(), "Answer y or n.") || !strings.Contains(out.String(), "Answer one of en, ja.") {
 		t.Errorf("no retry:\n%s", out.String())
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "ebira", "config.yaml")); !errors.Is(err, os.ErrNotExist) {
@@ -129,13 +135,14 @@ func TestSetupAnswers(t *testing.T) {
 	}
 
 	// Existing notes: no question about the search mode, and their settings
-	// are kept.
+	// are kept. With lang in the settings file, no question about it.
 	out.Reset()
+	settings.Lang = "en"
 	again, err := setup(cwd, strings.NewReader(dir+"\nn\n\n"), &out)
 	if err != nil || again != dir {
 		t.Fatalf("existing: %s, %v\n%s", again, err, out.String())
 	}
-	if strings.Contains(out.String(), "Use ja") {
+	if strings.Contains(out.String(), "Use ja") || strings.Contains(out.String(), "Language") {
 		t.Errorf("asked the search mode:\n%s", out.String())
 	}
 

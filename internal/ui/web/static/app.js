@@ -66,9 +66,35 @@ const $ = (id) => document.getElementById(id);
 
 // Messages: the text of the UI is in i18n/<lang>.json, keyed by name, so that
 // the code holds no text of a language. {name} in a message is replaced with
-// the value of name.
+// the value of name. English is the base: a message missing in the language
+// is shown in English.
 
+const LANGS = ["en", "ja"]; // as web.Langs
 let messages = {};
+let lang = "en";
+
+// chooseLang returns the language of the UI: the one chosen in the settings
+// menu, else the one of the server (the lang attribute of the page, from the
+// settings file or -lang), else the first of the browser's languages that the
+// UI has, else English.
+function chooseLang() {
+  let chosen = null;
+  try { chosen = localStorage.getItem("ebira.lang"); } catch (_) { /* none */ }
+  const wanted = [chosen, document.documentElement.getAttribute("lang"), ...(navigator.languages || [navigator.language])];
+  for (const w of wanted) {
+    const l = (w || "").toLowerCase().split("-")[0];
+    if (LANGS.includes(l)) return l;
+  }
+  return "en";
+}
+
+async function fetchMessages(l) {
+  try {
+    const res = await fetch(`i18n/${l}.json`);
+    if (res.ok) return await res.json();
+  } catch (_) { /* the keys are shown instead */ }
+  return {};
+}
 
 function t(key, vars) {
   const s = messages[key] ?? key;
@@ -76,10 +102,16 @@ function t(key, vars) {
 }
 
 async function loadMessages() {
-  try {
-    const res = await fetch("i18n/ja.json");
-    if (res.ok) messages = await res.json();
-  } catch (_) { /* the keys are shown instead */ }
+  lang = chooseLang();
+  document.documentElement.lang = lang;
+  const all = Object.fromEntries(await Promise.all(LANGS.map(async (l) => [l, await fetchMessages(l)])));
+  messages = { ...all.en, ...all[lang] };
+  // Each language is named in itself in the settings menu.
+  for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
+    b.textContent = all[b.dataset.lang].langName || b.dataset.lang;
+    b.lang = b.dataset.lang;
+    b.setAttribute("aria-checked", String(b.dataset.lang === lang));
+  }
   // The page marks its text with data-i18n (the text), data-i18n-title,
   // data-i18n-placeholder and data-i18n-aria-label.
   for (const e of document.querySelectorAll("[data-i18n]")) e.textContent = t(e.dataset.i18n);
@@ -414,7 +446,7 @@ function notebookName(id) {
 function formatTime(s) {
   const d = new Date(s);
   if (isNaN(d)) return s;
-  return d.toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(lang, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function el(tag, cls, ...children) {
@@ -1582,6 +1614,13 @@ $("settings-menu").addEventListener("keydown", (e) => {
   }
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
+for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
+  b.addEventListener("click", () => {
+    if (b.dataset.lang === lang) return;
+    try { localStorage.setItem("ebira.lang", b.dataset.lang); } catch (_) { /* this page only */ }
+    location.reload();
+  });
+}
 $("import-open").addEventListener("click", () => $("import-input").click());
 $("import-input").addEventListener("change", (e) => {
   const files = [...e.target.files];

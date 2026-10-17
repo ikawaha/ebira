@@ -1,4 +1,6 @@
 {
+  "langName": "日本語",
+  "language": "言語",
   "abort": "中止",
   "aborted": "中止しました。",
   "actionFailed": "できませんでした: {error}",

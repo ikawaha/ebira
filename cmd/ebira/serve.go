@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -40,8 +41,8 @@ import (
 // serveOptions are the flags of ebira serve, which ebira server start passes
 // on to the server it starts.
 type serveOptions struct {
-	dataDir, addr, search, stopW, stopT, prov, model *string
-	watch                                            *bool
+	dataDir, addr, search, stopW, stopT, prov, model, lang *string
+	watch                                                  *bool
 }
 
 // newServeFlags defines the flags of ebira serve on a new flag set.
@@ -55,9 +56,10 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		stopW   = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		stopT   = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		prov    = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
+		lang    = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
 		modelF  = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
 	)
-	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, watch: watchF}
+	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, watch: watchF}
 }
 
 // setFlags returns the flags set on fs other than -data-dir, as -name=value.
@@ -93,6 +95,9 @@ func runServe(args []string) error {
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
+	}
+	if *o.lang != "" && !web.ValidLang(*o.lang) {
+		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *o.lang, strings.Join(web.Langs, ", "))
 	}
 	dataDir, addr, search, stopW, stopT, prov, modelF, watchF := o.dataDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
 	abs, err := dataDirOf(fs, *dataDir, false, nil, nil)
@@ -235,7 +240,7 @@ func runServe(args []string) error {
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), DataDir: *dataDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
-	root.Handle(web.Prefix, web.Handler())
+	root.Handle(web.Prefix, web.Handler(*o.lang))
 	root.Handle("GET /{$}", http.RedirectHandler(web.Prefix, http.StatusFound))
 	root.Handle("/", mux)
 	listenHost, _, err := net.SplitHostPort(*addr)

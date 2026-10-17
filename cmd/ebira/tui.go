@@ -73,7 +73,7 @@ func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out i
 		return "", err
 	}
 	if !running {
-		s, err := startServer(ctx, dir, addr, []string{"-data-dir", dir, "-addr", addr}, out)
+		s, err := startServer(ctx, dir, addr, append([]string{"-data-dir", dir, "-addr", addr}, setupFlags...), out)
 		if err != nil {
 			return "", err
 		}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"cmp"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,11 +14,16 @@ import (
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/store"
+	"github.com/ikawaha/ebira/internal/ui/web"
 	"golang.org/x/term"
 )
 
 // defaultSetupDir is the directory setup suggests for the notes.
 const defaultSetupDir = "~/ebira"
+
+// setupFlags are flags of serve for the server started after setup: the
+// language chosen there when it is not saved to the settings file.
+var setupFlags []string
 
 // errNoNotes is returned when no data directory is given and the current
 // directory has no notes.
@@ -63,8 +69,9 @@ func interactive() bool {
 }
 
 // setup asks where to keep the notes, with the current directory cwd lacking
-// them, and how to search them; it creates the data directory and saves it
-// to the settings file if the user agrees.
+// them, how to search them and, unless the settings file has it, the
+// language of the web UI; it creates the data directory and saves the
+// directory and the language to the settings file if the user agrees.
 func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	r := bufio.NewReader(in)
 	cfgPath, err := config.Path()
@@ -96,8 +103,19 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 			mode = string(index.ModeJa)
 		}
 	}
+	lang := ""
+	if settings.Lang == "" {
+		fmt.Fprintln(out)
+		if lang, err = askLang(r, out); err != nil {
+			return "", err
+		}
+	}
 	fmt.Fprintln(out)
-	save, err := confirm(r, out, fmt.Sprintf("Save the directory as data_dir in %s, to use it from any directory", cfgPath), true)
+	what := "the directory as data_dir"
+	if lang != "" {
+		what += " and the language as lang"
+	}
+	save, err := confirm(r, out, fmt.Sprintf("Save %s in %s, to use them from any directory", what, cfgPath), true)
 	if err != nil {
 		return "", err
 	}
@@ -106,8 +124,11 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	if mode != "" {
 		fmt.Fprintf(out, "Search mode:  %s (in notes/%s)\n", mode, store.ConfigFile)
 	}
+	if lang != "" {
+		fmt.Fprintf(out, "Web UI:       %s\n", lang)
+	}
 	if save {
-		fmt.Fprintf(out, "Settings:     data_dir in %s\n", cfgPath)
+		fmt.Fprintf(out, "Settings:     saved in %s\n", cfgPath)
 	}
 	if ok, err := confirm(r, out, "Set up so", true); err != nil {
 		return "", err
@@ -125,13 +146,35 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		}
 	}
 	if save {
-		if _, err := config.SaveDataDir(dir); err != nil {
+		if _, err := config.Save(config.Config{DataDir: dir, Lang: lang}); err != nil {
 			return "", err
 		}
 		settings.DataDir = dir
+		settings.Lang = cmp.Or(lang, settings.Lang)
+	} else if lang != "" {
+		setupFlags = []string{"-lang", lang}
 	}
 	fmt.Fprintln(out)
 	return dir, nil
+}
+
+// askLang asks for the language of the web UI. The default is ja when $LANG
+// is Japanese, else en.
+func askLang(r *bufio.Reader, out io.Writer) (string, error) {
+	def := "en"
+	if strings.HasPrefix(os.Getenv("LANG"), "ja") {
+		def = "ja"
+	}
+	for {
+		answer, err := ask(r, out, "Language of the web UI ("+strings.Join(web.Langs, "/")+")", def)
+		if err != nil {
+			return "", err
+		}
+		if l := strings.ToLower(answer); web.ValidLang(l) {
+			return l, nil
+		}
+		fmt.Fprintf(out, "Answer one of %s.\n", strings.Join(web.Langs, ", "))
+	}
 }
 
 // ask asks for a line, with def for an empty answer.

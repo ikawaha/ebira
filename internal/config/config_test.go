@@ -154,25 +154,27 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
-func TestSaveDataDir(t *testing.T) {
+func TestSave(t *testing.T) {
 	home := setHome(t)
-	p, err := SaveDataDir(filepath.Join(home, "notes dir"))
+	p, err := Save(Config{DataDir: filepath.Join(home, "notes dir"), Lang: "ja"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c, err := Load(); err != nil || c.DataDir != filepath.Join(home, "notes dir") {
+	if b, _ := os.ReadFile(p); string(b) != "data_dir: ~/notes dir\nlang: ja\n" {
+		t.Errorf("new file: %q", b)
+	}
+	if c, err := Load(); err != nil || c.DataDir != filepath.Join(home, "notes dir") || c.Lang != "ja" {
 		t.Errorf("new file: %+v, %v", c, err)
 	}
 
-	// Other keys and comments are kept.
+	// Other keys and comments are kept; unset values are not written.
 	if err := os.WriteFile(p, []byte("# mine\naddr: localhost:9090"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := SaveDataDir("/srv/notes"); err != nil {
+	if _, err := Save(Config{DataDir: "/srv/notes"}); err != nil {
 		t.Fatal(err)
 	}
-	b, _ := os.ReadFile(p)
-	if string(b) != "# mine\naddr: localhost:9090\ndata_dir: /srv/notes\n" {
+	if b, _ := os.ReadFile(p); string(b) != "# mine\naddr: localhost:9090\ndata_dir: /srv/notes\n" {
 		t.Errorf("appended: %q", b)
 	}
 }

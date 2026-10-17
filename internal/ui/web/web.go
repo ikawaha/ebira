@@ -3,9 +3,12 @@
 package web
 
 import (
+	"bytes"
 	"embed"
 	"io/fs"
 	"net/http"
+	"slices"
+	"time"
 )
 
 //go:embed static
@@ -22,11 +25,28 @@ const Prefix = "/ui/"
 // HTTPS, as notes link them.
 const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
-// Handler serves the web UI under Prefix.
-func Handler() http.Handler {
+// Langs are the languages of the UI, each with static/i18n/<lang>.json.
+// English is the base: a message missing in another language is shown in
+// English.
+var Langs = []string{"en", "ja"}
+
+// ValidLang reports whether lang is one of Langs.
+func ValidLang(lang string) bool { return slices.Contains(Langs, lang) }
+
+// Handler serves the web UI under Prefix. lang, one of Langs or empty, is the
+// language set for this server, given to the page as the lang attribute of
+// its html element; empty leaves the choice to the browser's languages.
+func Handler(lang string) http.Handler {
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
 		panic(err) // the embedded directory always exists
+	}
+	page, err := fs.ReadFile(sub, "index.html")
+	if err != nil {
+		panic(err)
+	}
+	if lang != "" {
+		page = bytes.Replace(page, []byte("<html>"), []byte(`<html lang="`+lang+`">`), 1)
 	}
 	files := http.StripPrefix(Prefix, http.FileServerFS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +56,10 @@ func Handler() http.Handler {
 		h.Set("Referrer-Policy", "no-referrer")
 		// The files change with the binary and have no modification time.
 		h.Set("Cache-Control", "no-cache")
+		if r.URL.Path == Prefix || r.URL.Path == Prefix+"index.html" {
+			http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(page))
+			return
+		}
 		files.ServeHTTP(w, r)
 	})
 }
