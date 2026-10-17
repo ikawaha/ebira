@@ -87,7 +87,7 @@ type Model struct {
 	allSort   string                      // sort of all notes, kept only while running (a notebook keeps its own)
 	sortSeq   int                         // sequence number of the latest sort change
 	moving    string                      // ID of the note being moved, whose update event is ours
-	nbSel     int                         // cursor in the notebook pane; 0 is "All notes"
+	nbSel     int                         // cursor in the notebook pane; 0 is "All"
 	promptIn  textinput.Model
 	addKind   string // kind of the notebook promptAddNotebook creates
 	newKind   string // kind chosen at promptNotebookKind, waiting for promptUnprivate
@@ -413,7 +413,7 @@ func (m *Model) createNotebook(name, kind string) tea.Cmd {
 }
 
 // selectedNotebook returns the notebook under the cursor of the notebook
-// pane, or nil for "All notes".
+// pane, or nil for "All".
 func (m *Model) selectedNotebook() *gennotes.Notebook {
 	rows := m.notebookRows()
 	if m.nbSel <= 0 || m.nbSel >= len(rows) {

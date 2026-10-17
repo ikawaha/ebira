@@ -449,7 +449,7 @@ func createdByAI(v *string) bool { return v != nil && *v == "ai" }
 // notebookName is the display name of a notebook filter.
 func (m Model) notebookName(id string) string {
 	if id == "" {
-		return "All notes"
+		return "All"
 	}
 	if t, ok := tagOf(id); ok {
 		return "# " + t

@@ -39,7 +39,7 @@ func TestCycleSort(t *testing.T) {
 		t.Error("the last press was not saved")
 	}
 
-	// All notes keep their sort in the TUI only.
+	// "All" keeps its sort in the TUI only.
 	m.notebook = ""
 	m, _ = press(t, m, text("s"))
 	if m.allSort != "created" || m.currentSort() != "created" {
