@@ -161,6 +161,13 @@ type (
 		// Notes from offset, at most limit; fewer than total when the list goes on
 		Notes []*NoteSummary
 	}
+	// ListTagsPayload defines the JSON payload for the ebira.list_tags tool.
+	ListTagsPayload = struct {
+		// Only notes in this notebook. Omit for all notebooks except the trash
+		Notebook *string
+	}
+	// ListTagsResult defines the JSON result for the ebira.list_tags tool.
+	ListTagsResult = []*TagCount
 	// MakeNotebookPrivatePayload defines the JSON payload for the ebira.make_notebook_private tool.
 	MakeNotebookPrivatePayload = struct {
 		// Notebook ID
@@ -288,6 +295,13 @@ type (
 		// come by creation time, newest first), created and updated are newest first,
 		// and title is by code point, ignoring case and width
 		Sort string
+	}
+	// TagCount is a nested type used by the generated JSON contract.
+	TagCount = struct {
+		// Tag
+		Name string
+		// Number of notes with the tag
+		Count int
 	}
 	// TextRange is a nested type used by the generated JSON contract.
 	TextRange = struct {

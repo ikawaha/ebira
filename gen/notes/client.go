@@ -24,6 +24,7 @@ type Client struct {
 	RestoreEndpoint               goa.Endpoint
 	MoveEndpoint                  goa.Endpoint
 	NotebooksEndpoint             goa.Endpoint
+	TagsEndpoint                  goa.Endpoint
 	CreateNotebookEndpoint        goa.Endpoint
 	SaveNotebookEndpoint          goa.Endpoint
 	DeleteNotebookEndpoint        goa.Endpoint
@@ -40,7 +41,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, createAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, events, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, createAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, events, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -51,6 +52,7 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		RestoreEndpoint:               restore,
 		MoveEndpoint:                  move,
 		NotebooksEndpoint:             notebooks,
+		TagsEndpoint:                  tags,
 		CreateNotebookEndpoint:        createNotebook,
 		SaveNotebookEndpoint:          saveNotebook,
 		DeleteNotebookEndpoint:        deleteNotebook,
@@ -181,6 +183,16 @@ func (c *Client) Notebooks(ctx context.Context) (res []*Notebook, err error) {
 		return
 	}
 	return ires.([]*Notebook), nil
+}
+
+// Tags calls the "tags" endpoint of the "notes" service.
+func (c *Client) Tags(ctx context.Context, p *TagsPayload) (res []*TagCount, err error) {
+	var ires any
+	ires, err = c.TagsEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.([]*TagCount), nil
 }
 
 // CreateNotebook calls the "create_notebook" endpoint of the "notes" service.

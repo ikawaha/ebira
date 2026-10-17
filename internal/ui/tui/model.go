@@ -81,6 +81,8 @@ type Model struct {
 
 	notebooks []*gennotes.Notebook
 	trashed   []*gennotes.TrashedNotebook // notebooks in the trash
+	tags      []*gennotes.TagCount        // tags with their note counts
+	sideTags  bool                        // the notebook pane lists the tags instead of the notebooks (T)
 	notebook  string                      // notebook filter; empty for all notebooks except the trash
 	allSort   string                      // sort of all notes, kept only while running (a notebook keeps its own)
 	sortSeq   int                         // sequence number of the latest sort change
@@ -175,6 +177,7 @@ type (
 	notebooksMsg struct {
 		notebooks []*gennotes.Notebook
 		trashed   []*gennotes.TrashedNotebook
+		tags      []*gennotes.TagCount
 		err       error
 	}
 	// notebookOpMsg reports moving a notebook into or out of the trash, or
@@ -210,9 +213,20 @@ func (m *Model) loadNotebooks() tea.Cmd {
 			return notebooksMsg{err: err}
 		}
 		trashed, err := api.TrashedNotebooks(ctx)
-		return notebooksMsg{notebooks: res, trashed: trashed, err: err}
+		if err != nil {
+			return notebooksMsg{err: err}
+		}
+		tags, err := api.Tags(ctx, &gennotes.TagsPayload{})
+		return notebooksMsg{notebooks: res, trashed: trashed, tags: tags, err: err}
 	}
 }
+
+// tagPrefix marks a tag in the notebook filter and the rows of the notebook
+// pane: the list then has the notes with the tag in all notebooks but the
+// trash. Notebook IDs cannot start with it.
+const tagPrefix = "#"
+
+func tagOf(filter string) (string, bool) { return strings.CutPrefix(filter, tagPrefix) }
 
 // trashedPrefix marks a notebook in the trash in the notebook filter and the
 // rows of the notebook pane. Its notes are not listed.
@@ -235,8 +249,10 @@ func (m *Model) loadList() tea.Cmd {
 		// The notes of a notebook in the trash are not listed.
 		return func() tea.Msg { return listMsg{seq: seq, items: []*gennotes.NoteSummary{}} }
 	}
-	var nb *string
-	if m.notebook != "" {
+	var nb, tag *string
+	if t, ok := tagOf(m.notebook); ok {
+		tag = &t
+	} else if m.notebook != "" {
 		nb = &m.notebook
 	}
 	return func() tea.Msg {
@@ -246,10 +262,10 @@ func (m *Model) loadList() tea.Cmd {
 			if nb == nil && allSort != "" {
 				sort = &allSort
 			}
-			items, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Sort: sort})
+			items, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort})
 			return listMsg{seq: seq, items: items, total: total, err: err}
 		}
-		res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: nb, Limit: 200})
+		res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: nb, Tag: tag, Limit: 200})
 		if err != nil {
 			return listMsg{seq: seq, err: err}
 		}
@@ -445,7 +461,7 @@ var sorts = []string{"order", "created", "updated", "title"}
 
 // currentSort returns the order of the note list shown.
 func (m *Model) currentSort() string {
-	if m.notebook == "" {
+	if m.acrossNotebooks() {
 		return cmp.Or(m.allSort, "order")
 	}
 	for _, nb := range m.notebooks {
@@ -459,7 +475,7 @@ func (m *Model) currentSort() string {
 // canReorder reports whether the notes shown can be moved by hand: those of a
 // notebook in the manual order, without a search.
 func (m *Model) canReorder() bool {
-	if _, ok := trashedID(m.notebook); ok || m.query != "" || m.notebook == "" || m.notebook == trashNotebook {
+	if _, ok := trashedID(m.notebook); ok || m.query != "" || m.acrossNotebooks() || m.notebook == trashNotebook {
 		return false
 	}
 	return m.currentSort() == "order"
@@ -473,7 +489,7 @@ func (m *Model) cycleSort() tea.Cmd {
 	}
 	next := sorts[(slices.Index(sorts, m.currentSort())+1)%len(sorts)]
 	m.setStatus(statusInfo, "sort: %s", next)
-	if m.notebook == "" {
+	if m.acrossNotebooks() {
 		m.allSort = next
 		return m.loadList()
 	}
@@ -520,10 +536,25 @@ func (m *Model) moveNote(delta int) tea.Cmd {
 // defaultNotebook is the notebook for a new note: the selected one, or the
 // inbox when all notes or the trash are shown.
 func (m *Model) defaultNotebook() string {
-	if m.notebook == "" || m.notebook == trashNotebook {
+	if m.acrossNotebooks() || m.notebook == trashNotebook {
 		return inboxNotebook
 	}
 	return m.notebook
+}
+
+// defaultTags are the tags of a new note: the selected tag, if any.
+func (m *Model) defaultTags() []string {
+	if t, ok := tagOf(m.notebook); ok {
+		return []string{t}
+	}
+	return nil
+}
+
+// acrossNotebooks reports whether the list has notes of all notebooks: all
+// notes, or the notes with a tag.
+func (m *Model) acrossNotebooks() bool {
+	_, tag := tagOf(m.notebook)
+	return m.notebook == "" || tag
 }
 
 // notebookRow is a row of the notebook pane.
@@ -533,14 +564,29 @@ type notebookRow struct {
 	kind  string // "default", "collab" (AI clients may write), "drop" (they may only add notes) or "private" (hidden from them)
 }
 
+// notebookRows returns the rows of the notebook pane: all notes, then the
+// notebooks or, with sideTags, the tags.
 func (m *Model) notebookRows() []notebookRow {
+	if m.sideTags {
+		return m.tagRows()
+	}
+	return m.notebookListRows()
+}
+
+// allRow is the row of all notes, at the top of the notebook pane.
+func (m *Model) allRow() notebookRow {
 	all := 0
 	for _, nb := range m.notebooks {
 		if nb.ID != trashNotebook {
 			all += nb.Count
 		}
 	}
-	rows := []notebookRow{{id: "", count: all}}
+	return notebookRow{id: "", count: all}
+}
+
+// notebookListRows returns the rows of the notebooks.
+func (m *Model) notebookListRows() []notebookRow {
+	rows := []notebookRow{m.allRow()}
 	for _, nb := range m.notebooks {
 		rows = append(rows, notebookRow{id: nb.ID, count: nb.Count, kind: nb.Kind})
 	}
@@ -549,6 +595,36 @@ func (m *Model) notebookRows() []notebookRow {
 		rows = append(rows, notebookRow{id: trashedPrefix + nb.ID, count: nb.Count, kind: nb.Kind})
 	}
 	return rows
+}
+
+// tagRows returns the rows of the tags. The selected tag stays even when no
+// note has it any more, so that the rows do not change under the user.
+func (m *Model) tagRows() []notebookRow {
+	rows := []notebookRow{m.allRow()}
+	selected, isTag := tagOf(m.notebook)
+	for _, t := range m.tags {
+		rows = append(rows, notebookRow{id: tagPrefix + t.Name, count: t.Count})
+		if t.Name == selected {
+			isTag = false
+		}
+	}
+	if isTag {
+		rows = append(rows, notebookRow{id: m.notebook})
+	}
+	return rows
+}
+
+// toggleSide switches the notebook pane between the notebooks and the tags,
+// as Quiver does. The list stays; the cursor goes to its row, if any.
+func (m *Model) toggleSide() {
+	m.sideTags = !m.sideTags
+	m.nbSel = max(0, slices.IndexFunc(m.notebookRows(), func(r notebookRow) bool { return r.id == m.notebook }))
+}
+
+// notebookTop returns the first row of the notebook pane shown in h rows, so
+// that the row under the cursor is in view.
+func (m *Model) notebookTop(h int) int {
+	return max(0, m.nbSel-max(1, h)+1)
 }
 
 // selectedRow returns the row under the cursor of the notebook pane.
@@ -733,8 +809,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setStatus(statusError, "load failed: %v", msg.err)
 			return m, nil
 		}
-		m.notebooks, m.trashed = msg.notebooks, msg.trashed
-		if _, ok := trashedID(m.notebook); ok && !slices.ContainsFunc(m.notebookRows(), func(r notebookRow) bool { return r.id == m.notebook }) {
+		m.notebooks, m.trashed, m.tags = msg.notebooks, msg.trashed, msg.tags
+		if _, ok := trashedID(m.notebook); ok && !slices.ContainsFunc(m.notebookListRows(), func(r notebookRow) bool { return r.id == m.notebook }) {
 			m.notebook = trashNotebook // the notebook left the trash
 		}
 		m.nbSel = 0
@@ -839,7 +915,7 @@ func (m *Model) startEdit(n *gennotes.Note) tea.Cmd {
 		err error
 	)
 	if n == nil {
-		d, err = newDraft("", m.defaultNotebook(), "", "", nil, "")
+		d, err = newDraft("", m.defaultNotebook(), "", "", m.defaultTags(), "")
 	} else {
 		d, err = newDraft(n.ID, n.Notebook, n.Version, n.Title, n.Tags, n.Body)
 	}
@@ -1103,7 +1179,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.prompt = promptPurgeNotebook
 			} else if nb := m.selectedNotebook(); nb != nil && !nb.Reserved {
 				m.prompt = promptTrashNotebook
-			} else {
+			} else if _, ok := tagOf(row.id); !ok {
 				m.setStatus(statusWarn, "inbox and trash cannot be deleted")
 			}
 			return m, nil
@@ -1167,6 +1243,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.showMatch()
 		m.setStatus(statusInfo, "match %d/%d", m.matchIdx+1, n)
+		return m, nil
+	case "T":
+		m.toggleSide()
 		return m, nil
 	case "[":
 		return m, m.selectNotebook(m.nbSel - 1)
@@ -1295,7 +1374,7 @@ func (m *Model) handleClick(ms tea.Mouse) tea.Cmd {
 			m.input.Blur()
 		}
 		m.focus = focusNotebooks
-		return m.selectNotebook(ms.Y - l.paneTop - 1)
+		return m.selectNotebook(m.notebookTop(l.paneH-2) + ms.Y - l.paneTop - 1)
 	case l.showList && ms.X >= l.listX && ms.X < l.listX+l.listW && ms.Y > l.paneTop && ms.Y < l.paneTop+l.paneH-1:
 		if m.focus == focusSearch {
 			m.input.Blur()
@@ -1343,6 +1422,10 @@ func (m *Model) handleWheel(ms tea.Mouse) tea.Cmd {
 // openEditor starts editing n, or a new note when n is nil, in the UI.
 func (m *Model) openEditor(n *gennotes.Note) tea.Cmd {
 	m.edit = newEditor(m.th, n, m.defaultNotebook())
+	if tags := m.defaultTags(); n == nil && tags != nil {
+		m.edit.inputs[fieldTags].SetValue(strings.Join(tags, ", "))
+		m.edit.orig = m.edit.snapshot()
+	}
 	m.focus = focusEdit
 	m.layout()
 	return m.edit.focus(m.edit.field)

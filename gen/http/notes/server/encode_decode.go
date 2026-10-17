@@ -788,6 +788,43 @@ func EncodeNotebooksResponse(encoder func(context.Context, http.ResponseWriter) 
 	}
 }
 
+// EncodeTagsResponse returns an encoder for responses returned by the notes
+// tags endpoint.
+func EncodeTagsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.([]*notes.TagCount)
+		enc := encoder(ctx, w)
+		body := NewTagsResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeTagsRequest returns a decoder for requests sent to the notes tags
+// endpoint.
+func DecodeTagsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.TagsPayload, error) {
+	return func(r *http.Request) (*notes.TagsPayload, error) {
+		var payload *notes.TagsPayload
+		var (
+			notebook *string
+			err      error
+		)
+		notebookRaw := r.URL.Query().Get("notebook")
+		if notebookRaw != "" {
+			notebook = &notebookRaw
+		}
+		if notebook != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewTagsPayload(notebook)
+
+		return payload, nil
+	}
+}
+
 // EncodeCreateNotebookResponse returns an encoder for responses returned by
 // the notes create_notebook endpoint.
 func EncodeCreateNotebookResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1318,6 +1355,17 @@ func marshalNotesNotebookToNotebookResponse(v *notes.Notebook) *NotebookResponse
 		Reserved: v.Reserved,
 		Kind:     v.Kind,
 		Sort:     v.Sort,
+	}
+
+	return res
+}
+
+// marshalNotesTagCountToTagCountResponse builds a value of type
+// *TagCountResponse from a value of type *notes.TagCount.
+func marshalNotesTagCountToTagCountResponse(v *notes.TagCount) *TagCountResponse {
+	res := &TagCountResponse{
+		Name:  v.Name,
+		Count: v.Count,
 	}
 
 	return res

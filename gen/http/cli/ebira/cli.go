@@ -24,7 +24,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|search|restore|move|notebooks|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|events|sync)",
+		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|events|sync)",
 		"assistant ask",
 	}
 }
@@ -107,6 +107,9 @@ func ParseEndpoint(
 
 		notesNotebooksFlags = flag.NewFlagSet("notebooks", flag.ExitOnError)
 
+		notesTagsFlags        = flag.NewFlagSet("tags", flag.ExitOnError)
+		notesTagsNotebookFlag = new(cliStringFlag)
+
 		notesCreateNotebookFlags    = flag.NewFlagSet("create-notebook", flag.ExitOnError)
 		notesCreateNotebookBodyFlag = new(cliStringFlag)
 
@@ -153,6 +156,7 @@ func ParseEndpoint(
 	notesRestoreFlags.Var(notesRestoreIfMatchFlag, "if-match", "")
 	notesMoveFlags.Var(notesMoveBodyFlag, "body", "")
 	notesMoveFlags.Var(notesMoveIDFlag, "id", "Note ID")
+	notesTagsFlags.Var(notesTagsNotebookFlag, "notebook", "")
 	notesCreateNotebookFlags.Var(notesCreateNotebookBodyFlag, "body", "")
 	notesSaveNotebookFlags.Var(notesSaveNotebookBodyFlag, "body", "")
 	notesSaveNotebookFlags.Var(notesSaveNotebookIDFlag, "id", "Notebook ID")
@@ -171,6 +175,7 @@ func ParseEndpoint(
 	notesRestoreFlags.Usage = notesRestoreUsage
 	notesMoveFlags.Usage = notesMoveUsage
 	notesNotebooksFlags.Usage = notesNotebooksUsage
+	notesTagsFlags.Usage = notesTagsUsage
 	notesCreateNotebookFlags.Usage = notesCreateNotebookUsage
 	notesSaveNotebookFlags.Usage = notesSaveNotebookUsage
 	notesDeleteNotebookFlags.Usage = notesDeleteNotebookUsage
@@ -245,6 +250,9 @@ func ParseEndpoint(
 
 			case "notebooks":
 				epf = notesNotebooksFlags
+
+			case "tags":
+				epf = notesTagsFlags
 
 			case "create-notebook":
 				epf = notesCreateNotebookFlags
@@ -328,6 +336,9 @@ func ParseEndpoint(
 				data, err = notesc.BuildMovePayload(notesMoveBodyFlag.value, notesMoveIDFlag.value)
 			case "notebooks":
 				endpoint = c.Notebooks()
+			case "tags":
+				endpoint = c.Tags()
+				data, err = notesc.BuildTagsPayload(notesTagsNotebookFlag.value)
 			case "create-notebook":
 				endpoint = c.CreateNotebook()
 				data, err = notesc.BuildCreateNotebookPayload(notesCreateNotebookBodyFlag.value)
@@ -380,6 +391,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    restore: Move a note from the trash back to the notebook it was in.`)
 	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
 	fmt.Fprintln(os.Stderr, `    notebooks: List notebooks with their note counts: inbox first, then the others by order and name, trash last.`)
+	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
 	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
 	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
@@ -578,6 +590,24 @@ func notesNotebooksUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes notebooks")
+}
+
+func notesTagsUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes tags", os.Args[0])
+	fmt.Fprint(os.Stderr, " -notebook STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes tags --notebook \"inbox\"")
 }
 
 func notesCreateNotebookUsage() {

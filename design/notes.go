@@ -77,6 +77,12 @@ var TrashedNotebook = Type("TrashedNotebook", func() {
 	RequiredAttribute("count", Int, "Number of notes")
 })
 
+// TagCount is a tag with the number of notes that have it.
+var TagCount = Type("TagCount", func() {
+	RequiredAttribute("name", String, "Tag")
+	RequiredAttribute("count", Int, "Number of notes with the tag")
+})
+
 // NoteList is a page of a note list.
 var NoteList = Type("NoteList", func() {
 	RequiredAttribute("total", Int, "Number of notes in the whole list, regardless of limit and offset")
@@ -343,6 +349,21 @@ var _ = Service("notes", func() {
 			GET("/notebooks")
 		})
 		Tool("list_notebooks", "List notebooks with their kinds and note counts", func() {
+			ReadOnlyHint(true)
+		})
+	})
+
+	Method("tags", func() {
+		Description("List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).")
+		Payload(func() {
+			notebookFilter()
+		})
+		Result(ArrayOf(TagCount))
+		HTTP(func() {
+			GET("/tags")
+			Param("notebook")
+		})
+		Tool("list_tags", "List tags with their note counts; filter list_notes or search_notes by one of them", func() {
 			ReadOnlyHint(true)
 		})
 	})

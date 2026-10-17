@@ -110,6 +110,22 @@ func ListNotesResultCodec() tools.JSONCodec[*ListNotesResult] {
 	}
 }
 
+// ListTagsPayloadCodec returns a fresh codec for *ListTagsPayload.
+func ListTagsPayloadCodec() tools.JSONCodec[*ListTagsPayload] {
+	return tools.JSONCodec[*ListTagsPayload]{
+		ToJSON:   MarshalListTagsPayload,
+		FromJSON: UnmarshalListTagsPayload,
+	}
+}
+
+// ListTagsResultCodec returns a fresh codec for ListTagsResult.
+func ListTagsResultCodec() tools.JSONCodec[ListTagsResult] {
+	return tools.JSONCodec[ListTagsResult]{
+		ToJSON:   MarshalListTagsResult,
+		FromJSON: UnmarshalListTagsResult,
+	}
+}
+
 // MakeNotebookPrivatePayloadCodec returns a fresh codec for *MakeNotebookPrivatePayload.
 func MakeNotebookPrivatePayloadCodec() tools.JSONCodec[*MakeNotebookPrivatePayload] {
 	return tools.JSONCodec[*MakeNotebookPrivatePayload]{
@@ -292,6 +308,32 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalListNotesResult(data)
+		},
+	}
+	// listTagsPayloadCodec provides an untyped codec for *ListTagsPayload.
+	listTagsPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*ListTagsPayload); ok {
+				return MarshalListTagsPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *ListTagsPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalListTagsPayload(data)
+		},
+	}
+	// listTagsResultCodec provides an untyped codec for ListTagsResult.
+	listTagsResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(ListTagsResult); ok {
+				return MarshalListTagsResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for ListTagsResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalListTagsResult(data)
 		},
 	}
 	// makeNotebookPrivatePayloadCodec provides an untyped codec for *MakeNotebookPrivatePayload.
@@ -879,6 +921,35 @@ var listNotesResultFields = []tools.FieldMetadata{
 		Description: "Offset just past the last character",
 	},
 }
+var listTagsPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Only notes in this notebook. Omit for all notebooks except the trash",
+	},
+}
+var listTagsResultFields = []tools.FieldMetadata{
+	{
+		JSONType: "array",
+	},
+	{
+		Path:     []tools.FieldPathSegment{tools.DynamicField{}},
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "Tag",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("count")},
+		JSONType:    "integer",
+		Description: "Number of notes with the tag",
+	},
+}
 var makeNotebookPrivatePayloadFields = []tools.FieldMetadata{
 	{
 		JSONType: "object",
@@ -1376,6 +1447,40 @@ func enrichListNotesResultValidationError(err error) error {
 	}
 	return tools.NewValidationError(ve.Error(), issues, m)
 }
+func enrichListTagsPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(listTagsPayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichListTagsResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(listTagsResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
 func enrichMakeNotebookPrivatePayloadValidationError(err error) error {
 	var ve *tools.ValidationError
 	if !errors.As(err, &ve) {
@@ -1782,6 +1887,68 @@ func invalidListNotesResultFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(listNotesResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidListTagsPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "ListTagsPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(listTagsPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidListTagsResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "ListTagsResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(listTagsResultFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -2600,6 +2767,94 @@ func UnmarshalListNotesResult(data []byte) (*ListNotesResult, error) {
 	return out, nil
 }
 
+// MarshalListTagsPayload serializes *ListTagsPayload into JSON.
+func MarshalListTagsPayload(v *ListTagsPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("listTagsPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.ListTagsPayloadTransport
+	out = &toolhttp.ListTagsPayloadTransport{
+		Notebook: in.Notebook,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalListTagsPayload deserializes JSON into *ListTagsPayload.
+func UnmarshalListTagsPayload(data []byte) (*ListTagsPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("listTagsPayload JSON is empty")
+	}
+	var tv toolhttp.ListTagsPayloadTransport
+	if err := validateListTagsPayloadJSON(data); err != nil {
+		return nil, invalidListTagsPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidListTagsPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateListTagsPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichListTagsPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *ListTagsPayload
+	out = &ListTagsPayload{
+		Notebook: in.Notebook,
+	}
+	return out, nil
+}
+
+// MarshalListTagsResult serializes ListTagsResult into JSON.
+func MarshalListTagsResult(v ListTagsResult) ([]byte, error) {
+	in := v
+	_ = in
+	var out toolhttp.ListTagsResultTransport
+	out = make([]*toolhttp.TagCountTransport, len(in))
+	for i, val := range in {
+		if val == nil {
+			out[i] = nil
+			continue
+		}
+		out[i] = encodeTagCountToTagCountTransport(val)
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalListTagsResult deserializes JSON into ListTagsResult.
+func UnmarshalListTagsResult(data []byte) (ListTagsResult, error) {
+	var zero ListTagsResult
+	if len(data) == 0 {
+		return zero, fmt.Errorf("listTagsResult JSON is empty")
+	}
+	var tv toolhttp.ListTagsResultTransport
+	if err := validateListTagsResultJSON(data); err != nil {
+		return zero, invalidListTagsResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return zero, invalidListTagsResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateListTagsResultTransport(tv); err != nil {
+		err = newValidationError(err)
+		err = enrichListTagsResultValidationError(err)
+		return zero, err
+	}
+	in := tv
+	_ = in
+	var out ListTagsResult
+	out = make([]*TagCount, len(in))
+	for i, val := range in {
+		if val == nil {
+			out[i] = nil
+			continue
+		}
+		out[i] = decodeTagCountTransportToTagCount(val)
+	}
+	return out, nil
+}
+
 // MarshalMakeNotebookPrivatePayload serializes *MakeNotebookPrivatePayload into JSON.
 func MarshalMakeNotebookPrivatePayload(v *MakeNotebookPrivatePayload) ([]byte, error) {
 	if v == nil {
@@ -3033,6 +3288,36 @@ func validateListNotebooksResultJSON(data []byte) error {
 		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListNotebooksResultJSONValue("", root, "")
+}
+
+// validateListTagsPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateListTagsPayloadJSON(data []byte) error {
+	var root any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&root); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("multiple JSON documents")
+	}
+	return validateListTagsPayloadJSONValue("", root, "")
+}
+
+// validateListTagsResultJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateListTagsResultJSON(data []byte) error {
+	var root any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&root); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("multiple JSON documents")
+	}
+	return validateListTagsResultJSONValue("", root, "")
 }
 
 // validateCreateAiNotePayloadJSON parses one JSON document and checks the exact value
@@ -3951,6 +4236,110 @@ func validateBooleanJSONValue(path string, value any, description string) error 
 	return nil
 }
 
+// validateListTagsPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListTagsPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "notebook":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Only notes in this notebook. Omit for all notebooks except the trash",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"notebook",
+			})
+		}
+	}
+	return nil
+}
+
+// validateListTagsResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListTagsResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateListTagsResultTagCountTransportJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateListTagsResultTagCountTransportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListTagsResultTagCountTransportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "count":
+			if err := validateIntJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of notes with the tag",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Tag",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"count",
+				"name",
+			})
+		}
+	}
+	return nil
+}
+
 // validateCreateAiNotePayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateCreateAiNotePayloadJSONValue(path string, value any, description string) error {
 	field := path
@@ -4428,6 +4817,22 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 			}
 			res.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport(val)
 		}
+	}
+
+	return res
+}
+func decodeTagCountTransportToTagCount(v *toolhttp.TagCountTransport) *TagCount {
+	res := &TagCount{
+		Name:  *v.Name,
+		Count: *v.Count,
+	}
+
+	return res
+}
+func encodeTagCountToTagCountTransport(v *TagCount) *toolhttp.TagCountTransport {
+	res := &toolhttp.TagCountTransport{
+		Name:  &v.Name,
+		Count: &v.Count,
 	}
 
 	return res

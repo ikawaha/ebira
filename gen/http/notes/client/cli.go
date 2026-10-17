@@ -386,6 +386,26 @@ func BuildMovePayload(notesMoveBody *string, notesMoveID *string) (*notes.MovePa
 	return v, nil
 }
 
+// BuildTagsPayload builds the payload for the notes tags endpoint from CLI
+// flags.
+func BuildTagsPayload(notesTagsNotebook *string) (*notes.TagsPayload, error) {
+	var err error
+	var notebook *string
+	{
+		if notesTagsNotebook != nil {
+			notebook = notesTagsNotebook
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesTagsNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	v := &notes.TagsPayload{}
+	v.Notebook = notebook
+
+	return v, nil
+}
+
 // BuildCreateNotebookPayload builds the payload for the notes create_notebook
 // endpoint from CLI flags.
 func BuildCreateNotebookPayload(notesCreateNotebookBody *string) (*notes.CreateNotebookPayload, error) {

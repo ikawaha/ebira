@@ -1223,6 +1223,47 @@ paths:
                                     - Fugit qui.
                                 removed: 7984183524541165872
                                 updated: 3278025811743792993
+    /tags:
+        get:
+            tags:
+                - notes
+            summary: tags notes
+            description: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).
+            operationId: notes#tags
+            parameters:
+                - name: notebook
+                  in: query
+                  description: Only notes in this notebook. Omit for all notebooks except the trash
+                  allowEmptyValue: true
+                  schema:
+                    type: string
+                    description: Only notes in this notebook. Omit for all notebooks except the trash
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: inbox
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/TagCount'
+                                example:
+                                    - count: 6903405577005272120
+                                      name: Reiciendis eum et maiores.
+                                    - count: 6903405577005272120
+                                      name: Reiciendis eum et maiores.
+                                    - count: 6903405577005272120
+                                      name: Reiciendis eum et maiores.
+                            example:
+                                - count: 6903405577005272120
+                                  name: Reiciendis eum et maiores.
+                                - count: 6903405577005272120
+                                  name: Reiciendis eum et maiores.
+                                - count: 6903405577005272120
+                                  name: Reiciendis eum et maiores.
     /trash/notebooks:
         get:
             tags:
@@ -2282,6 +2323,24 @@ components:
                 - updated
                 - removed
                 - errors
+        TagCount:
+            type: object
+            properties:
+                count:
+                    type: integer
+                    description: Number of notes with the tag
+                    example: 6903405577005272120
+                    format: int64
+                name:
+                    type: string
+                    description: Tag
+                    example: Reiciendis eum et maiores.
+            example:
+                count: 6903405577005272120
+                name: Reiciendis eum et maiores.
+            required:
+                - name
+                - count
         TextRange:
             type: object
             properties:

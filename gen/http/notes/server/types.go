@@ -277,6 +277,10 @@ type MoveResponseBody struct {
 // endpoint HTTP response body.
 type NotebooksResponseBody []*NotebookResponse
 
+// TagsResponseBody is the type of the "notes" service "tags" endpoint HTTP
+// response body.
+type TagsResponseBody []*TagCountResponse
+
 // CreateNotebookResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body.
 type CreateNotebookResponseBody struct {
@@ -955,6 +959,14 @@ type NotebookResponse struct {
 	Sort string `form:"sort" json:"sort" xml:"sort"`
 }
 
+// TagCountResponse is used to define fields on response body types.
+type TagCountResponse struct {
+	// Tag
+	Name string `form:"name" json:"name" xml:"name"`
+	// Number of notes with the tag
+	Count int `form:"count" json:"count" xml:"count"`
+}
+
 // TrashedNotebookResponse is used to define fields on response body types.
 type TrashedNotebookResponse struct {
 	// Notebook ID
@@ -1245,6 +1257,20 @@ func NewNotebooksResponseBody(res []*notes.Notebook) []*NotebookResponse {
 			continue
 		}
 		body[i] = marshalNotesNotebookToNotebookResponse(val)
+	}
+	return body
+}
+
+// NewTagsResponseBody builds the HTTP response body from the result of the
+// "tags" endpoint of the "notes" service.
+func NewTagsResponseBody(res []*notes.TagCount) []*TagCountResponse {
+	body := make([]*TagCountResponse, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalNotesTagCountToTagCountResponse(val)
 	}
 	return body
 }
@@ -1825,6 +1851,14 @@ func NewMovePayload(body *MoveRequestBody, id string) *notes.MovePayload {
 		After: body.After,
 	}
 	v.ID = id
+
+	return v
+}
+
+// NewTagsPayload builds a notes service tags endpoint payload.
+func NewTagsPayload(notebook *string) *notes.TagsPayload {
+	v := &notes.TagsPayload{}
+	v.Notebook = notebook
 
 	return v
 }

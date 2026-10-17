@@ -49,6 +49,9 @@ type Client struct {
 	// endpoint.
 	NotebooksDoer goahttp.Doer
 
+	// Tags Doer is the HTTP client used to make requests to the tags endpoint.
+	TagsDoer goahttp.Doer
+
 	// CreateNotebook Doer is the HTTP client used to make requests to the
 	// create_notebook endpoint.
 	CreateNotebookDoer goahttp.Doer
@@ -108,6 +111,7 @@ func NewClient(
 		RestoreDoer:               doer,
 		MoveDoer:                  doer,
 		NotebooksDoer:             doer,
+		TagsDoer:                  doer,
 		CreateNotebookDoer:        doer,
 		SaveNotebookDoer:          doer,
 		DeleteNotebookDoer:        doer,
@@ -330,6 +334,30 @@ func (c *Client) Notebooks() goa.Endpoint {
 		resp, err := c.NotebooksDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "notebooks", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// Tags returns an endpoint that makes HTTP requests to the notes service tags
+// server.
+func (c *Client) Tags() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeTagsRequest(c.encoder)
+		decodeResponse = DecodeTagsResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildTagsRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.TagsDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "tags", err)
 		}
 		return decodeResponse(resp)
 	}

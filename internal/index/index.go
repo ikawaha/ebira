@@ -4,12 +4,14 @@
 package index
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -426,6 +428,38 @@ func (ix *Index) Counts(ctx context.Context) (map[string]int, error) {
 		counts[nb] = c
 	}
 	return counts, rows.Err()
+}
+
+// TagCount is a tag with the number of notes that have it.
+type TagCount struct {
+	Name  string
+	Count int
+}
+
+// Tags returns the tags of the notes in notebook (all but the trash and
+// exclude if empty) with their note counts, sorted by name as titles are.
+func (ix *Index) Tags(ctx context.Context, notebook string, exclude ...string) ([]TagCount, error) {
+	cond, args := notebookCond(notebook, exclude)
+	rows, err := ix.db.QueryContext(ctx, `SELECT t.tag, count(*) FROM note_tags t JOIN notes n ON n.id = t.id WHERE `+cond+` GROUP BY t.tag`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tags := []TagCount{}
+	for rows.Next() {
+		var t TagCount
+		if err := rows.Scan(&t.Name, &t.Count); err != nil {
+			return nil, err
+		}
+		tags = append(tags, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	slices.SortFunc(tags, func(a, b TagCount) int {
+		return cmp.Or(strings.Compare(titleKey(a.Name), titleKey(b.Name)), strings.Compare(a.Name, b.Name))
+	})
+	return tags, nil
 }
 
 // summaryColumns are the columns that query scans.

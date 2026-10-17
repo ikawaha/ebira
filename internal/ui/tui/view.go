@@ -339,7 +339,7 @@ func (m Model) renderList(w, h int) string {
 		if it.Snippet != nil && *it.Snippet != "" {
 			sub, subHL = *it.Snippet, it.SnippetHighlights
 		}
-		if m.notebook == "" {
+		if m.acrossNotebooks() {
 			prefix := m.notebookLabel(it.Notebook) + " · "
 			sub, subHL = prefix+sub, shiftRanges(subHL, prefix)
 		}
@@ -379,7 +379,8 @@ func (m Model) renderList(w, h int) string {
 func (m Model) renderNotebooks(w, h int) string {
 	innerW := w - 2
 	var lines []string
-	for _, r := range m.notebookRows() {
+	rows := m.notebookRows()
+	for _, r := range rows[min(m.notebookTop(h-2), len(rows)):] {
 		// The icon goes before the count, so that a long name is cut instead.
 		label := " " + m.notebookName(r.id)
 		count := fmt.Sprintf(" %d ", r.count) // the space keeps a long name apart
@@ -398,7 +399,11 @@ func (m Model) renderNotebooks(w, h int) string {
 		}
 		lines = append(lines, " "+st.Render(line))
 	}
-	return m.box("Notebooks", lines, w, h, m.focus == focusNotebooks)
+	title := "Notebooks"
+	if m.sideTags {
+		title = "Tags"
+	}
+	return m.box(title, lines, w, h, m.focus == focusNotebooks)
 }
 
 // kindIcon is the icon of a notebook kind: a robot for the notebooks people
@@ -427,6 +432,9 @@ func createdByAI(v *string) bool { return v != nil && *v == "ai" }
 func (m Model) notebookName(id string) string {
 	if id == "" {
 		return "All notes"
+	}
+	if t, ok := tagOf(id); ok {
+		return "# " + t
 	}
 	if tid, ok := trashedID(id); ok {
 		for _, nb := range m.trashed {
@@ -530,7 +538,10 @@ func (m Model) renderFooter() string {
 		}
 		hints = append(hints, [2]string{"q", "quit"})
 	case focusNotebooks:
-		hints = [][2]string{{"j/k", "notebook"}, {"enter", "notes"}, {"e", "rename"}, {"J/K", "reorder"}, {"a", "add"}, {"A", "add AI"}, {"t", "kind"}, {"d", "delete"}, {"n", "new note"}, {"q", "quit"}}
+		hints = [][2]string{{"j/k", "notebook"}, {"enter", "notes"}, {"e", "rename"}, {"J/K", "reorder"}, {"a", "add"}, {"A", "add AI"}, {"t", "kind"}, {"d", "delete"}, {"T", "tags"}, {"n", "new note"}, {"q", "quit"}}
+		if m.sideTags {
+			hints = [][2]string{{"j/k", "tag"}, {"enter", "notes"}, {"T", "notebooks"}, {"n", "new note"}, {"q", "quit"}}
+		}
 	default:
 		hints = [][2]string{{"j/k", "move"}, {"/", "search"}, {"?", "ask"}, {"enter", "open"}, {"e", "edit"}, {"n", "new"}, {"d", "delete"}, {"s", "sort"}}
 		if m.canReorder() {
@@ -546,7 +557,11 @@ func (m Model) renderFooter() string {
 			hints = append(hints, [2]string{"u", "restore"})
 		}
 		if !m.computeLayout().showNotebooks {
-			hints = append(hints, [2]string{"[ ]", "notebook"})
+			if m.sideTags {
+				hints = append(hints, [2]string{"[ ]", "tag"}, [2]string{"T", "notebooks"})
+			} else {
+				hints = append(hints, [2]string{"[ ]", "notebook"}, [2]string{"T", "tags"})
+			}
 		}
 		hints = append(hints, [2]string{"q", "quit"})
 	}

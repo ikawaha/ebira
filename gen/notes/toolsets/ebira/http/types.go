@@ -194,6 +194,19 @@ type (
 		// Notes from offset, at most limit; fewer than total when the list goes on
 		Notes []*NoteSummaryTransport `json:"notes"`
 	}
+	// ListTagsPayloadTransport is the internal JSON transport type for ListTagsPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ListTagsPayloadTransport struct {
+		// Only notes in this notebook. Omit for all notebooks except the trash
+		Notebook *string `json:"notebook,omitempty"`
+	}
+	// ListTagsResultTransport is the internal JSON transport type for ListTagsResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ListTagsResultTransport []*TagCountTransport
 	// MakeNotebookPrivatePayloadTransport is the internal JSON transport type for MakeNotebookPrivatePayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -342,6 +355,16 @@ type (
 		// come by creation time, newest first), created and updated are newest first,
 		// and title is by code point, ignoring case and width
 		Sort *string `json:"sort"`
+	}
+	// TagCountTransport is the internal JSON transport type for TagCountTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	TagCountTransport struct {
+		// Tag
+		Name *string `json:"name"`
+		// Number of notes with the tag
+		Count *int `json:"count"`
 	}
 	// TextRangeTransport is the internal JSON transport type for TextRangeTransport.
 	// It lives in the toolset-local http package and is used only for JSON

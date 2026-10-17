@@ -306,6 +306,26 @@ func ValidateListNotesResultTransport(body *ListNotesResultTransport) (err error
 	return
 }
 
+// ValidateListTagsPayloadTransport runs the validations defined on ListTagsPayloadTransport.
+func ValidateListTagsPayloadTransport(body *ListTagsPayloadTransport) (err error) {
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateListTagsResultTransport runs the validations defined on ListTagsResultTransport.
+func ValidateListTagsResultTransport(body ListTagsResultTransport) (err error) {
+	for _, e := range body {
+		if e != nil {
+			if err2 := ValidateTagCountTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
 // ValidateMakeNotebookPrivatePayloadTransport runs the validations defined on MakeNotebookPrivatePayloadTransport.
 func ValidateMakeNotebookPrivatePayloadTransport(body *MakeNotebookPrivatePayloadTransport) (err error) {
 	if body.ID == nil {
@@ -547,6 +567,17 @@ func ValidateNotebookTransport(body *NotebookTransport) (err error) {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
+	}
+	return
+}
+
+// ValidateTagCountTransport runs the validations defined on TagCountTransport.
+func ValidateTagCountTransport(body *TagCountTransport) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
 	return
 }

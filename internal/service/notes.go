@@ -373,6 +373,25 @@ func (s *Notes) Notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 	}), nil
 }
 
+func (s *Notes) Tags(ctx context.Context, p *gennotes.TagsPayload) ([]*gennotes.TagCount, error) {
+	hidden, err := s.hiddenNotebooks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if slices.Contains(hidden, deref(p.Notebook)) {
+		return []*gennotes.TagCount{}, nil // as if the notebook were empty
+	}
+	res, err := s.index.Tags(ctx, deref(p.Notebook), hidden...)
+	if err != nil {
+		return nil, err
+	}
+	tags := make([]*gennotes.TagCount, len(res))
+	for i, t := range res {
+		tags[i] = &gennotes.TagCount{Name: t.Name, Count: t.Count}
+	}
+	return tags, nil
+}
+
 func (s *Notes) SaveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayload) (*gennotes.Notebook, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

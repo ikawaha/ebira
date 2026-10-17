@@ -28,6 +28,7 @@ type Server struct {
 	Restore               http.Handler
 	Move                  http.Handler
 	Notebooks             http.Handler
+	Tags                  http.Handler
 	CreateNotebook        http.Handler
 	SaveNotebook          http.Handler
 	DeleteNotebook        http.Handler
@@ -74,6 +75,7 @@ func New(
 			{"Restore", "POST", "/notes/{id}/restore"},
 			{"Move", "POST", "/notes/{id}/move"},
 			{"Notebooks", "GET", "/notebooks"},
+			{"Tags", "GET", "/tags"},
 			{"CreateNotebook", "POST", "/notebooks"},
 			{"SaveNotebook", "PUT", "/notebooks/{id}"},
 			{"DeleteNotebook", "DELETE", "/notebooks/{id}"},
@@ -92,6 +94,7 @@ func New(
 		Restore:               NewRestoreHandler(e.Restore, mux, decoder, encoder, errhandler, formatter),
 		Move:                  NewMoveHandler(e.Move, mux, decoder, encoder, errhandler, formatter),
 		Notebooks:             NewNotebooksHandler(e.Notebooks, mux, decoder, encoder, errhandler, formatter),
+		Tags:                  NewTagsHandler(e.Tags, mux, decoder, encoder, errhandler, formatter),
 		CreateNotebook:        NewCreateNotebookHandler(e.CreateNotebook, mux, decoder, encoder, errhandler, formatter),
 		SaveNotebook:          NewSaveNotebookHandler(e.SaveNotebook, mux, decoder, encoder, errhandler, formatter),
 		DeleteNotebook:        NewDeleteNotebookHandler(e.DeleteNotebook, mux, decoder, encoder, errhandler, formatter),
@@ -117,6 +120,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Restore = m(s.Restore)
 	s.Move = m(s.Move)
 	s.Notebooks = m(s.Notebooks)
+	s.Tags = m(s.Tags)
 	s.CreateNotebook = m(s.CreateNotebook)
 	s.SaveNotebook = m(s.SaveNotebook)
 	s.DeleteNotebook = m(s.DeleteNotebook)
@@ -141,6 +145,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountRestoreHandler(mux, h.Restore)
 	MountMoveHandler(mux, h.Move)
 	MountNotebooksHandler(mux, h.Notebooks)
+	MountTagsHandler(mux, h.Tags)
 	MountCreateNotebookHandler(mux, h.CreateNotebook)
 	MountSaveNotebookHandler(mux, h.SaveNotebook)
 	MountDeleteNotebookHandler(mux, h.DeleteNotebook)
@@ -612,6 +617,59 @@ func NewNotebooksHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		var err error
 		res, err := endpoint(ctx, nil)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountTagsHandler configures the mux to serve the "notes" service "tags"
+// endpoint.
+func MountTagsHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/tags", f)
+}
+
+// NewTagsHandler creates a HTTP handler which loads the HTTP request and calls
+// the "notes" service "tags" endpoint.
+func NewTagsHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeTagsRequest(mux, decoder)
+		encodeResponse = EncodeTagsResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "tags")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)

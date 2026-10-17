@@ -7,6 +7,9 @@
 const state = {
   notebooks: [],
   notebook: null, // selected notebook ID; null for all but the trash
+  tags: [], // tags with their note counts
+  tag: null, // selected tag; the list then has the notes with it in all notebooks
+  side: loadSide(), // what the left column lists: "notebooks" or "tags"
   query: "",
   notes: [],
   total: 0,
@@ -28,6 +31,24 @@ function loadAllSort() {
   } catch (_) {
     return "order";
   }
+}
+
+// The left column lists the notebooks or the tags, as in Quiver; the choice is
+// a per-browser convenience.
+function loadSide() {
+  try {
+    return localStorage.getItem("ebira.side") === "tags" ? "tags" : "notebooks";
+  } catch (_) {
+    return "notebooks";
+  }
+}
+
+function setSide(side) {
+  state.side = side;
+  try {
+    localStorage.setItem("ebira.side", side);
+  } catch (_) { /* kept for this page only */ }
+  renderNotebooks();
 }
 
 function currentSort() {
@@ -251,38 +272,78 @@ function button(label, onClick, { title, cls } = {}) {
   return b;
 }
 
-function tagList(tags) {
-  return (tags || []).map((tag) => el("span", "tag", tag));
+// tagList returns the tags of a note; with link, a click on one chooses it.
+function tagList(tags, link = false) {
+  return (tags || []).map((tag) => {
+    const e = el("span", link ? "tag link" : "tag", tag);
+    if (link) {
+      e.title = t("showTag", { tag });
+      e.addEventListener("click", () => selectTag(tag));
+    }
+    return e;
+  });
 }
 
 // Notebooks
 
+// loadNotebooks reads the notebooks and the tags, which change together with
+// the notes.
 async function loadNotebooks() {
-  state.notebooks = await api("/notebooks");
+  const [notebooks, tags] = await Promise.all([api("/notebooks"), api("/tags")]);
+  state.notebooks = notebooks;
+  state.tags = tags;
   if (state.notebook && !state.notebooks.some((n) => n.id === state.notebook)) {
     state.notebook = null; // deleted
   }
   renderNotebooks();
 }
 
+// renderNotebooks renders the left column: the notebooks or the tags, each
+// below "all notes".
 function renderNotebooks() {
+  for (const b of document.querySelectorAll("#side-tabs button")) {
+    b.setAttribute("aria-selected", String(b.dataset.side === state.side));
+  }
   const ul = $("notebooks");
   ul.replaceChildren();
   const total = state.notebooks.filter((n) => n.id !== "trash").reduce((a, n) => a + n.count, 0);
+  const all = el("li", !state.tag && !state.notebook ? "active" : "", el("span", "name", t("all")), el("span", "count", String(total)));
+  all.addEventListener("click", () => selectNotebook(null));
+  ul.append(all);
+  if (state.side === "tags") {
+    renderTags(ul);
+    return;
+  }
   const item = (id, name, icon, count, cls) => {
     const li = el("li", cls || "", el("span", "name", name));
     if (icon) li.append(el("span", "icon", icon));
     li.append(el("span", "count", String(count)));
-    if (state.notebook === id) li.classList.add("active");
+    if (!state.tag && state.notebook === id) li.classList.add("active");
     li.addEventListener("click", () => selectNotebook(id));
     return li;
   };
-  ul.append(item(null, t("all"), "", total));
   for (const nb of state.notebooks) {
     const li = item(nb.id, nb.name, kindIcon(nb.kind), nb.count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
     ul.append(li);
   }
+}
+
+// renderTags appends the tags to ul. The selected tag stays even when no note
+// has it any more, so that the list does not change under the user.
+function renderTags(ul) {
+  const tags = [...state.tags];
+  if (state.tag && !tags.some((tg) => tg.name === state.tag)) tags.push({ name: state.tag, count: 0 });
+  if (!tags.length) {
+    ul.append(el("li", "empty sep", t("noTags")));
+    return;
+  }
+  tags.forEach((tg, i) => {
+    const li = el("li", (i === 0 ? "sep" : "") + (state.tag === tg.name ? " active" : ""),
+      el("span", "icon", "#"), el("span", "name", tg.name), el("span", "count", String(tg.count)));
+    li.addEventListener("click", () => selectTag(tg.name));
+    ul.append(li);
+  });
 }
 
 // Notebook order: the notebooks between inbox and trash, which stay fixed, can
@@ -365,8 +426,20 @@ async function moveNotebook(id, before) {
 }
 
 function selectNotebook(id) {
-  if (id === state.notebook) return;
+  if (!state.tag && id === state.notebook) return;
+  state.tag = null;
   state.notebook = id;
+  renderNotebooks();
+  loadNotes({ chosen: true, first: true });
+}
+
+// selectTag lists the notes with tag in all notebooks but the trash, as
+// choosing a notebook does.
+function selectTag(tag) {
+  if (state.side !== "tags") setSide("tags"); // show the tag chosen in the preview
+  if (tag === state.tag) return;
+  state.tag = tag;
+  state.notebook = null;
   renderNotebooks();
   loadNotes({ chosen: true, first: true });
 }
@@ -397,7 +470,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
   try {
     let notes, total, mode;
     if (state.query) {
-      const r = await api("/search", { params: { q: state.query, notebook: state.notebook, limit: 200 } });
+      const r = await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, limit: 200 } });
       notes = r.notes;
       total = r.total;
       mode = r.mode;
@@ -407,7 +480,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       // the pages read with "load more".
       notes = [];
       do {
-        const r = await api("/notes", { params: { notebook: state.notebook, sort: state.notebook ? null : state.allSort, limit: LIST_PAGE, offset: notes.length } });
+        const r = await api("/notes", { params: { notebook: state.notebook, tag: state.tag, sort: state.notebook ? null : state.allSort, limit: LIST_PAGE, offset: notes.length } });
         notes.push(...r.notes);
         total = r.total;
         if (!r.notes.length) break;
@@ -417,7 +490,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     state.notes = notes;
     state.total = total;
     if (mode) $("mode").textContent = mode;
-    const where = state.notebook ? notebookName(state.notebook) : t("all");
+    const where = state.tag ? "#" + state.tag : state.notebook ? notebookName(state.notebook) : t("all");
     info.textContent = state.query
       ? t(total > notes.length ? "searchInfoTop" : "searchInfo", { where, query: state.query, total, shown: notes.length })
       : t(total > notes.length ? "listInfoPart" : "listInfo", { where, total, shown: notes.length });
@@ -650,7 +723,7 @@ async function loadNote() {
   const meta = el("div", "meta",
     el("span", "", notebookName(n.notebook) + (n.trashed_from ? t("trashedFrom", { notebook: notebookName(n.trashed_from) }) : "")),
     el("span", "", t("updatedAt", { time: formatTime(n.updated_at) })),
-    ...tagList(n.tags));
+    ...tagList(n.tags, true));
   const mark = aiMark(n, t("createdByAI"));
   if (mark) meta.append(mark);
   const actions = el("div", "actions");
@@ -793,7 +866,7 @@ function startEdit(note) {
   f.notebook.value = note ? note.notebook : defaultNotebook;
   f.tags = el("input");
   f.tags.placeholder = t("tagsPlaceholder");
-  f.tags.value = note ? note.tags.join(", ") : "";
+  f.tags.value = note ? note.tags.join(", ") : state.tag || ""; // a new note under a tag gets it
   f.body = el("textarea", "editor-body");
   f.body.placeholder = t("bodyPlaceholder");
   f.body.spellcheck = false;
@@ -1146,6 +1219,7 @@ document.addEventListener("keydown", (e) => {
     case "c": e.preventDefault(); startEdit(null); break;
     case "u": restoreNote(); break;
     case "a": e.preventDefault(); toggleAssistant(true); break;
+    case "T": e.preventDefault(); setSide(state.side === "tags" ? "notebooks" : "tags"); break;
     case "Escape": if (!$("assistant").hidden) toggleAssistant(false); break;
   }
 });
@@ -1194,6 +1268,10 @@ function connect() {
 
 (async () => {
   await loadMessages();
+  for (const b of document.querySelectorAll("#side-tabs button")) {
+    b.addEventListener("click", () => setSide(b.dataset.side));
+  }
+  renderNotebooks();
   try {
     await loadNotebooks();
   } catch (e) {

@@ -51,6 +51,9 @@ type Service interface {
 	// List notebooks with their note counts: inbox first, then the others by order
 	// and name, trash last.
 	Notebooks(context.Context) (res []*Notebook, err error)
+	// List the tags of the notes with their note counts, by name
+	// (case-insensitive, full-width and half-width forms alike).
+	Tags(context.Context, *TagsPayload) (res []*TagCount, err error)
 	// Create a notebook from its display name. The ID, which is also the directory
 	// name, is derived from the name with only the characters an ID allows: an
 	// ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any
@@ -118,7 +121,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [22]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "create_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "events", "sync"}
+var MethodNames = [23]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "create_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "events", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -445,6 +448,19 @@ type SyncResult struct {
 	Removed int
 	// Files that could not be read
 	Errors []string
+}
+
+type TagCount struct {
+	// Tag
+	Name string
+	// Number of notes with the tag
+	Count int
+}
+
+// TagsPayload is the payload type of the notes service tags method.
+type TagsPayload struct {
+	// Only notes in this notebook. Omit for all notebooks except the trash
+	Notebook *string
 }
 
 // Range of characters, in Unicode code point offsets
@@ -916,6 +932,28 @@ func validatejsonSyncResultTransport(value *jsonSyncResultTransport) (err error)
 	return err
 }
 
+// jsonTagCountTransport stores JSON fields until they have been validated.
+type jsonTagCountTransport struct {
+	// Tag
+	Name *string `json:"name"`
+	// Number of notes with the tag
+	Count *tagCountIntTransport `json:"count"`
+}
+
+// validatejsonTagCountTransport checks decoded JSON before it becomes a service value.
+func validatejsonTagCountTransport(value *jsonTagCountTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
+	}
+	return err
+}
+
 // jsonTextRangeTransport stores JSON fields until they have been validated.
 type jsonTextRangeTransport struct {
 	// Offset of the first character
@@ -1074,6 +1112,26 @@ func (value *syncResultIntTransport) UnmarshalJSON(data []byte) error {
 
 // ValidatesyncResultIntTransport checks decoded JSON before it becomes a service value.
 func ValidatesyncResultIntTransport(value syncResultIntTransport) (err error) {
+
+	return err
+}
+
+// tagCountIntTransport stores JSON fields until they have been validated.
+type tagCountIntTransport int
+
+// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
+// declared range. Decimal and exponent spellings do not change its value.
+func (value *tagCountIntTransport) UnmarshalJSON(data []byte) error {
+	number, err := rawjson.DecodeInteger[int](data)
+	if err != nil {
+		return fmt.Errorf("decode tagCountIntTransport integer: %w", err)
+	}
+	*value = tagCountIntTransport(number)
+	return nil
+}
+
+// ValidatetagCountIntTransport checks decoded JSON before it becomes a service value.
+func ValidatetagCountIntTransport(value tagCountIntTransport) (err error) {
 
 	return err
 }
@@ -1834,6 +1892,62 @@ func DecodeSyncResult(data []byte) (out *SyncResult, err error) {
 		out.Errors = make([]string, len(body.Errors))
 		for i, val := range body.Errors {
 			out.Errors[i] = val
+		}
+	}
+	return out, nil
+}
+
+// EncodeTagCount turns a service value into JSON using the field names in the Goa design.
+func EncodeTagCount(in *TagCount) ([]byte, error) {
+	if err := checkTagCountValue(in); err != nil {
+		return nil, fmt.Errorf("encode TagCount JSON: %w", err)
+	}
+	var body *jsonTagCountTransport
+	{
+		body = &jsonTagCountTransport{
+			Name: &in.Name,
+		}
+		count := tagCountIntTransport(in.Count)
+		body.Count = &count
+	}
+	if err := validatejsonTagCountTransport(body); err != nil {
+		return nil, fmt.Errorf("validate TagCount JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode TagCount JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeTagCount checks JSON field names from the Goa design and returns a service value.
+func DecodeTagCount(data []byte) (out *TagCount, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode TagCount JSON: %w", err)
+	}
+	if err := validateTagCountJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode TagCount JSON: %w", err)
+	}
+	var body *jsonTagCountTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode TagCount JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode TagCount JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode TagCount JSON after first value: %w", err)
+	}
+	if err := validatejsonTagCountTransport(body); err != nil {
+		return out, fmt.Errorf("validate TagCount JSON: %w", err)
+	}
+	{
+		out = &TagCount{
+			Name:  *body.Name,
+			Count: int(*body.Count),
 		}
 	}
 	return out, nil
@@ -4588,6 +4702,82 @@ func validateSyncResultJSONValue6(path string, value any, description string) er
 	return nil
 }
 
+// validateTagCountJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateTagCountJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "count":
+			if err := validateTagCountJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of notes with the tag",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateTagCountJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Tag",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"count",
+				"name",
+			})
+		}
+	}
+	return nil
+}
+
+// validateTagCountJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateTagCountJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateTagCountJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateTagCountJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
 // validateTextRangeJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateTextRangeJSONValue(path string, value any, description string) error {
 	field := path
@@ -5463,6 +5653,36 @@ func checkSyncResultSyncResultValue(in *SyncResult, field string, active map[any
 			if !utf8.ValidString(string(item1)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "errors", false), strconv.Itoa(index1), true))
 			}
+		}
+	}
+	return nil
+}
+
+// checkTagCountValue checks text and cycles before conversion.
+func checkTagCountValue(in *TagCount) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkTagCountTagCountValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkTagCountTagCountValue checks one generated value on the active path.
+func checkTagCountTagCountValue(in *TagCount, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
 		}
 	}
 	return nil

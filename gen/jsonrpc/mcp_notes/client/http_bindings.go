@@ -17,6 +17,7 @@ func mcpHTTPBindings() mcpruntime.HTTPBindings {
 			"get_note":       {ReadOnly: true},
 			"list_notebooks": {ReadOnly: true},
 			"list_notes":     {ReadOnly: true},
+			"list_tags":      {ReadOnly: true},
 			"search_notes":   {ReadOnly: true},
 		},
 	}

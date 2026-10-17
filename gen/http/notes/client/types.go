@@ -945,6 +945,14 @@ type NotebookResponse struct {
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
 }
 
+// TagCountResponse is used to define fields on response body types.
+type TagCountResponse struct {
+	// Tag
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Number of notes with the tag
+	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+}
+
 // TrashedNotebookResponse is used to define fields on response body types.
 type TrashedNotebookResponse struct {
 	// Notebook ID
@@ -1521,6 +1529,21 @@ func NewNotebooksNotebookOK(body []*NotebookResponse) []*notes.Notebook {
 			continue
 		}
 		v[i] = unmarshalNotebookResponseToNotesNotebook(val)
+	}
+
+	return v
+}
+
+// NewTagsTagCountOK builds a "notes" service "tags" endpoint result from a
+// HTTP "OK" response.
+func NewTagsTagCountOK(body []*TagCountResponse) []*notes.TagCount {
+	v := make([]*notes.TagCount, len(body))
+	for i, val := range body {
+		if val == nil {
+			v[i] = nil
+			continue
+		}
+		v[i] = unmarshalTagCountResponseToNotesTagCount(val)
 	}
 
 	return v
@@ -3194,6 +3217,29 @@ func validateNotebookResponse(body *NotebookResponse, path string) (err error) {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
+	}
+	return
+}
+
+// ValidateTagCountResponse runs the validations defined on TagCount
+func ValidateTagCountResponse(body *TagCountResponse) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
+	}
+	return
+}
+
+// validateTagCountResponse checks TagCount and reports errors using the path
+// supplied by its caller
+func validateTagCountResponse(body *TagCountResponse, path string) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", path))
+	}
+	if body.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", path))
 	}
 	return
 }

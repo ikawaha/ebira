@@ -54,6 +54,11 @@ func NotebooksNotesPath() string {
 	return "/notebooks"
 }
 
+// TagsNotesPath returns the URL path to the notes service tags HTTP endpoint.
+func TagsNotesPath() string {
+	return "/tags"
+}
+
 // CreateNotebookNotesPath returns the URL path to the notes service create_notebook HTTP endpoint.
 func CreateNotebookNotesPath() string {
 	return "/notebooks"

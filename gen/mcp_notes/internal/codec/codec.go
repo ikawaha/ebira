@@ -976,6 +976,60 @@ func ValidateSearchResultTransport(value *SearchResultTransport) (err error) {
 	return err
 }
 
+// TagsPayloadTransport stores JSON fields until they have been validated.
+type TagsPayloadTransport struct {
+	// Only notes in this notebook. Omit for all notebooks except the trash
+	Notebook *string `json:"notebook,omitempty"`
+}
+
+// ValidateTagsPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateTagsPayloadTransport(value *TagsPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// TagsResultTagCountTransport stores JSON fields until they have been validated.
+type TagsResultTagCountTransport struct {
+	// Tag
+	Name *string `json:"name"`
+	// Number of notes with the tag
+	Count *int `json:"count"`
+}
+
+// ValidateTagsResultTagCountTransport checks decoded JSON before it becomes a service value.
+func ValidateTagsResultTagCountTransport(value *TagsResultTagCountTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
+	}
+	return err
+}
+
+// TagsResultTransport stores JSON fields until they have been validated.
+type TagsResultTransport []*TagsResultTagCountTransport
+
+// ValidateTagsResultTransport checks decoded JSON before it becomes a service value.
+func ValidateTagsResultTransport(value TagsResultTransport) (err error) {
+	for _, e := range value {
+		if e != nil {
+			if err2 := ValidateTagsResultTagCountTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
 // UpdateAiNotePayloadTransport stores JSON fields until they have been validated.
 type UpdateAiNotePayloadTransport struct {
 	// Note ID
@@ -1553,6 +1607,54 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeTagsPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeTagsPayload(data []byte) (out *notes.TagsPayload, err error) {
+	var body *TagsPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode TagsPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode TagsPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode TagsPayload JSON after first value: %w", err)
+	}
+	if err := ValidateTagsPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate TagsPayload JSON: %w", err)
+	}
+	{
+		out = &notes.TagsPayload{
+			Notebook: body.Notebook,
+		}
+	}
+	return out, nil
+}
+
+// EncodeTagsResult turns a service value into JSON using the field names in the Goa design.
+func EncodeTagsResult(in []*notes.TagCount) ([]byte, error) {
+	var body TagsResultTransport
+	{
+		body = make([]*TagsResultTagCountTransport, len(in))
+		for i, val := range in {
+			if val == nil {
+				body[i] = nil
+				continue
+			}
+			body[i] = encodeTagCountToTagsResultTagCountTransport(val)
+		}
+	}
+	if err := ValidateTagsResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate TagsResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode TagsResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // DecodeUpdateAiNotePayload checks JSON field names from the Goa design and returns a service value.
 func DecodeUpdateAiNotePayload(data []byte) (out *notes.UpdateAiNotePayload, err error) {
 	var body *UpdateAiNotePayloadTransport
@@ -1726,6 +1828,15 @@ func encodeNotebookToNotebooksResultNotebookTransport(v *notes.Notebook) *Notebo
 		Reserved: &v.Reserved,
 		Kind:     &v.Kind,
 		Sort:     &v.Sort,
+	}
+
+	return res
+}
+
+func encodeTagCountToTagsResultTagCountTransport(v *notes.TagCount) *TagsResultTagCountTransport {
+	res := &TagsResultTagCountTransport{
+		Name:  &v.Name,
+		Count: &v.Count,
 	}
 
 	return res

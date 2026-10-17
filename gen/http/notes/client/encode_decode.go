@@ -1100,6 +1100,93 @@ func DecodeNotebooksResponse(decoder func(*http.Response) goahttp.Decoder, resto
 	}
 }
 
+// BuildTagsRequest instantiates a HTTP request object with method and path set
+// to call the "notes" service "tags" endpoint
+func (c *Client) BuildTagsRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: TagsNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "tags", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeTagsRequest returns an encoder for requests sent to the notes tags
+// server.
+func EncodeTagsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.TagsPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "tags", "*notes.TagsPayload", v)
+		}
+		values := req.URL.Query()
+		if p.Notebook != nil {
+			values.Add("notebook", *p.Notebook)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeTagsResponse returns a decoder for responses returned by the notes
+// tags endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "tags", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "tags", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body []*TagCountResponse
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "tags", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := validateTagCountResponse(e, "body[*]"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "tags", err)
+			}
+			res := NewTagsTagCountOK(body)
+			return res, nil
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "tags", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "tags", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildCreateNotebookRequest instantiates a HTTP request object with method
 // and path set to call the "notes" service "create_notebook" endpoint
 func (c *Client) BuildCreateNotebookRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -1918,6 +2005,17 @@ func unmarshalNotebookResponseToNotesNotebook(v *NotebookResponse) *notes.Notebo
 		Reserved: *v.Reserved,
 		Kind:     *v.Kind,
 		Sort:     *v.Sort,
+	}
+
+	return res
+}
+
+// unmarshalTagCountResponseToNotesTagCount builds a value of type
+// *notes.TagCount from a value of type *TagCountResponse.
+func unmarshalTagCountResponseToNotesTagCount(v *TagCountResponse) *notes.TagCount {
+	res := &notes.TagCount{
+		Name:  *v.Name,
+		Count: *v.Count,
 	}
 
 	return res

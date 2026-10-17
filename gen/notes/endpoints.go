@@ -24,6 +24,7 @@ type Endpoints struct {
 	Restore               goa.Endpoint
 	Move                  goa.Endpoint
 	Notebooks             goa.Endpoint
+	Tags                  goa.Endpoint
 	CreateNotebook        goa.Endpoint
 	SaveNotebook          goa.Endpoint
 	DeleteNotebook        goa.Endpoint
@@ -58,6 +59,7 @@ func NewEndpoints(s Service) *Endpoints {
 		Restore:               NewRestoreEndpoint(s),
 		Move:                  NewMoveEndpoint(s),
 		Notebooks:             NewNotebooksEndpoint(s),
+		Tags:                  NewTagsEndpoint(s),
 		CreateNotebook:        NewCreateNotebookEndpoint(s),
 		SaveNotebook:          NewSaveNotebookEndpoint(s),
 		DeleteNotebook:        NewDeleteNotebookEndpoint(s),
@@ -85,6 +87,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Restore = m(e.Restore)
 	e.Move = m(e.Move)
 	e.Notebooks = m(e.Notebooks)
+	e.Tags = m(e.Tags)
 	e.CreateNotebook = m(e.CreateNotebook)
 	e.SaveNotebook = m(e.SaveNotebook)
 	e.DeleteNotebook = m(e.DeleteNotebook)
@@ -177,6 +180,15 @@ func NewMoveEndpoint(s Service) goa.Endpoint {
 func NewNotebooksEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		return s.Notebooks(ctx)
+	}
+}
+
+// NewTagsEndpoint returns an endpoint function that calls the method "tags" of
+// service "notes".
+func NewTagsEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*TagsPayload)
+		return s.Tags(ctx, p)
 	}
 }
 
