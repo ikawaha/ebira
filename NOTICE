@@ -1,0 +1,23 @@
+ebira
+Copyright (C) 2026 ikawaha
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License
+in LICENSE for more details.
+
+Third-party software and works:
+
+- The libraries ebira uses keep their own licenses. The libraries bundled
+  with the web UI have theirs in internal/ui/web/static/vendor/*.LICENSE;
+  the Go modules have theirs in their sources.
+- The IPA dictionary of kagome includes data of mecab-ipadic, under its own
+  terms; see the NOTICE of github.com/ikawaha/kagome-dict/ipa.
+- The icon, assets/logo/icon.png, is a detail of "Fujiwara no Hidesato
+  Shooting the Giant Centipede at the Dragon King's Palace" (1890) by
+  Tsukioka Yoshitoshi, in the public domain.
