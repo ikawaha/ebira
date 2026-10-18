@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -797,6 +798,18 @@ func (s *Notes) Sync(ctx context.Context) (*gennotes.SyncResult, error) {
 // sync updates the index from the files and notifies subscribers. The caller
 // holds s.mu.
 func (s *Notes) sync(ctx context.Context) (*gennotes.SyncResult, error) {
+	// Take in the copies of notes left by file sync services first.
+	repairs, err := s.store.Repair()
+	for _, r := range repairs {
+		if r.Note == "" {
+			slog.Info("removed a copy of a note, the same as the note", "file", r.Path)
+		} else {
+			slog.Info("made a note of a copy left by file sync", "file", r.Path, "note", r.Note)
+		}
+	}
+	if err != nil {
+		slog.Warn("cannot repair the copies of notes", "error", err)
+	}
 	r, err := s.index.Sync(ctx, s.store)
 	if err != nil {
 		return nil, err

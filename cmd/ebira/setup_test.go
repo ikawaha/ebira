@@ -219,3 +219,37 @@ func TestSetupGit(t *testing.T) {
 		t.Errorf("flags of the server: %v", setupFlags)
 	}
 }
+
+func TestSyncedFolder(t *testing.T) {
+	home := setupEnv(t)
+	cloud := filepath.Join(home, "Library", "CloudStorage", "Dropbox")
+	if err := os.MkdirAll(cloud, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(cloud, filepath.Join(home, "Dropbox")); err != nil {
+		t.Fatal(err)
+	}
+	for dir, want := range map[string]string{
+		filepath.Join(home, "Dropbox", "ebira"):                                                "Dropbox", // through the link, not made yet
+		filepath.Join(home, "Library", "CloudStorage", "GoogleDrive-you@example.com", "ebira"): "Google Drive",
+		filepath.Join(home, "Library", "CloudStorage", "OneDrive-Personal", "ebira"):           "OneDrive",
+		filepath.Join(home, "Library", "Mobile Documents", "com~apple~CloudDocs", "ebira"):     "iCloud Drive",
+		filepath.Join(home, "ebira"):                                                           "",
+		t.TempDir():                                                                            "",
+	} {
+		if got := syncedFolder(dir); got != want {
+			t.Errorf("%s: %q, want %q", dir, got, want)
+		}
+	}
+
+	// Setup does not ask for git there.
+	var out strings.Builder
+	dir := filepath.Join(home, "Dropbox", "ebira")
+	got, err := setup(t.TempDir(), strings.NewReader(dir+"\n\n\n\n\n"), &out)
+	if err != nil || got != dir {
+		t.Fatalf("%s, %v\n%s", got, err, out.String())
+	}
+	if !strings.Contains(out.String(), "The notes are in Dropbox") || strings.Contains(out.String(), "URL of the repository") {
+		t.Errorf("output:\n%s", out.String())
+	}
+}

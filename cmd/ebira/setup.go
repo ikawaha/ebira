@@ -102,8 +102,10 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	}
 
 	notes := filepath.Join(dir, "notes")
-	url, remoteNotes, err := askRemote(ctx, r, out, notes)
-	if err != nil {
+	url, remoteNotes := "", false
+	if svc := syncedFolder(dir); svc != "" {
+		fmt.Fprintf(out, "\nThe notes are in %s, which syncs them among machines. When a note is changed on two\nmachines, ebira makes the copy %s leaves into a note, titled as a conflict copy.\nGit is not used: a git repository in a synced folder can break.\n", svc, svc)
+	} else if url, remoteNotes, err = askRemote(ctx, r, out, notes); err != nil {
 		return "", err
 	}
 
@@ -236,6 +238,57 @@ func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode stri
 	_, err = gitsync.Connect(ctx, notes, url, func(f func() error) error { return f() }, store.IsNotePath,
 		func(p string, theirs []byte) (string, error) { return st.ConflictCopy(p, theirs, label) })
 	return err
+}
+
+// syncedFolder returns the name of the file sync service, such as Dropbox or
+// iCloud Drive, whose folder holds dir, or "" for none known.
+func syncedFolder(dir string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	// Resolve the links of the part that exists, such as ~/Dropbox to
+	// ~/Library/CloudStorage/Dropbox.
+	p := dir
+	var rest []string
+	for {
+		if real, err := filepath.EvalSymlinks(p); err == nil {
+			p = filepath.Join(append([]string{real}, rest...)...)
+			break
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			p = dir
+			break
+		}
+		rest = append([]string{filepath.Base(p)}, rest...)
+		p = parent
+	}
+	if realHome, err := filepath.EvalSymlinks(home); err == nil {
+		home = realHome
+	}
+	rel, err := filepath.Rel(home, p)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return ""
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	switch {
+	case len(parts) >= 3 && parts[0] == "Library" && parts[1] == "CloudStorage":
+		name, _, _ := strings.Cut(parts[2], "-") // such as GoogleDrive-you@example.com
+		if name == "GoogleDrive" {
+			return "Google Drive"
+		}
+		return name
+	case len(parts) >= 2 && parts[0] == "Library" && parts[1] == "Mobile Documents":
+		return "iCloud Drive"
+	case parts[0] == "Dropbox" || strings.HasPrefix(parts[0], "Dropbox ("):
+		return "Dropbox"
+	case strings.HasPrefix(parts[0], "OneDrive"):
+		return "OneDrive"
+	case parts[0] == "Google Drive":
+		return "Google Drive"
+	}
+	return ""
 }
 
 // askRemote asks for the URL of a git repository to sync the notes
