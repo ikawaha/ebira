@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -83,8 +84,8 @@ func TestSetup(t *testing.T) {
 	cwd := t.TempDir()
 	var out strings.Builder
 
-	// All defaults: ~/ebira, ja search, ja for $LANG, saved.
-	dir, err := setup(cwd, strings.NewReader("\n\n\n\n\n"), &out)
+	// All defaults: ~/ebira, no git, ja search, ja for $LANG, saved.
+	dir, err := setup(cwd, strings.NewReader("\n\n\n\n\n\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
@@ -114,7 +115,7 @@ func TestSetupAnswers(t *testing.T) {
 
 	// A relative directory, bigram, en, not saved; a wrong answer is asked
 	// again.
-	dir, err := setup(cwd, strings.NewReader("my notes\nmaybe\nn\nfr\nEN\nno\ny\n"), &out)
+	dir, err := setup(cwd, strings.NewReader("my notes\n\nmaybe\nn\nfr\nEN\nno\ny\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
@@ -138,7 +139,7 @@ func TestSetupAnswers(t *testing.T) {
 	// are kept. With lang in the settings file, no question about it.
 	out.Reset()
 	settings.Lang = "en"
-	again, err := setup(cwd, strings.NewReader(dir+"\nn\n\n"), &out)
+	again, err := setup(cwd, strings.NewReader(dir+"\n\nn\n\n"), &out)
 	if err != nil || again != dir {
 		t.Fatalf("existing: %s, %v\n%s", again, err, out.String())
 	}
@@ -148,7 +149,7 @@ func TestSetupAnswers(t *testing.T) {
 
 	// Canceled at the end: nothing is made.
 	out.Reset()
-	if _, err := setup(cwd, strings.NewReader("other\n\n\nn\n"), &out); err == nil {
+	if _, err := setup(cwd, strings.NewReader("other\n\n\n\nn\n"), &out); err == nil {
 		t.Error("canceled: no error")
 	}
 	if _, err := os.Stat(filepath.Join(cwd, "other")); !errors.Is(err, os.ErrNotExist) {
@@ -158,5 +159,63 @@ func TestSetupAnswers(t *testing.T) {
 	// End of input: canceled.
 	if _, err := setup(cwd, strings.NewReader(""), &out); err == nil {
 		t.Error("EOF: no error")
+	}
+}
+
+func TestSetupGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	for _, k := range []string{"GIT_AUTHOR", "GIT_COMMITTER"} {
+		t.Setenv(k+"_NAME", "test")
+		t.Setenv(k+"_EMAIL", "test@example.com")
+	}
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	if out, err := exec.Command("git", "init", "--quiet", "--bare", remote).CombinedOutput(); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+
+	// The first machine: an empty repository, after a wrong URL; the notes
+	// are pushed, and every answer saved.
+	home := setupEnv(t)
+	cwd := t.TempDir()
+	var out strings.Builder
+	in := "first\n" + filepath.Join(cwd, "none.git") + "\n" + remote + "\n\n\n\n\n\n"
+	dir, err := setup(cwd, strings.NewReader(in), &out)
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "Cannot read the repository") || !strings.Contains(out.String(), "Git:          push to "+remote) {
+		t.Errorf("output:\n%s", out.String())
+	}
+	b, err := os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml"))
+	if err != nil || !strings.HasSuffix(string(b), "lang: ja\ngit_sync: 10m\n") {
+		t.Errorf("config.yaml: %q, %v", b, err)
+	}
+	if log, err := exec.Command("git", "-C", remote, "log", "--format=%s", "--all").CombinedOutput(); err != nil || !strings.Contains(string(log), "Update notes") {
+		t.Errorf("not pushed: %s, %v", log, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "notes", ".git")); err != nil {
+		t.Errorf("the notes are not a repository: %v", err)
+	}
+
+	// The second machine clones them, with their search mode; not saved,
+	// so the server gets the interval and the language.
+	setupEnv(t)
+	out.Reset()
+	dir, err = setup(cwd, strings.NewReader("second\n"+remote+"\n5m\nen\nn\n\n"), &out)
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if strings.Contains(out.String(), "Use ja") || !strings.Contains(out.String(), "Git:          clone "+remote) {
+		t.Errorf("output:\n%s", out.String())
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "notes", "_ebira.yaml")); err != nil || string(b) != "search: ja\n" {
+		t.Errorf("cloned _ebira.yaml: %q, %v", b, err)
+	}
+	if !slices.Equal(setupFlags, []string{"-lang", "en", "-git-sync", "5m"}) {
+		t.Errorf("flags of the server: %v", setupFlags)
 	}
 }

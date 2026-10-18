@@ -56,6 +56,8 @@ type Config struct {
 	Model    string `yaml:"model"`
 	// Lang is the language of the web UI, such as en or ja.
 	Lang string `yaml:"lang"`
+	// GitSync is the interval of syncing the notes with git, such as 10m.
+	GitSync string `yaml:"git_sync"`
 }
 
 // Path returns the path of the settings file.
@@ -176,7 +178,7 @@ func base(env, def string) (string, error) {
 	return filepath.Join(home, def), nil
 }
 
-// Save adds the set values of c, data_dir and lang, to the settings file,
+// Save adds the set values of c, data_dir, lang and git_sync, to the settings file,
 // creating the file when it does not exist. A data directory under the home
 // directory is written with ~. The keys are appended, so the rest of the
 // file, with its comments, is kept; the file must not have them yet.
@@ -186,7 +188,7 @@ func Save(c Config) (string, error) {
 		return "", err
 	}
 	var add []byte
-	for _, kv := range [][2]string{{"data_dir", homeRel(c.DataDir)}, {"lang", c.Lang}} {
+	for _, kv := range [][2]string{{"data_dir", homeRel(c.DataDir)}, {"lang", c.Lang}, {"git_sync", c.GitSync}} {
 		if kv[1] == "" {
 			continue
 		}

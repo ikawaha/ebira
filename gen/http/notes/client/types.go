@@ -108,6 +108,16 @@ type ImportRequestBody struct {
 	Force *bool `form:"force,omitempty" json:"force,omitempty" xml:"force,omitempty"`
 }
 
+// GitSyncRequestBody is the type of the "notes" service "git_sync" endpoint
+// HTTP request body.
+type GitSyncRequestBody struct {
+	// URL of a remote repository to connect the notes to first, as the remote
+	// origin: the notes directory becomes a repository unless it is one, and the
+	// notes are pushed, setting the upstream branch; the notes already on the
+	// remote, such as from another machine, are merged first
+	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -413,6 +423,35 @@ type EventsResponseBody struct {
 	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
 	// Note ID (absent for ready and notebooks)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+}
+
+// GitStatusResponseBody is the type of the "notes" service "git_status"
+// endpoint HTTP response body.
+type GitStatusResponseBody struct {
+	// Whether the notes are in a git repository, so that git_sync can sync them;
+	// git is optional
+	Repository *bool `form:"repository,omitempty" json:"repository,omitempty" xml:"repository,omitempty"`
+	// Upstream branch that git_sync merges and pushes to; absent when there is none
+	Upstream *string `form:"upstream,omitempty" json:"upstream,omitempty" xml:"upstream,omitempty"`
+}
+
+// GitSyncResponseBody is the type of the "notes" service "git_sync" endpoint
+// HTTP response body.
+type GitSyncResponseBody struct {
+	// Number of changed files committed
+	Committed *int `form:"committed,omitempty" json:"committed,omitempty" xml:"committed,omitempty"`
+	// Upstream branch merged and pushed to; absent when the branch has none, and
+	// then the changes are only committed
+	Upstream *string `form:"upstream,omitempty" json:"upstream,omitempty" xml:"upstream,omitempty"`
+	// Number of files changed by the merge of the upstream branch
+	Merged *int `form:"merged,omitempty" json:"merged,omitempty" xml:"merged,omitempty"`
+	// Whether commits were pushed
+	Pushed *bool `form:"pushed,omitempty" json:"pushed,omitempty" xml:"pushed,omitempty"`
+	// Files changed on both sides of the merge, or deleted on one side and changed
+	// on the other
+	Conflicts []*GitConflictResponseBody `form:"conflicts,omitempty" json:"conflicts,omitempty" xml:"conflicts,omitempty"`
+	// Files that could not be read when the index was updated after the sync
+	Errors []string `form:"errors,omitempty" json:"errors,omitempty" xml:"errors,omitempty"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -1079,6 +1118,42 @@ type DeleteFileBadRequestResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// GitSyncForbiddenResponseBody is the type of the "notes" service "git_sync"
+// endpoint HTTP response body for the "forbidden" error.
+type GitSyncForbiddenResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// GitSyncBadRequestResponseBody is the type of the "notes" service "git_sync"
+// endpoint HTTP response body for the "bad_request" error.
+type GitSyncBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // NoteSummaryResponseBody is used to define fields on response body types.
 type NoteSummaryResponseBody struct {
 	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
@@ -1227,6 +1302,18 @@ type BrokenFileRefResponseBody struct {
 	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
 }
 
+// GitConflictResponseBody is used to define fields on response body types.
+type GitConflictResponseBody struct {
+	// File, relative to the notes directory; this side's version is kept, or the
+	// changed version when the other side deleted it
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// ID of the note of the file, for a note's file
+	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// ID of the new note made from the other side's version of the note, when both
+	// sides changed it
+	CopyID *string `form:"copy_id,omitempty" json:"copy_id,omitempty" xml:"copy_id,omitempty"`
+}
+
 // ImportFileRequestBody is used to define fields on request body types.
 type ImportFileRequestBody struct {
 	// Path of the image as the Markdown file refers to it, one of the paths the
@@ -1330,6 +1417,15 @@ func NewImportRequestBody(p *notes.ImportPayload) *ImportRequestBody {
 			}
 			body.Files[i] = marshalNotesImportFileToImportFileRequestBody(val)
 		}
+	}
+	return body
+}
+
+// NewGitSyncRequestBody builds the HTTP request body from the payload of the
+// "git_sync" endpoint of the "notes" service.
+func NewGitSyncRequestBody(p *notes.GitSyncPayload) *GitSyncRequestBody {
+	body := &GitSyncRequestBody{
+		Remote: p.Remote,
 	}
 	return body
 }
@@ -2278,6 +2374,71 @@ func NewEventsNoteEventOK(body *EventsResponseBody) *notes.NoteEvent {
 	return v
 }
 
+// NewGitStatusGitStatusOK builds a "notes" service "git_status" endpoint
+// result from a HTTP "OK" response.
+func NewGitStatusGitStatusOK(body *GitStatusResponseBody) *notes.GitStatus {
+	v := &notes.GitStatus{
+		Repository: *body.Repository,
+		Upstream:   body.Upstream,
+	}
+
+	return v
+}
+
+// NewGitSyncResultOK builds a "notes" service "git_sync" endpoint result from
+// a HTTP "OK" response.
+func NewGitSyncResultOK(body *GitSyncResponseBody) *notes.GitSyncResult {
+	v := &notes.GitSyncResult{
+		Committed: *body.Committed,
+		Upstream:  body.Upstream,
+		Merged:    *body.Merged,
+		Pushed:    *body.Pushed,
+	}
+	v.Conflicts = make([]*notes.GitConflict, len(body.Conflicts))
+	for i, val := range body.Conflicts {
+		if val == nil {
+			v.Conflicts[i] = nil
+			continue
+		}
+		v.Conflicts[i] = unmarshalGitConflictResponseBodyToNotesGitConflict(val)
+	}
+	v.Errors = make([]string, len(body.Errors))
+	for i, val := range body.Errors {
+		v.Errors[i] = val
+	}
+
+	return v
+}
+
+// NewGitSyncForbidden builds a notes service git_sync endpoint forbidden error.
+func NewGitSyncForbidden(body *GitSyncForbiddenResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewGitSyncBadRequest builds a notes service git_sync endpoint bad_request
+// error.
+func NewGitSyncBadRequest(body *GitSyncBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewSyncResultOK builds a "notes" service "sync" endpoint result from a HTTP
 // "OK" response.
 func NewSyncResultOK(body *SyncResponseBody) *notes.SyncResult {
@@ -2848,6 +3009,43 @@ func ValidateEventsResponseBody(body *EventsResponseBody) (err error) {
 	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateGitStatusResponseBody runs the validations defined on
+// GitStatusResponseBody
+func ValidateGitStatusResponseBody(body *GitStatusResponseBody) (err error) {
+	if body.Repository == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("repository", "body"))
+	}
+	return
+}
+
+// ValidateGitSyncResponseBody runs the validations defined on
+// GitSyncResponseBody
+func ValidateGitSyncResponseBody(body *GitSyncResponseBody) (err error) {
+	if body.Committed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("committed", "body"))
+	}
+	if body.Merged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("merged", "body"))
+	}
+	if body.Pushed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pushed", "body"))
+	}
+	if body.Conflicts == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("conflicts", "body"))
+	}
+	if body.Errors == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("errors", "body"))
+	}
+	for _, e := range body.Conflicts {
+		if e != nil {
+			if err2 := validateGitConflictResponseBody(e, "body.conflicts[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
 	}
 	return
 }
@@ -3733,6 +3931,54 @@ func ValidateDeleteFileBadRequestResponseBody(body *DeleteFileBadRequestResponse
 	return
 }
 
+// ValidateGitSyncForbiddenResponseBody runs the validations defined on
+// GitSyncForbiddenResponseBody
+func ValidateGitSyncForbiddenResponseBody(body *GitSyncForbiddenResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateGitSyncBadRequestResponseBody runs the validations defined on
+// GitSyncBadRequestResponseBody
+func ValidateGitSyncBadRequestResponseBody(body *GitSyncBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateNoteSummaryResponseBody runs the validations defined on NoteSummary
 func ValidateNoteSummaryResponseBody(body *NoteSummaryResponseBody) (err error) {
 	if body.ID == nil {
@@ -4255,6 +4501,35 @@ func validateBrokenFileRefResponseBody(body *BrokenFileRefResponseBody, path str
 	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateGitConflictResponseBody runs the validations defined on GitConflict
+func ValidateGitConflictResponseBody(body *GitConflictResponseBody) (err error) {
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CopyID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.copy_id", *body.CopyID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// validateGitConflictResponseBody checks GitConflict and reports errors using
+// the path supplied by its caller
+func validateGitConflictResponseBody(body *GitConflictResponseBody, path string) (err error) {
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", path))
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CopyID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".copy_id", *body.CopyID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }

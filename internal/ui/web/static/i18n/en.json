@@ -118,5 +118,19 @@
   "toTrash": "Move to trash",
   "trashedFrom": "(from {notebook})",
   "untitled": "(Untitled)",
-  "updatedAt": "Updated {time}"
+  "updatedAt": "Updated {time}",
+  "gitSync": "Sync with git",
+  "gitSyncTitle": "Commit the changes of the notes, merge those of the upstream branch and push",
+  "gitSyncing": "Syncing…",
+  "gitSyncFailed": "Could not sync: {error}",
+  "gitCommitted": "Files committed: {n}",
+  "gitMerged": "Files merged from {upstream}: {n}",
+  "gitPushed": "Pushed to {upstream}",
+  "gitNothingToPush": "Nothing to push to {upstream}",
+  "gitNoUpstream": "The branch has no upstream branch, so the changes were only committed. Set one with git push -u in the repository.",
+  "gitConflicts": "Changed on both sides: {n}",
+  "gitConflictCopy": "Kept this version. The other version:",
+  "gitConflictCopyNote": "a new note",
+  "gitConflictKept": "Kept this version, or the changed one; the other is in the merge commit",
+  "gitUnreadable": "Notes that could not be read: {n}"
 }

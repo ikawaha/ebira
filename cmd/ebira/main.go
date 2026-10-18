@@ -51,15 +51,18 @@ const usage = `usage:
   ebira files check [flags]     list the unused files of notes, such as images, and the
                                 broken references to files (-delete deletes the unused ones)
   ebira import [flags] path...  import Markdown files, and the images they refer to, as notes
+  ebira sync [flags]            sync the notes with their git repository: commit, merge the
+                                upstream branch and push
 
 Run a command with -h for its flags.
 
 The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
 file of $EBIRA_CONFIG), gives the defaults of the flags: data_dir, addr, watch,
-provider and model. Without -data-dir, data_dir and notes/ in the current
-directory, the commands that open the notes in a terminal ask where to keep
-them and how to search them, and set them up. The index is kept in ~/.cache/ebira and the server's
-state and log in ~/.local/state/ebira ($XDG_CACHE_HOME, $XDG_STATE_HOME).
+provider, model, lang and git_sync. Without -data-dir, data_dir and notes/
+in the current directory, the commands that open the notes in a terminal ask
+where to keep them, how to search them and the language of the web UI, and
+set them up. The index is kept in ~/.cache/ebira and the server's state and
+log in ~/.local/state/ebira ($XDG_CACHE_HOME, $XDG_STATE_HOME).
 `
 
 func main() {
@@ -93,6 +96,8 @@ func run(args []string) error {
 			return runFiles(args[1:])
 		case "import":
 			return runImport(args[1:])
+		case "sync":
+			return runSync(args[1:])
 		}
 	}
 	return runTUI(args)

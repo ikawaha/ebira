@@ -2390,6 +2390,182 @@ func DecodeEventsResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 	}
 }
 
+// BuildGitStatusRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "git_status" endpoint
+func (c *Client) BuildGitStatusRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GitStatusNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "git_status", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeGitStatusResponse returns a decoder for responses returned by the
+// notes git_status endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+func DecodeGitStatusResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_status", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "git_status", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body GitStatusResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_status", err)
+			}
+			err = ValidateGitStatusResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_status", err)
+			}
+			res := NewGitStatusGitStatusOK(&body)
+			return res, nil
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_status", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "git_status", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildGitSyncRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "git_sync" endpoint
+func (c *Client) BuildGitSyncRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GitSyncNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "git_sync", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeGitSyncRequest returns an encoder for requests sent to the notes
+// git_sync server.
+func EncodeGitSyncRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.GitSyncPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "git_sync", "*notes.GitSyncPayload", v)
+		}
+		body := NewGitSyncRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "git_sync", err)
+		}
+		return nil
+	}
+}
+
+// DecodeGitSyncResponse returns a decoder for responses returned by the notes
+// git_sync endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeGitSyncResponse may return the following errors:
+//   - "forbidden" (type *goa.ServiceError): http.StatusForbidden
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - error: internal error
+func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "git_sync", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body GitSyncResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			}
+			err = ValidateGitSyncResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_sync", err)
+			}
+			res := NewGitSyncResultOK(&body)
+			return res, nil
+		case http.StatusForbidden:
+			var (
+				body GitSyncForbiddenResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			}
+			err = ValidateGitSyncForbiddenResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_sync", err)
+			}
+			return nil, NewGitSyncForbidden(&body)
+		case http.StatusBadRequest:
+			var (
+				body GitSyncBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			}
+			err = ValidateGitSyncBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_sync", err)
+			}
+			return nil, NewGitSyncBadRequest(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "git_sync", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildSyncRequest instantiates a HTTP request object with method and path set
 // to call the "notes" service "sync" endpoint
 func (c *Client) BuildSyncRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -2636,6 +2812,18 @@ func unmarshalBrokenFileRefResponseBodyToNotesBrokenFileRef(v *BrokenFileRefResp
 		NoteID: *v.NoteID,
 		Title:  *v.Title,
 		Path:   *v.Path,
+	}
+
+	return res
+}
+
+// unmarshalGitConflictResponseBodyToNotesGitConflict builds a value of type
+// *notes.GitConflict from a value of type *GitConflictResponseBody.
+func unmarshalGitConflictResponseBodyToNotesGitConflict(v *GitConflictResponseBody) *notes.GitConflict {
+	res := &notes.GitConflict{
+		Path:   *v.Path,
+		NoteID: v.NoteID,
+		CopyID: v.CopyID,
 	}
 
 	return res

@@ -108,6 +108,16 @@ type ImportRequestBody struct {
 	Force *bool `form:"force,omitempty" json:"force,omitempty" xml:"force,omitempty"`
 }
 
+// GitSyncRequestBody is the type of the "notes" service "git_sync" endpoint
+// HTTP request body.
+type GitSyncRequestBody struct {
+	// URL of a remote repository to connect the notes to first, as the remote
+	// origin: the notes directory becomes a repository unless it is one, and the
+	// notes are pushed, setting the upstream branch; the notes already on the
+	// remote, such as from another machine, are merged first
+	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -425,6 +435,35 @@ type EventsResponseBody struct {
 	Type string `form:"type" json:"type" xml:"type"`
 	// Note ID (absent for ready and notebooks)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+}
+
+// GitStatusResponseBody is the type of the "notes" service "git_status"
+// endpoint HTTP response body.
+type GitStatusResponseBody struct {
+	// Whether the notes are in a git repository, so that git_sync can sync them;
+	// git is optional
+	Repository bool `form:"repository" json:"repository" xml:"repository"`
+	// Upstream branch that git_sync merges and pushes to; absent when there is none
+	Upstream *string `form:"upstream,omitempty" json:"upstream,omitempty" xml:"upstream,omitempty"`
+}
+
+// GitSyncResponseBody is the type of the "notes" service "git_sync" endpoint
+// HTTP response body.
+type GitSyncResponseBody struct {
+	// Number of changed files committed
+	Committed int `form:"committed" json:"committed" xml:"committed"`
+	// Upstream branch merged and pushed to; absent when the branch has none, and
+	// then the changes are only committed
+	Upstream *string `form:"upstream,omitempty" json:"upstream,omitempty" xml:"upstream,omitempty"`
+	// Number of files changed by the merge of the upstream branch
+	Merged int `form:"merged" json:"merged" xml:"merged"`
+	// Whether commits were pushed
+	Pushed bool `form:"pushed" json:"pushed" xml:"pushed"`
+	// Files changed on both sides of the merge, or deleted on one side and changed
+	// on the other
+	Conflicts []*GitConflictResponseBody `form:"conflicts" json:"conflicts" xml:"conflicts"`
+	// Files that could not be read when the index was updated after the sync
+	Errors []string `form:"errors" json:"errors" xml:"errors"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -1091,6 +1130,42 @@ type DeleteFileBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// GitSyncForbiddenResponseBody is the type of the "notes" service "git_sync"
+// endpoint HTTP response body for the "forbidden" error.
+type GitSyncForbiddenResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GitSyncBadRequestResponseBody is the type of the "notes" service "git_sync"
+// endpoint HTTP response body for the "bad_request" error.
+type GitSyncBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // NoteSummaryResponseBody is used to define fields on response body types.
 type NoteSummaryResponseBody struct {
 	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
@@ -1237,6 +1312,18 @@ type BrokenFileRefResponseBody struct {
 	Title string `form:"title" json:"title" xml:"title"`
 	// The path referred to
 	Path string `form:"path" json:"path" xml:"path"`
+}
+
+// GitConflictResponseBody is used to define fields on response body types.
+type GitConflictResponseBody struct {
+	// File, relative to the notes directory; this side's version is kept, or the
+	// changed version when the other side deleted it
+	Path string `form:"path" json:"path" xml:"path"`
+	// ID of the note of the file, for a note's file
+	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// ID of the new note made from the other side's version of the note, when both
+	// sides changed it
+	CopyID *string `form:"copy_id,omitempty" json:"copy_id,omitempty" xml:"copy_id,omitempty"`
 }
 
 // ImportFileRequestBody is used to define fields on request body types.
@@ -1673,6 +1760,48 @@ func NewEventsResponseBody(res *notes.NoteEvent) *EventsResponseBody {
 	body := &EventsResponseBody{
 		Type: res.Type,
 		ID:   res.ID,
+	}
+	return body
+}
+
+// NewGitStatusResponseBody builds the HTTP response body from the result of
+// the "git_status" endpoint of the "notes" service.
+func NewGitStatusResponseBody(res *notes.GitStatus) *GitStatusResponseBody {
+	body := &GitStatusResponseBody{
+		Repository: res.Repository,
+		Upstream:   res.Upstream,
+	}
+	return body
+}
+
+// NewGitSyncResponseBody builds the HTTP response body from the result of the
+// "git_sync" endpoint of the "notes" service.
+func NewGitSyncResponseBody(res *notes.GitSyncResult) *GitSyncResponseBody {
+	body := &GitSyncResponseBody{
+		Committed: res.Committed,
+		Upstream:  res.Upstream,
+		Merged:    res.Merged,
+		Pushed:    res.Pushed,
+	}
+	if res.Conflicts != nil {
+		body.Conflicts = make([]*GitConflictResponseBody, len(res.Conflicts))
+		for i, val := range res.Conflicts {
+			if val == nil {
+				body.Conflicts[i] = nil
+				continue
+			}
+			body.Conflicts[i] = marshalNotesGitConflictToGitConflictResponseBody(val)
+		}
+	} else {
+		body.Conflicts = []*GitConflictResponseBody{}
+	}
+	if res.Errors != nil {
+		body.Errors = make([]string, len(res.Errors))
+		for i, val := range res.Errors {
+			body.Errors[i] = val
+		}
+	} else {
+		body.Errors = []string{}
 	}
 	return body
 }
@@ -2202,6 +2331,34 @@ func NewDeleteFileBadRequestResponseBody(res *goa.ServiceError) *DeleteFileBadRe
 	return body
 }
 
+// NewGitSyncForbiddenResponseBody builds the HTTP response body from the
+// result of the "git_sync" endpoint of the "notes" service.
+func NewGitSyncForbiddenResponseBody(res *goa.ServiceError) *GitSyncForbiddenResponseBody {
+	body := &GitSyncForbiddenResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGitSyncBadRequestResponseBody builds the HTTP response body from the
+// result of the "git_sync" endpoint of the "notes" service.
+func NewGitSyncBadRequestResponseBody(res *goa.ServiceError) *GitSyncBadRequestResponseBody {
+	body := &GitSyncBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewListPayload builds a notes service list endpoint payload.
 func NewListPayload(notebook *string, tag *string, limit int, offset int, trashedNotebook *string, sort *string) *notes.ListPayload {
 	v := &notes.ListPayload{}
@@ -2411,6 +2568,15 @@ func NewDeleteFilePayload(id string, name string) *notes.DeleteFilePayload {
 	v := &notes.DeleteFilePayload{}
 	v.ID = id
 	v.Name = name
+
+	return v
+}
+
+// NewGitSyncPayload builds a notes service git_sync endpoint payload.
+func NewGitSyncPayload(body *GitSyncRequestBody) *notes.GitSyncPayload {
+	v := &notes.GitSyncPayload{
+		Remote: body.Remote,
+	}
 
 	return v
 }

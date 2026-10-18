@@ -44,11 +44,13 @@ type Client struct {
 	DeleteFileEndpoint            goa.Endpoint
 	CheckFilesEndpoint            goa.Endpoint
 	EventsEndpoint                goa.Endpoint
+	GitStatusEndpoint             goa.Endpoint
+	GitSyncEndpoint               goa.Endpoint
 	SyncEndpoint                  goa.Endpoint
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -78,6 +80,8 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		DeleteFileEndpoint:            deleteFile,
 		CheckFilesEndpoint:            checkFiles,
 		EventsEndpoint:                events,
+		GitStatusEndpoint:             gitStatus,
+		GitSyncEndpoint:               gitSync,
 		SyncEndpoint:                  sync,
 	}
 }
@@ -438,6 +442,30 @@ func (c *Client) Events(ctx context.Context) (res EventsClientStream, err error)
 		return
 	}
 	return ires.(EventsClientStream), nil
+}
+
+// GitStatus calls the "git_status" endpoint of the "notes" service.
+func (c *Client) GitStatus(ctx context.Context) (res *GitStatus, err error) {
+	var ires any
+	ires, err = c.GitStatusEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(*GitStatus), nil
+}
+
+// GitSync calls the "git_sync" endpoint of the "notes" service.
+// GitSync may return the following errors:
+//   - "forbidden" (type *goa.ServiceError): The caller is not a person
+//   - "bad_request" (type *goa.ServiceError): The notes are not in a git repository, the repository is in the middle of an operation such as a merge, a file outside the notes changed on both sides, the remote origin is another repository, or a git command failed, such as a push
+//   - error: internal error
+func (c *Client) GitSync(ctx context.Context, p *GitSyncPayload) (res *GitSyncResult, err error) {
+	var ires any
+	ires, err = c.GitSyncEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*GitSyncResult), nil
 }
 
 // Sync calls the "sync" endpoint of the "notes" service.

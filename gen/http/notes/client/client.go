@@ -99,6 +99,14 @@ type Client struct {
 	// Events Doer is the HTTP client used to make requests to the events endpoint.
 	EventsDoer goahttp.Doer
 
+	// GitStatus Doer is the HTTP client used to make requests to the git_status
+	// endpoint.
+	GitStatusDoer goahttp.Doer
+
+	// GitSync Doer is the HTTP client used to make requests to the git_sync
+	// endpoint.
+	GitSyncDoer goahttp.Doer
+
 	// Sync Doer is the HTTP client used to make requests to the sync endpoint.
 	SyncDoer goahttp.Doer
 
@@ -144,6 +152,8 @@ func NewClient(
 		DeleteFileDoer:            doer,
 		CheckFilesDoer:            doer,
 		EventsDoer:                doer,
+		GitStatusDoer:             doer,
+		GitSyncDoer:               doer,
 		SyncDoer:                  doer,
 		RestoreResponseBody:       restoreBody,
 		scheme:                    scheme,
@@ -657,6 +667,49 @@ func (c *Client) Events() goa.Endpoint {
 		}
 
 		return NewEventsStream(resp, c.decoder), nil
+	}
+}
+
+// GitStatus returns an endpoint that makes HTTP requests to the notes service
+// git_status server.
+func (c *Client) GitStatus() goa.Endpoint {
+	var (
+		decodeResponse = DecodeGitStatusResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildGitStatusRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.GitStatusDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "git_status", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// GitSync returns an endpoint that makes HTTP requests to the notes service
+// git_sync server.
+func (c *Client) GitSync() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeGitSyncRequest(c.encoder)
+		decodeResponse = DecodeGitSyncResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildGitSyncRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.GitSyncDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "git_sync", err)
+		}
+		return decodeResponse(resp)
 	}
 }
 

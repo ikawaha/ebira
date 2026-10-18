@@ -188,6 +188,32 @@ var SyncResult = Type("SyncResult", func() {
 	RequiredAttribute("errors", ArrayOf(String), "Files that could not be read")
 })
 
+var GitSyncResult = Type("GitSyncResult", func() {
+	RequiredAttribute("committed", Int, "Number of changed files committed")
+	Attribute("upstream", String, "Upstream branch merged and pushed to; absent when the branch has none, and then the changes are only committed", func() {
+		Example("origin/main")
+	})
+	RequiredAttribute("merged", Int, "Number of files changed by the merge of the upstream branch")
+	RequiredAttribute("pushed", Boolean, "Whether commits were pushed")
+	RequiredAttribute("conflicts", ArrayOf(GitConflict), "Files changed on both sides of the merge, or deleted on one side and changed on the other")
+	RequiredAttribute("errors", ArrayOf(String), "Files that could not be read when the index was updated after the sync")
+})
+
+var GitStatus = Type("GitStatus", func() {
+	RequiredAttribute("repository", Boolean, "Whether the notes are in a git repository, so that git_sync can sync them; git is optional")
+	Attribute("upstream", String, "Upstream branch that git_sync merges and pushes to; absent when there is none", func() {
+		Example("origin/main")
+	})
+})
+
+var GitConflict = Type("GitConflict", func() {
+	RequiredAttribute("path", String, "File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it", func() {
+		Example("inbox/3f9a1c0e7b2d4a.yaml")
+	})
+	Attribute("note_id", String, "ID of the note of the file, for a note's file", noteIDDSL)
+	Attribute("copy_id", String, "ID of the new note made from the other side's version of the note, when both sides changed it", noteIDDSL)
+})
+
 // sortKeys are the orders of a note list. order is the manual order: notes
 // moved with move come where they were put, and the others by creation time,
 // newest first.
@@ -753,6 +779,34 @@ var _ = Service("notes", func() {
 			ServerSentEvents(func() {
 				SSEEventType("type")
 			})
+		})
+	})
+
+	Method("git_status", func() {
+		Description("Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.")
+		Result(GitStatus)
+		HTTP(func() {
+			GET("/git/status")
+		})
+	})
+
+	Method("git_sync", func() {
+		Description("Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.")
+		Payload(func() {
+			Attribute("remote", String, "URL of a remote repository to connect the notes to first, as the remote origin: the notes directory becomes a repository unless it is one, and the notes are pushed, setting the upstream branch; the notes already on the remote, such as from another machine, are merged first", func() {
+				Example("git@github.com:you/notes.git")
+			})
+		})
+		Result(GitSyncResult)
+		Error("forbidden", ErrorResult, "The caller is not a person")
+		Error("bad_request", ErrorResult, "The notes are not in a git repository, the repository is in the middle of an operation such as a merge, a file outside the notes changed on both sides, the remote origin is another repository, or a git command failed, such as a push")
+		HTTP(func() {
+			POST("/git/sync")
+			Body(func() {
+				Attribute("remote")
+			})
+			Response("forbidden", StatusForbidden)
+			Response("bad_request", StatusBadRequest)
 		})
 	})
 

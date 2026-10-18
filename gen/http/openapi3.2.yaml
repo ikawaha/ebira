@@ -117,6 +117,95 @@ paths:
                                       recent: false
                                       size: 4123840254599638639
                                       title: Nesciunt nisi velit sed.
+    /git/status:
+        get:
+            tags:
+                - notes
+            summary: git_status notes
+            description: Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.
+            operationId: notes#git_status
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GitStatus'
+                            example:
+                                repository: false
+                                upstream: origin/main
+    /git/sync:
+        post:
+            tags:
+                - notes
+            summary: git_sync notes
+            description: 'Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side''s version, and the other side''s version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side''s version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.'
+            operationId: notes#git_sync
+            requestBody:
+                description: Request body for git_sync.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/GitSyncRequestBody'
+                        example:
+                            remote: git@github.com:you/notes.git
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GitSyncResult'
+                            example:
+                                committed: 4587836341878086885
+                                conflicts:
+                                    - copy_id: be4c1193735ee1
+                                      note_id: be4c1193735ee1
+                                      path: inbox/3f9a1c0e7b2d4a.yaml
+                                    - copy_id: be4c1193735ee1
+                                      note_id: be4c1193735ee1
+                                      path: inbox/3f9a1c0e7b2d4a.yaml
+                                    - copy_id: be4c1193735ee1
+                                      note_id: be4c1193735ee1
+                                      path: inbox/3f9a1c0e7b2d4a.yaml
+                                    - copy_id: be4c1193735ee1
+                                      note_id: be4c1193735ee1
+                                      path: inbox/3f9a1c0e7b2d4a.yaml
+                                errors:
+                                    - Odit libero quae odit culpa illo.
+                                    - Exercitationem consequatur.
+                                    - Nobis aliquam.
+                                    - Labore voluptate aut ducimus saepe.
+                                merged: 7055638964112614605
+                                pushed: true
+                                upstream: origin/main
+                "400":
+                    description: 'bad_request: The notes are not in a git repository, the repository is in the middle of an operation such as a merge, a file outside the notes changed on both sides, the remote origin is another repository, or a git command failed, such as a push'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'forbidden: The caller is not a person'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: forbidden
+                                temporary: false
+                                timeout: false
     /import:
         post:
             tags:
@@ -2015,6 +2104,134 @@ components:
             required:
                 - unused
                 - broken
+        GitConflict:
+            type: object
+            properties:
+                copy_id:
+                    type: string
+                    description: ID of the new note made from the other side's version of the note, when both sides changed it
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                note_id:
+                    type: string
+                    description: ID of the note of the file, for a note's file
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                path:
+                    type: string
+                    description: File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it
+                    example: inbox/3f9a1c0e7b2d4a.yaml
+            example:
+                copy_id: be4c1193735ee1
+                note_id: be4c1193735ee1
+                path: inbox/3f9a1c0e7b2d4a.yaml
+            required:
+                - path
+        GitStatus:
+            type: object
+            properties:
+                repository:
+                    type: boolean
+                    description: Whether the notes are in a git repository, so that git_sync can sync them; git is optional
+                    example: false
+                upstream:
+                    type: string
+                    description: Upstream branch that git_sync merges and pushes to; absent when there is none
+                    example: origin/main
+            example:
+                repository: false
+                upstream: origin/main
+            required:
+                - repository
+        GitSyncRequestBody:
+            type: object
+            properties:
+                remote:
+                    type: string
+                    description: 'URL of a remote repository to connect the notes to first, as the remote origin: the notes directory becomes a repository unless it is one, and the notes are pushed, setting the upstream branch; the notes already on the remote, such as from another machine, are merged first'
+                    example: git@github.com:you/notes.git
+            description: Request body for git_sync.
+            example:
+                remote: git@github.com:you/notes.git
+        GitSyncResult:
+            type: object
+            properties:
+                committed:
+                    type: integer
+                    description: Number of changed files committed
+                    example: 4587836341878086885
+                    format: int64
+                conflicts:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/GitConflict'
+                    description: Files changed on both sides of the merge, or deleted on one side and changed on the other
+                    example:
+                        - copy_id: be4c1193735ee1
+                          note_id: be4c1193735ee1
+                          path: inbox/3f9a1c0e7b2d4a.yaml
+                        - copy_id: be4c1193735ee1
+                          note_id: be4c1193735ee1
+                          path: inbox/3f9a1c0e7b2d4a.yaml
+                        - copy_id: be4c1193735ee1
+                          note_id: be4c1193735ee1
+                          path: inbox/3f9a1c0e7b2d4a.yaml
+                        - copy_id: be4c1193735ee1
+                          note_id: be4c1193735ee1
+                          path: inbox/3f9a1c0e7b2d4a.yaml
+                errors:
+                    type: array
+                    items:
+                        type: string
+                        example: Odit libero quae odit culpa illo.
+                    description: Files that could not be read when the index was updated after the sync
+                    example:
+                        - Odit libero quae odit culpa illo.
+                        - Exercitationem consequatur.
+                        - Nobis aliquam.
+                        - Labore voluptate aut ducimus saepe.
+                merged:
+                    type: integer
+                    description: Number of files changed by the merge of the upstream branch
+                    example: 7055638964112614605
+                    format: int64
+                pushed:
+                    type: boolean
+                    description: Whether commits were pushed
+                    example: true
+                upstream:
+                    type: string
+                    description: Upstream branch merged and pushed to; absent when the branch has none, and then the changes are only committed
+                    example: origin/main
+            example:
+                committed: 4587836341878086885
+                conflicts:
+                    - copy_id: be4c1193735ee1
+                      note_id: be4c1193735ee1
+                      path: inbox/3f9a1c0e7b2d4a.yaml
+                    - copy_id: be4c1193735ee1
+                      note_id: be4c1193735ee1
+                      path: inbox/3f9a1c0e7b2d4a.yaml
+                    - copy_id: be4c1193735ee1
+                      note_id: be4c1193735ee1
+                      path: inbox/3f9a1c0e7b2d4a.yaml
+                    - copy_id: be4c1193735ee1
+                      note_id: be4c1193735ee1
+                      path: inbox/3f9a1c0e7b2d4a.yaml
+                errors:
+                    - Odit libero quae odit culpa illo.
+                    - Exercitationem consequatur.
+                    - Nobis aliquam.
+                    - Labore voluptate aut ducimus saepe.
+                merged: 7055638964112614605
+                pushed: true
+                upstream: origin/main
+            required:
+                - committed
+                - merged
+                - pushed
+                - conflicts
+                - errors
         ImportFile:
             type: object
             properties:

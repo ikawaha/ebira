@@ -24,7 +24,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|import|add-file|get-file|delete-file|check-files|events|sync)",
+		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|import|add-file|get-file|delete-file|check-files|events|git-status|git-sync|sync)",
 		"assistant ask",
 	}
 }
@@ -148,6 +148,11 @@ func ParseEndpoint(
 
 		notesEventsFlags = flag.NewFlagSet("events", flag.ExitOnError)
 
+		notesGitStatusFlags = flag.NewFlagSet("git-status", flag.ExitOnError)
+
+		notesGitSyncFlags    = flag.NewFlagSet("git-sync", flag.ExitOnError)
+		notesGitSyncBodyFlag = new(cliStringFlag)
+
 		notesSyncFlags = flag.NewFlagSet("sync", flag.ExitOnError)
 
 		assistantFlags = flag.NewFlagSet("assistant", flag.ContinueOnError)
@@ -189,6 +194,7 @@ func ParseEndpoint(
 	notesGetFileFlags.Var(notesGetFileNameFlag, "name", "File name")
 	notesDeleteFileFlags.Var(notesDeleteFileIDFlag, "id", "Note ID")
 	notesDeleteFileFlags.Var(notesDeleteFileNameFlag, "name", "File name")
+	notesGitSyncFlags.Var(notesGitSyncBodyFlag, "body", "")
 	assistantAskFlags.Var(assistantAskBodyFlag, "body", "")
 
 	notesFlags.Usage = notesUsage
@@ -214,6 +220,8 @@ func ParseEndpoint(
 	notesDeleteFileFlags.Usage = notesDeleteFileUsage
 	notesCheckFilesFlags.Usage = notesCheckFilesUsage
 	notesEventsFlags.Usage = notesEventsUsage
+	notesGitStatusFlags.Usage = notesGitStatusUsage
+	notesGitSyncFlags.Usage = notesGitSyncUsage
 	notesSyncFlags.Usage = notesSyncUsage
 
 	assistantFlags.Usage = assistantUsage
@@ -321,6 +329,12 @@ func ParseEndpoint(
 			case "events":
 				epf = notesEventsFlags
 
+			case "git-status":
+				epf = notesGitStatusFlags
+
+			case "git-sync":
+				epf = notesGitSyncFlags
+
 			case "sync":
 				epf = notesSyncFlags
 
@@ -425,6 +439,11 @@ func ParseEndpoint(
 				endpoint = c.CheckFiles()
 			case "events":
 				endpoint = c.Events()
+			case "git-status":
+				endpoint = c.GitStatus()
+			case "git-sync":
+				endpoint = c.GitSync()
+				data, err = notesc.BuildGitSyncPayload(notesGitSyncBodyFlag.value)
 			case "sync":
 				endpoint = c.Sync()
 			}
@@ -471,6 +490,8 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it.`)
 	fmt.Fprintln(os.Stderr, `    check-files: Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.`)
 	fmt.Fprintln(os.Stderr, `    events: Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
+	fmt.Fprintln(os.Stderr, `    git-status: Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
+	fmt.Fprintln(os.Stderr, `    git-sync: Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.`)
 	fmt.Fprintln(os.Stderr, `    sync: Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
@@ -900,6 +921,40 @@ func notesEventsUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes events")
+}
+
+func notesGitStatusUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes git-status", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-status")
+}
+
+func notesGitSyncUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes git-sync", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-sync --body '{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }'")
 }
 
 func notesSyncUsage() {

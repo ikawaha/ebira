@@ -1583,6 +1583,55 @@ function renderImportResults(d, results, notebook) {
   d.replaceChildren(head, summary, ul);
 }
 
+// showGitSync shows Sync with git in the settings menu when the notes are in
+// a git repository; git is optional.
+async function showGitSync() {
+  try {
+    $("git-sync-open").hidden = !(await api("/git/status")).repository;
+  } catch (_) { /* left hidden */ }
+}
+
+// syncGit syncs the notes with their git repository (POST /git/sync) and
+// shows the outcome. The changed notes come back as change events.
+async function syncGit() {
+  const d = $("git-sync");
+  const head = el("div", "files-head", el("h2", "", t("gitSync")), button("×", () => d.close(), { title: t("closeTitle") }));
+  d.replaceChildren(head, el("p", "", t("gitSyncing")));
+  if (!d.open) d.showModal();
+  let res;
+  try {
+    res = await api("/git/sync", { method: "POST", body: {} });
+  } catch (e) {
+    d.replaceChildren(head, el("p", "error", t("gitSyncFailed", { error: e.message })));
+    return;
+  }
+  const parts = [head, el("p", "", t("gitCommitted", { n: res.committed }))];
+  if (res.upstream) {
+    parts.push(el("p", "", t("gitMerged", { upstream: res.upstream, n: res.merged })));
+    parts.push(el("p", "", t(res.pushed ? "gitPushed" : "gitNothingToPush", { upstream: res.upstream })));
+  } else {
+    parts.push(el("p", "msg", t("gitNoUpstream")));
+  }
+  if (res.conflicts.length) {
+    const ul = el("ul", "files-list");
+    for (const c of res.conflicts) {
+      const li = el("li", "", c.note_id ? noteAnchor(c.note_id, c.path, d) : el("span", "files-name", c.path), " · ");
+      if (c.copy_id) {
+        li.append(t("gitConflictCopy"), " ", noteAnchor(c.copy_id, t("gitConflictCopyNote"), d));
+      } else {
+        li.append(t("gitConflictKept"));
+      }
+      ul.append(li);
+    }
+    parts.push(el("section", "", el("h3", "", t("gitConflicts", { n: res.conflicts.length })), ul));
+  }
+  if (res.errors.length) {
+    parts.push(el("section", "", el("h3", "", t("gitUnreadable", { n: res.errors.length })),
+      el("ul", "files-list", ...res.errors.map((e) => el("li", "", e)))));
+  }
+  d.replaceChildren(...parts);
+}
+
 window.addEventListener("beforeunload", (e) => {
   if (isDirty()) e.preventDefault();
 });
@@ -1673,6 +1722,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
   }
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
+$("git-sync-open").addEventListener("click", () => syncGit());
 for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
   b.addEventListener("click", () => {
     if (b.dataset.lang === lang) return;
@@ -1856,4 +1906,5 @@ function connect() {
   await loadNotes();
   openLinkedNote();
   connect();
+  showGitSync();
 })();

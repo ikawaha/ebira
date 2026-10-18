@@ -118,5 +118,19 @@
   "toTrash": "ゴミ箱へ",
   "trashedFrom": "（元: {notebook}）",
   "untitled": "(無題)",
-  "updatedAt": "更新 {time}"
+  "updatedAt": "更新 {time}",
+  "gitSync": "git と同期",
+  "gitSyncTitle": "ノートの変更をコミットし、上流のブランチの変更を取り込んで push する",
+  "gitSyncing": "同期しています…",
+  "gitSyncFailed": "同期できませんでした: {error}",
+  "gitCommitted": "コミットしたファイル: {n} 件",
+  "gitMerged": "{upstream} から取り込んだファイル: {n} 件",
+  "gitPushed": "{upstream} へ push しました",
+  "gitNothingToPush": "{upstream} へ push するものはありません",
+  "gitNoUpstream": "上流のブランチが無いので、コミットだけしました。リポジトリで git push -u を実行して設定してください。",
+  "gitConflicts": "両方で変更されたファイル: {n} 件",
+  "gitConflictCopy": "こちらの版を残しました。相手の版は",
+  "gitConflictCopyNote": "新しいノート",
+  "gitConflictKept": "こちらの版か、変更された版を残しました。相手の版はマージのコミットにあります",
+  "gitUnreadable": "読めなかったノート: {n} 件"
 }

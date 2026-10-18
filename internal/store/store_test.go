@@ -476,3 +476,77 @@ body: |
 		}
 	}
 }
+
+func TestConflictMarkers(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	merged := "title: A\nbody: |\n<<<<<<< HEAD\n  mine\n=======\n  theirs\n>>>>>>> origin/main\n"
+	if err := os.WriteFile(filepath.Join(dir, Inbox, "a.yaml"), []byte(merged), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Load("a"); !errors.Is(err, ErrConflict) {
+		t.Errorf("err = %v", err)
+	}
+	// Markers in a body are indented, and not conflicts.
+	body := "title: B\nbody: |\n  <<<<<<< HEAD\n  >>>>>>> x\n"
+	if err := os.WriteFile(filepath.Join(dir, Inbox, "b.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := s.Load("b"); err != nil || !strings.Contains(n.Body, "<<<<<<<") {
+		t.Errorf("b: %+v, %v", n, err)
+	}
+}
+
+func TestIsNotePath(t *testing.T) {
+	for p, want := range map[string]bool{
+		"inbox/a.yaml":         true,
+		"trash/a.yaml":         true,
+		"trash/dev/a.yaml":     true,
+		"dev/_notebook.yaml":   false,
+		"_ebira.yaml":          false,
+		"a.yaml":               false,
+		"dev/a.assets/x.yaml":  false,
+		"dev/sub/a.yaml":       false,
+		"Dev/a.yaml":           false,
+		"dev/a.yml":            false,
+		"trash/dev/sub/a.yaml": false,
+	} {
+		if got := IsNotePath(p); got != want {
+			t.Errorf("IsNotePath(%q) = %v", p, got)
+		}
+	}
+}
+
+func TestConflictCopy(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	theirs := "# kept\ntitle: Plan\ntags: [a]\ncreated_at: 2026-10-18T10:00:00Z\nupdated_at: 2026-10-18T11:00:00Z\nmine: 1\nbody: |\n  theirs\n"
+	p, err := s.ConflictCopy("dev/x.yaml", []byte(theirs), "conflict 2026-10-18 20:00")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := strings.TrimSuffix(filepath.Base(p), Ext)
+	if filepath.Dir(p) != "dev" || !ValidID(id) || id == "x" {
+		t.Fatalf("path %s", p)
+	}
+	n, err := s.Load(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Title != "Plan (conflict 2026-10-18 20:00)" || n.Body != "theirs\n" || n.Notebook != "dev" || !slices.Equal(n.Tags, []string{"a"}) {
+		t.Errorf("copy: %+v", n)
+	}
+	b, _ := os.ReadFile(filepath.Join(dir, "dev", id+Ext))
+	if !strings.Contains(string(b), "# kept") || !strings.Contains(string(b), "mine: 1") {
+		t.Errorf("comments or keys lost:\n%s", b)
+	}
+	if _, err := s.ConflictCopy("dev/_notebook.yaml", []byte(theirs), "c"); err == nil {
+		t.Error("not a note: no error")
+	}
+}

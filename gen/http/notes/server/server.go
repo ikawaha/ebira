@@ -43,6 +43,8 @@ type Server struct {
 	DeleteFile            http.Handler
 	CheckFiles            http.Handler
 	Events                http.Handler
+	GitStatus             http.Handler
+	GitSync               http.Handler
 	Sync                  http.Handler
 }
 
@@ -95,6 +97,8 @@ func New(
 			{"DeleteFile", "DELETE", "/notes/{id}/files/{name}"},
 			{"CheckFiles", "GET", "/files/check"},
 			{"Events", "GET", "/events"},
+			{"GitStatus", "GET", "/git/status"},
+			{"GitSync", "POST", "/git/sync"},
 			{"Sync", "POST", "/sync"},
 		},
 		List:                  NewListHandler(e.List, mux, decoder, encoder, errhandler, formatter),
@@ -119,6 +123,8 @@ func New(
 		DeleteFile:            NewDeleteFileHandler(e.DeleteFile, mux, decoder, encoder, errhandler, formatter),
 		CheckFiles:            NewCheckFilesHandler(e.CheckFiles, mux, decoder, encoder, errhandler, formatter),
 		Events:                NewEventsHandler(e.Events, mux, decoder, encoder, errhandler, formatter),
+		GitStatus:             NewGitStatusHandler(e.GitStatus, mux, decoder, encoder, errhandler, formatter),
+		GitSync:               NewGitSyncHandler(e.GitSync, mux, decoder, encoder, errhandler, formatter),
 		Sync:                  NewSyncHandler(e.Sync, mux, decoder, encoder, errhandler, formatter),
 	}
 }
@@ -150,6 +156,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.DeleteFile = m(s.DeleteFile)
 	s.CheckFiles = m(s.CheckFiles)
 	s.Events = m(s.Events)
+	s.GitStatus = m(s.GitStatus)
+	s.GitSync = m(s.GitSync)
 	s.Sync = m(s.Sync)
 }
 
@@ -180,6 +188,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountDeleteFileHandler(mux, h.DeleteFile)
 	MountCheckFilesHandler(mux, h.CheckFiles)
 	MountEventsHandler(mux, h.Events)
+	MountGitStatusHandler(mux, h.GitStatus)
+	MountGitSyncHandler(mux, h.GitSync)
 	MountSyncHandler(mux, h.Sync)
 }
 
@@ -1369,6 +1379,105 @@ func NewEventsHandler(
 				errhandler(ctx, w, err)
 			}
 			return
+		}
+	})
+}
+
+// MountGitStatusHandler configures the mux to serve the "notes" service
+// "git_status" endpoint.
+func MountGitStatusHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/git/status", f)
+}
+
+// NewGitStatusHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "git_status" endpoint.
+func NewGitStatusHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		encodeResponse = EncodeGitStatusResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "git_status")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		var err error
+		res, err := endpoint(ctx, nil)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountGitSyncHandler configures the mux to serve the "notes" service
+// "git_sync" endpoint.
+func MountGitSyncHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/git/sync", f)
+}
+
+// NewGitSyncHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "git_sync" endpoint.
+func NewGitSyncHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeGitSyncRequest(mux, decoder)
+		encodeResponse = EncodeGitSyncResponse(encoder)
+		encodeError    = EncodeGitSyncError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "git_sync")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }

@@ -1616,6 +1616,98 @@ func EncodeEventsResponse(encoder func(context.Context, http.ResponseWriter) goa
 	}
 }
 
+// EncodeGitStatusResponse returns an encoder for responses returned by the
+// notes git_status endpoint.
+func EncodeGitStatusResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.GitStatus)
+		enc := encoder(ctx, w)
+		body := NewGitStatusResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// EncodeGitSyncResponse returns an encoder for responses returned by the notes
+// git_sync endpoint.
+func EncodeGitSyncResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.GitSyncResult)
+		enc := encoder(ctx, w)
+		body := NewGitSyncResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeGitSyncRequest returns a decoder for requests sent to the notes
+// git_sync endpoint.
+func DecodeGitSyncRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.GitSyncPayload, error) {
+	return func(r *http.Request) (*notes.GitSyncPayload, error) {
+		var payload *notes.GitSyncPayload
+		var (
+			body GitSyncRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		payload = NewGitSyncPayload(&body)
+
+		return payload, nil
+	}
+}
+
+// EncodeGitSyncError returns an encoder for errors returned by the git_sync
+// notes endpoint.
+func EncodeGitSyncError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "forbidden":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGitSyncForbiddenResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGitSyncBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeSyncResponse returns an encoder for responses returned by the notes
 // sync endpoint.
 func EncodeSyncResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1806,6 +1898,18 @@ func marshalNotesBrokenFileRefToBrokenFileRefResponseBody(v *notes.BrokenFileRef
 		NoteID: v.NoteID,
 		Title:  v.Title,
 		Path:   v.Path,
+	}
+
+	return res
+}
+
+// marshalNotesGitConflictToGitConflictResponseBody builds a value of type
+// *GitConflictResponseBody from a value of type *notes.GitConflict.
+func marshalNotesGitConflictToGitConflictResponseBody(v *notes.GitConflict) *GitConflictResponseBody {
+	res := &GitConflictResponseBody{
+		Path:   v.Path,
+		NoteID: v.NoteID,
+		CopyID: v.CopyID,
 	}
 
 	return res

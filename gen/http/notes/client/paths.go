@@ -119,6 +119,16 @@ func EventsNotesPath() string {
 	return "/events"
 }
 
+// GitStatusNotesPath returns the URL path to the notes service git_status HTTP endpoint.
+func GitStatusNotesPath() string {
+	return "/git/status"
+}
+
+// GitSyncNotesPath returns the URL path to the notes service git_sync HTTP endpoint.
+func GitSyncNotesPath() string {
+	return "/git/sync"
+}
+
 // SyncNotesPath returns the URL path to the notes service sync HTTP endpoint.
 func SyncNotesPath() string {
 	return "/sync"

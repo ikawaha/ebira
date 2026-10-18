@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -29,6 +30,9 @@ var (
 	ErrDuplicate       = errors.New("note id is used in more than one notebook")
 	ErrNotebookExists  = errors.New("notebook already exists")
 	ErrReserved        = errors.New("inbox and trash cannot be deleted")
+	// ErrConflict is returned for a note file with the conflict markers of
+	// git, left by a merge whose conflict is not resolved yet.
+	ErrConflict = errors.New("the note file has conflict markers of git; resolve the conflict")
 )
 
 // CreatedByAI is Note.CreatedBy for a note created by an AI client.
@@ -244,6 +248,9 @@ func (s *Store) load(nb, id string) (*Note, error) {
 	if err != nil {
 		return nil, err
 	}
+	if hasConflictMarkers(b) {
+		return nil, fmt.Errorf("%s: %w", s.path(nb, id), ErrConflict)
+	}
 	var n Note
 	if err := yaml.Unmarshal(b, &n); err != nil {
 		return nil, fmt.Errorf("%s: %w", s.path(nb, id), err)
@@ -255,6 +262,85 @@ func (s *Store) load(nb, id string) (*Note, error) {
 		n.Tags = []string{}
 	}
 	return &n, nil
+}
+
+// hasConflictMarkers reports whether b has the markers git writes around a
+// conflict. They start a line, which the lines of a body never do, as the
+// body is indented.
+func hasConflictMarkers(b []byte) bool {
+	return conflictStart.Match(b) && conflictEnd.Match(b)
+}
+
+var (
+	conflictStart = regexp.MustCompile(`(?m)^<<<<<<< `)
+	conflictEnd   = regexp.MustCompile(`(?m)^>>>>>>> `)
+)
+
+// IsNotePath reports whether p, a path relative to the notes directory with
+// slashes, is the place of a note file: <notebook>/<id>.yaml, or
+// trash/<notebook>/<id>.yaml for a notebook in the trash.
+func IsNotePath(p string) bool {
+	_, _, ok := splitNotePath(p)
+	return ok
+}
+
+func splitNotePath(p string) (place, id string, ok bool) {
+	dir, file := path.Split(p)
+	id, ok = strings.CutSuffix(file, Ext)
+	place = strings.TrimSuffix(dir, "/")
+	if !ok || !ValidID(id) {
+		return "", "", false
+	}
+	nb, trashed := splitPlace(place)
+	if !ValidNotebook(nb) || (trashed != "" && !ValidNotebook(trashed)) {
+		return "", "", false
+	}
+	return place, id, true
+}
+
+// ConflictCopy writes b, a version of the note file at p (a path relative to
+// the notes directory, with slashes), as a new note next to it, with a new
+// ID and label added to its title, keeping its other keys and comments. It is
+// for the other version of a note changed on two machines. It returns the
+// path of the new note's file.
+func (s *Store) ConflictCopy(p string, b []byte, label string) (string, error) {
+	place, _, ok := splitNotePath(p)
+	if !ok {
+		return "", fmt.Errorf("%w: %s", ErrInvalidID, p)
+	}
+	var n Note
+	if err := yaml.Unmarshal(b, &n); err != nil {
+		return "", fmt.Errorf("%s: %w", p, err)
+	}
+	n.Title = strings.TrimSpace(n.Title + " (" + label + ")")
+	enc, err := encode(b, &n)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Join(s.dir, filepath.FromSlash(place)), 0o755); err != nil {
+		return "", err
+	}
+	for {
+		id := NewID()
+		if _, err := s.locate(id); !errors.Is(err, ErrNotFound) {
+			continue // taken, or a duplicate
+		}
+		f, err := os.OpenFile(s.path(place, id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if errors.Is(err, fs.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		if _, err := f.Write(enc); err != nil {
+			f.Close()
+			return "", err
+		}
+		if err := f.Close(); err != nil {
+			return "", err
+		}
+		return path.Join(place, id+Ext), nil
+	}
 }
 
 // Version returns the current version of the note file without parsing it.

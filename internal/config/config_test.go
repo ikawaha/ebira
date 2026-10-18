@@ -73,12 +73,12 @@ func TestLoad(t *testing.T) {
 		t.Errorf("empty file: %+v, %v", c, err)
 	}
 
-	write("data_dir: ~/notes\naddr: localhost:9090\nwatch: false\nprovider: gemini\nmodel: m\n")
+	write("data_dir: ~/notes\naddr: localhost:9090\nwatch: false\nprovider: gemini\nmodel: m\ngit_sync: 10m\n")
 	c, err = Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.DataDir != filepath.Join(home, "notes") || c.Addr != "localhost:9090" || c.Watch == nil || *c.Watch || c.Provider != "gemini" || c.Model != "m" {
+	if c.DataDir != filepath.Join(home, "notes") || c.Addr != "localhost:9090" || c.Watch == nil || *c.Watch || c.Provider != "gemini" || c.Model != "m" || c.GitSync != "10m" {
 		t.Errorf("got %+v", c)
 	}
 

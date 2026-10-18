@@ -714,3 +714,24 @@ func BuildDeleteFilePayload(notesDeleteFileID *string, notesDeleteFileName *stri
 
 	return v, nil
 }
+
+// BuildGitSyncPayload builds the payload for the notes git_sync endpoint from
+// CLI flags.
+func BuildGitSyncPayload(notesGitSyncBody *string) (*notes.GitSyncPayload, error) {
+	var err error
+	var body GitSyncRequestBody
+	{
+		if notesGitSyncBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesGitSyncBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }'")
+		}
+	}
+	v := &notes.GitSyncPayload{
+		Remote: body.Remote,
+	}
+
+	return v, nil
+}

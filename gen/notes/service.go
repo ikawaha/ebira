@@ -136,6 +136,17 @@ type Service interface {
 	// are not replayed; the ready event sent on every (re)connection tells clients
 	// to reload the note list.
 	Events(context.Context, EventsServerStream) (err error)
+	// Tell whether the notes are in a git repository, and its upstream branch,
+	// such as to offer git_sync. For people only; others are told there is none.
+	GitStatus(context.Context) (res *GitStatus, err error)
+	// Sync the notes with their git repository: commit the changes of the notes
+	// directory, then, when the branch has an upstream branch, fetch it, merge it
+	// and push. A merge never stops in conflict: a note changed on both sides
+	// keeps this side's version, and the other side's version becomes a new note
+	// in the same notebook, with the conflict in its title; another file keeps
+	// this side's version; a file deleted on one side and changed on the other
+	// keeps the changed version. The index is updated afterwards. For people only.
+	GitSync(context.Context, *GitSyncPayload) (res *GitSyncResult, err error)
 	// Scan the notes directory and bring the SQLite index in line with the YAML
 	// files. Not needed while the server watches files.
 	Sync(context.Context) (res *SyncResult, err error)
@@ -155,7 +166,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [29]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "sync"}
+var MethodNames = [31]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "git_status", "git_sync", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -316,6 +327,53 @@ type GetPayload struct {
 	ID string
 	// Search query to highlight
 	Q *string
+}
+
+type GitConflict struct {
+	// File, relative to the notes directory; this side's version is kept, or the
+	// changed version when the other side deleted it
+	Path string
+	// ID of the note of the file, for a note's file
+	NoteID *string
+	// ID of the new note made from the other side's version of the note, when both
+	// sides changed it
+	CopyID *string
+}
+
+// GitStatus is the result type of the notes service git_status method.
+type GitStatus struct {
+	// Whether the notes are in a git repository, so that git_sync can sync them;
+	// git is optional
+	Repository bool
+	// Upstream branch that git_sync merges and pushes to; absent when there is none
+	Upstream *string
+}
+
+// GitSyncPayload is the payload type of the notes service git_sync method.
+type GitSyncPayload struct {
+	// URL of a remote repository to connect the notes to first, as the remote
+	// origin: the notes directory becomes a repository unless it is one, and the
+	// notes are pushed, setting the upstream branch; the notes already on the
+	// remote, such as from another machine, are merged first
+	Remote *string
+}
+
+// GitSyncResult is the result type of the notes service git_sync method.
+type GitSyncResult struct {
+	// Number of changed files committed
+	Committed int
+	// Upstream branch merged and pushed to; absent when the branch has none, and
+	// then the changes are only committed
+	Upstream *string
+	// Number of files changed by the merge of the upstream branch
+	Merged int
+	// Whether commits were pushed
+	Pushed bool
+	// Files changed on both sides of the merge, or deleted on one side and changed
+	// on the other
+	Conflicts []*GitConflict
+	// Files that could not be read when the index was updated after the sync
+	Errors []string
 }
 
 // ImportAiNotePayload is the payload type of the notes service import_ai_note
@@ -733,6 +791,26 @@ func ValidatefileCheckInt64Transport(value fileCheckInt64Transport) (err error) 
 	return err
 }
 
+// gitSyncResultIntTransport stores JSON fields until they have been validated.
+type gitSyncResultIntTransport int
+
+// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
+// declared range. Decimal and exponent spellings do not change its value.
+func (value *gitSyncResultIntTransport) UnmarshalJSON(data []byte) error {
+	number, err := rawjson.DecodeInteger[int](data)
+	if err != nil {
+		return fmt.Errorf("decode gitSyncResultIntTransport integer: %w", err)
+	}
+	*value = gitSyncResultIntTransport(number)
+	return nil
+}
+
+// ValidategitSyncResultIntTransport checks decoded JSON before it becomes a service value.
+func ValidategitSyncResultIntTransport(value gitSyncResultIntTransport) (err error) {
+
+	return err
+}
+
 // importResultIntTransport stores JSON fields until they have been validated.
 type importResultIntTransport int
 
@@ -813,6 +891,103 @@ func validatejsonFileCheckTransport(value *jsonFileCheckTransport) (err error) {
 	for _, e := range value.Broken {
 		if e != nil {
 			if err2 := validatejsonBrokenFileRefTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
+// jsonGitConflictTransport stores JSON fields until they have been validated.
+type jsonGitConflictTransport struct {
+	// File, relative to the notes directory; this side's version is kept, or the
+	// changed version when the other side deleted it
+	Path *string `json:"path"`
+	// ID of the note of the file, for a note's file
+	NoteID *string `json:"note_id,omitempty"`
+	// ID of the new note made from the other side's version of the note, when both
+	// sides changed it
+	CopyID *string `json:"copy_id,omitempty"`
+}
+
+// validatejsonGitConflictTransport checks decoded JSON before it becomes a service value.
+func validatejsonGitConflictTransport(value *jsonGitConflictTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.CopyID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.copy_id", *value.CopyID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// jsonGitStatusTransport stores JSON fields until they have been validated.
+type jsonGitStatusTransport struct {
+	// Whether the notes are in a git repository, so that git_sync can sync them;
+	// git is optional
+	Repository *bool `json:"repository"`
+	// Upstream branch that git_sync merges and pushes to; absent when there is none
+	Upstream *string `json:"upstream,omitempty"`
+}
+
+// validatejsonGitStatusTransport checks decoded JSON before it becomes a service value.
+func validatejsonGitStatusTransport(value *jsonGitStatusTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Repository == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("repository", "body"))
+	}
+	return err
+}
+
+// jsonGitSyncResultTransport stores JSON fields until they have been validated.
+type jsonGitSyncResultTransport struct {
+	// Number of changed files committed
+	Committed *gitSyncResultIntTransport `json:"committed"`
+	// Upstream branch merged and pushed to; absent when the branch has none, and
+	// then the changes are only committed
+	Upstream *string `json:"upstream,omitempty"`
+	// Number of files changed by the merge of the upstream branch
+	Merged *gitSyncResultIntTransport `json:"merged"`
+	// Whether commits were pushed
+	Pushed *bool `json:"pushed"`
+	// Files changed on both sides of the merge, or deleted on one side and changed
+	// on the other
+	Conflicts []*jsonGitConflictTransport `json:"conflicts"`
+	// Files that could not be read when the index was updated after the sync
+	Errors []string `json:"errors"`
+}
+
+// validatejsonGitSyncResultTransport checks decoded JSON before it becomes a service value.
+func validatejsonGitSyncResultTransport(value *jsonGitSyncResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Committed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("committed", "body"))
+	}
+	if value.Merged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("merged", "body"))
+	}
+	if value.Pushed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pushed", "body"))
+	}
+	if value.Conflicts == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("conflicts", "body"))
+	}
+	if value.Errors == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("errors", "body"))
+	}
+	for _, e := range value.Conflicts {
+		if e != nil {
+			if err2 := validatejsonGitConflictTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -1611,6 +1786,46 @@ func validateBrokenFileRefOriginal2(value *BrokenFileRef) (err error) {
 	return err
 }
 
+// validateGitConflictOriginal checks the original typed value before JSON conversion.
+func validateGitConflictOriginal(value *GitConflict) (err error) {
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.CopyID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.copy_id", *value.CopyID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// validateGitSyncResultOriginal checks the original typed value before JSON conversion.
+func validateGitSyncResultOriginal(value *GitSyncResult) (err error) {
+	if value.Conflicts == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("conflicts", "value"))
+	}
+	if value.Errors == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("errors", "value"))
+	}
+	for _, e := range value.Conflicts {
+		if e != nil {
+			if err2 := validateGitConflictOriginal2(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
+// validateGitConflictOriginal2 checks the original typed value before JSON conversion.
+func validateGitConflictOriginal2(value *GitConflict) (err error) {
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.CopyID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.copy_id", *value.CopyID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // validateImportFileOriginal checks the original typed value before JSON conversion.
 func validateImportFileOriginal(value *ImportFile) (err error) {
 	if value.Content == nil {
@@ -1969,6 +2184,209 @@ func DecodeFileCheck(data []byte) (out *FileCheck, err error) {
 				continue
 			}
 			out.Broken[i] = decodeBrokenFileRefTransportToBrokenFileRef(val)
+		}
+	}
+	return out, nil
+}
+
+// EncodeGitConflict turns a service value into JSON using the field names in the Goa design.
+func EncodeGitConflict(in *GitConflict) ([]byte, error) {
+	if err := checkGitConflictValue(in); err != nil {
+		return nil, fmt.Errorf("encode GitConflict JSON: %w", err)
+	}
+	if err := validateGitConflictOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate GitConflict value: %w", err)
+	}
+	var body *jsonGitConflictTransport
+	{
+		body = &jsonGitConflictTransport{
+			Path:   &in.Path,
+			NoteID: in.NoteID,
+			CopyID: in.CopyID,
+		}
+	}
+	if err := validatejsonGitConflictTransport(body); err != nil {
+		return nil, fmt.Errorf("validate GitConflict JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode GitConflict JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeGitConflict checks JSON field names from the Goa design and returns a service value.
+func DecodeGitConflict(data []byte) (out *GitConflict, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode GitConflict JSON: %w", err)
+	}
+	if err := validateGitConflictJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode GitConflict JSON: %w", err)
+	}
+	var body *jsonGitConflictTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode GitConflict JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode GitConflict JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode GitConflict JSON after first value: %w", err)
+	}
+	if err := validatejsonGitConflictTransport(body); err != nil {
+		return out, fmt.Errorf("validate GitConflict JSON: %w", err)
+	}
+	{
+		out = &GitConflict{
+			Path:   *body.Path,
+			NoteID: body.NoteID,
+			CopyID: body.CopyID,
+		}
+	}
+	return out, nil
+}
+
+// EncodeGitStatus turns a service value into JSON using the field names in the Goa design.
+func EncodeGitStatus(in *GitStatus) ([]byte, error) {
+	if err := checkGitStatusValue(in); err != nil {
+		return nil, fmt.Errorf("encode GitStatus JSON: %w", err)
+	}
+	var body *jsonGitStatusTransport
+	{
+		body = &jsonGitStatusTransport{
+			Repository: &in.Repository,
+			Upstream:   in.Upstream,
+		}
+	}
+	if err := validatejsonGitStatusTransport(body); err != nil {
+		return nil, fmt.Errorf("validate GitStatus JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode GitStatus JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeGitStatus checks JSON field names from the Goa design and returns a service value.
+func DecodeGitStatus(data []byte) (out *GitStatus, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode GitStatus JSON: %w", err)
+	}
+	if err := validateGitStatusJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode GitStatus JSON: %w", err)
+	}
+	var body *jsonGitStatusTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode GitStatus JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode GitStatus JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode GitStatus JSON after first value: %w", err)
+	}
+	if err := validatejsonGitStatusTransport(body); err != nil {
+		return out, fmt.Errorf("validate GitStatus JSON: %w", err)
+	}
+	{
+		out = &GitStatus{
+			Repository: *body.Repository,
+			Upstream:   body.Upstream,
+		}
+	}
+	return out, nil
+}
+
+// EncodeGitSyncResult turns a service value into JSON using the field names in the Goa design.
+func EncodeGitSyncResult(in *GitSyncResult) ([]byte, error) {
+	if err := checkGitSyncResultValue(in); err != nil {
+		return nil, fmt.Errorf("encode GitSyncResult JSON: %w", err)
+	}
+	if err := validateGitSyncResultOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate GitSyncResult value: %w", err)
+	}
+	var body *jsonGitSyncResultTransport
+	{
+		body = &jsonGitSyncResultTransport{
+			Upstream: in.Upstream,
+			Pushed:   &in.Pushed,
+		}
+		committed := gitSyncResultIntTransport(in.Committed)
+		body.Committed = &committed
+		merged := gitSyncResultIntTransport(in.Merged)
+		body.Merged = &merged
+		body.Conflicts = make([]*jsonGitConflictTransport, len(in.Conflicts))
+		for i, val := range in.Conflicts {
+			if val == nil {
+				body.Conflicts[i] = nil
+				continue
+			}
+			body.Conflicts[i] = encodeGitConflictToGitConflictTransport(val)
+		}
+		body.Errors = make([]string, len(in.Errors))
+		for i, val := range in.Errors {
+			body.Errors[i] = val
+		}
+	}
+	if err := validatejsonGitSyncResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate GitSyncResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode GitSyncResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeGitSyncResult checks JSON field names from the Goa design and returns a service value.
+func DecodeGitSyncResult(data []byte) (out *GitSyncResult, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode GitSyncResult JSON: %w", err)
+	}
+	if err := validateGitSyncResultJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode GitSyncResult JSON: %w", err)
+	}
+	var body *jsonGitSyncResultTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode GitSyncResult JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode GitSyncResult JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode GitSyncResult JSON after first value: %w", err)
+	}
+	if err := validatejsonGitSyncResultTransport(body); err != nil {
+		return out, fmt.Errorf("validate GitSyncResult JSON: %w", err)
+	}
+	{
+		out = &GitSyncResult{
+			Committed: int(*body.Committed),
+			Upstream:  body.Upstream,
+			Merged:    int(*body.Merged),
+			Pushed:    *body.Pushed,
+		}
+		out.Conflicts = make([]*GitConflict, len(body.Conflicts))
+		for i, val := range body.Conflicts {
+			if val == nil {
+				out.Conflicts[i] = nil
+				continue
+			}
+			out.Conflicts[i] = decodeGitConflictTransportToGitConflict(val)
+		}
+		out.Errors = make([]string, len(body.Errors))
+		for i, val := range body.Errors {
+			out.Errors[i] = val
 		}
 	}
 	return out, nil
@@ -3000,6 +3418,16 @@ func decodeBrokenFileRefTransportToBrokenFileRef(v *jsonBrokenFileRefTransport) 
 	return res
 }
 
+func decodeGitConflictTransportToGitConflict(v *jsonGitConflictTransport) *GitConflict {
+	res := &GitConflict{
+		Path:   *v.Path,
+		NoteID: v.NoteID,
+		CopyID: v.CopyID,
+	}
+
+	return res
+}
+
 func decodeNoteSummaryTransportToNoteSummary(v *jsonNoteSummaryTransport) *NoteSummary {
 	res := &NoteSummary{
 		ID:              *v.ID,
@@ -3228,6 +3656,16 @@ func encodeBrokenFileRefToBrokenFileRefTransport(v *BrokenFileRef) *jsonBrokenFi
 		NoteID: &v.NoteID,
 		Title:  &v.Title,
 		Path:   &v.Path,
+	}
+
+	return res
+}
+
+func encodeGitConflictToGitConflictTransport(v *GitConflict) *jsonGitConflictTransport {
+	res := &jsonGitConflictTransport{
+		Path:   &v.Path,
+		NoteID: v.NoteID,
+		CopyID: v.CopyID,
 	}
 
 	return res
@@ -3947,6 +4385,489 @@ func validateFileCheckJSONValue6(path string, value any, description string) err
 
 // validateFileCheckJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateFileCheckJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitConflictJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitConflictJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "copy_id":
+			if err := validateGitConflictJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the new note made from the other side's version of the note, when both sides changed it",
+			); err != nil {
+				return err
+			}
+		case "note_id":
+			if err := validateGitConflictJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note of the file, for a note's file",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateGitConflictJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"copy_id",
+				"note_id",
+				"path",
+			})
+		}
+	}
+	return nil
+}
+
+// validateGitConflictJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitConflictJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitConflictJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitConflictJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitConflictJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitConflictJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitStatusJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitStatusJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "repository":
+			if err := validateGitStatusJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the notes are in a git repository, so that git_sync can sync them; git is optional",
+			); err != nil {
+				return err
+			}
+		case "upstream":
+			if err := validateGitStatusJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Upstream branch that git_sync merges and pushes to; absent when there is none",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"repository",
+				"upstream",
+			})
+		}
+	}
+	return nil
+}
+
+// validateGitStatusJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitStatusJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitStatusJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitStatusJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "committed":
+			if err := validateGitSyncResultJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of changed files committed",
+			); err != nil {
+				return err
+			}
+		case "conflicts":
+			if err := validateGitSyncResultJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Files changed on both sides of the merge, or deleted on one side and changed on the other",
+			); err != nil {
+				return err
+			}
+		case "errors":
+			if err := validateGitSyncResultJSONValue10(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Files that could not be read when the index was updated after the sync",
+			); err != nil {
+				return err
+			}
+		case "merged":
+			if err := validateGitSyncResultJSONValue12(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of files changed by the merge of the upstream branch",
+			); err != nil {
+				return err
+			}
+		case "pushed":
+			if err := validateGitSyncResultJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether commits were pushed",
+			); err != nil {
+				return err
+			}
+		case "upstream":
+			if err := validateGitSyncResultJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Upstream branch merged and pushed to; absent when the branch has none, and then the changes are only committed",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"committed",
+				"conflicts",
+				"errors",
+				"merged",
+				"pushed",
+				"upstream",
+			})
+		}
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateGitSyncResultJSONValue6(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue6(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "copy_id":
+			if err := validateGitSyncResultJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the new note made from the other side's version of the note, when both sides changed it",
+			); err != nil {
+				return err
+			}
+		case "note_id":
+			if err := validateGitSyncResultJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note of the file, for a note's file",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateGitSyncResultJSONValue9(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"copy_id",
+				"note_id",
+				"path",
+			})
+		}
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue9(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue10(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateGitSyncResultJSONValue11(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue11(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue12(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateGitSyncResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateGitSyncResultJSONValue4(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -7798,6 +8719,152 @@ func checkFileCheckBrokenFileRefValue(in *BrokenFileRef, field string, active ma
 		}
 		if !utf8.ValidString(string(in.Path)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+	}
+	return nil
+}
+
+// checkGitConflictValue checks text and cycles before conversion.
+func checkGitConflictValue(in *GitConflict) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkGitConflictGitConflictValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkGitConflictGitConflictValue checks one generated value on the active path.
+func checkGitConflictGitConflictValue(in *GitConflict, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+		if in.NoteID != nil {
+			if !utf8.ValidString(string(*in.NoteID)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+			}
+		}
+		if in.CopyID != nil {
+			if !utf8.ValidString(string(*in.CopyID)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "copy_id", false))
+			}
+		}
+	}
+	return nil
+}
+
+// checkGitStatusValue checks text and cycles before conversion.
+func checkGitStatusValue(in *GitStatus) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkGitStatusGitStatusValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkGitStatusGitStatusValue checks one generated value on the active path.
+func checkGitStatusGitStatusValue(in *GitStatus, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if in.Upstream != nil {
+			if !utf8.ValidString(string(*in.Upstream)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "upstream", false))
+			}
+		}
+	}
+	return nil
+}
+
+// checkGitSyncResultValue checks text and cycles before conversion.
+func checkGitSyncResultValue(in *GitSyncResult) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkGitSyncResultGitSyncResultValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkGitSyncResultGitSyncResultValue checks one generated value on the active path.
+func checkGitSyncResultGitSyncResultValue(in *GitSyncResult, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if in.Upstream != nil {
+			if !utf8.ValidString(string(*in.Upstream)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "upstream", false))
+			}
+		}
+		for index1, item1 := range in.Conflicts {
+			_ = index1
+			_ = item1
+			if err := checkGitSyncResultGitConflictValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "conflicts", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
+		for index1, item1 := range in.Errors {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "errors", false), strconv.Itoa(index1), true))
+			}
+		}
+	}
+	return nil
+}
+
+// checkGitSyncResultGitConflictValue checks one generated value on the active path.
+func checkGitSyncResultGitConflictValue(in *GitConflict, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+		if in.NoteID != nil {
+			if !utf8.ValidString(string(*in.NoteID)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+			}
+		}
+		if in.CopyID != nil {
+			if !utf8.ValidString(string(*in.CopyID)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "copy_id", false))
+			}
 		}
 	}
 	return nil

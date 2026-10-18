@@ -22,6 +22,7 @@ import (
 // Notes implements the notes service.
 type Notes struct {
 	mu      sync.Mutex // serializes writes to files and the index
+	gitMu   sync.Mutex // serializes syncs with git
 	store   *store.Store
 	index   *index.Index
 	events  *broker
@@ -858,7 +859,7 @@ func mapErr(err error) error {
 		return gennotes.MakeAlreadyExists(err)
 	case errors.Is(err, store.ErrNotebookExists):
 		return gennotes.MakeAlreadyExists(err)
-	case errors.Is(err, store.ErrInvalidNotebook), errors.Is(err, store.ErrDuplicate), errors.Is(err, store.ErrReserved):
+	case errors.Is(err, store.ErrInvalidNotebook), errors.Is(err, store.ErrDuplicate), errors.Is(err, store.ErrReserved), errors.Is(err, store.ErrConflict):
 		return gennotes.MakeBadRequest(err)
 	}
 	return err

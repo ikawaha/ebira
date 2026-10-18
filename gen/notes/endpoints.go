@@ -44,6 +44,8 @@ type Endpoints struct {
 	DeleteFile            goa.Endpoint
 	CheckFiles            goa.Endpoint
 	Events                goa.Endpoint
+	GitStatus             goa.Endpoint
+	GitSync               goa.Endpoint
 	Sync                  goa.Endpoint
 }
 
@@ -103,6 +105,8 @@ func NewEndpoints(s Service) *Endpoints {
 		DeleteFile:            NewDeleteFileEndpoint(s),
 		CheckFiles:            NewCheckFilesEndpoint(s),
 		Events:                NewEventsEndpoint(s),
+		GitStatus:             NewGitStatusEndpoint(s),
+		GitSync:               NewGitSyncEndpoint(s),
 		Sync:                  NewSyncEndpoint(s),
 	}
 }
@@ -137,6 +141,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.DeleteFile = m(e.DeleteFile)
 	e.CheckFiles = m(e.CheckFiles)
 	e.Events = m(e.Events)
+	e.GitStatus = m(e.GitStatus)
+	e.GitSync = m(e.GitSync)
 	e.Sync = m(e.Sync)
 }
 
@@ -390,6 +396,23 @@ func NewEventsEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		ep := req.(*EventsEndpointInput)
 		return nil, s.Events(ctx, ep.Stream)
+	}
+}
+
+// NewGitStatusEndpoint returns an endpoint function that calls the method
+// "git_status" of service "notes".
+func NewGitStatusEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.GitStatus(ctx)
+	}
+}
+
+// NewGitSyncEndpoint returns an endpoint function that calls the method
+// "git_sync" of service "notes".
+func NewGitSyncEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*GitSyncPayload)
+		return s.GitSync(ctx, p)
 	}
 }
 

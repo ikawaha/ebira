@@ -41,8 +41,8 @@ import (
 // serveOptions are the flags of ebira serve, which ebira server start passes
 // on to the server it starts.
 type serveOptions struct {
-	dataDir, addr, search, stopW, stopT, prov, model, lang *string
-	watch                                                  *bool
+	dataDir, addr, search, stopW, stopT, prov, model, lang, gitSync *string
+	watch                                                           *bool
 }
 
 // newServeFlags defines the flags of ebira serve on a new flag set.
@@ -58,8 +58,9 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		prov    = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
 		lang    = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
 		modelF  = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
+		gitSync = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file)")
 	)
-	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, watch: watchF}
+	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, gitSync: gitSync, watch: watchF}
 }
 
 // setFlags returns the flags set on fs other than -data-dir, as -name=value.
@@ -98,6 +99,10 @@ func runServe(args []string) error {
 	}
 	if *o.lang != "" && !web.ValidLang(*o.lang) {
 		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *o.lang, strings.Join(web.Langs, ", "))
+	}
+	gitEvery, err := gitSyncInterval(*o.gitSync)
+	if err != nil {
+		return err
 	}
 	dataDir, addr, search, stopW, stopT, prov, modelF, watchF := o.dataDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
 	abs, err := dataDirOf(fs, *dataDir, false, nil, nil)
@@ -221,6 +226,10 @@ func runServe(args []string) error {
 	asst, err := newAssistant(ctx, svc, *prov, *modelF)
 	if err != nil {
 		return err
+	}
+
+	if gitEvery > 0 {
+		go syncGitEvery(ctx, svc, gitEvery)
 	}
 
 	// Only the REST API, which the UI uses, is marked as from people. MCP (and
@@ -349,4 +358,48 @@ func stopListLog(list []string) string {
 		return "none"
 	}
 	return fmt.Sprintf("%d entries", len(list))
+}
+
+// minGitSync is the shortest interval of syncing with git, not to load the
+// remote.
+const minGitSync = time.Minute
+
+// gitSyncInterval parses -git-sync: 0 for none.
+func gitSyncInterval(s string) (time.Duration, error) {
+	if s == "" || s == "0" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || (d != 0 && d < minGitSync) {
+		return 0, fmt.Errorf("invalid interval %q of -git-sync or git_sync in the settings file: a duration of at least %s, such as 10m, or 0", s, minGitSync)
+	}
+	return d, nil
+}
+
+// syncGitEvery syncs the notes with git at the start and every interval,
+// until ctx is done. A failure is logged, and retried at the next time.
+func syncGitEvery(ctx context.Context, svc *service.Notes, every time.Duration) {
+	slog.Info("syncing with git", "every", every.String())
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		r, err := svc.GitSync(service.AsPerson(ctx), &gennotes.GitSyncPayload{})
+		switch {
+		case ctx.Err() != nil:
+			return
+		case err != nil:
+			slog.Warn("git sync failed", "error", err)
+		case r.Committed+r.Merged > 0 || r.Pushed || len(r.Conflicts) > 0:
+			conflicts := make([]string, len(r.Conflicts))
+			for i, c := range r.Conflicts {
+				conflicts[i] = c.Path
+			}
+			slog.Info("git synced", "committed", r.Committed, "merged", r.Merged, "pushed", r.Pushed, "conflicts", conflicts)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }
