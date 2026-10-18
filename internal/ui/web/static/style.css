@@ -244,13 +244,35 @@ mark.current { background: var(--mark-current); }
 .editor-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
 .editor-actions .msg { flex: 1; font-size: 12px; color: var(--fg-muted); }
 .editor-actions .msg.error { color: var(--ng); }
-.editor-body {
-  flex: 1;
-  min-height: 0;
-  resize: none;
-  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace !important;
-  padding: 12px !important;
-  tab-size: 4;
+/* The editor of the body: CodeMirror 6, colored by the tok-* classes of its
+   highlighters (bodyExtensions in app.js) */
+.editor-body { flex: 1; min-height: 0; display: flex; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.editor-body[hidden] { display: none; }
+.editor-body .cm-editor { flex: 1; min-width: 0; border-radius: 6px; }
+.editor-body .cm-editor.cm-focused { outline: 2px solid var(--accent); outline-offset: -1px; }
+.editor-body .cm-scroller { font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.editor-body .cm-content { padding: 12px; caret-color: var(--fg); tab-size: 4; }
+.editor-body .cm-line { padding: 0; }
+.editor-body .cm-placeholder { color: var(--fg-muted); }
+.tok-heading { font-weight: 700; color: var(--accent); }
+.tok-strong { font-weight: 700; }
+.tok-emphasis { font-style: italic; }
+.tok-link { color: var(--accent); }
+.tok-url, .tok-mark, .tok-comment, .tok-meta { color: var(--fg-muted); }
+.tok-monospace { background: var(--code-bg); border-radius: 3px; }
+.tok-quote { color: var(--fg-muted); font-style: italic; }
+.tok-keyword, .tok-operator { color: #a3368f; }
+.tok-string, .tok-inserted { color: #2c7a3f; }
+.tok-number, .tok-bool, .tok-atom { color: #b35a00; }
+.tok-typeName, .tok-className, .tok-namespace { color: #1f6f8b; }
+.tok-propertyName, .tok-labelName, .tok-macroName { color: #4b56b3; }
+.tok-deleted, .tok-invalid { color: var(--ng); }
+@media (prefers-color-scheme: dark) {
+  .tok-keyword, .tok-operator { color: #d690c9; }
+  .tok-string, .tok-inserted { color: #8fcf8f; }
+  .tok-number, .tok-bool, .tok-atom { color: #e8a964; }
+  .tok-typeName, .tok-className, .tok-namespace { color: #6fc1d9; }
+  .tok-propertyName, .tok-labelName, .tok-macroName { color: #a3aef0; }
 }
 .editor-preview { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0 16px; }
 .banner { background: var(--banner-bg); border-radius: 6px; padding: 6px 10px; font-size: 12px; }

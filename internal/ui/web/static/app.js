@@ -1033,9 +1033,77 @@ function parseTags(s) {
     .map((tag) => tag.trim()).filter((tag) => tag && !seen.has(tag) && seen.add(tag));
 }
 
+// The editor of the body is CodeMirror 6 (vendor/codemirror.js, the global CM,
+// built by internal/ui/web/codemirror), loaded on the first edit.
+let editorReady = null;
+let editorLoading = false;
+
+function loadEditor() {
+  editorReady ||= loadScript("vendor/codemirror.js").then(() => {
+    // With EditContext, Chrome on macOS shows the candidates of an IME at the
+    // top left of the page on a new line; contenteditable has no such problem.
+    CM.EditorView.EDIT_CONTEXT = false;
+  });
+  return editorReady;
+}
+
+// bodyExtensions returns the extensions of the editor of the body: Markdown
+// with its code blocks colored, Tab and Shift+Tab to indent, Enter to continue
+// a list or a quote, undo history, and images pasted or dropped.
+function bodyExtensions() {
+  const markup = CM.tagHighlighter([
+    { tag: CM.tags.monospace, class: "tok-monospace" },
+    { tag: CM.tags.quote, class: "tok-quote" },
+    { tag: [CM.tags.processingInstruction, CM.tags.contentSeparator], class: "tok-mark" },
+  ]);
+  return [
+    CM.history(),
+    CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.codeLanguages }),
+    CM.keymap.of([...CM.defaultKeymap, ...CM.historyKeymap, CM.indentWithTab]),
+    CM.syntaxHighlighting(CM.classHighlighter),
+    CM.syntaxHighlighting(markup),
+    CM.EditorView.lineWrapping,
+    CM.placeholder(t("bodyPlaceholder")),
+    CM.EditorView.contentAttributes.of({ spellcheck: "false", "aria-label": t("bodyPlaceholder") }),
+    CM.EditorView.domEventHandlers({
+      paste(e) {
+        if (!hasFiles(e.clipboardData) || !addImages(e.clipboardData.files)) return false;
+        e.preventDefault();
+        return true;
+      },
+      dragover(e) {
+        if (!hasFiles(e.dataTransfer)) return false;
+        e.preventDefault();
+        return true;
+      },
+      drop(e, view) {
+        if (!hasFiles(e.dataTransfer)) return false;
+        e.preventDefault();
+        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+        if (pos !== null) view.dispatch({ selection: { anchor: pos } });
+        view.focus();
+        addImages(e.dataTransfer.files);
+        return true;
+      },
+    }),
+  ];
+}
+
 function startEdit(note) {
-  if (state.editing) return;
+  if (state.editing || editorLoading) return;
   if (note && note.notebook === "trash") return;
+  if (!window.CM) {
+    editorLoading = true;
+    loadEditor().then(() => {
+      editorLoading = false;
+      startEdit(note);
+    }, (e) => {
+      editorLoading = false;
+      editorReady = null;
+      alert(t("actionFailed", { error: e.message }));
+    });
+    return;
+  }
   const defaultNotebook = state.notebook && state.notebook !== "trash" ? state.notebook : "inbox";
   const ed = {
     note, // null for a new note
@@ -1061,22 +1129,8 @@ function startEdit(note) {
   f.tags = el("input");
   f.tags.placeholder = t("tagsPlaceholder");
   f.tags.value = note ? note.tags.join(", ") : state.tag || ""; // a new note under a tag gets it
-  f.body = el("textarea", "editor-body");
-  f.body.placeholder = t("bodyPlaceholder");
-  f.body.spellcheck = false;
-  f.body.value = note ? note.body : "";
-  f.body.addEventListener("paste", (e) => {
-    if (hasFiles(e.clipboardData) && addImages(e.clipboardData.files)) e.preventDefault();
-  });
-  f.body.addEventListener("dragover", (e) => {
-    if (hasFiles(e.dataTransfer)) e.preventDefault();
-  });
-  f.body.addEventListener("drop", (e) => {
-    if (!hasFiles(e.dataTransfer)) return;
-    e.preventDefault();
-    f.body.focus();
-    addImages(e.dataTransfer.files);
-  });
+  f.body = el("div", "editor-body");
+  ed.view = new CM.EditorView({ parent: f.body, doc: note ? note.body : "", extensions: bodyExtensions() });
   f.rendered = el("div", "body editor-preview");
   f.rendered.hidden = true;
   f.banner = el("div", "banner");
@@ -1112,7 +1166,7 @@ function startEdit(note) {
   pv.classList.add("editing");
   delete pv.dataset.id;
   ed.loaded = formValues();
-  (note ? f.body : f.title).focus();
+  (note ? ed.view : f.title).focus();
 }
 
 function formValues() {
@@ -1121,7 +1175,7 @@ function formValues() {
     title: f.title.value.trim(),
     notebook: f.notebook.value,
     tags: parseTags(f.tags.value),
-    body: f.body.value,
+    body: state.editing.view.state.doc.toString(),
     id: f.id ? f.id.value.trim() : "",
   };
 }
@@ -1136,8 +1190,14 @@ function isDirty() {
 function leaveEditor() {
   if (!state.editing) return true;
   if (isDirty() && !confirm(t("confirmDiscard"))) return false;
-  state.editing = null;
+  endEdit();
   return true;
+}
+
+// endEdit drops the editor, which the caller replaces.
+function endEdit() {
+  state.editing?.view.destroy();
+  state.editing = null;
 }
 
 function cancelEdit() {
@@ -1150,11 +1210,11 @@ function togglePreview() {
   const ed = state.editing;
   const f = ed.elems;
   ed.preview = !ed.preview;
-  if (ed.preview) renderBody(f.rendered, f.body.value, null);
+  if (ed.preview) renderBody(f.rendered, ed.view.state.doc.toString(), null);
   f.body.hidden = ed.preview;
   f.rendered.hidden = !ed.preview;
   f.toggle.textContent = t(ed.preview ? "editBody" : "preview");
-  if (!ed.preview) f.body.focus();
+  if (!ed.preview) ed.view.focus();
 }
 
 // hasFiles reports whether a paste or a drop carries files.
@@ -1179,7 +1239,6 @@ function addImages(files) {
 }
 
 async function uploadImages(ed, images) {
-  const f = ed.elems;
   editorMessage(t("imageUploading", { n: images.length }));
   const refs = [];
   const errors = [];
@@ -1195,11 +1254,11 @@ async function uploadImages(ed, images) {
   }
   if (state.editing !== ed) return; // closed meanwhile; the files stay with the note
   if (refs.length) {
-    const ta = f.body;
-    const before = ta.value.slice(0, ta.selectionStart);
-    const sep = before && !before.endsWith("\n") ? "\n" : "";
-    ta.setRangeText(sep + refs.join("\n") + "\n", ta.selectionStart, ta.selectionEnd, "end");
-    ta.dispatchEvent(new Event("input"));
+    const view = ed.view;
+    const { from, to } = view.state.selection.main;
+    const sep = from > 0 && view.state.sliceDoc(from - 1, from) !== "\n" ? "\n" : "";
+    const insert = sep + refs.join("\n") + "\n";
+    view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true });
   }
   editorMessage(errors.join(" ") || t("imageAdded", { n: refs.length }), errors.length > 0);
 }
@@ -1245,7 +1304,7 @@ async function saveNote(overwrite = false) {
   }
   saving = false;
   if (state.editing !== ed) return; // closed meanwhile
-  state.editing = null;
+  endEdit();
   state.selected = saved.id;
   refreshAfterWrite();
 }
@@ -1259,7 +1318,7 @@ async function saveFailed(e) {
     if (choice === "overwrite") {
       saveNote(true);
     } else if (choice === "reload") {
-      state.editing = null;
+      endEdit();
       try {
         startEdit(await api(noteURL(ed.note.id)));
       } catch (err) {
