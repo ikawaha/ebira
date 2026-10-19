@@ -104,6 +104,7 @@ type Model struct {
 	vp       viewport.Model
 	input    textinput.Model
 	focus    focus
+	zoom     bool // the preview, and the editor opened from it, take the whole width
 	live     bool
 	status   string
 	statusK  statusKind
@@ -677,6 +678,18 @@ func (m *Model) selectIndex(i int) tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	tm, cmd := m.update(msg)
+	if m, ok := tm.(Model); ok && m.zoom && m.focus != focusPreview && m.focus != focusEdit {
+		// The zoom ends once the focus leaves the preview and the editor,
+		// so that it does not come back by surprise.
+		m.zoom = false
+		m.layout()
+		return m, cmd
+	}
+	return tm, cmd
+}
+
+func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -1294,9 +1307,19 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	if m.focus == focusPreview {
 		switch key {
+		case "z":
+			if m.width >= narrowWidth {
+				m.zoom = !m.zoom
+				m.layout()
+			}
 		case "esc", "h", "left":
 			if key == "esc" && m.answerOn {
 				m.closeAnswer()
+				return m, nil
+			}
+			if key == "esc" && m.zoom {
+				m.zoom = false
+				m.layout()
 				return m, nil
 			}
 			m.focus = focusList

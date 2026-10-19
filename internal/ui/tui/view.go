@@ -97,7 +97,7 @@ type layout struct {
 
 func (m *Model) computeLayout() layout {
 	l := layout{paneTop: 1, paneH: max(3, m.height-2)}
-	if m.width < narrowWidth {
+	if m.width < narrowWidth || m.zoom && (m.focus == focusPreview || m.focus == focusEdit) {
 		switch m.focus {
 		case focusPreview, focusEdit:
 			l.showPreview, l.previewW = true, m.width
@@ -550,6 +550,12 @@ func (m Model) renderFooter() string {
 		hints = [][2]string{{"j/k", "scroll"}, {"space/b", "page"}, {"esc", "back"}, {"e", "edit"}, {"E", "$EDITOR"}}
 		if m.answerOn {
 			hints = [][2]string{{"j/k", "scroll"}, {"space/b", "page"}, {"esc", "close answer"}, {"?", "ask again"}}
+		}
+		switch {
+		case m.zoom:
+			hints = append(hints, [2]string{"z", "unzoom"})
+		case m.width >= narrowWidth:
+			hints = append(hints, [2]string{"z", "zoom"})
 		}
 		if len(m.matches) > 0 {
 			hints = append(hints, [2]string{"ctrl+n/p", "match"})

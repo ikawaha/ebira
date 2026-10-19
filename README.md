@@ -54,7 +54,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
   <img src="assets/screenshots/web-editor.png" width="800" alt="Editing a note in the web UI: the title, notebook and tags above, and the Markdown body with a Go code block colored">
 </p>
 
-**TUI** — `ebira`. The same three panes in the terminal, driven by the keyboard: `/` to search, `j`/`k` to move, `e` to edit in the TUI or in your `$EDITOR`.
+**TUI** — `ebira`. The same three panes in the terminal, driven by the keyboard: `/` to search, `j`/`k` to move, `z` to zoom the note to the whole width, `e` to edit in the TUI or in your `$EDITOR`.
 
 <p align="center">
   <img src="assets/screenshots/tui.png" width="800" alt="The ebira TUI: notebooks, the notes found for a search with the matches highlighted, and the note with its code colored">

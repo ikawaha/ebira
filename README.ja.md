@@ -54,7 +54,7 @@ flowchart LR
   <img src="assets/screenshots/web-editor-ja.png" width="800" alt="Web UI でノートを編集しているところ: 上にタイトル・ノートブック・タグ、下に Go のコードが色付けされた Markdown の本文">
 </p>
 
-**TUI** — `ebira`。同じ 3 つの欄をターミナルで、キーボードで操作します。`/` で検索、`j`/`k` で移動、`e` で TUI の中か `$EDITOR` で編集します。
+**TUI** — `ebira`。同じ 3 つの欄をターミナルで、キーボードで操作します。`/` で検索、`j`/`k` で移動、`z` でノートを全幅に広げ、`e` で TUI の中か `$EDITOR` で編集します。
 
 <p align="center">
   <img src="assets/screenshots/tui-ja.png" width="800" alt="ebira の TUI: ノートブック、検索で見つかったノートと強調された一致、コードが色付けされたノート">
