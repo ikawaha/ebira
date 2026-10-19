@@ -42,8 +42,8 @@ import (
 // serveOptions are the flags of ebira serve, which ebira server start passes
 // on to the server it starts.
 type serveOptions struct {
-	notesDir, addr, search, stopW, stopT, prov, model, lang, gitSync *string
-	watch                                                            *bool
+	notesDir, addr, search, stopW, stopT, prov, model, lang, theme, gitSync *string
+	watch                                                                   *bool
 }
 
 // newServeFlags defines the flags of ebira serve on a new flag set.
@@ -58,10 +58,11 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		stopT    = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
 		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
+		theme    = fs.String("theme", settings.Theme, "color theme of the web UI: auto (the system's light or dark mode), light or dark; a theme chosen in the web UI's settings menu wins (default: theme of the settings file, else auto)")
 		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
 		gitSync  = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file)")
 	)
-	return fs, &serveOptions{notesDir: notesDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, gitSync: gitSync, watch: watchF}
+	return fs, &serveOptions{notesDir: notesDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, theme: theme, gitSync: gitSync, watch: watchF}
 }
 
 // setFlags returns the flags set on fs other than -notes, as -name=value.
@@ -97,6 +98,9 @@ func runServe(args []string) error {
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
+	}
+	if *o.theme != "" && !web.ValidTheme(*o.theme) {
+		return fmt.Errorf("unknown theme %q of -theme or theme in the settings file (%s)", *o.theme, strings.Join(web.Themes, ", "))
 	}
 	if *o.lang != "" && !web.ValidLang(*o.lang) {
 		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *o.lang, strings.Join(web.Langs, ", "))
@@ -260,7 +264,7 @@ func runServe(args []string) error {
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
-	ui := web.Handler(*o.lang)
+	ui := web.Handler(*o.lang, *o.theme)
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)
 	root.Handle(web.LegacyPrefix, http.RedirectHandler(web.Prefix, http.StatusMovedPermanently))

@@ -13,7 +13,7 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	srv := httptest.NewServer(Handler(""))
+	srv := httptest.NewServer(Handler("", ""))
 	defer srv.Close()
 	for _, path := range []string{"/", "/assets/app.js", "/assets/style.css", "/assets/i18n/ja.json", "/assets/vendor/marked.umd.js", "/assets/vendor/purify.min.js", "/assets/vendor/katex/katex.min.js", "/assets/vendor/katex/katex.min.css", "/assets/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "/assets/vendor/mermaid.min.js", "/assets/vendor/codemirror.js"} {
 		res, err := http.Get(srv.URL + path)
@@ -36,8 +36,14 @@ func TestHandler(t *testing.T) {
 }
 
 func TestHandlerLang(t *testing.T) {
-	for _, tt := range []struct{ lang, want string }{{"", "<html>"}, {"ja", `<html lang="ja">`}, {"en", `<html lang="en">`}} {
-		srv := httptest.NewServer(Handler(tt.lang))
+	for _, tt := range []struct{ lang, theme, want string }{
+		{"", "", "<html>"},
+		{"ja", "", `<html lang="ja">`},
+		{"en", "auto", `<html lang="en">`},
+		{"", "dark", `<html data-theme="dark">`},
+		{"ja", "light", `<html lang="ja" data-theme="light">`},
+	} {
+		srv := httptest.NewServer(Handler(tt.lang, tt.theme))
 		for _, path := range []string{"/"} {
 			res, err := http.Get(srv.URL + path)
 			if err != nil {
@@ -46,7 +52,7 @@ func TestHandlerLang(t *testing.T) {
 			body, _ := io.ReadAll(res.Body)
 			res.Body.Close()
 			if res.StatusCode != http.StatusOK || !strings.Contains(string(body), tt.want) {
-				t.Errorf("lang %q, %s: status %d, no %s", tt.lang, path, res.StatusCode, tt.want)
+				t.Errorf("lang %q, theme %q, %s: status %d, no %s", tt.lang, tt.theme, path, res.StatusCode, tt.want)
 			}
 			if csp := res.Header.Get("Content-Security-Policy"); csp != contentSecurityPolicy {
 				t.Errorf("lang %q, %s: Content-Security-Policy = %q", tt.lang, path, csp)

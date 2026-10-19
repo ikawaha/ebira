@@ -177,5 +177,10 @@
   "toastRenamed": "Renamed the notebook to {name}.",
   "toastKind": "Made {name} {kind}.",
   "toastNotebookTrashed": "Moved the notebook {name} to the trash.",
-  "searchClear": "Clear the search (Esc)"
+  "searchClear": "Clear the search (Esc)",
+  "theme": "Theme",
+  "themeAuto": "Auto",
+  "themeAutoTitle": "Follow the light or dark mode of the system",
+  "themeLight": "Light",
+  "themeDark": "Dark"
 }

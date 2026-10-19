@@ -340,6 +340,13 @@ function renderDiagrams(el) {
   diagramQueue = diagramQueue.then(() => drawDiagrams(el), () => drawDiagrams(el));
 }
 
+// isDark reports whether the page shows the dark theme: chosen, or the
+// system's dark mode when none is (see theme.js).
+function isDark() {
+  const theme = document.documentElement.dataset.theme;
+  return theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
 async function drawDiagrams(el) {
   const nodes = [...el.querySelectorAll(".mermaid[data-src]")].filter((n) => n.isConnected && !n.firstChild);
   if (!nodes.length) return;
@@ -348,7 +355,7 @@ async function drawDiagrams(el) {
       startOnLoad: false,
       securityLevel: "strict",
       htmlLabels: false,
-      theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
+      theme: isDark() ? "dark" : "default",
     }));
     await mermaidReady;
   } catch (_) {
@@ -2312,6 +2319,37 @@ $("settings-menu").addEventListener("keydown", (e) => {
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
 $("git-sync-open").addEventListener("click", () => syncGit());
+// Theme: auto (the system's), light or dark, chosen in the settings menu and
+// kept in the browser; without a choice, the server's (see theme.js).
+function currentTheme() {
+  let chosen = null;
+  try { chosen = localStorage.getItem("ebira.theme"); } catch (_) { /* none */ }
+  return ["auto", "light", "dark"].includes(chosen) ? chosen : document.documentElement.dataset.serverTheme || "auto";
+}
+
+function markTheme() {
+  const cur = currentTheme();
+  for (const b of document.querySelectorAll("#settings-menu [data-theme-choice]")) {
+    b.setAttribute("aria-checked", String(b.dataset.themeChoice === cur));
+  }
+}
+
+function setTheme(choice) {
+  try { localStorage.setItem("ebira.theme", choice); } catch (_) { /* this page only */ }
+  const root = document.documentElement;
+  if (choice === "auto") delete root.dataset.theme;
+  else root.dataset.theme = choice;
+  markTheme();
+  // Diagrams are drawn in the colors of the theme; draw them again.
+  mermaidReady = null;
+  if (!state.editing && state.note) loadNote();
+}
+
+for (const b of document.querySelectorAll("#settings-menu [data-theme-choice]")) {
+  b.addEventListener("click", () => setTheme(b.dataset.themeChoice));
+}
+markTheme();
+
 for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
   b.addEventListener("click", () => {
     if (b.dataset.lang === lang) return;

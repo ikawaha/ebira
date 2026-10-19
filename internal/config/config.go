@@ -62,6 +62,10 @@ type Config struct {
 	Model    string `yaml:"model"`
 	// Lang is the language of the UI, the web UI and the TUI, such as en or ja.
 	Lang string `yaml:"lang"`
+	// Theme is the color theme of the UI: auto (the system's light or dark
+	// mode), light or dark. The TUI, which cannot tell the background of the
+	// terminal, takes light as -light and the others as dark.
+	Theme string `yaml:"theme"`
 	// GitSync is the interval of syncing the notes with git, such as 10m.
 	GitSync string `yaml:"git_sync"`
 

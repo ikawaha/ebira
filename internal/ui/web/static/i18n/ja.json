@@ -177,5 +177,10 @@
   "toastRenamed": "ノートブックの名前を「{name}」にしました。",
   "toastKind": "「{name}」の種別を {kind} にしました。",
   "toastNotebookTrashed": "ノートブック「{name}」をゴミ箱へ移しました。",
-  "searchClear": "検索を消す（Esc）"
+  "searchClear": "検索を消す（Esc）",
+  "theme": "テーマ",
+  "themeAuto": "自動",
+  "themeAutoTitle": "システムのライト・ダークモードに合わせる",
+  "themeLight": "ライト",
+  "themeDark": "ダーク"
 }

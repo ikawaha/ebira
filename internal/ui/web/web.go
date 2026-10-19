@@ -42,11 +42,22 @@ var Langs = []string{"en", "ja"}
 // ValidLang reports whether lang is one of Langs.
 func ValidLang(lang string) bool { return slices.Contains(Langs, lang) }
 
+// Themes are the color themes of the UI: auto follows the system's light or
+// dark mode.
+var Themes = []string{"auto", "light", "dark"}
+
+// ValidTheme reports whether theme is one of Themes.
+func ValidTheme(theme string) bool { return slices.Contains(Themes, theme) }
+
 // Handler serves the web UI: the page at Prefix, and its files under
 // AssetsPrefix. lang, one of Langs or empty, is the language set for this
 // server, given to the page as the lang attribute of its html element; empty
-// leaves the choice to the browser's languages.
-func Handler(lang string) http.Handler {
+// leaves the choice to the browser's languages. theme, one of Themes or
+// empty, is the color theme set for this server, given to the page as the
+// data-theme attribute of its html element when it is light or dark; auto and
+// empty follow the system. A language or theme chosen in the page's settings
+// menu wins over both.
+func Handler(lang, theme string) http.Handler {
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
 		panic(err) // the embedded directory always exists
@@ -55,9 +66,14 @@ func Handler(lang string) http.Handler {
 	if err != nil {
 		panic(err)
 	}
+	attrs := ""
 	if lang != "" {
-		page = bytes.Replace(page, []byte("<html>"), []byte(`<html lang="`+lang+`">`), 1)
+		attrs += ` lang="` + lang + `"`
 	}
+	if theme == "light" || theme == "dark" {
+		attrs += ` data-theme="` + theme + `"`
+	}
+	page = bytes.Replace(page, []byte("<html>"), []byte("<html"+attrs+">"), 1)
 	files := http.StripPrefix(AssetsPrefix, http.FileServerFS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()

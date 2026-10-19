@@ -14,11 +14,30 @@
   --ok: #2e9d52;
   --ng: #c94a3a;
   --banner-bg: #fff4d6;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
+/* The dark theme: chosen (data-theme="dark", see theme.js), or the system's
+   dark mode unless the light theme is chosen. The two blocks are the same. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1c1e;
+  --bg-side: #222326;
+  --bg-hover: #2c2d31;
+  --bg-active: #2c3a55;
+  --fg: #e6e6e3;
+  --fg-muted: #9a9a95;
+  --border: #34353a;
+  --accent: #7aa5f0;
+  --mark-bg: #7a6213;
+  --mark-fg: #fff6d6;
+  --mark-current: #b5651d;
+  --code-bg: #2a2b2f;
+  --banner-bg: #3d3420;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #1b1c1e;
     --bg-side: #222326;
     --bg-hover: #2c2d31;
@@ -281,12 +300,17 @@ mark.current { background: var(--mark-current); }
 .tok-typeName, .tok-className, .tok-namespace { color: #1f6f8b; }
 .tok-propertyName, .tok-labelName, .tok-macroName { color: #4b56b3; }
 .tok-deleted, .tok-invalid { color: var(--ng); }
+:root[data-theme="dark"] .tok-keyword, :root[data-theme="dark"] .tok-operator { color: #d690c9; }
+:root[data-theme="dark"] .tok-string, :root[data-theme="dark"] .tok-inserted { color: #8fcf8f; }
+:root[data-theme="dark"] .tok-number, :root[data-theme="dark"] .tok-bool, :root[data-theme="dark"] .tok-atom { color: #e8a964; }
+:root[data-theme="dark"] .tok-typeName, :root[data-theme="dark"] .tok-className, :root[data-theme="dark"] .tok-namespace { color: #6fc1d9; }
+:root[data-theme="dark"] .tok-propertyName, :root[data-theme="dark"] .tok-labelName, :root[data-theme="dark"] .tok-macroName { color: #a3aef0; }
 @media (prefers-color-scheme: dark) {
-  .tok-keyword, .tok-operator { color: #d690c9; }
-  .tok-string, .tok-inserted { color: #8fcf8f; }
-  .tok-number, .tok-bool, .tok-atom { color: #e8a964; }
-  .tok-typeName, .tok-className, .tok-namespace { color: #6fc1d9; }
-  .tok-propertyName, .tok-labelName, .tok-macroName { color: #a3aef0; }
+  :root:not([data-theme="light"]) .tok-keyword, :root:not([data-theme="light"]) .tok-operator { color: #d690c9; }
+  :root:not([data-theme="light"]) .tok-string, :root:not([data-theme="light"]) .tok-inserted { color: #8fcf8f; }
+  :root:not([data-theme="light"]) .tok-number, :root:not([data-theme="light"]) .tok-bool, :root:not([data-theme="light"]) .tok-atom { color: #e8a964; }
+  :root:not([data-theme="light"]) .tok-typeName, :root:not([data-theme="light"]) .tok-className, :root:not([data-theme="light"]) .tok-namespace { color: #6fc1d9; }
+  :root:not([data-theme="light"]) .tok-propertyName, :root:not([data-theme="light"]) .tok-labelName, :root:not([data-theme="light"]) .tok-macroName { color: #a3aef0; }
 }
 .editor-preview { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 0 16px; }
 .banner { background: var(--banner-bg); border-radius: 6px; padding: 6px 10px; font-size: 12px; }

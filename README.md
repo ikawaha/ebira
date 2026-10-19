@@ -69,7 +69,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 - **Sync with Dropbox, iCloud Drive and the like** — keep the notes in a synced folder; the conflicted copies the services leave become notes, so no change is hidden.
 - **Sync with git, if you like** — `ebira sync`, a menu item, or every few minutes: commit, merge and push in one step. A note changed on two machines never ends in conflict markers; the other version becomes a new note.
 - **Always up to date** — the index follows file changes (fsnotify), so `git pull` or another editor just works. The index is a cache: delete it and it is rebuilt.
-- **Web UI** — notebooks and tags, search as you type, Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation and code coloring (CodeMirror 6), drag and drop to reorder and to import, images by paste, and live updates. In English and Japanese.
+- **Web UI** — notebooks and tags, search as you type, Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation and code coloring (CodeMirror 6), drag and drop to reorder and to import, images by paste, and live updates. In English and Japanese, with light and dark themes.
 - **TUI** — the same notes in the terminal.
 - **MCP server** — AI clients such as Claude Code can list, search and read notes, and write where you allow it (see [MCP server](#mcp-server)).
 - **Notebook kinds for AI** — `default` (AI reads), `collab` (AI reads and writes), `drop` (AI can only drop new notes in; the inbox by default), and `private` (invisible to AI).
@@ -325,7 +325,7 @@ addr: localhost:8080
 lang: en
 ```
 
-The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang` and `git_sync`. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) and `git_sync`. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
 ## License
 
