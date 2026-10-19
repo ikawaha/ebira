@@ -92,7 +92,7 @@ function chooseLang() {
 
 async function fetchMessages(l) {
   try {
-    const res = await fetch(`i18n/${l}.json`);
+    const res = await fetch(`assets/i18n/${l}.json`);
     if (res.ok) return await res.json();
   } catch (_) { /* the keys are shown instead */ }
   return {};
@@ -200,8 +200,9 @@ function markSource(text, ranges) {
   return out + text.slice(pos);
 }
 
-// noteLink returns the note ID of a link to a note in this UI (/ui/#note/<ID>),
-// which the assistant puts in its answers, or null.
+// noteLink returns the note ID of a link to a note in this UI (/#note/<ID>,
+// or /ui/#note/<ID> where the UI was before), which the assistant puts in its
+// answers, or null.
 function noteLink(href) {
   let u;
   try {
@@ -209,7 +210,7 @@ function noteLink(href) {
   } catch (_) {
     return null;
   }
-  if (u.origin !== location.origin || u.pathname !== "/ui/") return null;
+  if (u.origin !== location.origin || (u.pathname !== "/" && u.pathname !== "/ui/")) return null;
   const m = /^#note\/(.+)$/.exec(u.hash);
   if (!m) return null;
   try {
@@ -318,7 +319,7 @@ async function renderMath(el) {
   const nodes = el.querySelectorAll(".math[data-src]");
   if (!nodes.length) return;
   try {
-    await loadScript("vendor/katex/katex.min.js", "vendor/katex/katex.min.css");
+    await loadScript("assets/vendor/katex/katex.min.js", "assets/vendor/katex/katex.min.css");
   } catch (_) {
     return; // the source stays hidden; nothing better to show
   }
@@ -343,7 +344,7 @@ async function drawDiagrams(el) {
   const nodes = [...el.querySelectorAll(".mermaid[data-src]")].filter((n) => n.isConnected && !n.firstChild);
   if (!nodes.length) return;
   try {
-    mermaidReady ||= loadScript("vendor/mermaid.min.js").then(() => mermaid.initialize({
+    mermaidReady ||= loadScript("assets/vendor/mermaid.min.js").then(() => mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
       htmlLabels: false,
@@ -1315,7 +1316,7 @@ let editorReady = null;
 let editorLoading = false;
 
 function loadEditor() {
-  editorReady ||= loadScript("vendor/codemirror.js").then(() => {
+  editorReady ||= loadScript("assets/vendor/codemirror.js").then(() => {
     // With EditContext, Chrome on macOS shows the candidates of an IME at the
     // top left of the page on a new line; contenteditable has no such problem.
     CM.EditorView.EDIT_CONTEXT = false;
@@ -1626,7 +1627,7 @@ function formatSize(n) {
 // noteAnchor returns a link that opens note id and closes the dialog d.
 function noteAnchor(id, title, d) {
   const a = el("a", "", title || t("untitled"));
-  a.href = `/ui/#note/${encodeURIComponent(id)}`;
+  a.href = `/#note/${encodeURIComponent(id)}`;
   a.addEventListener("click", () => d.close());
   return a;
 }
@@ -2076,7 +2077,7 @@ $("ask-q").addEventListener("keydown", (e) => {
   }
 });
 
-// Links to notes (/ui/#note/<ID>), in answers or in notes, open the note in the
+// Links to notes (/#note/<ID>), in answers or in notes, open the note in the
 // preview. The same URL opened from elsewhere does too.
 document.addEventListener("click", (e) => {
   const a = e.target.closest?.("a[href]");

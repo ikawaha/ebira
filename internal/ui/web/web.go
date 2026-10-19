@@ -8,14 +8,23 @@ import (
 	"io/fs"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 )
 
 //go:embed static
 var static embed.FS
 
-// Prefix is the path the web UI is served under.
-const Prefix = "/ui/"
+// Prefix is the path of the page of the web UI, the top of the server.
+const Prefix = "/"
+
+// AssetsPrefix is the path the files of the page, such as its scripts, are
+// served under, apart from the paths of the REST API.
+const AssetsPrefix = "/assets/"
+
+// LegacyPrefix is the path the web UI was served under before; it redirects
+// to Prefix, keeping the fragment of links to notes (#note/<ID>).
+const LegacyPrefix = "/ui/"
 
 // contentSecurityPolicy lets the UI run only its own scripts. Notes are
 // rendered as HTML after sanitizing, and this keeps scripts that slip through
@@ -33,9 +42,10 @@ var Langs = []string{"en", "ja"}
 // ValidLang reports whether lang is one of Langs.
 func ValidLang(lang string) bool { return slices.Contains(Langs, lang) }
 
-// Handler serves the web UI under Prefix. lang, one of Langs or empty, is the
-// language set for this server, given to the page as the lang attribute of
-// its html element; empty leaves the choice to the browser's languages.
+// Handler serves the web UI: the page at Prefix, and its files under
+// AssetsPrefix. lang, one of Langs or empty, is the language set for this
+// server, given to the page as the lang attribute of its html element; empty
+// leaves the choice to the browser's languages.
 func Handler(lang string) http.Handler {
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
@@ -48,7 +58,7 @@ func Handler(lang string) http.Handler {
 	if lang != "" {
 		page = bytes.Replace(page, []byte("<html>"), []byte(`<html lang="`+lang+`">`), 1)
 	}
-	files := http.StripPrefix(Prefix, http.FileServerFS(sub))
+	files := http.StripPrefix(AssetsPrefix, http.FileServerFS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Content-Security-Policy", contentSecurityPolicy)
@@ -56,10 +66,13 @@ func Handler(lang string) http.Handler {
 		h.Set("Referrer-Policy", "no-referrer")
 		// The files change with the binary and have no modification time.
 		h.Set("Cache-Control", "no-cache")
-		if r.URL.Path == Prefix || r.URL.Path == Prefix+"index.html" {
+		switch {
+		case r.URL.Path == Prefix:
 			http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(page))
-			return
+		case strings.HasPrefix(r.URL.Path, AssetsPrefix) && r.URL.Path != AssetsPrefix+"index.html":
+			files.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
 		}
-		files.ServeHTTP(w, r)
 	})
 }

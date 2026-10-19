@@ -15,7 +15,7 @@ import (
 func TestHandler(t *testing.T) {
 	srv := httptest.NewServer(Handler(""))
 	defer srv.Close()
-	for _, path := range []string{"/ui/", "/ui/app.js", "/ui/style.css", "/ui/vendor/marked.umd.js", "/ui/vendor/purify.min.js", "/ui/vendor/katex/katex.min.js", "/ui/vendor/katex/katex.min.css", "/ui/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "/ui/vendor/mermaid.min.js"} {
+	for _, path := range []string{"/", "/assets/app.js", "/assets/style.css", "/assets/i18n/ja.json", "/assets/vendor/marked.umd.js", "/assets/vendor/purify.min.js", "/assets/vendor/katex/katex.min.js", "/assets/vendor/katex/katex.min.css", "/assets/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "/assets/vendor/mermaid.min.js", "/assets/vendor/codemirror.js"} {
 		res, err := http.Get(srv.URL + path)
 		if err != nil {
 			t.Fatal(err)
@@ -38,7 +38,7 @@ func TestHandler(t *testing.T) {
 func TestHandlerLang(t *testing.T) {
 	for _, tt := range []struct{ lang, want string }{{"", "<html>"}, {"ja", `<html lang="ja">`}, {"en", `<html lang="en">`}} {
 		srv := httptest.NewServer(Handler(tt.lang))
-		for _, path := range []string{"/ui/", "/ui/index.html"} {
+		for _, path := range []string{"/"} {
 			res, err := http.Get(srv.URL + path)
 			if err != nil {
 				t.Fatal(err)

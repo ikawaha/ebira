@@ -87,7 +87,7 @@ func setFlags(fs *flag.FlagSet) []string {
 
 // runServe runs the server in the foreground: the REST API (/notes, /search,
 // /sync), the assistant (POST /ask), the MCP server (POST /mcp), the web UI
-// (/ui/) and GET /health on the same port. One server runs per data
+// (/) and GET /health on the same port. One server runs per data
 // directory (see internal/daemon).
 func runServe(args []string) error {
 	fs, o := newServeFlags("serve")
@@ -249,8 +249,10 @@ func runServe(args []string) error {
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
-	root.Handle(web.Prefix, web.Handler(*o.lang))
-	root.Handle("GET /{$}", http.RedirectHandler(web.Prefix, http.StatusFound))
+	ui := web.Handler(*o.lang)
+	root.Handle("GET /{$}", ui)
+	root.Handle("GET "+web.AssetsPrefix, ui)
+	root.Handle(web.LegacyPrefix, http.RedirectHandler(web.Prefix, http.StatusMovedPermanently))
 	root.Handle("/", mux)
 	listenHost, _, err := net.SplitHostPort(*addr)
 	if err != nil {
