@@ -12,7 +12,7 @@ import (
 )
 
 func TestTagRows(t *testing.T) {
-	m := New(context.Background(), &Clients{}, false)
+	m := New(context.Background(), &Clients{}, false, "en")
 	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 12})
 	m = tm.(Model)
 	msg := notebooksMsg{

@@ -88,7 +88,7 @@ ebira runs on macOS and Linux.
 
 ## Quick Start
 
-1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI, and saves the answers to `~/.config/ebira/config.yaml`. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/notes`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
+1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI and the TUI, and saves the answers to `~/.config/ebira/config.yaml`. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/notes`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
 
    ```console
    $ ebira web
@@ -137,7 +137,7 @@ ebira runs on macOS and Linux.
 
 | Command | Description |
 | --- | --- |
-| `ebira` | Open the TUI, starting the server in the background if needed |
+| `ebira [-lang en\|ja]` | Open the TUI, starting the server in the background if needed |
 | `ebira web [-no-open]` | Open the web UI in the browser, starting the server in the background if needed |
 | `ebira serve` | Run the server in the foreground |
 | `ebira server start\|stop\|restart\|status` | Manage the server in the background; `restart` keeps the flags it ran with |
@@ -153,7 +153,7 @@ Flags of `serve` (also taken by `server start` and `server restart`):
 | `-addr` | `localhost:8080` | Address to listen on |
 | `-search` | `search` of `_ebira.yaml` in the notes directory, else `bigram` | `like`, `bigram` or `ja` |
 | `-watch` | `true` | Watch the notes and update the index |
-| `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` |
+| `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` (the TUI takes `ebira -lang` or `lang` of the settings file, else `$LANG`) |
 | `-provider`, `-model` | the provider whose API key is set | Model of the assistant: `anthropic` or `gemini` |
 | `-git-sync` | `git_sync` of the settings file, else off | Sync with git at the start and at this interval, such as `10m` |
 

@@ -5,7 +5,7 @@ package tui
 import (
 	"cmp"
 	"context"
-	"fmt"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -104,7 +104,8 @@ type Model struct {
 	vp       viewport.Model
 	input    textinput.Model
 	focus    focus
-	zoom     bool // the preview, and the editor opened from it, take the whole width
+	tr       *catalog // messages in the language of the UI
+	zoom     bool     // the preview, and the editor opened from it, take the whole width
 	live     bool
 	status   string
 	statusK  statusKind
@@ -115,8 +116,10 @@ type Model struct {
 	failure  string  // reason shown with promptRetry
 }
 
-// New returns the UI model. Pass the same ctx to WatchEvents.
-func New(ctx context.Context, api *Clients, light bool) Model {
+// New returns the UI model, in the language lang (one of Langs; see Lang).
+// Pass the same ctx to WatchEvents.
+func New(ctx context.Context, api *Clients, light bool, lang string) Model {
+	tr := newCatalog(lang)
 	th := darkTheme
 	glamourStyle := "dark"
 	if light {
@@ -125,12 +128,13 @@ func New(ctx context.Context, api *Clients, light bool) Model {
 	}
 	in := textinput.New()
 	in.Prompt = ""
-	in.Placeholder = "search notes"
+	in.Placeholder = tr.t("search.placeholder")
 	in.CharLimit = 200
 	pin := textinput.New()
 	pin.Prompt = ""
 	pin.CharLimit = 100
 	return Model{
+		tr:       tr,
 		promptIn: pin,
 		ctx:      ctx,
 		api:      api.Notes,
@@ -235,7 +239,8 @@ const trashedPrefix = "trash/"
 
 func trashedID(filter string) (string, bool) { return strings.CutPrefix(filter, trashedPrefix) }
 
-// notebookOp runs an operation on a notebook as a whole.
+// notebookOp runs an operation on a notebook as a whole, showing the message
+// status of the catalog when it is done.
 func (m *Model) notebookOp(status, show string, op func(ctx context.Context) error) tea.Cmd {
 	ctx := m.ctx
 	return func() tea.Msg {
@@ -310,7 +315,7 @@ func (m *Model) askAssistant(q string) tea.Cmd {
 	m.askSeq++
 	m.answer, m.answerOn = &answer{question: q, pending: true}, true
 	m.renderPreview(false)
-	m.setStatus(statusInfo, "asking the assistant…")
+	m.setStatus(statusInfo, "status.asking")
 	seq, ctx, api := m.askSeq, m.ctx, m.ask
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(ctx, askTimeout)
@@ -489,7 +494,7 @@ func (m *Model) cycleSort() tea.Cmd {
 		return nil
 	}
 	next := sorts[(slices.Index(sorts, m.currentSort())+1)%len(sorts)]
-	m.setStatus(statusInfo, "sort: %s", next)
+	m.setStatus(statusInfo, "status.sort", "sort", m.tr.t("sort."+next))
 	if m.acrossNotebooks() {
 		m.allSort = next
 		return m.loadList()
@@ -509,7 +514,7 @@ func (m *Model) cycleSort() tea.Cmd {
 // moveNote moves the selected note up (-1) or down (+1) in the manual order.
 func (m *Model) moveNote(delta int) tea.Cmd {
 	if !m.canReorder() {
-		m.setStatus(statusWarn, "J/K moves notes of a notebook sorted by order, without a search (s changes the sort)")
+		m.setStatus(statusWarn, "status.reorderHint")
 		return nil
 	}
 	j := m.sel + delta
@@ -650,9 +655,25 @@ func (m *Model) selectNotebook(i int) tea.Cmd {
 	return m.loadList()
 }
 
-func (m *Model) setStatus(k statusKind, format string, args ...any) {
-	m.statusK = k
-	m.status = fmt.Sprintf(format, args...)
+// setStatus shows the message key of the catalog, with args as pairs of a
+// name and a value (see catalog.t).
+func (m *Model) setStatus(k statusKind, key string, args ...any) {
+	m.setStatusText(k, m.tr.t(key, args...))
+}
+
+// setStatusText shows s, a message already in the language of the UI or
+// from the server.
+func (m *Model) setStatusText(k statusKind, s string) {
+	m.statusK, m.status = k, s
+}
+
+// errText is the message of err, in the language of the UI when it is one
+// of the TUI's own (see errMsg).
+func (m *Model) errText(err error) string {
+	if me, ok := errors.AsType[*msgError](err); ok {
+		return m.tr.t(me.key, me.args...)
+	}
+	return err.Error()
 }
 
 func (m *Model) selected() *gennotes.NoteSummary {
@@ -701,7 +722,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil // stale response
 		}
 		if msg.err != nil {
-			m.setStatus(statusError, "load failed: %v", msg.err)
+			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
 		}
 		return m, m.applyList(msg)
@@ -714,9 +735,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.answerOn = true // show it even if the user moved on meanwhile
 		m.renderPreview(false)
 		if msg.err != nil {
-			m.setStatus(statusError, "the assistant failed: %s", errorMessage(msg.err))
+			m.setStatus(statusError, "status.assistantFailed", "err", errorMessage(msg.err))
 		} else {
-			m.setStatus(statusInfo, "answered")
+			m.setStatus(statusInfo, "status.answered")
 		}
 		return m, nil
 
@@ -725,7 +746,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if errorName(msg.err) == "not_found" {
 				return m, nil // deleted meanwhile; the list reload follows
 			}
-			m.setStatus(statusError, "load failed: %v", msg.err)
+			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
 		}
 		if cur := m.selected(); cur == nil || cur.ID != msg.note.ID {
@@ -762,45 +783,45 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case deletedMsg:
 		if msg.err != nil {
 			if errorName(msg.err) == "precondition_failed" {
-				m.setStatus(statusWarn, "not deleted: the note was changed outside; review it and try again")
+				m.setStatus(statusWarn, "status.notDeletedChanged")
 				return m, m.loadNote(msg.id)
 			}
-			m.setStatus(statusError, "delete failed: %v", msg.err)
+			m.setStatus(statusError, "status.deleteFailed", "err", msg.err)
 			return m, nil
 		}
 		if msg.permanent {
-			m.setStatus(statusInfo, "deleted permanently")
+			m.setStatus(statusInfo, "status.deletedPermanently")
 		} else {
-			m.setStatus(statusInfo, "moved to the trash (open the trash and press u to restore)")
+			m.setStatus(statusInfo, "status.movedToTrash")
 		}
 		return m, tea.Batch(m.loadList(), m.loadNotebooks())
 
 	case restoredMsg:
 		if msg.err != nil {
-			m.setStatus(statusError, "restore failed: %v", msg.err)
+			m.setStatus(statusError, "status.restoreFailed", "err", msg.err)
 			return m, nil
 		}
-		m.setStatus(statusInfo, "restored to %s", msg.note.Notebook)
+		m.setStatus(statusInfo, "status.restored", "notebook", m.notebookName(msg.note.Notebook))
 		return m, tea.Batch(m.loadList(), m.loadNotebooks())
 
 	case notebookOpMsg:
 		if msg.err != nil {
-			m.setStatus(statusError, "%s", errorMessage(msg.err))
+			m.setStatusText(statusError, errorMessage(msg.err))
 			return m, nil
 		}
-		m.setStatus(statusInfo, "%s", msg.status)
+		m.setStatus(statusInfo, msg.status)
 		m.notebook, m.sel, m.top = msg.show, 0, 0
 		return m, tea.Batch(m.loadNotebooks(), m.loadList())
 
 	case notebookSavedMsg:
 		if msg.err != nil {
-			m.setStatus(statusError, "notebook not saved: %s", errorMessage(msg.err))
+			m.setStatus(statusError, "status.notebookNotSaved", "err", errorMessage(msg.err))
 			return m, nil
 		}
 		if msg.created {
 			// Show the new notebook; the cursor follows it once the list is loaded.
 			m.notebook, m.sel, m.top = msg.notebook.ID, 0, 0
-			m.setStatus(statusInfo, "created %q (folder %s)", msg.notebook.Name, msg.notebook.ID)
+			m.setStatus(statusInfo, "status.notebookCreated", "name", msg.notebook.Name, "id", msg.notebook.ID)
 			return m, tea.Batch(m.loadNotebooks(), m.loadList())
 		}
 		if msg.notebook.ID == m.notebook {
@@ -812,14 +833,14 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case movedMsg:
 		if msg.err != nil {
 			m.pending, m.moving = "", ""
-			m.setStatus(statusError, "not moved: %s", errorMessage(msg.err))
+			m.setStatus(statusError, "status.notMoved", "err", errorMessage(msg.err))
 			return m, nil
 		}
 		return m, m.loadList()
 
 	case notebooksMsg:
 		if msg.err != nil {
-			m.setStatus(statusError, "load failed: %v", msg.err)
+			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
 		}
 		m.notebooks, m.trashed, m.tags = msg.notebooks, msg.trashed, msg.tags
@@ -844,7 +865,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case connMsg:
 		m.live = msg.live
 		if !msg.live && msg.err != nil {
-			m.setStatus(statusWarn, "event stream disconnected; reconnecting…")
+			m.setStatus(statusWarn, "status.disconnected")
 		}
 		return m, nil
 
@@ -909,13 +930,17 @@ func (m *Model) handleEvent(ev *gennotes.NoteEvent) tea.Cmd {
 	cmds := []tea.Cmd{m.loadList(), m.loadNotebooks()}
 	if e := m.edit; e != nil && ev.ID != nil && e.id == *ev.ID && (ev.Type == "updated" || ev.Type == "deleted") {
 		e.outside = true
-		m.setStatus(statusWarn, "the note you are editing was %s outside", ev.Type)
+		if ev.Type == "deleted" {
+			m.setStatus(statusWarn, "status.editingDeleted")
+		} else {
+			m.setStatus(statusWarn, "status.editingUpdated")
+		}
 	}
 	if ev.ID != nil && m.note != nil && m.note.ID == *ev.ID && ev.Type == "updated" {
 		if m.moving == *ev.ID {
 			m.moving = "" // the move by J/K, not an edit outside
 		} else {
-			m.setStatus(statusInfo, "%q was updated outside", m.note.Title)
+			m.setStatus(statusInfo, "status.updatedOutside", "title", m.note.Title)
 		}
 		cmds = append(cmds, m.loadNote(*ev.ID))
 	}
@@ -928,12 +953,12 @@ func (m *Model) startEdit(n *gennotes.Note) tea.Cmd {
 		err error
 	)
 	if n == nil {
-		d, err = newDraft("", m.defaultNotebook(), "", "", m.defaultTags(), "")
+		d, err = newDraft("", m.defaultNotebook(), "", "", m.defaultTags(), "", m.tr.t("draft.idHint"))
 	} else {
-		d, err = newDraft(n.ID, n.Notebook, n.Version, n.Title, n.Tags, n.Body)
+		d, err = newDraft(n.ID, n.Notebook, n.Version, n.Title, n.Tags, n.Body, m.tr.t("draft.idHint"))
 	}
 	if err != nil {
-		m.setStatus(statusError, "edit failed: %v", err)
+		m.setStatus(statusError, "status.editFailed", "err", err)
 		return nil
 	}
 	return openEditor(d)
@@ -942,17 +967,17 @@ func (m *Model) startEdit(n *gennotes.Note) tea.Cmd {
 func (m *Model) finishEdit(msg editorDoneMsg) tea.Cmd {
 	d := msg.d
 	if msg.err != nil {
-		m.setStatus(statusError, "editor failed: %v (draft kept at %s)", msg.err, d.path)
+		m.setStatus(statusError, "status.editorFailed", "err", msg.err, "path", d.path)
 		return nil
 	}
 	changed, err := d.load()
 	if !changed && err == nil {
 		d.remove()
-		m.setStatus(statusInfo, "no changes")
+		m.setStatus(statusInfo, "status.noChanges")
 		return nil
 	}
 	if err != nil {
-		m.retry(d, err.Error())
+		m.retry(d, m.errText(err))
 		return nil
 	}
 	return m.save(d, false)
@@ -969,7 +994,7 @@ func (m *Model) finishSave(msg savedMsg) tea.Cmd {
 		case "precondition_failed":
 			m.prompt, m.draft = promptConflict, msg.d
 		case "already_exists":
-			m.retry(msg.d, fmt.Sprintf("a note with id %q already exists", msg.d.newID))
+			m.retry(msg.d, m.tr.t("status.exists", "id", msg.d.newID))
 		default:
 			m.retry(msg.d, msg.err.Error())
 		}
@@ -979,7 +1004,7 @@ func (m *Model) finishSave(msg savedMsg) tea.Cmd {
 	if msg.d.path == "" {
 		m.closeEditor()
 	}
-	m.setStatus(statusInfo, "saved %q", msg.note.Title)
+	m.setStatus(statusInfo, "status.saved", "title", msg.note.Title)
 	m.pending = msg.note.ID
 	return m.loadList()
 }
@@ -999,7 +1024,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, m.remove(n)
 		}
 		m.toDelete = nil
-		m.setStatus(statusInfo, "cancelled")
+		m.setStatus(statusInfo, "status.cancelled")
 		return m, nil
 	case promptConflict:
 		d := m.draft
@@ -1080,14 +1105,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if kind == promptTrashNotebook {
 			if nb := m.selectedNotebook(); nb != nil {
 				id := nb.ID
-				return m, m.notebookOp("moved the notebook to the trash", trashedPrefix+id, func(ctx context.Context) error {
+				return m, m.notebookOp("status.notebookTrashed", trashedPrefix+id, func(ctx context.Context) error {
 					return m.api.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: id})
 				})
 			}
 			return m, nil
 		}
 		if id, ok := trashedID(m.selectedRow().id); ok {
-			return m, m.notebookOp("deleted the notebook permanently", trashNotebook, func(ctx context.Context) error {
+			return m, m.notebookOp("status.notebookDeleted", trashNotebook, func(ctx context.Context) error {
 				return m.api.DeleteTrashedNotebook(ctx, &gennotes.DeleteTrashedNotebookPayload{ID: id})
 			})
 		}
@@ -1103,7 +1128,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.prompt = promptNone
 		if key == "y" {
 			m.closeEditor()
-			m.setStatus(statusInfo, "discarded your changes")
+			m.setStatus(statusInfo, "status.discarded")
 		}
 		return m, nil
 	}
@@ -1193,12 +1218,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			} else if nb := m.selectedNotebook(); nb != nil && !nb.Reserved {
 				m.prompt = promptTrashNotebook
 			} else if _, ok := tagOf(row.id); !ok {
-				m.setStatus(statusWarn, "inbox and trash cannot be deleted")
+				m.setStatus(statusWarn, "status.reservedNotebook")
 			}
 			return m, nil
 		case "u":
 			if id, ok := trashedID(m.selectedRow().id); ok {
-				return m, m.notebookOp("restored the notebook", id, func(ctx context.Context) error {
+				return m, m.notebookOp("status.notebookRestored", id, func(ctx context.Context) error {
 					_, err := m.api.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: id})
 					return err
 				})
@@ -1255,7 +1280,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.matchIdx = (max(m.matchIdx, 0) + n - 1) % n
 		}
 		m.showMatch()
-		m.setStatus(statusInfo, "match %d/%d", m.matchIdx+1, n)
+		m.setStatus(statusInfo, "status.match", "i", m.matchIdx+1, "n", n)
 		return m, nil
 	case "T":
 		m.toggleSide()
@@ -1265,7 +1290,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "]":
 		return m, m.selectNotebook(m.nbSel + 1)
 	case "r":
-		m.setStatus(statusInfo, "reloaded")
+		m.setStatus(statusInfo, "status.reloaded")
 		return m, m.loadList()
 	case "tab", "shift+tab":
 		order := []focus{focusList, focusPreview}
@@ -1444,7 +1469,7 @@ func (m *Model) handleWheel(ms tea.Mouse) tea.Cmd {
 
 // openEditor starts editing n, or a new note when n is nil, in the UI.
 func (m *Model) openEditor(n *gennotes.Note) tea.Cmd {
-	m.edit = newEditor(m.th, n, m.defaultNotebook())
+	m.edit = newEditor(m.th, m.tr, n, m.defaultNotebook())
 	if tags := m.defaultTags(); n == nil && tags != nil {
 		m.edit.inputs[fieldTags].SetValue(strings.Join(tags, ", "))
 		m.edit.orig = m.edit.snapshot()
@@ -1468,7 +1493,7 @@ func (m *Model) closeEditor() {
 func (m *Model) saveEditor() tea.Cmd {
 	d, err := m.edit.draft()
 	if err != nil {
-		m.retry(d, err.Error())
+		m.retry(d, m.errText(err))
 		return nil
 	}
 	return m.save(d, false)
@@ -1488,8 +1513,8 @@ func (m *Model) editAgain(d *draft) tea.Cmd {
 func (m *Model) discard(d *draft) {
 	if d.path == "" {
 		m.closeEditor()
-		m.setStatus(statusInfo, "discarded your changes")
+		m.setStatus(statusInfo, "status.discarded")
 		return
 	}
-	m.setStatus(statusInfo, "discarded the draft (copy at %s)", d.path)
+	m.setStatus(statusInfo, "status.draftDiscarded", "path", d.path)
 }

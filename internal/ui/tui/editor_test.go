@@ -8,7 +8,7 @@ import (
 
 func TestDraftRoundTrip(t *testing.T) {
 	for _, id := range []string{"", "my-note"} {
-		b, err := formatDraft(id, "work", "タイトル: colon", []string{"a", "b c"}, "# body\n\ntext\n")
+		b, err := formatDraft(id, "work", "タイトル: colon", []string{"a", "b c"}, "# body\n\ntext\n", "hint")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -70,7 +70,7 @@ func TestDraftLoad(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d, err := newDraft(tt.id, "inbox", "", "T", nil, "")
+			d, err := newDraft(tt.id, "inbox", "", "T", nil, "", "hint")
 			if err != nil {
 				t.Fatal(err)
 			}

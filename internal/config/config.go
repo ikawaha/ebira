@@ -60,7 +60,7 @@ type Config struct {
 	// Provider and Model choose the model of the assistant.
 	Provider string `yaml:"provider"`
 	Model    string `yaml:"model"`
-	// Lang is the language of the web UI, such as en or ja.
+	// Lang is the language of the UI, the web UI and the TUI, such as en or ja.
 	Lang string `yaml:"lang"`
 	// GitSync is the interval of syncing the notes with git, such as 10m.
 	GitSync string `yaml:"git_sync"`

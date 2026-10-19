@@ -88,7 +88,7 @@ macOS と Linux で動きます。
 
 ## はじめかた
 
-1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI の言語を聞かれ、答えは `~/.config/ebira/config.yaml` に保存されます。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
+1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI と TUI の言語を聞かれ、答えは `~/.config/ebira/config.yaml` に保存されます。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
 
    ```console
    $ ebira web
@@ -137,7 +137,7 @@ macOS と Linux で動きます。
 
 | コマンド | 説明 |
 | --- | --- |
-| `ebira` | TUI を開く。サーバーが無ければ裏で起動する |
+| `ebira [-lang en\|ja]` | TUI を開く。サーバーが無ければ裏で起動する |
 | `ebira web [-no-open]` | ブラウザで Web UI を開く。サーバーが無ければ裏で起動する |
 | `ebira serve` | サーバーを前面で動かす |
 | `ebira server start\|stop\|restart\|status` | 裏のサーバーを操作する。`restart` は動いていたときのフラグを引き継ぐ |
@@ -153,7 +153,7 @@ macOS と Linux で動きます。
 | `-addr` | `localhost:8080` | 待ち受けるアドレス |
 | `-search` | ノートのディレクトリの `_ebira.yaml` の `search`、無ければ `bigram` | `like`、`bigram`、`ja` |
 | `-watch` | `true` | ノートを監視して索引を更新する |
-| `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja` |
+| `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja`（TUI の言語は `ebira -lang` か設定ファイルの `lang`、無ければ `$LANG`） |
 | `-provider`、`-model` | API キーが設定されているプロバイダー | アシスタントのモデル: `anthropic` か `gemini` |
 | `-git-sync` | 設定ファイルの `git_sync`、無ければ同期しない | 起動時と、この間隔（`10m` など）で git と同期する |
 

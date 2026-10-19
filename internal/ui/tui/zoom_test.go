@@ -13,7 +13,7 @@ import (
 // the preview.
 func zoomModel(t *testing.T, width int) Model {
 	t.Helper()
-	m := New(context.Background(), &Clients{}, false)
+	m := New(context.Background(), &Clients{}, false, "en")
 	tm, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: 30})
 	m = tm.(Model)
 	m.note = &gennotes.Note{ID: "plan", Title: "Plan", Body: "body", Notebook: "inbox", UpdatedAt: "2026-10-19T10:00:00Z"}

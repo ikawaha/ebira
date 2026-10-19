@@ -22,9 +22,9 @@ func setupEnv(t *testing.T) string {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv(config.Env, "")
 	t.Setenv("LANG", "ja_JP.UTF-8")
-	old, oldFlags := settings, setupFlags
-	settings, setupFlags = config.Config{}, nil
-	t.Cleanup(func() { settings, setupFlags = old, oldFlags })
+	old, oldFlags, oldLang := settings, setupFlags, setupLang
+	settings, setupFlags, setupLang = config.Config{}, nil, ""
+	t.Cleanup(func() { settings, setupFlags, setupLang = old, oldFlags, oldLang })
 	return home
 }
 
@@ -127,6 +127,9 @@ func TestSetupAnswers(t *testing.T) {
 	}
 	if !slices.Equal(setupFlags, []string{"-lang", "en"}) {
 		t.Errorf("flags of the server: %v", setupFlags)
+	}
+	if setupLang != "en" {
+		t.Errorf("language of the TUI: %q", setupLang)
 	}
 	if !strings.Contains(out.String(), "Answer y or n.") || !strings.Contains(out.String(), "Answer one of en, ja.") {
 		t.Errorf("no retry:\n%s", out.String())

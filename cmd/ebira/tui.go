@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -24,6 +25,7 @@ func runTUI(args []string) error {
 		addr     = fs.String("addr", defaultAddr(), "address of a server started for the TUI")
 		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
 		light    = fs.Bool("light", false, "use colors for a light terminal background")
+		lang     = fs.String("lang", settings.Lang, "language of the TUI: "+strings.Join(tui.Langs, " or ")+" (default: lang of the settings file, which the web UI shares, else ja when $LANG is Japanese, else en)")
 	)
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), usage+"\nflags of the TUI:\n")
@@ -34,6 +36,9 @@ func runTUI(args []string) error {
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unknown command %q (see ebira help)", fs.Arg(0))
+	}
+	if *lang != "" && !tui.ValidLang(*lang) {
+		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *lang, strings.Join(tui.Langs, ", "))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -54,7 +59,10 @@ func runTUI(args []string) error {
 	if err != nil {
 		return err
 	}
-	p := tea.NewProgram(tui.New(ctx, api, *light))
+	if !flagSet(fs, "lang") {
+		*lang = cmp.Or(settings.Lang, setupLang) // as chosen in setup, if it ran
+	}
+	p := tea.NewProgram(tui.New(ctx, api, *light, tui.Lang(*lang)))
 	go tui.WatchEvents(ctx, api.Notes, p.Send)
 	_, err = p.Run()
 	return err

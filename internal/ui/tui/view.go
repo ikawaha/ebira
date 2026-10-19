@@ -157,7 +157,7 @@ func (m *Model) renderPreview(keepOffset bool) {
 	}
 	if m.note == nil {
 		m.rendered, m.matches, m.matchIdx = "", nil, -1
-		m.vp.SetContent(m.th.style(m.th.dim).Render("\n  No note selected."))
+		m.vp.SetContent(m.th.style(m.th.dim).Render("\n  " + m.tr.t("preview.none")))
 		return
 	}
 	key := fmt.Sprintf("%s/%d/%s", m.note.Version, width, m.noteQ)
@@ -171,7 +171,7 @@ func (m *Model) renderPreview(keepOffset bool) {
 	b.WriteString("\n  " + title + "\n")
 	nb := m.notebookLabel(m.note.Notebook)
 	if m.note.TrashedFrom != nil {
-		nb += " (from " + m.notebookLabel(*m.note.TrashedFrom) + ")"
+		nb += " " + m.tr.t("preview.from", "notebook", m.notebookLabel(*m.note.TrashedFrom))
 	}
 	meta := []string{nb, formatTime(m.note.UpdatedAt), m.note.ID}
 	if len(m.note.Tags) > 0 {
@@ -217,7 +217,7 @@ func (m *Model) renderAnswer(width int, keepOffset bool) {
 	b.WriteString("  " + m.th.style(m.th.border).Render(strings.Repeat("─", max(0, width-4))) + "\n")
 	switch {
 	case a.pending:
-		b.WriteString("\n  " + m.th.style(m.th.dim).Render("Thinking… the assistant is searching and reading your notes."))
+		b.WriteString("\n  " + m.th.style(m.th.dim).Render(m.tr.t("answer.thinking")))
 	case a.err != nil:
 		b.WriteString("\n" + block.Foreground(m.th.err).Render(errorMessage(a.err)))
 	default:
@@ -267,24 +267,24 @@ func (m Model) render() string {
 		panes = append(panes, m.renderList(l.listW, l.paneH))
 	}
 	if l.showPreview && m.edit != nil {
-		title := "New note"
+		title := m.tr.t("pane.newNote")
 		if m.edit.id != "" {
-			title = "Editing " + m.edit.id
+			title = m.tr.t("pane.editing", "id", m.edit.id)
 		}
 		if m.edit.dirty() {
-			title += "  ● modified"
+			title += "  " + m.tr.t("pane.modified")
 		}
 		if m.edit.outside {
-			title += "  ⚠ changed outside"
+			title += "  " + m.tr.t("pane.changedOutside")
 		}
 		panes = append(panes, m.box(title, m.edit.view(m.th, l.previewW-2), l.previewW, l.paneH, true))
 	} else if l.showPreview {
-		title := "Preview"
+		title := m.tr.t("pane.preview")
 		switch {
 		case m.answerOn && m.answer != nil && m.answer.pending:
-			title = "Asking…"
+			title = m.tr.t("pane.asking")
 		case m.answerOn && m.answer != nil:
-			title = "Answer"
+			title = m.tr.t("pane.answer")
 		case m.note != nil:
 			title = m.note.Title
 		}
@@ -308,21 +308,21 @@ func (m Model) renderHeader() string {
 	case m.focus == focusSearch:
 		search = m.th.style(m.th.accent).Render(" / ") + m.input.View()
 	case m.query != "":
-		search = m.th.style(m.th.dim).Render(" / ") + m.th.style(m.th.fg).Render(m.query) + m.th.style(m.th.dim).Render("  (esc to clear)")
+		search = m.th.style(m.th.dim).Render(" / ") + m.th.style(m.th.fg).Render(m.query) + m.th.style(m.th.dim).Render("  "+m.tr.t("header.clear"))
 	default:
-		search = m.th.style(m.th.dim).Render(" / search")
+		search = m.th.style(m.th.dim).Render(" / " + m.tr.t("header.search"))
 	}
 
 	var right []string
 	if m.query != "" {
-		right = append(right, m.th.style(m.th.dim).Render(fmt.Sprintf("%d hits · %s", m.total, m.mode)))
+		right = append(right, m.th.style(m.th.dim).Render(m.tr.t("header.hits", "n", m.total, "mode", m.mode)))
 	} else {
-		right = append(right, m.th.style(m.th.dim).Render(fmt.Sprintf("%d notes", m.total)))
+		right = append(right, m.th.style(m.th.dim).Render(m.tr.t("header.notes", "n", m.total)))
 	}
 	if m.live {
-		right = append(right, m.th.style(m.th.ok).Render("● live"))
+		right = append(right, m.th.style(m.th.ok).Render(m.tr.t("header.live")))
 	} else {
-		right = append(right, m.th.style(m.th.err).Render("○ offline"))
+		right = append(right, m.th.style(m.th.err).Render(m.tr.t("header.offline")))
 	}
 	r := strings.Join(right, "  ") + " "
 	left := badge + search
@@ -337,12 +337,12 @@ func (m Model) renderList(w, h int) string {
 	innerW := w - 2
 	var lines []string
 	if len(m.items) == 0 {
-		msg := "No notes. Press n to create one."
+		msg := m.tr.t("list.empty")
 		if m.query != "" {
-			msg = "No matches."
+			msg = m.tr.t("list.noMatches")
 		}
 		if _, ok := trashedID(m.notebook); ok {
-			msg = "A notebook in the trash: u restore · d delete permanently"
+			msg = m.tr.t("list.trashedNotebook")
 		}
 		lines = append(lines, "", " "+m.th.style(m.th.dim).Render(msg))
 	}
@@ -381,9 +381,9 @@ func (m Model) renderList(w, h int) string {
 			lead+padHighlight(sub, subHL, subSt, hl, innerW-1),
 		)
 	}
-	title := "Notes · " + m.currentSort()
+	title := m.tr.t("pane.notes", "sort", m.tr.t("sort."+m.currentSort()))
 	if m.query != "" {
-		title = "Search"
+		title = m.tr.t("pane.search")
 	}
 	if !m.computeLayout().showNotebooks {
 		title += " · " + m.notebookLabel(m.notebook)
@@ -417,9 +417,9 @@ func (m Model) renderNotebooks(w, h int) string {
 		}
 		lines = append(lines, " "+st.Render(line))
 	}
-	title := "Notebooks"
+	title := m.tr.t("pane.notebooks")
 	if m.sideTags {
-		title = "Tags"
+		title = m.tr.t("pane.tags")
 	}
 	return m.box(title, lines, w, h, m.focus == focusNotebooks)
 }
@@ -449,7 +449,7 @@ func createdByAI(v *string) bool { return v != nil && *v == "ai" }
 // notebookName is the display name of a notebook filter.
 func (m Model) notebookName(id string) string {
 	if id == "" {
-		return "All"
+		return m.tr.t("notebook.all")
 	}
 	if t, ok := tagOf(id); ok {
 		return "# " + t
@@ -500,94 +500,94 @@ func (m Model) renderFooter() string {
 			t = m.toDelete.Title
 		}
 		if m.toDelete != nil && m.toDelete.Notebook == trashNotebook {
-			return m.th.style(m.th.err).Render(fmt.Sprintf(" Delete %q permanently? [y/N]", t))
+			return m.th.style(m.th.err).Render(" " + m.tr.t("prompt.deletePermanently", "title", t))
 		}
-		return m.th.style(m.th.warn).Render(fmt.Sprintf(" Move %q to the trash? [y/N]", t))
+		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.trash", "title", t))
 	case promptConflict:
-		return m.th.style(m.th.warn).Render(" The note was changed outside since you opened it.") +
-			m.keys([][2]string{{"o", "overwrite"}, {"e", "edit again"}, {"d", "discard mine"}})
+		return m.th.style(m.th.warn).Render(" "+m.tr.t("prompt.conflict")) +
+			m.keys([][2]string{{"o", "key.overwrite"}, {"e", "key.editAgain"}, {"d", "key.discardMine"}})
 	case promptRename, promptAddNotebook, promptAsk:
-		label := " Name: "
+		label := "prompt.name"
 		switch m.prompt {
 		case promptAddNotebook:
-			label = " New notebook name: "
+			label = "prompt.newNotebook"
 			if m.addKind == "collab" {
-				label = " New AI notebook name: "
+				label = "prompt.newAINotebook"
 			}
 		case promptAsk:
-			label = " Ask about your notes: "
+			label = "prompt.ask"
 		}
-		return m.th.style(m.th.accent).Render(label) + m.promptIn.View() + m.keys([][2]string{{"enter", "ok"}, {"esc", "cancel"}})
+		return m.th.style(m.th.accent).Render(" "+m.tr.t(label)+" ") + m.promptIn.View() + m.keys([][2]string{{"enter", "key.ok"}, {"esc", "key.cancel"}})
 	case promptNotebookKind:
 		name := ""
 		if nb := m.selectedNotebook(); nb != nil {
 			name = nb.Name
 		}
-		return m.th.style(m.th.accent).Render(fmt.Sprintf(" Kind of %q:", name)) +
-			m.keys([][2]string{{"d", "default (AI reads)"}, {"c", "collab (AI writes)"}, {"w", "drop (AI only adds)"}, {"p", "private (hidden from AI)"}, {"esc", "cancel"}})
+		return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.kind", "name", name)) +
+			m.keys([][2]string{{"d", "kind.default"}, {"c", "kind.collab"}, {"w", "kind.drop"}, {"p", "kind.private"}, {"esc", "key.cancel"}})
 	case promptUnprivate:
-		return m.th.style(m.th.warn).Render(" AI clients will be able to read this notebook. Continue? [y/N]")
+		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.unprivate"))
 	case promptTrashNotebook:
 		row := m.selectedRow()
-		return m.th.style(m.th.warn).Render(fmt.Sprintf(" Move notebook %q and its %d notes to the trash? [y/N]", m.notebookName(row.id), row.count))
+		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.trashNotebook", "name", m.notebookName(row.id), "n", row.count))
 	case promptPurgeNotebook:
 		row := m.selectedRow()
-		return m.th.style(m.th.err).Render(fmt.Sprintf(" Delete notebook %q and its %d notes permanently? [y/N]", strings.TrimPrefix(m.notebookName(row.id), "↳ "), row.count))
+		return m.th.style(m.th.err).Render(" " + m.tr.t("prompt.purgeNotebook", "name", strings.TrimPrefix(m.notebookName(row.id), "↳ "), "n", row.count))
 	case promptDiscard:
-		return m.th.style(m.th.warn).Render(" Discard unsaved changes? [y/N]")
+		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.discard"))
 	case promptRetry:
-		keys := m.keys([][2]string{{"e", "edit again"}, {"d", "discard"}})
-		reason := " Not saved: " + m.failure
+		keys := m.keys([][2]string{{"e", "key.editAgain"}, {"d", "key.discard"}})
+		reason := " " + m.tr.t("prompt.notSaved", "reason", m.failure)
 		return m.th.style(m.th.warn).Render(ansi.Truncate(reason, max(10, m.width-ansi.StringWidth(keys)-1), "…")) + keys
 	}
 	var hints [][2]string
 	switch m.focus {
 	case focusSearch:
-		hints = [][2]string{{"enter", "done"}, {"esc", "clear"}, {"↑↓", "move"}}
+		hints = [][2]string{{"enter", "key.done"}, {"esc", "key.clear"}, {"↑↓", "key.move"}}
 	case focusEdit:
-		hints = [][2]string{{"ctrl+s", "save"}, {"esc", "cancel"}, {"tab/shift+tab", "field"}}
+		hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.cancel"}, {"tab/shift+tab", "key.field"}}
 	case focusPreview:
-		hints = [][2]string{{"j/k", "scroll"}, {"space/b", "page"}, {"esc", "back"}, {"e", "edit"}, {"E", "$EDITOR"}}
+		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"e", "key.edit"}, {"E", "key.editor"}}
 		if m.answerOn {
-			hints = [][2]string{{"j/k", "scroll"}, {"space/b", "page"}, {"esc", "close answer"}, {"?", "ask again"}}
+			hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.closeAnswer"}, {"?", "key.askAgain"}}
 		}
 		switch {
 		case m.zoom:
-			hints = append(hints, [2]string{"z", "unzoom"})
+			hints = append(hints, [2]string{"z", "key.unzoom"})
 		case m.width >= narrowWidth:
-			hints = append(hints, [2]string{"z", "zoom"})
+			hints = append(hints, [2]string{"z", "key.zoom"})
 		}
 		if len(m.matches) > 0 {
-			hints = append(hints, [2]string{"ctrl+n/p", "match"})
+			hints = append(hints, [2]string{"ctrl+n/p", "key.match"})
 		}
-		hints = append(hints, [2]string{"q", "quit"})
+		hints = append(hints, [2]string{"q", "key.quit"})
 	case focusNotebooks:
-		hints = [][2]string{{"j/k", "notebook"}, {"enter", "notes"}, {"e", "rename"}, {"J/K", "reorder"}, {"a", "add"}, {"A", "add AI"}, {"t", "kind"}, {"d", "delete"}, {"T", "tags"}, {"n", "new note"}, {"q", "quit"}}
+		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		if m.sideTags {
-			hints = [][2]string{{"j/k", "tag"}, {"enter", "notes"}, {"T", "notebooks"}, {"n", "new note"}, {"q", "quit"}}
+			hints = [][2]string{{"j/k", "key.tag"}, {"enter", "key.notes"}, {"T", "key.notebooks"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		}
 	default:
-		hints = [][2]string{{"j/k", "move"}, {"/", "search"}, {"?", "ask"}, {"enter", "open"}, {"e", "edit"}, {"n", "new"}, {"d", "delete"}, {"s", "sort"}}
+		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"s", "key.sort"}}
 		if m.canReorder() {
-			hints = append(hints, [2]string{"J/K", "reorder"})
+			hints = append(hints, [2]string{"J/K", "key.reorder"})
 		}
 		if m.answerOn {
-			hints = append(hints, [2]string{"esc", "close answer"})
+			hints = append(hints, [2]string{"esc", "key.closeAnswer"})
 		}
 		if len(m.matches) > 0 {
-			hints = append(hints, [2]string{"ctrl+n/p", "match"})
+			hints = append(hints, [2]string{"ctrl+n/p", "key.match"})
 		}
 		if m.note != nil && m.note.Notebook == trashNotebook {
-			hints = append(hints, [2]string{"u", "restore"})
+			hints = append(hints, [2]string{"u", "key.restore"})
 		}
 		if !m.computeLayout().showNotebooks {
 			if m.sideTags {
-				hints = append(hints, [2]string{"[ ]", "tag"}, [2]string{"T", "notebooks"})
+				hints = append(hints, [2]string{"[ ]", "key.tag"}, [2]string{"T", "key.notebooks"})
 			} else {
-				hints = append(hints, [2]string{"[ ]", "notebook"}, [2]string{"T", "tags"})
+				hints = append(hints, [2]string{"[ ]", "key.notebook"}, [2]string{"T", "key.tags"})
 			}
 		}
-		hints = append(hints, [2]string{"q", "quit"})
+		hints = append(hints, [2]string{"q", "key.quit"})
 	}
 	left := m.keys(hints)
 	if m.status == "" {
@@ -611,7 +611,7 @@ func (m Model) renderFooter() string {
 func (m Model) keys(hints [][2]string) string {
 	var b strings.Builder
 	for _, h := range hints {
-		b.WriteString(" " + lipgloss.NewStyle().Bold(true).Foreground(m.th.accent).Render(h[0]) + " " + m.th.style(m.th.dim).Render(h[1]) + " ")
+		b.WriteString(" " + lipgloss.NewStyle().Bold(true).Foreground(m.th.accent).Render(h[0]) + " " + m.th.style(m.th.dim).Render(m.tr.t(h[1])) + " ")
 	}
 	return b.String()
 }

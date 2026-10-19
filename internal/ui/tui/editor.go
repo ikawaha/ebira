@@ -2,8 +2,6 @@ package tui
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
@@ -39,8 +37,6 @@ type frontMatter struct {
 	Tags     []string `yaml:"tags,flow"`
 }
 
-const idHint = "file name: a-z, 0-9, - and _ (random if empty)"
-
 // idPattern mirrors the note ID and notebook pattern of the API design (design/design.go),
 // so that the UI can explain a bad ID instead of showing a validation error.
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
@@ -53,7 +49,9 @@ const (
 
 const fence = "---\n"
 
-func formatDraft(id, notebook, title string, tags []string, body string) ([]byte, error) {
+// formatDraft returns the file of a draft. hint is the comment on an empty
+// ID, telling what it may be.
+func formatDraft(id, notebook, title string, tags []string, body, hint string) ([]byte, error) {
 	if tags == nil {
 		tags = []string{}
 	}
@@ -62,7 +60,7 @@ func formatDraft(id, notebook, title string, tags []string, body string) ([]byte
 		return nil, err
 	}
 	if id == "" {
-		node.Content[1].LineComment = idHint // the value node of "id"
+		node.Content[1].LineComment = hint // the value node of "id"
 	}
 	fm, err := yaml.Marshal(&node)
 	if err != nil {
@@ -79,7 +77,7 @@ func formatDraft(id, notebook, title string, tags []string, body string) ([]byte
 func parseDraft(b []byte) (fm frontMatter, body string, err error) {
 	s := strings.ReplaceAll(string(b), "\r\n", "\n")
 	if !strings.HasPrefix(s, fence) {
-		return fm, "", errors.New("the file must start with a front matter (---)")
+		return fm, "", errMsg("draft.noFrontMatter")
 	}
 	rest := s[len(fence):]
 	end := strings.Index(rest, "\n"+fence)
@@ -87,7 +85,7 @@ func parseDraft(b []byte) (fm frontMatter, body string, err error) {
 		if strings.HasSuffix(rest, "\n---") {
 			end = len(rest) - len("\n---")
 		} else {
-			return fm, "", errors.New("the front matter is not closed (---)")
+			return fm, "", errMsg("draft.unclosed")
 		}
 	}
 	if err := yaml.Unmarshal([]byte(rest[:end]), &fm); err != nil {
@@ -102,9 +100,10 @@ func parseDraft(b []byte) (fm frontMatter, body string, err error) {
 	return fm, body, nil
 }
 
-// newDraft writes the note into a temporary file for editing.
-func newDraft(id, notebook, version, title string, tags []string, body string) (*draft, error) {
-	b, err := formatDraft(id, notebook, title, tags, body)
+// newDraft writes the note into a temporary file for editing, with hint on an
+// empty ID (see formatDraft).
+func newDraft(id, notebook, version, title string, tags []string, body, hint string) (*draft, error) {
+	b, err := formatDraft(id, notebook, title, tags, body, hint)
 	if err != nil {
 		return nil, err
 	}
@@ -163,17 +162,17 @@ func (d *draft) load() (changed bool, err error) {
 func (d *draft) apply(fm frontMatter, body string) error {
 	switch {
 	case fm.Title == "":
-		return errors.New("a title is required")
+		return errMsg("draft.noTitle")
 	case d.id != "" && fm.ID != "" && fm.ID != d.id:
-		return errors.New("changing the id of an existing note is not supported")
+		return errMsg("draft.idChange")
 	case fm.ID != "" && !idPattern.MatchString(fm.ID):
-		return fmt.Errorf("invalid id %q: use 1-64 of a-z, 0-9, - and _, starting with a letter or digit", fm.ID)
+		return errMsg("draft.badID", "id", fm.ID)
 	case fm.Notebook != "" && !idPattern.MatchString(fm.Notebook):
-		return fmt.Errorf("invalid notebook %q: use 1-64 of a-z, 0-9, - and _, starting with a letter or digit", fm.Notebook)
+		return errMsg("draft.badNotebook", "notebook", fm.Notebook)
 	case fm.Notebook == trashNotebook && d.notebook != trashNotebook:
-		return errors.New("use delete (d) to move a note to the trash")
+		return errMsg("draft.useDelete")
 	case d.id == "" && fm.Notebook == trashNotebook:
-		return errors.New("cannot create a note in the trash")
+		return errMsg("draft.inTrash")
 	}
 	d.newID, d.title, d.tags, d.body = fm.ID, fm.Title, fm.Tags, body
 	d.newNotebook = fm.Notebook

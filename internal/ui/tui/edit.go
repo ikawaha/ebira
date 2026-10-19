@@ -30,12 +30,14 @@ type editor struct {
 	field       int
 	orig        string // snapshot to detect unsaved changes
 	outside     bool   // the note was changed outside while editing
+	idFixed     string // shown after the ID of an existing note
 }
 
-// newEditor edits n, or a new note in notebook when n is nil.
-func newEditor(th theme, n *gennotes.Note, notebook string) *editor {
-	e := &editor{notebook: notebook}
-	for i, ph := range []string{"random if empty (a-z, 0-9, -, _)", "inbox, or a new name to create a notebook", "title", "comma separated"} {
+// newEditor edits n, or a new note in notebook when n is nil, with the
+// messages of tr.
+func newEditor(th theme, tr *catalog, n *gennotes.Note, notebook string) *editor {
+	e := &editor{notebook: notebook, idFixed: tr.t("edit.idFixed")}
+	for i, ph := range []string{tr.t("edit.idPlaceholder"), tr.t("edit.notebookPlaceholder"), tr.t("edit.titlePlaceholder"), tr.t("edit.tagsPlaceholder")} {
 		in := textinput.New()
 		in.Prompt = ""
 		in.Placeholder = ph
@@ -164,7 +166,7 @@ func (e *editor) view(th theme, w int) []string {
 	}
 	idView := e.inputs[fieldID].View()
 	if e.id != "" {
-		idView = th.style(th.dim).Render(e.id + "  (cannot be changed)")
+		idView = th.style(th.dim).Render(e.id + "  " + e.idFixed)
 	}
 	lines := []string{
 		label(fieldID, "id") + idView,

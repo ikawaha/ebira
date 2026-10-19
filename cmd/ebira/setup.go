@@ -34,6 +34,10 @@ const defaultSetupGitSync = "10m"
 // not saved to the settings file.
 var setupFlags []string
 
+// setupLang is the language chosen in setup, also when it is not saved, for
+// the TUI started after setup.
+var setupLang string
+
 // errNoNotes is returned when no notes directory is given and the current
 // directory has no notes/.
 var errNoNotes = errors.New("no notes found")
@@ -159,6 +163,7 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		if lang, err = askLang(r, out); err != nil {
 			return "", err
 		}
+		setupLang = lang
 	}
 	fmt.Fprintln(out)
 	what := "the directory as notes_dir"
@@ -373,15 +378,15 @@ func askGitSync(r *bufio.Reader, out io.Writer) (string, error) {
 	}
 }
 
-// askLang asks for the language of the web UI. The default is ja when $LANG
-// is Japanese, else en.
+// askLang asks for the language of the UI, the web UI and the TUI. The
+// default is ja when $LANG is Japanese, else en.
 func askLang(r *bufio.Reader, out io.Writer) (string, error) {
 	def := "en"
 	if strings.HasPrefix(os.Getenv("LANG"), "ja") {
 		def = "ja"
 	}
 	for {
-		answer, err := ask(r, out, "Language of the web UI ("+strings.Join(web.Langs, "/")+")", def)
+		answer, err := ask(r, out, "Language of the web UI and the TUI ("+strings.Join(web.Langs, "/")+")", def)
 		if err != nil {
 			return "", err
 		}

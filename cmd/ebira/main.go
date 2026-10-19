@@ -60,8 +60,8 @@ The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
 file of $EBIRA_CONFIG), gives the defaults of the flags: notes_dir, addr,
 watch, provider, model, lang and git_sync. Without -notes, notes_dir and notes/
 in the current directory, the commands that open the notes in a terminal ask
-where to keep them, how to search them and the language of the web UI, and
-set them up. The index is kept in ~/.cache/ebira and the server's state and
+where to keep them, how to search them and the language of the web UI and
+the TUI, and set them up. The index is kept in ~/.cache/ebira and the server's state and
 log in ~/.local/state/ebira ($XDG_CACHE_HOME, $XDG_STATE_HOME).
 `
 

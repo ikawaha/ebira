@@ -28,7 +28,7 @@ func text(s string) tea.KeyPressMsg {
 }
 
 func TestAsk(t *testing.T) {
-	m := New(context.Background(), &Clients{}, false)
+	m := New(context.Background(), &Clients{}, false, "en")
 	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
 	m = tm.(Model)
 
@@ -67,7 +67,7 @@ func TestAsk(t *testing.T) {
 }
 
 func TestAskError(t *testing.T) {
-	m := New(context.Background(), &Clients{}, false)
+	m := New(context.Background(), &Clients{}, false, "en")
 	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
 	m = tm.(Model)
 	m, _ = press(t, m, text("?"), text("x"), tea.KeyPressMsg{Code: tea.KeyEnter})
