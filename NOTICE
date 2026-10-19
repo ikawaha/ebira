@@ -21,3 +21,6 @@ Third-party software and works:
 - The icon, assets/logo/icon.png, is a detail of "Fujiwara no Hidesato
   Shooting the Giant Centipede at the Dragon King's Palace" (1890) by
   Tsukioka Yoshitoshi, in the public domain.
+- The badges assets/badges/built-with-goa.svg and built-with-goa-ai.svg,
+  made with shields.io, show the Goa logo of github.com/goadesign/goa.design
+  (MIT), to tell that ebira is built with Goa and Goa-AI.

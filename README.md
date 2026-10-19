@@ -11,6 +11,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/go-%E2%89%A51.27-00ADD8" alt="Go ≥ 1.27">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
+  <a href="https://goa.design"><img src="assets/badges/built-with-goa.svg" alt="Built with Goa"></a>
+  <a href="https://goa.design/docs/2-goa-ai/"><img src="assets/badges/built-with-goa-ai.svg" alt="Built with Goa-AI"></a>
 </p>
 
 <p align="center">
