@@ -315,6 +315,8 @@
               "enum": [
                 "like",
                 "bigram",
+                "trigram",
+                "en",
                 "ja"
               ],
               "type": "string"

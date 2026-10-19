@@ -33,26 +33,26 @@ func TestSearch(t *testing.T) {
 		tag  string
 		want map[Mode][]string
 	}{
-		{q: "東京都", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}}},
+		{q: "東京都", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}, ModeTrigram: {"tokyo"}, ModeEn: {"tokyo"}}},
 		// Substring search finds 京都 inside 東京都. Morphemes do not, but the
 		// ja mode also searches its bigram table.
-		{q: "京都", want: map[Mode][]string{ModeLike: {"go", "tokyo"}, ModeBigram: {"go", "tokyo"}, ModeJa: {"go", "tokyo"}}},
-		{q: "GOROUTINE", want: map[Mode][]string{ModeLike: {"go"}, ModeBigram: {"go"}, ModeJa: {"go"}}},
-		{q: "雨 天気", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}}},
-		{q: "雨", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}}},
-		{q: "rout", want: map[Mode][]string{ModeLike: {"go"}, ModeBigram: {"go"}, ModeJa: {"go"}}},
+		{q: "京都", want: map[Mode][]string{ModeLike: {"go", "tokyo"}, ModeBigram: {"go", "tokyo"}, ModeJa: {"go", "tokyo"}, ModeTrigram: {"go", "tokyo"}, ModeEn: {"go", "tokyo"}}},
+		{q: "GOROUTINE", want: map[Mode][]string{ModeLike: {"go"}, ModeBigram: {"go"}, ModeJa: {"go"}, ModeTrigram: {"go"}, ModeEn: {"go"}}},
+		{q: "雨 天気", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}, ModeTrigram: {"tokyo"}, ModeEn: {"tokyo"}}},
+		{q: "雨", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}, ModeTrigram: {"tokyo"}, ModeEn: {"tokyo"}}},
+		{q: "rout", want: map[Mode][]string{ModeLike: {"go"}, ModeBigram: {"go"}, ModeJa: {"go"}, ModeTrigram: {"go"}, ModeEn: {"go"}}},
 		// NFKC: full-width terms match half-width text.
-		{q: "ＧＯＲＯＵＴＩＮＥ", want: map[Mode][]string{ModeLike: {}, ModeBigram: {"go"}, ModeJa: {"go"}}},
+		{q: "ＧＯＲＯＵＴＩＮＥ", want: map[Mode][]string{ModeLike: {}, ModeBigram: {"go"}, ModeJa: {"go"}, ModeTrigram: {"go"}, ModeEn: {"go"}}},
 		// Base form: 書く matches 書いた.
-		{q: "書く", want: map[Mode][]string{ModeLike: {}, ModeBigram: {}, ModeJa: {"go"}}},
+		{q: "書く", want: map[Mode][]string{ModeLike: {}, ModeBigram: {}, ModeJa: {"go"}, ModeTrigram: {}, ModeEn: {}}},
 		// A term made only of stop words is searched with LIKE instead of matching everything.
-		{q: "の", want: map[Mode][]string{ModeLike: {"go", "tokyo"}, ModeBigram: {"go", "tokyo"}, ModeJa: {"go", "tokyo"}}},
-		{q: "の 雨", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}}},
-		{q: "京都", tag: "weather", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}}},
+		{q: "の", want: map[Mode][]string{ModeLike: {"go", "tokyo"}, ModeBigram: {"go", "tokyo"}, ModeJa: {"go", "tokyo"}, ModeTrigram: {"go", "tokyo"}, ModeEn: {"go", "tokyo"}}},
+		{q: "の 雨", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}, ModeTrigram: {"tokyo"}, ModeEn: {"tokyo"}}},
+		{q: "京都", tag: "weather", want: map[Mode][]string{ModeLike: {"tokyo"}, ModeBigram: {"tokyo"}, ModeJa: {"tokyo"}, ModeTrigram: {"tokyo"}, ModeEn: {"tokyo"}}},
 	}
 	// Reopen the same database with each mode to check that the full-text table is rebuilt.
 	db := filepath.Join(dir, "index.sqlite")
-	for _, mode := range []Mode{ModeLike, ModeBigram, ModeJa} {
+	for _, mode := range []Mode{ModeLike, ModeBigram, ModeTrigram, ModeEn, ModeJa} {
 		t.Run(string(mode), func(t *testing.T) {
 			ix, err := Open(ctx, db, Config{Mode: mode})
 			if err != nil {
@@ -329,6 +329,94 @@ func TestJaWithBigram(t *testing.T) {
 	}
 	if res, _, _ = ix.Search(ctx, "大阪", "", "", 10); len(res) != 1 {
 		t.Errorf("the rebuilt tables lost notes: %v", res)
+	}
+}
+
+// TestEnWithTrigram checks that the en mode finds notes by the stems of words
+// first, and then by trigrams, such as a word inside a longer one, and that it
+// keeps the trigram table instead of the bigram table of the ja mode.
+func TestEnWithTrigram(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	st, err := store.New(filepath.Join(dir, "notes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
+	for _, n := range []*store.Note{
+		{ID: "airplane", Notebook: store.Inbox, Title: "Airplane", Body: "Seats by the window", CreatedAt: now, UpdatedAt: now},
+		{ID: "trip", Notebook: store.Inbox, Title: "Trip", Body: "Planning the trip to 京都", CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := st.Create(n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	db := filepath.Join(dir, "index.sqlite")
+	tables := func(ix *Index) []string {
+		t.Helper()
+		rows, err := ix.db.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('notes_fts', 'notes_bigram', 'notes_trigram') ORDER BY name`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		var names []string
+		for rows.Next() {
+			var n string
+			if err := rows.Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			names = append(names, n)
+		}
+		return names
+	}
+	// From the ja mode, the bigram table goes and the trigram table comes.
+	ja, err := Open(ctx, db, Config{Mode: ModeJa})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := tables(ja); !slices.Equal(got, []string{"notes_bigram", "notes_fts"}) {
+		t.Errorf("ja tables = %v", got)
+	}
+	ja.Close()
+	ix, err := Open(ctx, db, Config{Mode: ModeEn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ix.Close()
+	if got := tables(ix); !slices.Equal(got, []string{"notes_fts", "notes_trigram"}) {
+		t.Errorf("en tables = %v", got)
+	}
+	if _, err := ix.Sync(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	search := func(q string) []string {
+		t.Helper()
+		res, _, err := ix.Search(ctx, q, "", "", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, s := range res {
+			ids = append(ids, s.ID)
+		}
+		return ids
+	}
+	// plan finds planning by its stem first, then airplane by trigrams.
+	if got := search("plan"); !slices.Equal(got, []string{"trip", "airplane"}) {
+		t.Errorf("plan: %v", got)
+	}
+	// plans finds planning by its stem; trigrams find the characters of the
+	// term itself, which airplane does not have.
+	if got := search("plans"); !slices.Equal(got, []string{"trip"}) {
+		t.Errorf("plans: %v", got)
+	}
+	// Japanese in an English note is found by the bigrams of the en table.
+	if got := search("京都"); !slices.Equal(got, []string{"trip"}) {
+		t.Errorf("京都: %v", got)
+	}
+	// A word being typed is found by trigrams.
+	if got := search("planni"); !slices.Equal(got, []string{"trip"}) {
+		t.Errorf("planni: %v", got)
 	}
 }
 

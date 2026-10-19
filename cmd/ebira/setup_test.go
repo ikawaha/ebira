@@ -115,7 +115,7 @@ func TestSetupAnswers(t *testing.T) {
 
 	// A relative directory, bigram, en, not saved; a wrong answer is asked
 	// again.
-	dir, err := setup(cwd, strings.NewReader("my notes\n\nmaybe\nn\nfr\nEN\nno\ny\n"), &out)
+	dir, err := setup(cwd, strings.NewReader("my notes\n\nmaybe\nbigram\nfr\nEN\nmaybe\nno\ny\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
@@ -146,7 +146,7 @@ func TestSetupAnswers(t *testing.T) {
 	if err != nil || again != dir {
 		t.Fatalf("existing: %s, %v\n%s", again, err, out.String())
 	}
-	if strings.Contains(out.String(), "Use ja") || strings.Contains(out.String(), "Language") {
+	if strings.Contains(out.String(), "Search mode (") || strings.Contains(out.String(), "Language") {
 		t.Errorf("asked the search mode:\n%s", out.String())
 	}
 
@@ -156,11 +156,11 @@ func TestSetupAnswers(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(foreign, "memo"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	got, err := setup(cwd, strings.NewReader("foreign\n\nforeign\ny\n\nn\nn\n\n"), &out)
+	got, err := setup(cwd, strings.NewReader("foreign\n\nforeign\ny\n\nbigram\nn\n\n"), &out)
 	if err != nil || got != foreign {
 		t.Fatalf("foreign: %s, %v\n%s", got, err, out.String())
 	}
-	if strings.Count(out.String(), "has files, but no notes of ebira") != 2 || !strings.Contains(out.String(), "Use ja") {
+	if strings.Count(out.String(), "has files, but no notes of ebira") != 2 || !strings.Contains(out.String(), "Search mode (") {
 		t.Errorf("foreign:\n%s", out.String())
 	}
 
@@ -226,7 +226,7 @@ func TestSetupGit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
-	if strings.Contains(out.String(), "Use ja") || !strings.Contains(out.String(), "Git:          clone "+remote) {
+	if strings.Contains(out.String(), "Search mode (") || !strings.Contains(out.String(), "Git:          clone "+remote) {
 		t.Errorf("output:\n%s", out.String())
 	}
 	if b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); err != nil || string(b) != "search: ja\n" {

@@ -14,6 +14,7 @@ import (
 	"github.com/ikawaha/kagome/v2/filter"
 	"github.com/ikawaha/kagome/v2/filter/ja"
 	"github.com/ikawaha/kagome/v2/tokenizer"
+	"github.com/kljensen/snowball/english"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -53,6 +54,16 @@ func newAnalyzer(cfg Config) (*analyzer, error) {
 		return &analyzer{
 			tokenize:    bigrams,
 			fingerprint: "bigram/" + analyzerVersion,
+		}, nil
+	case ModeTrigram:
+		return &analyzer{
+			tokenize:    trigrams,
+			fingerprint: "trigram/" + analyzerVersion,
+		}, nil
+	case ModeEn:
+		return &analyzer{
+			tokenize:    enTokens,
+			fingerprint: "en/" + analyzerVersion + "/porter2",
 		}, nil
 	case ModeJa:
 		return newJaAnalyzer(cfg.StopWords, cfg.StopTags)
@@ -103,14 +114,27 @@ func normalizeMap(s string) (rs []rune, from, to []int) {
 // bigrams returns the overlapping two-character grams of s. Grams containing
 // spaces, punctuation or symbols are skipped. Searching for the bigrams of a
 // term as a phrase matches the term as a substring.
-func bigrams(s string) []token {
+func bigrams(s string) []token { return ngrams(s, 2) }
+
+// trigrams returns the overlapping three-character grams of s, as bigrams
+// does. A term of fewer than three characters has none.
+func trigrams(s string) []token { return ngrams(s, 3) }
+
+// ngrams returns the overlapping grams of n characters of s, skipping grams
+// containing spaces, punctuation or symbols.
+func ngrams(s string, n int) []token {
 	rs := []rune(s)
 	var ts []token
-	for i := 0; i+1 < len(rs); i++ {
-		if !isWordRune(rs[i]) || !isWordRune(rs[i+1]) {
+	run := 0 // word runes ending at i
+	for i, r := range rs {
+		if !isWordRune(r) {
+			run = 0
 			continue
 		}
-		ts = append(ts, token{text: string(rs[i : i+2]), start: i, end: i + 2})
+		run++
+		if run >= n {
+			ts = append(ts, token{text: string(rs[i+1-n : i+1]), start: i + 1 - n, end: i + 1})
+		}
 	}
 	return ts
 }
@@ -211,6 +235,65 @@ func LoadWordList(path string) ([]string, error) {
 	}
 	return list, s.Err()
 }
+
+// englishStopWords are the stop words of the en mode: those of Lucene's
+// English analyzer. The longer list of Snowball drops words that matter in
+// a search, such as not and only.
+var englishStopWords = map[string]bool{
+	"a": true, "an": true, "and": true, "are": true, "as": true, "at": true, "be": true,
+	"but": true, "by": true, "for": true, "if": true, "in": true, "into": true, "is": true,
+	"it": true, "no": true, "not": true, "of": true, "on": true, "or": true, "such": true,
+	"that": true, "the": true, "their": true, "then": true, "there": true, "these": true,
+	"they": true, "this": true, "to": true, "was": true, "will": true, "with": true,
+}
+
+// enTokens returns the tokens of the en mode, as Lucene's CJK analyzer does
+// with the stemming of its English analyzer: a run of letters and digits
+// other than Chinese, Japanese and Korean is a word, reduced to its stem by
+// the English stemmer of Snowball (Porter2), so that plans and planning both
+// match plan; English stop words are dropped. A run of Chinese, Japanese or
+// Korean characters is split into bigrams as in the bigram mode. An
+// apostrophe between letters stays in the word, so that the stemmer drops a
+// possessive 's.
+func enTokens(s string) []token {
+	rs := []rune(s)
+	var ts []token
+	for i := 0; i < len(rs); {
+		switch {
+		case isCJK(rs[i]):
+			j := i
+			for j < len(rs) && isCJK(rs[j]) {
+				j++
+			}
+			for k := i; k+1 < j; k++ {
+				ts = append(ts, token{text: string(rs[k : k+2]), start: k, end: k + 2})
+			}
+			i = j
+		case isWordRune(rs[i]):
+			j := i
+			for j < len(rs) && (isWordRune(rs[j]) && !isCJK(rs[j]) || isApostrophe(rs[j]) && j > i && j+1 < len(rs) && unicode.IsLetter(rs[j+1]) && !isCJK(rs[j+1])) {
+				j++
+			}
+			w := strings.ReplaceAll(string(rs[i:j]), "\u2019", "'")
+			if !englishStopWords[w] {
+				ts = append(ts, token{text: english.Stem(w, true), start: i, end: j})
+			}
+			i = j
+		default:
+			i++
+		}
+	}
+	return ts
+}
+
+// isCJK reports whether r is a Chinese, Japanese or Korean character, which
+// the en mode splits into bigrams instead of words.
+func isCJK(r rune) bool {
+	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul) ||
+		r == '\u30fc' || r == '\u3005' // the prolonged sound mark and the iteration mark
+}
+
+func isApostrophe(r rune) bool { return r == '\'' || r == '\u2019' }
 
 func isWordRune(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.Is(unicode.Mn, r)

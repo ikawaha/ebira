@@ -51,7 +51,7 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 	var (
 		notesDir = fs.String("notes", defaultNotesDir(), "notes directory: the notebooks, with the note YAML files, and "+store.ConfigFile+" (default: notes_dir of the settings file, else ./notes)")
 		addr     = fs.String("addr", defaultAddr(), "address to listen on")
-		search   = fs.String("search", "", "search mode: like, bigram, or ja (Japanese morphological analysis) (default: search in "+store.ConfigFile+" of the notes directory, else "+string(index.ModeBigram)+")")
+		search   = fs.String("search", "", "search mode: like, bigram, trigram, en (English words with their stems), or ja (Japanese morphological analysis) (default: search in "+store.ConfigFile+" of the notes directory, else "+string(index.ModeBigram)+")")
 		watchF   = fs.Bool("watch", settings.Watch == nil || *settings.Watch, "watch the notes directory and update the index on changes")
 		stopW    = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		stopT    = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")

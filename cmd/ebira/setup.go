@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -140,14 +141,9 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	case remoteNotes:
 		fmt.Fprintf(out, "Found notes in %s; they are cloned, with their settings.\n", url)
 	default:
-		fmt.Fprintln(out, "\nSearch mode: ja analyzes Japanese into words, so that a search finds other forms of a word,\nsuch as the past tense of a verb, and also matches characters as bigram does.\nbigram only matches characters; it is enough for notes mostly in English.")
-		ja, err := confirm(r, out, "Use ja", true)
-		if err != nil {
+		fmt.Fprintln(out, "\nSearch mode:\n  ja      analyzes Japanese into words, so that a search finds other forms of a word, such as\n          the past tense of a verb; for notes mostly in Japanese.\n  en      takes English words with their stems, so that plan finds plans and planning, and\n          Japanese text as pairs of characters; for notes mostly in English.\n  bigram  matches pairs of characters only, in any language, including parts of words.\n  trigram matches runs of three characters, as bigram does; a term of one or two characters,\n          such as many Japanese words, is searched more slowly, through every note.\nAfter their own matches, ja also matches pairs of characters, and en runs of three characters.")
+		if mode, err = askMode(r, out); err != nil {
 			return "", err
-		}
-		mode = string(index.ModeBigram)
-		if ja {
-			mode = string(index.ModeJa)
 		}
 	}
 	gitSync := ""
@@ -375,6 +371,26 @@ func askGitSync(r *bufio.Reader, out io.Writer) (string, error) {
 			return answer, nil
 		}
 		fmt.Fprintf(out, "Answer a duration of at least %s, such as 10m or 1h, or 0.\n", minGitSync)
+	}
+}
+
+// askMode asks for the search mode. The default is ja when $LANG is
+// Japanese, else en.
+func askMode(r *bufio.Reader, out io.Writer) (string, error) {
+	def := string(index.ModeEn)
+	if strings.HasPrefix(os.Getenv("LANG"), "ja") {
+		def = string(index.ModeJa)
+	}
+	modes := []string{string(index.ModeJa), string(index.ModeEn), string(index.ModeBigram), string(index.ModeTrigram)}
+	for {
+		answer, err := ask(r, out, "Search mode ("+strings.Join(modes, "/")+")", def)
+		if err != nil {
+			return "", err
+		}
+		if m := strings.ToLower(answer); slices.Contains(modes, m) {
+			return m, nil
+		}
+		fmt.Fprintf(out, "Answer one of %s.\n", strings.Join(modes, ", "))
 	}
 }
 

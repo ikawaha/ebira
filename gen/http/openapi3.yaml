@@ -1495,7 +1495,7 @@ paths:
             tags:
                 - notes
             summary: search notes
-            description: Search notes. The search mode (like, bigram or ja, Japanese morphological analysis) is set by the server configuration.
+            description: Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.
             operationId: notes#search
             parameters:
                 - name: q
@@ -1549,7 +1549,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/SearchResult'
                             example:
-                                mode: like
+                                mode: ja
                                 notes:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
@@ -3049,10 +3049,12 @@ components:
                 mode:
                     type: string
                     description: Search mode used
-                    example: like
+                    example: ja
                     enum:
                         - like
                         - bigram
+                        - trigram
+                        - en
                         - ja
                 notes:
                     type: array
@@ -3141,7 +3143,7 @@ components:
                     example: 5184544928014764202
                     format: int64
             example:
-                mode: like
+                mode: ja
                 notes:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai

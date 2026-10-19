@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ikawaha/kagome-dict/ipa v1.2.6
 	github.com/ikawaha/kagome/v2 v2.11.0
+	github.com/kljensen/snowball v0.10.0
 	go.opentelemetry.io/otel v1.47.0
 	goa.design/goa-ai v0.88.0
 	goa.design/goa/v3 v3.34.1-0.20261009061557-9fd65ad2c943

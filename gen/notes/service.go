@@ -38,8 +38,9 @@ type Service interface {
 	// Move a note to the trash, or delete it permanently if it is already in the
 	// trash.
 	Delete(context.Context, *DeletePayload) (err error)
-	// Search notes. The search mode (like, bigram or ja, Japanese morphological
-	// analysis) is set by the server configuration.
+	// Search notes. The search mode (like, bigram, trigram, en, English words with
+	// their stems, or ja, Japanese morphological analysis) is set by the server
+	// configuration.
 	Search(context.Context, *SearchPayload) (res *SearchResult, err error)
 	// Move a note from the trash back to the notebook it was in.
 	Restore(context.Context, *RestorePayload) (res *Note, err error)
@@ -1450,8 +1451,8 @@ func validatejsonSearchResultTransport(value *jsonSearchResultTransport) (err er
 		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "body"))
 	}
 	if value.Mode != nil {
-		if !(*value.Mode == "like" || *value.Mode == "bigram" || *value.Mode == "ja") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *value.Mode, []any{"like", "bigram", "ja"}))
+		if !(*value.Mode == "like" || *value.Mode == "bigram" || *value.Mode == "trigram" || *value.Mode == "en" || *value.Mode == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *value.Mode, []any{"like", "bigram", "trigram", "en", "ja"}))
 		}
 	}
 	for _, e := range value.Notes {
@@ -2000,8 +2001,8 @@ func validateSearchResultOriginal(value *SearchResult) (err error) {
 	if value.Notes == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "value"))
 	}
-	if !(value.Mode == "like" || value.Mode == "bigram" || value.Mode == "ja") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.mode", value.Mode, []any{"like", "bigram", "ja"}))
+	if !(value.Mode == "like" || value.Mode == "bigram" || value.Mode == "trigram" || value.Mode == "en" || value.Mode == "ja") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.mode", value.Mode, []any{"like", "bigram", "trigram", "en", "ja"}))
 	}
 	for _, e := range value.Notes {
 		if e != nil {

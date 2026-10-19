@@ -126,8 +126,8 @@ func ValidateSearchResultTransport(body *SearchResultTransport) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "body"))
 	}
 	if body.Mode != nil {
-		if !(*body.Mode == "like" || *body.Mode == "bigram" || *body.Mode == "ja") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *body.Mode, []any{"like", "bigram", "ja"}))
+		if !(*body.Mode == "like" || *body.Mode == "bigram" || *body.Mode == "trigram" || *body.Mode == "en" || *body.Mode == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *body.Mode, []any{"like", "bigram", "trigram", "en", "ja"}))
 		}
 	}
 	for _, e := range body.Notes {

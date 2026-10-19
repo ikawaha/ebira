@@ -30,18 +30,40 @@ const (
 	// ModeBigram indexes character bigrams in FTS5 and searches substrings.
 	// Terms shorter than two characters are searched with LIKE.
 	ModeBigram Mode = "bigram"
+	// ModeTrigram indexes character trigrams in FTS5 and searches substrings,
+	// as the bigram mode does. Terms shorter than three characters, such as
+	// many Japanese words, are searched with LIKE.
+	ModeTrigram Mode = "trigram"
+	// ModeEn indexes English text as words reduced to their stems, and
+	// Chinese, Japanese and Korean text as bigrams, in FTS5 (see enTokens).
+	// It also searches the trigram table, for parts of words.
+	ModeEn Mode = "en"
 	// ModeJa indexes Japanese text split into morphemes (by kagome) in FTS5 and
 	// searches by morpheme. Stop words and stop tags are dropped.
 	ModeJa Mode = "ja"
 )
 
+// ngram returns the mode of the n-gram table that the mode keeps besides its
+// own, for the substrings that its tokens miss, or "" for none: bigrams for
+// the ja mode, and trigrams for the en mode, whose own table has the bigrams
+// of Japanese text.
+func (m Mode) ngram() Mode {
+	switch m {
+	case ModeJa:
+		return ModeBigram
+	case ModeEn:
+		return ModeTrigram
+	}
+	return ""
+}
+
 // ParseMode parses s as a Mode.
 func ParseMode(s string) (Mode, error) {
 	switch m := Mode(s); m {
-	case ModeLike, ModeBigram, ModeJa:
+	case ModeLike, ModeBigram, ModeTrigram, ModeEn, ModeJa:
 		return m, nil
 	}
-	return "", fmt.Errorf("unknown search mode %q (like, bigram, ja)", s)
+	return "", fmt.Errorf("unknown search mode %q (like, bigram, trigram, en, ja)", s)
 }
 
 // Summary is an entry of a list or search result.
@@ -80,7 +102,8 @@ type Index struct {
 	mode Mode
 	an   *analyzer // nil in the like mode
 	// fts lists the full-text tables: notes_fts for the search mode (none in
-	// the like mode) and, in the ja mode, notes_bigram. Search merges
+	// the like mode) and, in the ja and en modes, an n-gram table (see
+	// Mode.ngram). Search merges
 	// their results in this order.
 	fts []ftsTable
 }
@@ -92,10 +115,16 @@ type ftsTable struct {
 	an   *analyzer
 }
 
-// bigramTable is kept besides the morpheme table of the ja mode, so that search also finds
+// ngramTables are the n-gram tables kept besides the table of a mode (see
+// Mode.ngram): the bigram table of the ja mode, so that search also finds
 // substrings that morphemes miss, such as a city name inside a longer
-// administrative name that the dictionary takes as one word.
-const bigramTable = "notes_bigram"
+// administrative name that the dictionary takes as one word, and the trigram
+// table of the en mode, for parts of English words, such as a word being
+// typed. key is the key in meta of the analyzer fingerprint.
+var ngramTables = map[Mode]struct{ name, key string }{
+	ModeBigram:  {"notes_bigram", "bigram"},
+	ModeTrigram: {"notes_trigram", "trigram"},
+}
 
 var (
 	//go:embed sql/schema.sql
@@ -121,13 +150,14 @@ func Open(ctx context.Context, path string, cfg Config) (*Index, error) {
 	if an != nil {
 		ix.fts = append(ix.fts, ftsTable{name: "notes_fts", key: "fts", an: an})
 	}
-	if cfg.Mode == ModeJa {
-		bi, err := newAnalyzer(Config{Mode: ModeBigram})
+	if g := cfg.Mode.ngram(); g != "" {
+		an, err := newAnalyzer(Config{Mode: g})
 		if err != nil {
 			db.Close()
 			return nil, err
 		}
-		ix.fts = append(ix.fts, ftsTable{name: bigramTable, key: "bigram", an: bi})
+		t := ngramTables[g]
+		ix.fts = append(ix.fts, ftsTable{name: t.name, key: t.key, an: an})
 	}
 	if err := ix.migrate(ctx); err != nil {
 		db.Close()
@@ -152,7 +182,7 @@ func (ix *Index) migrate(ctx context.Context) error {
 		return err
 	}
 	if v != schemaVersion {
-		for _, t := range []string{"notes_fts", bigramTable, "note_tags", "notes", "meta"} {
+		for _, t := range []string{"notes_fts", ngramTables[ModeBigram].name, ngramTables[ModeTrigram].name, "note_tags", "notes", "meta"} {
 			if _, err := ix.db.ExecContext(ctx, `DROP TABLE IF EXISTS `+t); err != nil {
 				return err
 			}
@@ -172,13 +202,19 @@ func (ix *Index) migrate(ctx context.Context) error {
 	if err := ix.migrateFTS(ctx, main, mainFP); err != nil {
 		return err
 	}
-	bigram := ftsTable{name: bigramTable, key: "bigram"} // only in the ja mode
-	bigramFP := ""
-	if len(ix.fts) > 1 {
-		bigram = ix.fts[1]
-		bigramFP = bigram.an.fingerprint
+	// The n-gram table of the mode, if any, is kept up to date, and the
+	// other one is dropped.
+	for _, g := range []Mode{ModeBigram, ModeTrigram} {
+		t := ftsTable{name: ngramTables[g].name, key: ngramTables[g].key}
+		fp := ""
+		if len(ix.fts) > 1 && ix.fts[1].name == t.name {
+			t, fp = ix.fts[1], ix.fts[1].an.fingerprint
+		}
+		if err := ix.migrateFTS(ctx, t, fp); err != nil {
+			return err
+		}
 	}
-	return ix.migrateFTS(ctx, bigram, bigramFP)
+	return nil
 }
 
 // migrateFTS rebuilds the full-text table t when the fingerprint stored for it
@@ -610,8 +646,9 @@ func (ix *Index) TrashedNotebookCounts(ctx context.Context) (map[string]int, err
 
 // Search finds notes in notebook (all but the trash and exclude if empty) matching q,
 // whose space-separated terms are combined with AND. total is the number of
-// matched notes. In the ja mode, notes found only by bigrams (substrings
-// that morphemes miss) follow the notes found by morphemes.
+// matched notes. In the ja and en modes, notes found only by bigrams
+// (substrings that morphemes or words miss) follow the notes found by
+// morphemes or words.
 func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int, exclude ...string) (res []*Summary, total int, err error) {
 	terms := strings.Fields(q)
 	if len(terms) == 0 {

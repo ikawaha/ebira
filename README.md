@@ -63,7 +63,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 ## Features
 
 - **YAML notes in folders** — `<notebook>/<id>.yaml` in your notes directory. Comments and unknown keys survive every update. Images live next to their note.
-- **Three search modes** — `bigram` (default), `ja` (Japanese morphological analysis with [kagome](https://github.com/ikawaha/kagome), plus bigrams), and `like`. Matches are highlighted in the list and the note.
+- **Five search modes** — `bigram` (default), `trigram`, `ja` (Japanese morphological analysis with [kagome](https://github.com/ikawaha/kagome), plus bigrams), `en` (English words with their stems, plus trigrams), and `like`. Matches are highlighted in the list and the note.
 - **Sync with Dropbox, iCloud Drive and the like** — keep the notes in a synced folder; the conflicted copies the services leave become notes, so no change is hidden.
 - **Sync with git, if you like** — `ebira sync`, a menu item, or every few minutes: commit, merge and push in one step. A note changed on two machines never ends in conflict markers; the other version becomes a new note.
 - **Always up to date** — the index follows file changes (fsnotify), so `git pull` or another editor just works. The index is a cache: delete it and it is rebuilt.
@@ -151,7 +151,7 @@ Flags of `serve` (also taken by `server start` and `server restart`):
 | --- | --- | --- |
 | `-notes` | `notes_dir` of the settings file, else `./notes` | The notes directory |
 | `-addr` | `localhost:8080` | Address to listen on |
-| `-search` | `search` of `_ebira.yaml` in the notes directory, else `bigram` | `like`, `bigram` or `ja` |
+| `-search` | `search` of `_ebira.yaml` in the notes directory, else `bigram` | `like`, `bigram`, `trigram`, `en` or `ja` |
 | `-watch` | `true` | Watch the notes and update the index |
 | `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` (the TUI takes `ebira -lang` or `lang` of the settings file, else `$LANG`) |
 | `-provider`, `-model` | the provider whose API key is set | Model of the assistant: `anthropic` or `gemini` |
@@ -213,7 +213,9 @@ When a note is changed on two machines, the service keeps one version and leaves
 | Mode | How | Good for |
 | --- | --- | --- |
 | `bigram` | Splits text into overlapping pairs of characters | Any language; finds any substring of two or more characters |
+| `trigram` | Splits text into overlapping runs of three characters | Any language, with a smaller choice of matches for long terms; a term of one or two characters, such as many Japanese words, is searched through every note, more slowly |
 | `ja` | Splits Japanese into words with kagome, with the verbs and adjectives in their base form, and also searches bigrams | Notes in Japanese: a search for a verb finds its other forms |
+| `en` | Takes English words with their stems (the Snowball English stemmer), without stop words such as *the* and *of*, and Japanese as bigrams; also searches trigrams, for parts of words | Notes in English: *plan* finds *plans* and *planning*, and a word being typed is still found |
 | `like` | SQL `LIKE` | Small collections |
 
 Text is normalized with NFKC and lowercased, so full-width and half-width characters, and upper and lower case, match each other. Set the mode for all your machines in `_ebira.yaml` of the notes directory:

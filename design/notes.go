@@ -167,7 +167,7 @@ var NoteList = Type("NoteList", func() {
 
 var SearchResult = Type("SearchResult", func() {
 	RequiredAttribute("mode", String, "Search mode used", func() {
-		Enum("like", "bigram", "ja")
+		Enum("like", "bigram", "trigram", "en", "ja")
 	})
 	RequiredAttribute("total", Int, "Number of matched notes")
 	RequiredAttribute("notes", ArrayOf(NoteSummary), "Matched notes")
@@ -382,7 +382,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("search", func() {
-		Description("Search notes. The search mode (like, bigram or ja, Japanese morphological analysis) is set by the server configuration.")
+		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
 			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND", func() {
 				MinLength(1)

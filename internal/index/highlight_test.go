@@ -51,6 +51,14 @@ func TestHighlight(t *testing.T) {
 		{ModeBigram, "ab-cd", "ab cd abcd", "[ab cd] abcd"},
 		{ModeBigram, "雨 天気", "天気は雨", "[天気]は[雨]"},
 		{ModeBigram, "雨", "雨雨", "[雨雨]"},
+		// Trigrams match substrings of three or more characters; shorter terms
+		// match as substrings of the text, as the LIKE search does.
+		{ModeTrigram, "東京都", "東京都と京都", "[東京都]と京都"},
+		{ModeTrigram, "京都", "東京都と京都", "東[京都]と[京都]"},
+		// A stem matches other forms of an English word.
+		{ModeEn, "plan", "Planning plans", "[Planning] [plans]"},
+		{ModeEn, "studies", "I studied it", "I [studied] it"},
+		{ModeEn, "京都", "東京都と京都", "東[京都]と[京都]"},
 		// A base form matches inflected forms.
 		{ModeJa, "書く", "書いた手紙を書きます", "[書い]た手紙を[書き]ます"},
 		{ModeJa, "京都", "東京都と京都", "東京都と[京都]"},

@@ -13,6 +13,14 @@ func TestAnalyzer(t *testing.T) {
 		{"bigram skips symbols", Config{Mode: ModeBigram}, "C++ と Go", "go"},
 		{"bigram NFKC width", Config{Mode: ModeBigram}, "ＡＢＣとｶﾞｷﾞ", "ab bc cと とガ ガギ"},
 		{"bigram NFKC composition", Config{Mode: ModeBigram}, "がき", "がき"},
+		{"trigram", Config{Mode: ModeTrigram}, "東京都庁", "東京都 京都庁"},
+		{"trigram skips symbols and short runs", Config{Mode: ModeTrigram}, "C++ と Go と rust", "rus ust"},
+		{"trigram of two characters", Config{Mode: ModeTrigram}, "京都", ""},
+		{"en words, stems and stop words", Config{Mode: ModeEn}, "The planning of a new plan", "plan new plan"},
+		{"en possessive and inflections", Config{Mode: ModeEn}, "John's plans: studies, studying", "john plan studi studi"},
+		{"en Japanese as bigrams", Config{Mode: ModeEn}, "Go言語のv2対応", "go 言語 語の v2 対応"},
+		{"en NFKC width", Config{Mode: ModeEn}, "ＰＬＡＮＳとｶﾞｷﾞ", "plan とガ ガギ"},
+		{"en only stop words", Config{Mode: ModeEn}, "the", ""},
 		{"ja default stop tags, stop words and base forms", Config{Mode: ModeJa}, "東京都の天気を書いた", "東京 都 天気 書く"},
 		{"ja default stop words", Config{Mode: ModeJa}, "これはペンです", "ペン"},
 		{"ja only stop words", Config{Mode: ModeJa}, "の", ""},
@@ -50,6 +58,8 @@ func TestAnalyzerFingerprint(t *testing.T) {
 	}
 	for _, cfg := range []Config{
 		{Mode: ModeBigram},
+		{Mode: ModeTrigram},
+		{Mode: ModeEn},
 		{Mode: ModeJa, StopWords: []string{"天気"}},
 		{Mode: ModeJa, StopTags: []string{"助詞"}},
 		{Mode: ModeJa, StopWords: []string{}},

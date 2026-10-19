@@ -1182,8 +1182,8 @@ func ValidateSearchResultTransport(value *SearchResultTransport) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "body"))
 	}
 	if value.Mode != nil {
-		if !(*value.Mode == "like" || *value.Mode == "bigram" || *value.Mode == "ja") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *value.Mode, []any{"like", "bigram", "ja"}))
+		if !(*value.Mode == "like" || *value.Mode == "bigram" || *value.Mode == "trigram" || *value.Mode == "en" || *value.Mode == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.mode", *value.Mode, []any{"like", "bigram", "trigram", "en", "ja"}))
 		}
 	}
 	for _, e := range value.Notes {

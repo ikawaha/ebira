@@ -473,7 +473,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    create: Create a note. A random ID is assigned when id is omitted, and the note goes to the inbox when notebook is omitted. A new notebook is created on demand.`)
 	fmt.Fprintln(os.Stderr, `    update: Update a note. Omitted attributes are left unchanged. Setting notebook moves the note; use delete to move it to the trash.`)
 	fmt.Fprintln(os.Stderr, `    delete: Move a note to the trash, or delete it permanently if it is already in the trash.`)
-	fmt.Fprintln(os.Stderr, `    search: Search notes. The search mode (like, bigram or ja, Japanese morphological analysis) is set by the server configuration.`)
+	fmt.Fprintln(os.Stderr, `    search: Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.`)
 	fmt.Fprintln(os.Stderr, `    restore: Move a note from the trash back to the notebook it was in.`)
 	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
 	fmt.Fprintln(os.Stderr, `    notebooks: List notebooks with their note counts: inbox first, then the others by order and name, trash last.`)
@@ -616,7 +616,7 @@ func notesSearchUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Search notes. The search mode (like, bigram or ja, Japanese morphological analysis) is set by the server configuration.`)
+	fmt.Fprintln(os.Stderr, `Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -q STRING: `)
