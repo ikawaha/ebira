@@ -185,5 +185,8 @@
   "themeDark": "ダーク",
   "statusConnecting": "接続しています",
   "statusLive": "接続中",
-  "statusOffline": "切断"
+  "statusOffline": "切断",
+  "moveTo": "ノートブックへ移す…",
+  "moveToTitle": "ノートをゴミ箱から出して、ノートブックへ移す",
+  "confirmMovePrivate": "「{title}」は private のノートブックにあったノートです。{notebook} へ移すと AI が読めるようになります。移しますか？"
 }

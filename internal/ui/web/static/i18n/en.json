@@ -185,5 +185,8 @@
   "themeDark": "Dark",
   "statusConnecting": "connecting",
   "statusLive": "live",
-  "statusOffline": "offline"
+  "statusOffline": "offline",
+  "moveTo": "Move to…",
+  "moveToTitle": "Take the note out of the trash into a notebook",
+  "confirmMovePrivate": "\"{title}\" was in a private notebook. Moved to {notebook}, AI clients will be able to read it. Move it?"
 }

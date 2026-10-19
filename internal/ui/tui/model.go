@@ -51,6 +51,7 @@ const (
 	promptUnprivate     // confirmation to show a private notebook to AI
 	promptTrashNotebook // confirmation to move the selected notebook into the trash
 	promptPurgeNotebook // confirmation to delete the selected notebook in the trash permanently
+	promptMovePrivate   // confirmation to move a note of a private notebook where AI can read it
 )
 
 const searchDebounce = 150 * time.Millisecond
@@ -91,6 +92,10 @@ type Model struct {
 	promptIn  textinput.Model
 	addKind   string // kind of the notebook promptAddNotebook creates
 	newKind   string // kind chosen at promptNotebookKind, waiting for promptUnprivate
+	// toMove is a note in the trash being moved to a notebook chosen in the
+	// notebook pane (m), and moveTo the notebook waiting for promptMovePrivate.
+	toMove *gennotes.Note
+	moveTo string
 
 	note     *gennotes.Note
 	noteQ    string  // query the note was loaded with, whose matches it highlights
@@ -233,11 +238,81 @@ const tagPrefix = "#"
 
 func tagOf(filter string) (string, bool) { return strings.CutPrefix(filter, tagPrefix) }
 
+// startMove starts moving note n, which is in the trash, to a notebook: the
+// notebook pane shows the notebooks to choose from.
+func (m *Model) startMove(n *gennotes.Note) {
+	m.toMove = n
+	if m.sideTags {
+		m.toggleSide()
+	}
+	m.focus = focusNotebooks
+	m.layout()
+	m.setStatus(statusInfo, "status.chooseMoveTarget", "title", n.Title)
+}
+
+// chooseMoveTarget moves the note being moved to the notebook under the
+// cursor, after asking when it would show a note of a private notebook to AI.
+func (m *Model) chooseMoveTarget() tea.Cmd {
+	row := m.selectedRow()
+	_, tag := tagOf(row.id)
+	_, trashed := trashedID(row.id)
+	if row.id == "" || row.id == trashNotebook || tag || trashed {
+		m.setStatus(statusWarn, "status.moveTargetInvalid")
+		return nil
+	}
+	if m.noteKind(m.toMove) == "private" && row.kind != "private" {
+		m.prompt, m.moveTo = promptMovePrivate, row.id
+		return nil
+	}
+	return m.moveNoteTo(row.id)
+}
+
+// moveNoteTo moves the note being moved to notebook nb and shows nb.
+func (m *Model) moveNoteTo(nb string) tea.Cmd {
+	n := m.toMove
+	m.toMove = nil
+	m.focus = focusList
+	return m.notebookOp("status.noteMoved", nb, func(ctx context.Context) error {
+		_, err := m.api.Update(ctx, &gennotes.UpdatePayload{ID: n.ID, Notebook: &nb})
+		return err
+	})
+}
+
+// noteKind returns the kind of the notebook note n belongs to: for a note in
+// the trash, the notebook it was deleted from or with.
+func (m *Model) noteKind(n *gennotes.Note) string {
+	if n.TrashedNotebook != nil {
+		for _, nb := range m.trashed {
+			if nb.ID == *n.TrashedNotebook {
+				return nb.Kind
+			}
+		}
+	}
+	id := n.Notebook
+	if n.TrashedFrom != nil {
+		id = *n.TrashedFrom
+	}
+	for _, nb := range m.notebooks {
+		if nb.ID == id {
+			return nb.Kind
+		}
+	}
+	return ""
+}
+
 // trashedPrefix marks a notebook in the trash in the notebook filter and the
-// rows of the notebook pane. Its notes are not listed.
+// rows of the notebook pane. Its notes are listed to be read only: they are
+// edited, deleted and restored with the notebook as a whole, as in the web UI.
 const trashedPrefix = "trash/"
 
 func trashedID(filter string) (string, bool) { return strings.CutPrefix(filter, trashedPrefix) }
+
+// inTrashedNotebook reports whether the list shows the notes of a notebook in
+// the trash.
+func (m *Model) inTrashedNotebook() bool {
+	_, ok := trashedID(m.notebook)
+	return ok
+}
 
 // notebookOp runs an operation on a notebook as a whole, showing the message
 // status of the catalog when it is done.
@@ -251,9 +326,8 @@ func (m *Model) notebookOp(status, show string, op func(ctx context.Context) err
 func (m *Model) loadList() tea.Cmd {
 	m.listSeq++
 	seq, q, ctx, api, allSort := m.listSeq, m.query, m.ctx, m.api, m.allSort
-	if _, ok := trashedID(m.notebook); ok {
-		// The notes of a notebook in the trash are not listed.
-		return func() tea.Msg { return listMsg{seq: seq, items: []*gennotes.NoteSummary{}} }
+	if tid, ok := trashedID(m.notebook); ok {
+		return func() tea.Msg { return loadTrashedNotebook(ctx, api, tid, q, seq) }
 	}
 	var nb, tag *string
 	if t, ok := tagOf(m.notebook); ok {
@@ -277,6 +351,28 @@ func (m *Model) loadList() tea.Cmd {
 		}
 		return listMsg{seq: seq, items: res.Notes, total: res.Total, mode: res.Mode}
 	}
+}
+
+// loadTrashedNotebook lists the notes of notebook tid in the trash, or those
+// matching q. The search takes no notebook in the trash, so it searches the
+// trash and keeps the notes of tid.
+func loadTrashedNotebook(ctx context.Context, api *gennotes.Client, tid, q string, seq int) tea.Msg {
+	trash := trashNotebook
+	if q == "" {
+		items, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: &trash, TrashedNotebook: &tid})
+		return listMsg{seq: seq, items: items, total: total, err: err}
+	}
+	res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: &trash, Limit: 200})
+	if err != nil {
+		return listMsg{seq: seq, err: err}
+	}
+	items := []*gennotes.NoteSummary{}
+	for _, n := range res.Notes {
+		if n.TrashedNotebook != nil && *n.TrashedNotebook == tid {
+			items = append(items, n)
+		}
+	}
+	return listMsg{seq: seq, items: items, total: len(items), mode: res.Mode}
 }
 
 // listPage is the number of notes read at a time.
@@ -542,7 +638,7 @@ func (m *Model) moveNote(delta int) tea.Cmd {
 // defaultNotebook is the notebook for a new note: the selected one, or the
 // inbox when all notes or the trash are shown.
 func (m *Model) defaultNotebook() string {
-	if m.acrossNotebooks() || m.notebook == trashNotebook {
+	if m.acrossNotebooks() || m.notebook == trashNotebook || m.inTrashedNotebook() {
 		return inboxNotebook
 	}
 	return m.notebook
@@ -1117,6 +1213,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			})
 		}
 		return m, nil
+	case promptMovePrivate:
+		m.prompt = promptNone
+		if key == "y" {
+			return m, m.moveNoteTo(m.moveTo)
+		}
+		return m, nil // still choosing where to move the note
 	case promptUnprivate:
 		m.prompt = promptNone
 		if nb := m.selectedNotebook(); key == "y" && nb != nil {
@@ -1183,6 +1285,21 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Keys of the notebook pane that mean something else elsewhere.
+	if m.focus == focusNotebooks && m.toMove != nil {
+		// Choosing the notebook to move a note to: the cursor moves as usual.
+		switch key {
+		case "esc":
+			m.toMove = nil
+			m.focus = focusList
+			m.setStatus(statusInfo, "status.moveCancelled")
+			return m, nil
+		case "enter":
+			return m, m.chooseMoveTarget()
+		case "j", "k", "down", "up", "g", "G", "home", "end", "pgup", "pgdown":
+		default:
+			return m, nil
+		}
+	}
 	if m.focus == focusNotebooks {
 		switch key {
 		case "e":
@@ -1244,6 +1361,18 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.focus = focusSearch
 		return m, m.input.Focus()
+	case "e", "E":
+		if m.note != nil && m.inTrashedNotebook() {
+			m.setStatus(statusWarn, "status.trashedNotebookReadOnly")
+			return m, nil
+		}
+	case "m":
+		if m.note != nil && m.note.Notebook == trashNotebook {
+			m.startMove(m.note)
+		}
+		return m, nil
+	}
+	switch key {
 	case "n":
 		return m, m.openEditor(nil)
 	case "e":

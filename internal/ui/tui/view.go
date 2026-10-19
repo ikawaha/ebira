@@ -170,6 +170,9 @@ func (m *Model) renderPreview(keepOffset bool) {
 	title, _ := highlightANSI(lipgloss.NewStyle().Bold(true).Foreground(m.th.fg).Render(m.note.Title), highlightWords(m.note.Title, m.note.TitleHighlights), on)
 	b.WriteString("\n  " + title + "\n")
 	nb := m.notebookLabel(m.note.Notebook)
+	if m.note.TrashedNotebook != nil {
+		nb += " / " + strings.TrimPrefix(m.notebookName(trashedPrefix+*m.note.TrashedNotebook), "↳ ")
+	}
 	if m.note.TrashedFrom != nil {
 		nb += " " + m.tr.t("preview.from", "notebook", m.notebookLabel(*m.note.TrashedFrom))
 	}
@@ -529,6 +532,8 @@ func (m Model) renderFooter() string {
 			m.keys([][2]string{{"d", "kind.default"}, {"c", "kind.collab"}, {"w", "kind.drop"}, {"p", "kind.private"}, {"esc", "key.cancel"}})
 	case promptUnprivate:
 		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.unprivate"))
+	case promptMovePrivate:
+		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.movePrivate"))
 	case promptTrashNotebook:
 		row := m.selectedRow()
 		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.trashNotebook", "name", m.notebookName(row.id), "n", row.count))
@@ -565,11 +570,22 @@ func (m Model) renderFooter() string {
 		hints = append(hints, [2]string{"q", "key.quit"})
 	case focusNotebooks:
 		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
+		if m.toMove != nil {
+			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.moveHere"}, {"esc", "key.cancel"}}
+			break
+		}
+		if _, ok := trashedID(m.selectedRow().id); ok && !m.sideTags {
+			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"u", "key.restore"}, {"d", "key.deletePermanently"}, {"T", "key.tags"}, {"q", "key.quit"}}
+		}
 		if m.sideTags {
 			hints = [][2]string{{"j/k", "key.tag"}, {"enter", "key.notes"}, {"T", "key.notebooks"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		}
 	default:
 		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"s", "key.sort"}}
+		if m.inTrashedNotebook() {
+			// The notes of a notebook in the trash are read only.
+			hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"d", "key.deletePermanently"}, {"h", "key.notebooks"}}
+		}
 		if m.canReorder() {
 			hints = append(hints, [2]string{"J/K", "key.reorder"})
 		}
@@ -580,7 +596,7 @@ func (m Model) renderFooter() string {
 			hints = append(hints, [2]string{"ctrl+n/p", "key.match"})
 		}
 		if m.note != nil && m.note.Notebook == trashNotebook {
-			hints = append(hints, [2]string{"u", "key.restore"})
+			hints = append(hints, [2]string{"u", "key.restore"}, [2]string{"m", "key.moveTo"})
 		}
 		if !m.computeLayout().showNotebooks {
 			if m.sideTags {

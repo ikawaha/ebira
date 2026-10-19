@@ -1153,7 +1153,7 @@ function renderNotes() {
   for (const n of state.notes) {
     const li = el("li", n.id === state.selected ? "active" : "");
     li.dataset.id = n.id;
-    if (n.notebook !== "trash") enableDrag(li, reorder);
+    enableDrag(li, reorder && n.notebook !== "trash"); // a note in the trash can be moved to a notebook
     const head = el("div", "title-row", el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
     const mark = aiMark(n);
     if (mark) head.append(mark);
@@ -1238,6 +1238,7 @@ async function loadNote() {
   if (n.notebook === "trash") {
     actions.append(
       button(t("restore"), restoreNote, { title: t("restoreTitle") }),
+      moveSelect(n),
       button(t("deletePermanently"), deleteNote, { cls: "danger" }));
   } else {
     actions.append(
@@ -2017,8 +2018,11 @@ async function moveNoteTo(id, nb) {
     alert(t("moveWhileEditing"));
     return;
   }
-  const n = state.notes.find((x) => x.id === id);
+  const n = state.notes.find((x) => x.id === id) || (state.note?.id === id ? state.note : null);
   const title = n?.title || t("untitled");
+  const target = state.notebooks.find((x) => x.id === nb);
+  if (n && nb !== "trash" && noteKind(n) === "private" && target && target.kind !== "private" &&
+      !confirm(t("confirmMovePrivate", { title, notebook: target.name }))) return;
   try {
     if (nb === "trash") {
       await api(noteURL(id), { method: "DELETE" });
@@ -2027,6 +2031,10 @@ async function moveNoteTo(id, nb) {
     }
     if (nb === "trash") {
       offerUndo(t("toastTrashed", { title }), () => undoTrash(id));
+    } else if (n?.notebook === "trash") {
+      // Out of the trash: it cannot go back where it was, such as into a
+      // notebook in the trash, so there is no undo; it can be deleted again.
+      state.selected = null;
     } else if (n) {
       offerUndo(t("toastMoved", { title, notebook: notebookName(nb) }), async () => {
         await api(noteURL(id), { method: "PATCH", body: { notebook: n.notebook } });
@@ -2038,6 +2046,36 @@ async function moveNoteTo(id, nb) {
   }
   if (state.selected === id && nb === "trash") state.selected = null;
   refreshAfterWrite();
+}
+
+// noteKind returns the kind of the notebook note n belongs to: for a note in
+// the trash, the notebook it was deleted from or with.
+function noteKind(n) {
+  if (n.trashed_notebook) return state.trashed.find((x) => x.id === n.trashed_notebook)?.kind;
+  return state.notebooks.find((x) => x.id === (n.trashed_from || n.notebook))?.kind;
+}
+
+// moveSelect returns a menu to move note n, which is in the trash, to a
+// notebook.
+function moveSelect(n) {
+  const sel = el("select", "move-to");
+  sel.title = t("moveToTitle");
+  sel.setAttribute("aria-label", t("moveToTitle"));
+  const first = el("option", "", t("moveTo"));
+  first.value = "";
+  sel.append(first);
+  for (const nb of state.notebooks) {
+    if (nb.id === "trash") continue;
+    const o = el("option", "", nb.name + (kindIcon(nb.kind) ? " " + kindIcon(nb.kind) : ""));
+    o.value = nb.id;
+    sel.append(o);
+  }
+  sel.addEventListener("change", () => {
+    const nb = sel.value;
+    sel.value = "";
+    if (nb) moveNoteTo(n.id, nb);
+  });
+  return sel;
 }
 
 // Undo of the operations on notes and notebooks: after one, a bar offers to

@@ -789,3 +789,42 @@ func TestTrashNotebook(t *testing.T) {
 		t.Errorf("restoring into a notebook of another kind = %v, want bad_request", err)
 	}
 }
+
+// A note of a notebook in the trash can be moved to another notebook on its
+// own, which takes it out of the trash and leaves the notebook there.
+func TestMoveNoteOutOfTrashedNotebook(t *testing.T) {
+	ctx := AsPerson(context.Background())
+	svc, _ := newTestService(t)
+	for _, id := range []string{"a", "b"} {
+		if _, err := svc.Create(ctx, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("old"), Title: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := svc.Create(ctx, &gennotes.CreatePayload{ID: ptr("c"), Notebook: ptr("work"), Title: "c"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: "old"}); err != nil {
+		t.Fatal(err)
+	}
+	n, err := svc.Update(ctx, &gennotes.UpdatePayload{ID: "a", Notebook: ptr("work")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Notebook != "work" || n.TrashedNotebook != nil || n.TrashedFrom != nil {
+		t.Errorf("moved note = %+v", n)
+	}
+	trashed, err := svc.TrashedNotebooks(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trashed) != 1 || trashed[0].ID != "old" || trashed[0].Count != 1 {
+		t.Errorf("trashed notebooks = %+v, want old with 1 note", trashed)
+	}
+	list, err := svc.List(ctx, &gennotes.ListPayload{Notebook: ptr("work"), Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list.Total != 2 {
+		t.Errorf("work has %d notes, want 2", list.Total)
+	}
+}

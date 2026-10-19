@@ -418,6 +418,7 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 /* History of a note */
 
 dialog.history { max-width: min(960px, calc(100vw - 32px)); }
+.actions select.move-to { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 .history-note, .history-legend { color: var(--fg-muted); font-size: 12px; margin: 6px 0; }
 .history-body { display: flex; gap: 12px; align-items: flex-start; }
 .history-list { list-style: none; margin: 0; padding: 0; flex: 0 0 220px; max-height: 60vh; overflow-y: auto; border-right: 1px solid var(--border); }
