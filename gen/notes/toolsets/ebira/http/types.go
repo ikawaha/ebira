@@ -65,7 +65,7 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	CreateAiNotebookPayloadTransport struct {
-		// Display name
+		// Display name, in any language; the ID is derived from it
 		Name *string `json:"name"`
 	}
 	// CreateAiNotebookResultTransport is the internal JSON transport type for CreateAiNotebookResult.
@@ -73,7 +73,12 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	CreateAiNotebookResultTransport struct {
-		// Notebook ID, which is also its directory name
+		// Notebook ID, which is also its directory name. It is derived from the
+		// display name when the notebook is created: an ASCII name is lower-cased with
+		// dashes, and a name with other characters, such as Japanese, is
+		// Punycode-encoded into an ID that starts with xn--, as in internationalized
+		// domain names. Pass the ID as is wherever a notebook is asked for, and show
+		// people the name instead
 		ID *string `json:"id"`
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name *string `json:"name"`
@@ -399,7 +404,12 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	NotebookTransport struct {
-		// Notebook ID, which is also its directory name
+		// Notebook ID, which is also its directory name. It is derived from the
+		// display name when the notebook is created: an ASCII name is lower-cased with
+		// dashes, and a name with other characters, such as Japanese, is
+		// Punycode-encoded into an ID that starts with xn--, as in internationalized
+		// domain names. Pass the ID as is wherever a notebook is asked for, and show
+		// people the name instead
 		ID *string `json:"id"`
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name *string `json:"name"`

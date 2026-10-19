@@ -591,7 +591,7 @@ var createAiNotebookPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
 		JSONType:    "string",
-		Description: "Display name",
+		Description: "Display name, in any language; the ID is derived from it",
 	},
 }
 var createAiNotebookResultFields = []tools.FieldMetadata{
@@ -601,7 +601,7 @@ var createAiNotebookResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Notebook ID, which is also its directory name",
+		Description: "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
@@ -935,7 +935,7 @@ var listNotebooksResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Notebook ID, which is also its directory name",
+		Description: "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("name")},
@@ -4584,7 +4584,7 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Notebook ID, which is also its directory name",
+				typed[key], "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 			); err != nil {
 				return err
 			}
@@ -5081,7 +5081,7 @@ func validateCreateAiNotebookPayloadJSONValue(path string, value any, descriptio
 		case "name":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Display name",
+				typed[key], "Display name, in any language; the ID is derived from it",
 			); err != nil {
 				return err
 			}

@@ -306,7 +306,12 @@ type MoveResponseBody struct {
 // CreateNotebookResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body.
 type CreateNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name
+	// Notebook ID, which is also its directory name. It is derived from the
+	// display name when the notebook is created: an ASCII name is lower-cased with
+	// dashes, and a name with other characters, such as Japanese, is
+	// Punycode-encoded into an ID that starts with xn--, as in internationalized
+	// domain names. Pass the ID as is wherever a notebook is asked for, and show
+	// people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -332,7 +337,12 @@ type CreateNotebookResponseBody struct {
 // SaveNotebookResponseBody is the type of the "notes" service "save_notebook"
 // endpoint HTTP response body.
 type SaveNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name
+	// Notebook ID, which is also its directory name. It is derived from the
+	// display name when the notebook is created: an ASCII name is lower-cased with
+	// dashes, and a name with other characters, such as Japanese, is
+	// Punycode-encoded into an ID that starts with xn--, as in internationalized
+	// domain names. Pass the ID as is wherever a notebook is asked for, and show
+	// people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -358,7 +368,12 @@ type SaveNotebookResponseBody struct {
 // RestoreNotebookResponseBody is the type of the "notes" service
 // "restore_notebook" endpoint HTTP response body.
 type RestoreNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name
+	// Notebook ID, which is also its directory name. It is derived from the
+	// display name when the notebook is created: an ASCII name is lower-cased with
+	// dashes, and a name with other characters, such as Japanese, is
+	// Punycode-encoded into an ID that starts with xn--, as in internationalized
+	// domain names. Pass the ID as is wherever a notebook is asked for, and show
+	// people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -1196,7 +1211,12 @@ type TextRangeResponseBody struct {
 
 // NotebookResponse is used to define fields on response body types.
 type NotebookResponse struct {
-	// Notebook ID, which is also its directory name
+	// Notebook ID, which is also its directory name. It is derived from the
+	// display name when the notebook is created: an ASCII name is lower-cased with
+	// dashes, and a name with other characters, such as Japanese, is
+	// Punycode-encoded into an ID that starts with xn--, as in internationalized
+	// domain names. Pass the ID as is wherever a notebook is asked for, and show
+	// people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`

@@ -56,12 +56,17 @@ type (
 	}
 	// CreateAiNotebookPayload defines the JSON payload for the ebira.create_ai_notebook tool.
 	CreateAiNotebookPayload = struct {
-		// Display name
+		// Display name, in any language; the ID is derived from it
 		Name string
 	}
 	// CreateAiNotebookResult defines the JSON result for the ebira.create_ai_notebook tool.
 	CreateAiNotebookResult = struct {
-		// Notebook ID, which is also its directory name
+		// Notebook ID, which is also its directory name. It is derived from the
+		// display name when the notebook is created: an ASCII name is lower-cased with
+		// dashes, and a name with other characters, such as Japanese, is
+		// Punycode-encoded into an ID that starts with xn--, as in internationalized
+		// domain names. Pass the ID as is wherever a notebook is asked for, and show
+		// people the name instead
 		ID string
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name string
@@ -330,7 +335,12 @@ type (
 	}
 	// Notebook is a nested type used by the generated JSON contract.
 	Notebook = struct {
-		// Notebook ID, which is also its directory name
+		// Notebook ID, which is also its directory name. It is derived from the
+		// display name when the notebook is created: an ASCII name is lower-cased with
+		// dashes, and a name with other characters, such as Japanese, is
+		// Punycode-encoded into an ID that starts with xn--, as in internationalized
+		// domain names. Pass the ID as is wherever a notebook is asked for, and show
+		// people the name instead
 		ID string
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name string

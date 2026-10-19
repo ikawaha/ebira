@@ -53,7 +53,7 @@ var NoteSummary = Type("NoteSummary", func() {
 // Notebook is a directory of notes. inbox and trash always exist. The display
 // name and order are kept in notes/<id>/_notebook.yaml.
 var Notebook = Type("Notebook", func() {
-	RequiredAttribute("id", String, "Notebook ID, which is also its directory name", notebookIDDSL)
+	RequiredAttribute("id", String, "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead", notebookIDDSL)
 	RequiredAttribute("name", String, "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)")
 	RequiredAttribute("order", Int, "Sort key among the notebooks other than inbox and trash; lower comes first")
 	RequiredAttribute("count", Int, "Number of notes")
@@ -452,7 +452,7 @@ var _ = Service("notes", func() {
 		HTTP(func() {
 			GET("/notebooks")
 		})
-		Tool("list_notebooks", "List notebooks with their kinds and note counts", func() {
+		Tool("list_notebooks", "List notebooks with their kinds and note counts; other tools take a notebook by its id, and people know it by its name", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -667,9 +667,9 @@ var _ = Service("notes", func() {
 	})
 
 	Method("create_ai_notebook", func() {
-		Description("Create a new notebook of the collab kind, where AI clients may write notes. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that.")
+		Description("Create a new notebook of the collab kind, where AI clients may write notes. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that. The ID of the notebook is derived from the name: a name with characters other than ASCII gives an ID that starts with xn-- (Punycode), which is expected.")
 		Payload(func() {
-			RequiredAttribute("name", String, "Display name", func() {
+			RequiredAttribute("name", String, "Display name, in any language; the ID is derived from it", func() {
 				MinLength(1)
 				MaxLength(100)
 			})
@@ -677,7 +677,7 @@ var _ = Service("notes", func() {
 		Result(Notebook)
 		Error("bad_request", ErrorResult, "The name is empty")
 		Error("already_exists", ErrorResult, "A notebook with the name exists")
-		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes")
+		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes. Its ID is derived from the name; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people")
 	})
 
 	Method("make_notebook_private", func() {

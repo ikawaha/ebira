@@ -105,7 +105,9 @@ type Service interface {
 	DeleteAiNote(context.Context, *DeleteAiNotePayload) (err error)
 	// Create a new notebook of the collab kind, where AI clients may write notes.
 	// Existing notebooks cannot be turned into collab notebooks by AI clients;
-	// people do that.
+	// people do that. The ID of the notebook is derived from the name: a name with
+	// characters other than ASCII gives an ID that starts with xn-- (Punycode),
+	// which is expected.
 	CreateAiNotebook(context.Context, *CreateAiNotebookPayload) (res *Notebook, err error)
 	// Make a notebook private, so that AI clients can no longer see it or its
 	// notes. Only people can undo this.
@@ -221,7 +223,7 @@ type CreateAiNotePayload struct {
 // CreateAiNotebookPayload is the payload type of the notes service
 // create_ai_notebook method.
 type CreateAiNotebookPayload struct {
-	// Display name
+	// Display name, in any language; the ID is derived from it
 	Name string
 }
 
@@ -561,7 +563,12 @@ type NoteSummary struct {
 
 // Notebook is the result type of the notes service create_notebook method.
 type Notebook struct {
-	// Notebook ID, which is also its directory name
+	// Notebook ID, which is also its directory name. It is derived from the
+	// display name when the notebook is created: an ASCII name is lower-cased with
+	// dashes, and a name with other characters, such as Japanese, is
+	// Punycode-encoded into an ID that starts with xn--, as in internationalized
+	// domain names. Pass the ID as is wherever a notebook is asked for, and show
+	// people the name instead
 	ID string
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name string
@@ -1348,7 +1355,12 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 
 // jsonNotebookTransport stores JSON fields until they have been validated.
 type jsonNotebookTransport struct {
-	// Notebook ID, which is also its directory name
+	// Notebook ID, which is also its directory name. It is derived from the
+	// display name when the notebook is created: an ASCII name is lower-cased with
+	// dashes, and a name with other characters, such as Japanese, is
+	// Punycode-encoded into an ID that starts with xn--, as in internationalized
+	// domain names. Pass the ID as is wherever a notebook is asked for, and show
+	// people the name instead
 	ID *string `json:"id"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `json:"name"`
@@ -7135,7 +7147,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 		case "id":
 			if err := validateNotebookJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Notebook ID, which is also its directory name",
+				typed[key], "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 			); err != nil {
 				return err
 			}

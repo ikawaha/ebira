@@ -2045,7 +2045,7 @@ definitions:
                 format: int64
             id:
                 type: string
-                description: Notebook ID, which is also its directory name
+                description: 'Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead'
                 example: inbox
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
             kind:
