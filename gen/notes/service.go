@@ -135,6 +135,14 @@ type Service interface {
 	GetFile(context.Context, *GetFilePayload) (res *GetFileResult, body io.ReadCloser, err error)
 	// Delete a file of a note. The body may still refer to it.
 	DeleteFile(context.Context, *DeleteFilePayload) (err error)
+	// List the earlier versions of a note, newest first. A version is kept on this
+	// device whenever the title, tags or body is replaced, by a save or by a
+	// change of the file found by a sync; up to 50 per note, and those older than
+	// 30 days are dropped except the 5 newest. To put a version back, update the
+	// note with its content. For people only.
+	History(context.Context, *HistoryPayload) (res []*NoteVersionSummary, err error)
+	// Get an earlier version of a note from its history. For people only.
+	HistoryVersion(context.Context, *HistoryVersionPayload) (res *NoteVersion, err error)
 	// Check the files of notes against the note bodies: list the files that no
 	// body refers to, which can be deleted with delete_file, and the references to
 	// files that do not exist. A reference is <id>.assets/<name> anywhere in a
@@ -176,7 +184,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [32]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "git_status", "git_sync", "sync"}
+var MethodNames = [34]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -386,6 +394,21 @@ type GitSyncResult struct {
 	Errors []string
 }
 
+// HistoryPayload is the payload type of the notes service history method.
+type HistoryPayload struct {
+	// Note ID
+	ID string
+}
+
+// HistoryVersionPayload is the payload type of the notes service
+// history_version method.
+type HistoryVersionPayload struct {
+	// Note ID
+	ID string
+	// ID of the version
+	Rev string
+}
+
 // ImportAiNotePayload is the payload type of the notes service import_ai_note
 // method.
 type ImportAiNotePayload struct {
@@ -577,6 +600,33 @@ type NoteSummary struct {
 	// Ranges of the snippet matched by the query, sorted and not overlapping
 	// (search only)
 	SnippetHighlights []*TextRange
+}
+
+// NoteVersion is the result type of the notes service history_version method.
+type NoteVersion struct {
+	// ID of the version among those of the note
+	Rev string
+	// Title of the version
+	Title string
+	// Last update time of the version
+	UpdatedAt string
+	// When the version was replaced by a newer one
+	ReplacedAt string
+	// Tags of the version
+	Tags []string
+	// Body of the version in Markdown
+	Body string
+}
+
+type NoteVersionSummary struct {
+	// ID of the version among those of the note
+	Rev string
+	// Title of the version
+	Title string
+	// Last update time of the version
+	UpdatedAt string
+	// When the version was replaced by a newer one
+	ReplacedAt string
 }
 
 // Notebook is the result type of the notes service create_notebook method.
@@ -1371,6 +1421,98 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 	return err
 }
 
+// jsonNoteVersionSummaryTransport stores JSON fields until they have been validated.
+type jsonNoteVersionSummaryTransport struct {
+	// ID of the version among those of the note
+	Rev *string `json:"rev"`
+	// Title of the version
+	Title *string `json:"title"`
+	// Last update time of the version
+	UpdatedAt *string `json:"updated_at"`
+	// When the version was replaced by a newer one
+	ReplacedAt *string `json:"replaced_at"`
+}
+
+// validatejsonNoteVersionSummaryTransport checks decoded JSON before it becomes a service value.
+func validatejsonNoteVersionSummaryTransport(value *jsonNoteVersionSummaryTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if value.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", "body"))
+	}
+	if value.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.rev", *value.Rev, "^[0-9]{1,20}$"))
+	}
+	if value.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
+	}
+	if value.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *value.ReplacedAt, goa.FormatDateTime))
+	}
+	return err
+}
+
+// jsonNoteVersionTransport stores JSON fields until they have been validated.
+type jsonNoteVersionTransport struct {
+	// ID of the version among those of the note
+	Rev *string `json:"rev"`
+	// Title of the version
+	Title *string `json:"title"`
+	// Last update time of the version
+	UpdatedAt *string `json:"updated_at"`
+	// When the version was replaced by a newer one
+	ReplacedAt *string `json:"replaced_at"`
+	// Tags of the version
+	Tags []string `json:"tags"`
+	// Body of the version in Markdown
+	Body *string `json:"body"`
+}
+
+// validatejsonNoteVersionTransport checks decoded JSON before it becomes a service value.
+func validatejsonNoteVersionTransport(value *jsonNoteVersionTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if value.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", "body"))
+	}
+	if value.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "body"))
+	}
+	if value.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
+	}
+	if value.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.rev", *value.Rev, "^[0-9]{1,20}$"))
+	}
+	if value.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
+	}
+	if value.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *value.ReplacedAt, goa.FormatDateTime))
+	}
+	return err
+}
+
 // jsonNotebookTransport stores JSON fields until they have been validated.
 type jsonNotebookTransport struct {
 	// Notebook ID, which is also its directory name. It is derived from the
@@ -1998,6 +2140,25 @@ func validateNoteSummaryOriginal2(value *NoteSummary) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.created_by", *value.CreatedBy, []any{"ai"}))
 		}
 	}
+	return err
+}
+
+// validateNoteVersionOriginal checks the original typed value before JSON conversion.
+func validateNoteVersionOriginal(value *NoteVersion) (err error) {
+	if value.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
+	}
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.rev", value.Rev, "^[0-9]{1,20}$"))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.replaced_at", value.ReplacedAt, goa.FormatDateTime))
+	return err
+}
+
+// validateNoteVersionSummaryOriginal checks the original typed value before JSON conversion.
+func validateNoteVersionSummaryOriginal(value *NoteVersionSummary) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.rev", value.Rev, "^[0-9]{1,20}$"))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.replaced_at", value.ReplacedAt, goa.FormatDateTime))
 	return err
 }
 
@@ -2974,6 +3135,140 @@ func DecodeNoteSummary(data []byte) (out *NoteSummary, err error) {
 				}
 				out.SnippetHighlights[i] = decodeTextRangeTransportToTextRange8(val)
 			}
+		}
+	}
+	return out, nil
+}
+
+// EncodeNoteVersion turns a service value into JSON using the field names in the Goa design.
+func EncodeNoteVersion(in *NoteVersion) ([]byte, error) {
+	if err := checkNoteVersionValue(in); err != nil {
+		return nil, fmt.Errorf("encode NoteVersion JSON: %w", err)
+	}
+	if err := validateNoteVersionOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate NoteVersion value: %w", err)
+	}
+	var body *jsonNoteVersionTransport
+	{
+		body = &jsonNoteVersionTransport{
+			Rev:        &in.Rev,
+			Title:      &in.Title,
+			UpdatedAt:  &in.UpdatedAt,
+			ReplacedAt: &in.ReplacedAt,
+			Body:       &in.Body,
+		}
+		body.Tags = make([]string, len(in.Tags))
+		for i, val := range in.Tags {
+			body.Tags[i] = val
+		}
+	}
+	if err := validatejsonNoteVersionTransport(body); err != nil {
+		return nil, fmt.Errorf("validate NoteVersion JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode NoteVersion JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeNoteVersion checks JSON field names from the Goa design and returns a service value.
+func DecodeNoteVersion(data []byte) (out *NoteVersion, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode NoteVersion JSON: %w", err)
+	}
+	if err := validateNoteVersionJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode NoteVersion JSON: %w", err)
+	}
+	var body *jsonNoteVersionTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode NoteVersion JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode NoteVersion JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode NoteVersion JSON after first value: %w", err)
+	}
+	if err := validatejsonNoteVersionTransport(body); err != nil {
+		return out, fmt.Errorf("validate NoteVersion JSON: %w", err)
+	}
+	{
+		out = &NoteVersion{
+			Rev:        *body.Rev,
+			Title:      *body.Title,
+			UpdatedAt:  *body.UpdatedAt,
+			ReplacedAt: *body.ReplacedAt,
+			Body:       *body.Body,
+		}
+		out.Tags = make([]string, len(body.Tags))
+		for i, val := range body.Tags {
+			out.Tags[i] = val
+		}
+	}
+	return out, nil
+}
+
+// EncodeNoteVersionSummary turns a service value into JSON using the field names in the Goa design.
+func EncodeNoteVersionSummary(in *NoteVersionSummary) ([]byte, error) {
+	if err := checkNoteVersionSummaryValue(in); err != nil {
+		return nil, fmt.Errorf("encode NoteVersionSummary JSON: %w", err)
+	}
+	if err := validateNoteVersionSummaryOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate NoteVersionSummary value: %w", err)
+	}
+	var body *jsonNoteVersionSummaryTransport
+	{
+		body = &jsonNoteVersionSummaryTransport{
+			Rev:        &in.Rev,
+			Title:      &in.Title,
+			UpdatedAt:  &in.UpdatedAt,
+			ReplacedAt: &in.ReplacedAt,
+		}
+	}
+	if err := validatejsonNoteVersionSummaryTransport(body); err != nil {
+		return nil, fmt.Errorf("validate NoteVersionSummary JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode NoteVersionSummary JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeNoteVersionSummary checks JSON field names from the Goa design and returns a service value.
+func DecodeNoteVersionSummary(data []byte) (out *NoteVersionSummary, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode NoteVersionSummary JSON: %w", err)
+	}
+	if err := validateNoteVersionSummaryJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode NoteVersionSummary JSON: %w", err)
+	}
+	var body *jsonNoteVersionSummaryTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode NoteVersionSummary JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode NoteVersionSummary JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode NoteVersionSummary JSON after first value: %w", err)
+	}
+	if err := validatejsonNoteVersionSummaryTransport(body); err != nil {
+		return out, fmt.Errorf("validate NoteVersionSummary JSON: %w", err)
+	}
+	{
+		out = &NoteVersionSummary{
+			Rev:        *body.Rev,
+			Title:      *body.Title,
+			UpdatedAt:  *body.UpdatedAt,
+			ReplacedAt: *body.ReplacedAt,
 		}
 	}
 	return out, nil
@@ -7135,6 +7430,326 @@ func validateNoteSummaryJSONValue8(path string, value any, description string) e
 	return nil
 }
 
+// validateNoteVersionJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "body":
+			if err := validateNoteVersionJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Body of the version in Markdown",
+			); err != nil {
+				return err
+			}
+		case "replaced_at":
+			if err := validateNoteVersionJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the version was replaced by a newer one",
+			); err != nil {
+				return err
+			}
+		case "rev":
+			if err := validateNoteVersionJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the version among those of the note",
+			); err != nil {
+				return err
+			}
+		case "tags":
+			if err := validateNoteVersionJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Tags of the version",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateNoteVersionJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title of the version",
+			); err != nil {
+				return err
+			}
+		case "updated_at":
+			if err := validateNoteVersionJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Last update time of the version",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"body",
+				"replaced_at",
+				"rev",
+				"tags",
+				"title",
+				"updated_at",
+			})
+		}
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateNoteVersionJSONValue6(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue6(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionSummaryJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionSummaryJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "replaced_at":
+			if err := validateNoteVersionSummaryJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the version was replaced by a newer one",
+			); err != nil {
+				return err
+			}
+		case "rev":
+			if err := validateNoteVersionSummaryJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the version among those of the note",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateNoteVersionSummaryJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title of the version",
+			); err != nil {
+				return err
+			}
+		case "updated_at":
+			if err := validateNoteVersionSummaryJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Last update time of the version",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"replaced_at",
+				"rev",
+				"title",
+				"updated_at",
+			})
+		}
+	}
+	return nil
+}
+
+// validateNoteVersionSummaryJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionSummaryJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionSummaryJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionSummaryJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionSummaryJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionSummaryJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNoteVersionSummaryJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteVersionSummaryJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
 // validateNotebookJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateNotebookJSONValue(path string, value any, description string) error {
 	field := path
@@ -9436,6 +10051,94 @@ func checkNoteSummaryTextRangeValue(in *TextRange, field string, active map[any]
 	active[in] = true
 	defer delete(active, in)
 	if in != nil {
+	}
+	return nil
+}
+
+// checkNoteVersionValue checks text and cycles before conversion.
+func checkNoteVersionValue(in *NoteVersion) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkNoteVersionNoteVersionValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkNoteVersionNoteVersionValue checks one generated value on the active path.
+func checkNoteVersionNoteVersionValue(in *NoteVersion, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Rev)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "rev", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.UpdatedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "updated_at", false))
+		}
+		if !utf8.ValidString(string(in.ReplacedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "replaced_at", false))
+		}
+		for index1, item1 := range in.Tags {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "tags", false), strconv.Itoa(index1), true))
+			}
+		}
+		if !utf8.ValidString(string(in.Body)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "body", false))
+		}
+	}
+	return nil
+}
+
+// checkNoteVersionSummaryValue checks text and cycles before conversion.
+func checkNoteVersionSummaryValue(in *NoteVersionSummary) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkNoteVersionSummaryNoteVersionSummaryValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkNoteVersionSummaryNoteVersionSummaryValue checks one generated value on the active path.
+func checkNoteVersionSummaryNoteVersionSummaryValue(in *NoteVersionSummary, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Rev)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "rev", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.UpdatedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "updated_at", false))
+		}
+		if !utf8.ValidString(string(in.ReplacedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "replaced_at", false))
+		}
 	}
 	return nil
 }

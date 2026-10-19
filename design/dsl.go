@@ -25,6 +25,12 @@ var notebookIDDSL = func() {
 	Example("inbox")
 }
 
+// revDSL is the pattern and an example of the ID of a version of a note.
+var revDSL = func() {
+	Pattern(`^[0-9]{1,20}$`)
+	Example("1792400000000000000")
+}
+
 // timeDSL is the format and an example of a time.
 var timeDSL = func() {
 	Format(FormatDateTime)

@@ -41,6 +41,8 @@ type Server struct {
 	AddFile               http.Handler
 	GetFile               http.Handler
 	DeleteFile            http.Handler
+	History               http.Handler
+	HistoryVersion        http.Handler
 	CheckFiles            http.Handler
 	Events                http.Handler
 	GitStatus             http.Handler
@@ -95,6 +97,8 @@ func New(
 			{"AddFile", "POST", "/notes/{id}/files"},
 			{"GetFile", "GET", "/notes/{id}/files/{name}"},
 			{"DeleteFile", "DELETE", "/notes/{id}/files/{name}"},
+			{"History", "GET", "/notes/{id}/history"},
+			{"HistoryVersion", "GET", "/notes/{id}/history/{rev}"},
 			{"CheckFiles", "GET", "/files/check"},
 			{"Events", "GET", "/events"},
 			{"GitStatus", "GET", "/git/status"},
@@ -121,6 +125,8 @@ func New(
 		AddFile:               NewAddFileHandler(e.AddFile, mux, decoder, encoder, errhandler, formatter),
 		GetFile:               NewGetFileHandler(e.GetFile, mux, decoder, encoder, errhandler, formatter),
 		DeleteFile:            NewDeleteFileHandler(e.DeleteFile, mux, decoder, encoder, errhandler, formatter),
+		History:               NewHistoryHandler(e.History, mux, decoder, encoder, errhandler, formatter),
+		HistoryVersion:        NewHistoryVersionHandler(e.HistoryVersion, mux, decoder, encoder, errhandler, formatter),
 		CheckFiles:            NewCheckFilesHandler(e.CheckFiles, mux, decoder, encoder, errhandler, formatter),
 		Events:                NewEventsHandler(e.Events, mux, decoder, encoder, errhandler, formatter),
 		GitStatus:             NewGitStatusHandler(e.GitStatus, mux, decoder, encoder, errhandler, formatter),
@@ -154,6 +160,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.AddFile = m(s.AddFile)
 	s.GetFile = m(s.GetFile)
 	s.DeleteFile = m(s.DeleteFile)
+	s.History = m(s.History)
+	s.HistoryVersion = m(s.HistoryVersion)
 	s.CheckFiles = m(s.CheckFiles)
 	s.Events = m(s.Events)
 	s.GitStatus = m(s.GitStatus)
@@ -186,6 +194,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountAddFileHandler(mux, h.AddFile)
 	MountGetFileHandler(mux, h.GetFile)
 	MountDeleteFileHandler(mux, h.DeleteFile)
+	MountHistoryHandler(mux, h.History)
+	MountHistoryVersionHandler(mux, h.HistoryVersion)
 	MountCheckFilesHandler(mux, h.CheckFiles)
 	MountEventsHandler(mux, h.Events)
 	MountGitStatusHandler(mux, h.GitStatus)
@@ -1257,6 +1267,112 @@ func NewDeleteFileHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "delete_file")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountHistoryHandler configures the mux to serve the "notes" service
+// "history" endpoint.
+func MountHistoryHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/notes/{id}/history", f)
+}
+
+// NewHistoryHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "history" endpoint.
+func NewHistoryHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeHistoryRequest(mux, decoder)
+		encodeResponse = EncodeHistoryResponse(encoder)
+		encodeError    = EncodeHistoryError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "history")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountHistoryVersionHandler configures the mux to serve the "notes" service
+// "history_version" endpoint.
+func MountHistoryVersionHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/notes/{id}/history/{rev}", f)
+}
+
+// NewHistoryVersionHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "history_version" endpoint.
+func NewHistoryVersionHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeHistoryVersionRequest(mux, decoder)
+		encodeResponse = EncodeHistoryVersionResponse(encoder)
+		encodeError    = EncodeHistoryVersionError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "history_version")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

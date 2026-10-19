@@ -1300,6 +1300,155 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+    /notes/{id}/history:
+        get:
+            tags:
+                - notes
+            summary: history notes
+            description: List the earlier versions of a note, newest first. A version is kept on this device whenever the title, tags or body is replaced, by a save or by a change of the file found by a sync; up to 50 per note, and those older than 30 days are dropped except the 5 newest. To put a version back, update the note with its content. For people only.
+            operationId: notes#history
+            parameters:
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Note ID
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/NoteVersionSummary'
+                                example:
+                                    - replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      title: Excepturi aspernatur atque.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      title: Excepturi aspernatur atque.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      title: Excepturi aspernatur atque.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                            example:
+                                - replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  title: Excepturi aspernatur atque.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                                - replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  title: Excepturi aspernatur atque.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                                - replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  title: Excepturi aspernatur atque.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+    /notes/{id}/history/{rev}:
+        get:
+            tags:
+                - notes
+            summary: history_version notes
+            description: Get an earlier version of a note from its history. For people only.
+            operationId: notes#history_version
+            parameters:
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Note ID
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+                - name: rev
+                  in: path
+                  description: ID of the version
+                  required: true
+                  schema:
+                    type: string
+                    description: ID of the version
+                    example: "1792400000000000000"
+                    pattern: ^[0-9]{1,20}$
+                  example: "1792400000000000000"
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NoteVersion'
+                            example:
+                                body: Enim qui ducimus necessitatibus libero fugiat.
+                                replaced_at: "2026-10-16T09:30:00Z"
+                                rev: "1792400000000000000"
+                                tags:
+                                    - Perferendis sed inventore magnam dolorem.
+                                    - Quos laudantium voluptatem porro vel.
+                                title: Nesciunt incidunt blanditiis maxime.
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note or the version does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
     /notes/{id}/move:
         post:
             tags:
@@ -2963,6 +3112,89 @@ components:
                 - tags
                 - created_at
                 - updated_at
+        NoteVersion:
+            type: object
+            properties:
+                body:
+                    type: string
+                    description: Body of the version in Markdown
+                    example: Enim qui ducimus necessitatibus libero fugiat.
+                replaced_at:
+                    type: string
+                    description: When the version was replaced by a newer one
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                rev:
+                    type: string
+                    description: ID of the version among those of the note
+                    example: "1792400000000000000"
+                    pattern: ^[0-9]{1,20}$
+                tags:
+                    type: array
+                    items:
+                        type: string
+                        example: Perferendis sed inventore magnam dolorem.
+                    description: Tags of the version
+                    example:
+                        - Perferendis sed inventore magnam dolorem.
+                        - Quos laudantium voluptatem porro vel.
+                title:
+                    type: string
+                    description: Title of the version
+                    example: Nesciunt incidunt blanditiis maxime.
+                updated_at:
+                    type: string
+                    description: Last update time of the version
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+            example:
+                body: Enim qui ducimus necessitatibus libero fugiat.
+                replaced_at: "2026-10-16T09:30:00Z"
+                rev: "1792400000000000000"
+                tags:
+                    - Perferendis sed inventore magnam dolorem.
+                    - Quos laudantium voluptatem porro vel.
+                title: Nesciunt incidunt blanditiis maxime.
+                updated_at: "2026-10-16T09:30:00Z"
+            required:
+                - rev
+                - title
+                - updated_at
+                - replaced_at
+                - tags
+                - body
+        NoteVersionSummary:
+            type: object
+            properties:
+                replaced_at:
+                    type: string
+                    description: When the version was replaced by a newer one
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                rev:
+                    type: string
+                    description: ID of the version among those of the note
+                    example: "1792400000000000000"
+                    pattern: ^[0-9]{1,20}$
+                title:
+                    type: string
+                    description: Title of the version
+                    example: Excepturi aspernatur atque.
+                updated_at:
+                    type: string
+                    description: Last update time of the version
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+            example:
+                replaced_at: "2026-10-16T09:30:00Z"
+                rev: "1792400000000000000"
+                title: Excepturi aspernatur atque.
+                updated_at: "2026-10-16T09:30:00Z"
+            required:
+                - rev
+                - title
+                - updated_at
+                - replaced_at
         Notebook:
             type: object
             properties:

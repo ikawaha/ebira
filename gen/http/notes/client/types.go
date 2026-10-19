@@ -419,6 +419,23 @@ type AddFileResponseBody struct {
 	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
 }
 
+// HistoryVersionResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body.
+type HistoryVersionResponseBody struct {
+	// ID of the version among those of the note
+	Rev *string `form:"rev,omitempty" json:"rev,omitempty" xml:"rev,omitempty"`
+	// Title of the version
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Last update time of the version
+	UpdatedAt *string `form:"updated_at,omitempty" json:"updated_at,omitempty" xml:"updated_at,omitempty"`
+	// When the version was replaced by a newer one
+	ReplacedAt *string `form:"replaced_at,omitempty" json:"replaced_at,omitempty" xml:"replaced_at,omitempty"`
+	// Tags of the version
+	Tags []string `form:"tags,omitempty" json:"tags,omitempty" xml:"tags,omitempty"`
+	// Body of the version in Markdown
+	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
+}
+
 // CheckFilesResponseBody is the type of the "notes" service "check_files"
 // endpoint HTTP response body.
 type CheckFilesResponseBody struct {
@@ -1133,6 +1150,78 @@ type DeleteFileBadRequestResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// HistoryNotFoundResponseBody is the type of the "notes" service "history"
+// endpoint HTTP response body for the "not_found" error.
+type HistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// HistoryBadRequestResponseBody is the type of the "notes" service "history"
+// endpoint HTTP response body for the "bad_request" error.
+type HistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// HistoryVersionNotFoundResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body for the "not_found" error.
+type HistoryVersionNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// HistoryVersionBadRequestResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body for the "bad_request" error.
+type HistoryVersionBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // GitSyncForbiddenResponseBody is the type of the "notes" service "git_sync"
 // endpoint HTTP response body for the "forbidden" error.
 type GitSyncForbiddenResponseBody struct {
@@ -1291,6 +1380,18 @@ type NoteResponseBody struct {
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
 	BodyHighlights []*TextRangeResponseBody `form:"body_highlights,omitempty" json:"body_highlights,omitempty" xml:"body_highlights,omitempty"`
+}
+
+// NoteVersionSummaryResponse is used to define fields on response body types.
+type NoteVersionSummaryResponse struct {
+	// ID of the version among those of the note
+	Rev *string `form:"rev,omitempty" json:"rev,omitempty" xml:"rev,omitempty"`
+	// Title of the version
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Last update time of the version
+	UpdatedAt *string `form:"updated_at,omitempty" json:"updated_at,omitempty" xml:"updated_at,omitempty"`
+	// When the version was replaced by a newer one
+	ReplacedAt *string `form:"replaced_at,omitempty" json:"replaced_at,omitempty" xml:"replaced_at,omitempty"`
 }
 
 // UnusedFileResponseBody is used to define fields on response body types.
@@ -2359,6 +2460,98 @@ func NewDeleteFileBadRequest(body *DeleteFileBadRequestResponseBody) *goa.Servic
 	return v
 }
 
+// NewHistoryNoteVersionSummaryOK builds a "notes" service "history" endpoint
+// result from a HTTP "OK" response.
+func NewHistoryNoteVersionSummaryOK(body []*NoteVersionSummaryResponse) []*notes.NoteVersionSummary {
+	v := make([]*notes.NoteVersionSummary, len(body))
+	for i, val := range body {
+		if val == nil {
+			v[i] = nil
+			continue
+		}
+		v[i] = unmarshalNoteVersionSummaryResponseToNotesNoteVersionSummary(val)
+	}
+
+	return v
+}
+
+// NewHistoryNotFound builds a notes service history endpoint not_found error.
+func NewHistoryNotFound(body *HistoryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewHistoryBadRequest builds a notes service history endpoint bad_request
+// error.
+func NewHistoryBadRequest(body *HistoryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewHistoryVersionNoteVersionOK builds a "notes" service "history_version"
+// endpoint result from a HTTP "OK" response.
+func NewHistoryVersionNoteVersionOK(body *HistoryVersionResponseBody) *notes.NoteVersion {
+	v := &notes.NoteVersion{
+		Rev:        *body.Rev,
+		Title:      *body.Title,
+		UpdatedAt:  *body.UpdatedAt,
+		ReplacedAt: *body.ReplacedAt,
+		Body:       *body.Body,
+	}
+	v.Tags = make([]string, len(body.Tags))
+	for i, val := range body.Tags {
+		v.Tags[i] = val
+	}
+
+	return v
+}
+
+// NewHistoryVersionNotFound builds a notes service history_version endpoint
+// not_found error.
+func NewHistoryVersionNotFound(body *HistoryVersionNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewHistoryVersionBadRequest builds a notes service history_version endpoint
+// bad_request error.
+func NewHistoryVersionBadRequest(body *HistoryVersionBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewCheckFilesFileCheckOK builds a "notes" service "check_files" endpoint
 // result from a HTTP "OK" response.
 func NewCheckFilesFileCheckOK(body *CheckFilesResponseBody) *notes.FileCheck {
@@ -2987,6 +3180,39 @@ func ValidateAddFileResponseBody(body *AddFileResponseBody) (err error) {
 	}
 	if body.Path == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	return
+}
+
+// ValidateHistoryVersionResponseBody runs the validations defined on
+// HistoryVersionResponseBody
+func ValidateHistoryVersionResponseBody(body *HistoryVersionResponseBody) (err error) {
+	if body.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if body.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", "body"))
+	}
+	if body.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "body"))
+	}
+	if body.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
+	}
+	if body.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.rev", *body.Rev, "^[0-9]{1,20}$"))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *body.ReplacedAt, goa.FormatDateTime))
 	}
 	return
 }
@@ -3951,6 +4177,102 @@ func ValidateDeleteFileBadRequestResponseBody(body *DeleteFileBadRequestResponse
 	return
 }
 
+// ValidateHistoryNotFoundResponseBody runs the validations defined on
+// HistoryNotFoundResponseBody
+func ValidateHistoryNotFoundResponseBody(body *HistoryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateHistoryBadRequestResponseBody runs the validations defined on
+// HistoryBadRequestResponseBody
+func ValidateHistoryBadRequestResponseBody(body *HistoryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateHistoryVersionNotFoundResponseBody runs the validations defined on
+// HistoryVersionNotFoundResponseBody
+func ValidateHistoryVersionNotFoundResponseBody(body *HistoryVersionNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateHistoryVersionBadRequestResponseBody runs the validations defined on
+// HistoryVersionBadRequestResponseBody
+func ValidateHistoryVersionBadRequestResponseBody(body *HistoryVersionBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateGitSyncForbiddenResponseBody runs the validations defined on
 // GitSyncForbiddenResponseBody
 func ValidateGitSyncForbiddenResponseBody(body *GitSyncForbiddenResponseBody) (err error) {
@@ -4420,6 +4742,60 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return
+}
+
+// ValidateNoteVersionSummaryResponse runs the validations defined on
+// NoteVersionSummary
+func ValidateNoteVersionSummaryResponse(body *NoteVersionSummaryResponse) (err error) {
+	if body.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if body.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", "body"))
+	}
+	if body.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.rev", *body.Rev, "^[0-9]{1,20}$"))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *body.ReplacedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// validateNoteVersionSummaryResponse checks NoteVersionSummary and reports
+// errors using the path supplied by its caller
+func validateNoteVersionSummaryResponse(body *NoteVersionSummaryResponse, path string) (err error) {
+	if body.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", path))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", path))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", path))
+	}
+	if body.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", path))
+	}
+	if body.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".rev", *body.Rev, "^[0-9]{1,20}$"))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".replaced_at", *body.ReplacedAt, goa.FormatDateTime))
 	}
 	return
 }

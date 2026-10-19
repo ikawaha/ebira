@@ -123,6 +123,7 @@
   "key.sort": "sort",
   "key.tag": "tag",
   "key.tags": "tags",
+  "key.undo": "undo/redo",
   "key.unzoom": "unzoom",
   "key.zoom": "zoom",
 

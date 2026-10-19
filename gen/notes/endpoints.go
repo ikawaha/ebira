@@ -43,6 +43,8 @@ type Endpoints struct {
 	AddFile               goa.Endpoint
 	GetFile               goa.Endpoint
 	DeleteFile            goa.Endpoint
+	History               goa.Endpoint
+	HistoryVersion        goa.Endpoint
 	CheckFiles            goa.Endpoint
 	Events                goa.Endpoint
 	GitStatus             goa.Endpoint
@@ -105,6 +107,8 @@ func NewEndpoints(s Service) *Endpoints {
 		AddFile:               NewAddFileEndpoint(s),
 		GetFile:               NewGetFileEndpoint(s),
 		DeleteFile:            NewDeleteFileEndpoint(s),
+		History:               NewHistoryEndpoint(s),
+		HistoryVersion:        NewHistoryVersionEndpoint(s),
 		CheckFiles:            NewCheckFilesEndpoint(s),
 		Events:                NewEventsEndpoint(s),
 		GitStatus:             NewGitStatusEndpoint(s),
@@ -142,6 +146,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.AddFile = m(e.AddFile)
 	e.GetFile = m(e.GetFile)
 	e.DeleteFile = m(e.DeleteFile)
+	e.History = m(e.History)
+	e.HistoryVersion = m(e.HistoryVersion)
 	e.CheckFiles = m(e.CheckFiles)
 	e.Events = m(e.Events)
 	e.GitStatus = m(e.GitStatus)
@@ -391,6 +397,24 @@ func NewDeleteFileEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeleteFilePayload)
 		return nil, s.DeleteFile(ctx, p)
+	}
+}
+
+// NewHistoryEndpoint returns an endpoint function that calls the method
+// "history" of service "notes".
+func NewHistoryEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*HistoryPayload)
+		return s.History(ctx, p)
+	}
+}
+
+// NewHistoryVersionEndpoint returns an endpoint function that calls the method
+// "history_version" of service "notes".
+func NewHistoryVersionEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*HistoryVersionPayload)
+		return s.HistoryVersion(ctx, p)
 	}
 }
 

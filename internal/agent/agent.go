@@ -32,7 +32,7 @@ func New(ctx context.Context, client model.Client, svc notes.Service, cfg Config
 		return nil, err
 	}
 	e := notes.NewEndpoints(svc)
-	c := notes.NewClient(e.List, e.Get, e.Create, e.Update, e.Delete, e.Search, e.Restore, e.Move, e.Notebooks, e.Tags, e.CreateNotebook, e.SaveNotebook, e.DeleteNotebook, e.TrashedNotebooks, e.RestoreNotebook, e.DeleteTrashedNotebook, e.Import, e.CreateAiNote, e.ImportAiNote, e.UpdateAiNote, e.DeleteAiNote, e.MoveAiNote, e.CreateAiNotebook, e.MakeNotebookPrivate, e.AddFile, e.GetFile, e.DeleteFile, e.CheckFiles, e.Events, e.GitStatus, e.GitSync, e.Sync)
+	c := notes.NewClient(e.List, e.Get, e.Create, e.Update, e.Delete, e.Search, e.Restore, e.Move, e.Notebooks, e.Tags, e.CreateNotebook, e.SaveNotebook, e.DeleteNotebook, e.TrashedNotebooks, e.RestoreNotebook, e.DeleteTrashedNotebook, e.Import, e.CreateAiNote, e.ImportAiNote, e.UpdateAiNote, e.DeleteAiNote, e.MoveAiNote, e.CreateAiNotebook, e.MakeNotebookPrivate, e.AddFile, e.GetFile, e.DeleteFile, e.History, e.HistoryVersion, e.CheckFiles, e.Events, e.GitStatus, e.GitSync, e.Sync)
 	exec := assistantnotes.NewAssistantNotesExec(assistantnotes.WithClient(c))
 	if err := assistant.RegisterUsedToolsets(ctx, rt, assistant.WithNotesExecutor(exec)); err != nil {
 		return nil, err

@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/history"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/store"
 )
@@ -26,6 +27,7 @@ type Notes struct {
 	gitMu   sync.Mutex // serializes syncs with git
 	store   *store.Store
 	index   *index.Index
+	history *history.Store // earlier versions of notes; nil keeps none (see SetHistory)
 	events  *broker
 	now     func() time.Time
 	nbState string // last known notebook list, for notebooks events
@@ -218,6 +220,7 @@ func (s *Notes) Delete(ctx context.Context, p *gennotes.DeletePayload) error {
 	if err := s.index.Delete(ctx, p.ID); err != nil {
 		return err
 	}
+	s.forgetHistory(p.ID)
 	s.events.publish(eventDeleted, p.ID)
 	return nil
 }
@@ -833,6 +836,7 @@ func (s *Notes) sync(ctx context.Context) (*gennotes.SyncResult, error) {
 	s.events.publish(eventCreated, r.Added...)
 	s.events.publish(eventUpdated, r.Updated...)
 	s.events.publish(eventDeleted, r.Removed...)
+	s.forgetHistory(r.Removed...) // deleted for good, here or elsewhere
 	if nbs, err := s.notebooks(ctx); err == nil {
 		s.notifyNotebooks(nbs) // picks up edits of _notebook.yaml and new or removed notebooks
 	}

@@ -715,6 +715,60 @@ func BuildDeleteFilePayload(notesDeleteFileID *string, notesDeleteFileName *stri
 	return v, nil
 }
 
+// BuildHistoryPayload builds the payload for the notes history endpoint from
+// CLI flags.
+func BuildHistoryPayload(notesHistoryID *string) (*notes.HistoryPayload, error) {
+	var err error
+	var id string
+	{
+		if notesHistoryID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesHistoryID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	v := &notes.HistoryPayload{}
+	v.ID = id
+
+	return v, nil
+}
+
+// BuildHistoryVersionPayload builds the payload for the notes history_version
+// endpoint from CLI flags.
+func BuildHistoryVersionPayload(notesHistoryVersionID *string, notesHistoryVersionRev *string) (*notes.HistoryVersionPayload, error) {
+	var err error
+	var id string
+	{
+		if notesHistoryVersionID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesHistoryVersionID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var rev string
+	{
+		if notesHistoryVersionRev == nil {
+			return nil, fmt.Errorf("missing required flag --rev")
+		}
+		rev = *notesHistoryVersionRev
+		err = goa.MergeErrors(err, goa.ValidatePattern("rev", rev, "^[0-9]{1,20}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	v := &notes.HistoryVersionPayload{}
+	v.ID = id
+	v.Rev = rev
+
+	return v, nil
+}
+
 // BuildGitSyncPayload builds the payload for the notes git_sync endpoint from
 // CLI flags.
 func BuildGitSyncPayload(notesGitSyncBody *string) (*notes.GitSyncPayload, error) {

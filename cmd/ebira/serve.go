@@ -25,6 +25,7 @@ import (
 	"github.com/ikawaha/ebira/internal/agent"
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
+	"github.com/ikawaha/ebira/internal/history"
 	"github.com/ikawaha/ebira/internal/httpguard"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/service"
@@ -194,6 +195,13 @@ func runServe(args []string) error {
 	defer ix.Close()
 
 	svc := service.New(st, ix)
+	// The earlier versions of notes stay on this device, in the state
+	// directory, apart from the notes that are synced.
+	hist, err := history.New(filepath.Join(stateDir, "history"))
+	if err != nil {
+		return err
+	}
+	svc.SetHistory(hist)
 	r, err := svc.Sync(ctx)
 	if err != nil {
 		return err
@@ -202,6 +210,9 @@ func runServe(args []string) error {
 	for _, e := range r.Errors {
 		slog.Warn("skip note", "error", e)
 	}
+	// The earlier versions past the limits of the history go now and then
+	// once a day, for a server left running.
+	go sweepHistoryEvery(ctx, svc, 24*time.Hour)
 	if *watchF {
 		go func() {
 			err := watch.Run(ctx, st.Dir(), store.Ext, 300*time.Millisecond, func() {
@@ -397,6 +408,24 @@ func syncGitEvery(ctx context.Context, svc *service.Notes, every time.Duration) 
 				conflicts[i] = c.Path
 			}
 			slog.Info("git synced", "committed", r.Committed, "merged", r.Merged, "pushed", r.Pushed, "conflicts", conflicts)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}
+
+// sweepHistoryEvery drops the earlier versions of notes past the limits of the
+// history, and those of deleted notes, now and then every interval until ctx
+// is done.
+func sweepHistoryEvery(ctx context.Context, svc *service.Notes, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		if err := svc.SweepHistory(); err != nil {
+			slog.Warn("cannot drop the old versions of notes", "error", err)
 		}
 		select {
 		case <-ctx.Done():

@@ -561,3 +561,58 @@ func TestImportedNote(t *testing.T) {
 		}
 	}
 }
+
+func TestOnReplace(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	notes := filepath.Join(dir, "notes")
+	st, err := store.New(notes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix, err := Open(ctx, filepath.Join(dir, "index.sqlite"), Config{Mode: ModeBigram})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ix.Close()
+	var got []Replaced
+	ix.OnReplace(func(r Replaced) { got = append(got, r) })
+
+	p := filepath.Join(notes, "inbox", "a.yaml")
+	write := func(body string, mtime time.Time) {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(p, mtime, mtime); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t0 := time.Now().Add(-time.Hour)
+	write("title: A\ntags: [x]\nupdated_at: 2026-10-01T00:00:00Z\nbody: りんご\n", t0)
+	if _, err := ix.Sync(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("a new note was reported replaced: %+v", got)
+	}
+	// A change of the file found by Sync reports the content before it.
+	write("title: A\ntags: [x]\nupdated_at: 2026-10-02T00:00:00Z\nbody: みかん\n", t0.Add(time.Minute))
+	if _, err := ix.Sync(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].ID != "a" || got[0].Body != "りんご" || got[0].Title != "A" || len(got[0].Tags) != 1 || !got[0].UpdatedAt.Equal(time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("replaced = %+v", got)
+	}
+	// The same content in a new file, such as after a move or a reorder, is
+	// not a new version.
+	write("title: A\ntags: [x]\norder: 5\nupdated_at: 2026-10-02T00:00:00Z\nbody: みかん\n", t0.Add(2*time.Minute))
+	if _, err := ix.Sync(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Errorf("an unchanged content was reported replaced: %+v", got[1:])
+	}
+}

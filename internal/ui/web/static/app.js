@@ -451,10 +451,12 @@ function trashedName(id) {
   return state.trashed.find((n) => n.id === id)?.name ?? id;
 }
 
-function formatTime(s) {
+// formatTime formats the time s in the language of the page, to the minute,
+// or to the second with seconds.
+function formatTime(s, seconds) {
   const d = new Date(s);
   if (isNaN(d)) return s;
-  return d.toLocaleString(lang, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(lang, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: seconds ? "2-digit" : undefined });
 }
 
 function el(tag, cls, ...children) {
@@ -782,6 +784,12 @@ function renameNotebook(id) {
         notebookFailed(e);
         return;
       }
+      const old = nb.name;
+      offerUndo(t("toastRenamed", { name }), async () => {
+        await api(`/notebooks/${encodeURIComponent(id)}`, { method: "PUT", body: { name: old } });
+        await loadNotebooks().catch(() => {});
+        loadNotes();
+      });
       await loadNotebooks().catch(() => {});
       loadNotes();
       return;
@@ -803,15 +811,20 @@ function renameNotebook(id) {
   input.addEventListener("blur", () => finish(true));
 }
 
-async function setNotebookKind(nb, kind) {
+async function setNotebookKind(nb, kind, undoing) {
   if (nb.kind === "private" && (kind === "default" || kind === "collab") && !confirm(t("confirmUnprivate", { name: nb.name }))) return;
   try {
     await api(`/notebooks/${encodeURIComponent(nb.id)}`, { method: "PUT", body: { kind } });
   } catch (e) {
+    if (undoing) throw e;
     notebookFailed(e);
     return;
   }
-  loadNotebooks().catch(() => {});
+  if (!undoing) {
+    const old = nb.kind;
+    offerUndo(t("toastKind", { name: nb.name, kind }), () => setNotebookKind({ ...nb, kind }, old, true));
+  }
+  await loadNotebooks().catch(() => {});
 }
 
 // trashNotebook moves a notebook with its notes to the trash, where it is
@@ -824,6 +837,11 @@ async function trashNotebook(nb) {
     notebookFailed(e);
     return;
   }
+  offerUndo(t("toastNotebookTrashed", { name: nb.name }), async () => {
+    await api(`/trash/notebooks/${encodeURIComponent(nb.id)}/restore`, { method: "POST" });
+    await loadNotebooks().catch(() => {});
+    selectNotebook(nb.id);
+  });
   await loadNotebooks().catch(() => {});
   if (state.notebook === nb.id) selectNotebook("trash", nb.id);
 }
@@ -1039,11 +1057,20 @@ function cycleSort() {
 
 // moveNote puts note id right after the note after (null for first) in the
 // manual order.
-async function moveNote(id, after) {
+async function moveNote(id, after, undoing) {
+  // The note above it now, to put it back after.
+  const i = state.notes.findIndex((n) => n.id === id);
+  const before = i > 0 ? state.notes[i - 1].id : null;
   try {
     await api(`${noteURL(id)}/move`, { method: "POST", body: after ? { after } : {} });
   } catch (e) {
+    if (undoing) throw e;
     alert(t("moveFailed", { error: e.message }));
+    await loadNotes();
+    return;
+  }
+  if (!undoing && i >= 0) {
+    offerUndo(t("toastReordered", { title: state.notes[i].title || t("untitled") }), () => moveNote(id, before, true));
   }
   await loadNotes();
   markSelected();
@@ -1205,6 +1232,7 @@ async function loadNote() {
   } else {
     actions.append(
       button(t("edit"), () => startEdit(n), { title: t("editTitle") }),
+      button(t("history"), openHistory, { title: t("historyTitle") }),
       button(t("toTrash"), deleteNote));
   }
   const body = el("div", "body");
@@ -1263,6 +1291,7 @@ async function deleteNote() {
     actionFailed(e);
     return;
   }
+  if (n.notebook !== "trash") offerUndo(t("toastTrashed", { title: n.title || t("untitled") }), () => undoTrash(n.id));
   const i = state.notes.findIndex((x) => x.id === n.id);
   const next = state.notes[i + 1] || state.notes[i - 1];
   state.selected = next ? next.id : null;
@@ -1366,6 +1395,36 @@ function bodyExtensions() {
   ];
 }
 
+// editHistories keeps, for the notes last edited, the state of the editor of
+// the body with its undo history when it was saved or closed, so that editing
+// the note again can undo past the save. It is used only while the note is at
+// the version the history ends at; the page keeps it in memory only.
+const editHistories = new Map(); // note ID -> {version, json}
+const EDIT_HISTORIES = 20;
+
+// rememberHistory keeps the history of the editor ed for the note id at
+// version, if the body is that version's.
+function rememberHistory(ed, id, version, body) {
+  if (!id || !version || ed.view.state.doc.toString() !== body) return;
+  editHistories.delete(id);
+  editHistories.set(id, { version, json: ed.view.state.toJSON({ history: CM.historyField }) });
+  while (editHistories.size > EDIT_HISTORIES) editHistories.delete(editHistories.keys().next().value);
+}
+
+// bodyState returns the state of the editor of the body of note: the one kept
+// with its history if the note is still at its version, or a new one.
+function bodyState(note) {
+  const h = note && editHistories.get(note.id);
+  if (h && h.version === note.version && h.json.doc === note.body) {
+    try {
+      return CM.EditorState.fromJSON(h.json, { extensions: bodyExtensions() }, { history: CM.historyField });
+    } catch (e) {
+      editHistories.delete(note.id);
+    }
+  }
+  return CM.EditorState.create({ doc: note ? note.body : "", extensions: bodyExtensions() });
+}
+
 function startEdit(note) {
   if (state.editing || editorLoading) return;
   if (note && note.notebook === "trash") return;
@@ -1407,7 +1466,7 @@ function startEdit(note) {
   f.tags.placeholder = t("tagsPlaceholder");
   f.tags.value = note ? note.tags.join(", ") : state.tag || ""; // a new note under a tag gets it
   f.body = el("div", "editor-body");
-  ed.view = new CM.EditorView({ parent: f.body, doc: note ? note.body : "", extensions: bodyExtensions() });
+  ed.view = new CM.EditorView({ parent: f.body, state: bodyState(note) });
   f.rendered = el("div", "body editor-preview");
   f.rendered.hidden = true;
   f.banner = el("div", "banner");
@@ -1471,9 +1530,13 @@ function leaveEditor() {
   return true;
 }
 
-// endEdit drops the editor, which the caller replaces.
+// endEdit drops the editor, which the caller replaces. An editor left
+// unchanged keeps its history for the next edit of the note.
 function endEdit() {
-  state.editing?.view.destroy();
+  const ed = state.editing;
+  if (!ed) return;
+  if (ed.note) rememberHistory(ed, ed.note.id, ed.version, ed.note.body);
+  ed.view.destroy();
   state.editing = null;
 }
 
@@ -1581,6 +1644,8 @@ async function saveNote(overwrite = false) {
   }
   saving = false;
   if (state.editing !== ed) return; // closed meanwhile
+  rememberHistory(ed, saved.id, saved.version, saved.body);
+  ed.note = null; // the history is kept as of the save
   endEdit();
   state.selected = saved.id;
   refreshAfterWrite();
@@ -1630,6 +1695,150 @@ function noteAnchor(id, title, d) {
   a.href = `/#note/${encodeURIComponent(id)}`;
   a.addEventListener("click", () => d.close());
   return a;
+}
+
+// History: the earlier versions of the note in the preview, kept on this
+// device by the server. Putting one back saves its content as the note, so the
+// content replaced goes into the history too.
+
+async function openHistory() {
+  const n = state.note;
+  if (!n) return;
+  const d = $("history");
+  const head = el("div", "files-head", el("h2", "", t("historyHeading", { title: n.title || t("untitled") })),
+    button("\u00d7", () => d.close(), { title: t("closeTitle") }));
+  d.replaceChildren(head, el("p", "", t("historyLoading")));
+  if (!d.open) d.showModal();
+  let versions;
+  try {
+    versions = await api(`${noteURL(n.id)}/history`);
+  } catch (e) {
+    d.replaceChildren(head, el("p", "error", t("loadFailed", { error: e.message })));
+    return;
+  }
+  if (!versions.length) {
+    d.replaceChildren(head, el("p", "empty", t("historyEmpty")));
+    return;
+  }
+  const list = el("ul", "history-list");
+  const view = el("div", "history-view");
+  let seq = 0;
+  const show = async (v, li) => {
+    for (const x of list.children) x.classList.toggle("active", x === li);
+    const my = ++seq;
+    view.replaceChildren(el("p", "", t("historyLoading")));
+    let full;
+    try {
+      full = await api(`${noteURL(n.id)}/history/${encodeURIComponent(v.rev)}`);
+    } catch (e) {
+      if (my === seq) view.replaceChildren(el("p", "error", t("loadFailed", { error: e.message })));
+      return;
+    }
+    if (my === seq) renderVersion(view, n, full, d);
+  };
+  for (const v of versions) {
+    const li = el("li", "", el("span", "history-time", formatTime(v.replaced_at, true)), el("span", "history-name", v.title || t("untitled")));
+    li.tabIndex = 0;
+    li.title = t("historyUpdatedAt", { time: formatTime(v.updated_at) });
+    li.addEventListener("click", () => show(v, li));
+    li.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") show(v, li);
+    });
+    list.append(li);
+  }
+  d.replaceChildren(head, el("p", "history-note", t("historyNote")), el("div", "history-body", list, view));
+  show(versions[0], list.firstChild);
+}
+
+// renderVersion shows the version v of note n in view: what putting it back
+// would change, and the button to do so.
+function renderVersion(view, n, v, d) {
+  const parts = [];
+  if (v.title !== n.title) parts.push(el("p", "history-change", t("historyTitleChange", { from: n.title, to: v.title })));
+  if (v.tags.join(", ") !== n.tags.join(", ")) {
+    parts.push(el("p", "history-change", t("historyTagsChange", { from: n.tags.join(", ") || "-", to: v.tags.join(", ") || "-" })));
+  }
+  const diff = lineDiff((n.body || "").split("\n"), (v.body || "").split("\n"));
+  if (diff.some((x) => x.op !== " ")) {
+    const pre = el("pre", "history-diff");
+    for (const x of contextOf(diff, 3)) {
+      pre.append(x.op === "…" ? el("span", "skip", "\u22ef\n") : el("span", x.op === "+" ? "add" : x.op === "-" ? "del" : "", `${x.op} ${x.line}\n`));
+    }
+    parts.push(el("p", "history-legend", t("historyDiffLegend")), pre);
+  }
+  if (!parts.length) {
+    view.replaceChildren(el("p", "empty", t("historySame")));
+    return;
+  }
+  view.replaceChildren(...parts, el("div", "files-actions",
+    button(t("historyRestore"), () => restoreVersion(n, v, d), { cls: "primary" })));
+}
+
+async function restoreVersion(n, v, d) {
+  if (!confirm(t("historyRestoreConfirm", { time: formatTime(v.replaced_at, true) }))) return;
+  try {
+    await api(noteURL(n.id), { method: "PATCH", body: { title: v.title, tags: v.tags, body: v.body }, ifMatch: n.version });
+  } catch (e) {
+    d.close();
+    actionFailed(e);
+    return;
+  }
+  d.close();
+  refreshAfterWrite();
+}
+
+// lineDiff returns the lines of a and b as a list of {op, line}: " " for a
+// line of both, "-" for a line of a only and "+" for one of b only, by the
+// longest common subsequence of the lines between the common start and end.
+// A middle too long to compare is shown as removed and added as a whole.
+function lineDiff(a, b) {
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+  let end = 0;
+  while (end < a.length - start && end < b.length - start && a[a.length - 1 - end] === b[b.length - 1 - end]) end++;
+  const x = a.slice(start, a.length - end);
+  const y = b.slice(start, b.length - end);
+  const out = a.slice(0, start).map((line) => ({ op: " ", line }));
+  if (x.length * y.length > 4e6) {
+    out.push(...x.map((line) => ({ op: "-", line })), ...y.map((line) => ({ op: "+", line })));
+  } else {
+    // lcs[i][j] is the length of the common subsequence of x[i:] and y[j:].
+    const lcs = Array.from({ length: x.length + 1 }, () => new Uint32Array(y.length + 1));
+    for (let i = x.length - 1; i >= 0; i--) {
+      for (let j = y.length - 1; j >= 0; j--) {
+        lcs[i][j] = x[i] === y[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+      }
+    }
+    let i = 0, j = 0;
+    while (i < x.length || j < y.length) {
+      if (i < x.length && j < y.length && x[i] === y[j]) {
+        out.push({ op: " ", line: x[i++] });
+        j++;
+      } else if (j < y.length && (i === x.length || lcs[i][j + 1] >= lcs[i + 1][j])) {
+        out.push({ op: "+", line: y[j++] });
+      } else {
+        out.push({ op: "-", line: x[i++] });
+      }
+    }
+  }
+  out.push(...a.slice(a.length - end).map((line) => ({ op: " ", line })));
+  return out;
+}
+
+// contextOf keeps the changed lines of diff and n lines around them, putting
+// {op: "…"} in place of the lines left out.
+function contextOf(diff, n) {
+  const keep = diff.map(() => false);
+  diff.forEach((x, i) => {
+    if (x.op === " ") return;
+    for (let k = Math.max(0, i - n); k <= Math.min(diff.length - 1, i + n); k++) keep[k] = true;
+  });
+  const out = [];
+  diff.forEach((x, i) => {
+    if (keep[i]) out.push(x);
+    else if (keep[i - 1] !== false || i === 0) out.push({ op: "…" });
+  });
+  return out.filter((x, i) => x.op !== "…" || out[i - 1]?.op !== "…");
 }
 
 async function openFilesCheck(message) {
@@ -1798,16 +2007,73 @@ async function moveNoteTo(id, nb) {
     alert(t("moveWhileEditing"));
     return;
   }
+  const n = state.notes.find((x) => x.id === id);
+  const title = n?.title || t("untitled");
   try {
     if (nb === "trash") {
       await api(noteURL(id), { method: "DELETE" });
     } else {
       await api(noteURL(id), { method: "PATCH", body: { notebook: nb } });
     }
+    if (nb === "trash") {
+      offerUndo(t("toastTrashed", { title }), () => undoTrash(id));
+    } else if (n) {
+      offerUndo(t("toastMoved", { title, notebook: notebookName(nb) }), async () => {
+        await api(noteURL(id), { method: "PATCH", body: { notebook: n.notebook } });
+        refreshAfterWrite();
+      });
+    }
   } catch (e) {
     alert(t("moveToNotebookFailed", { error: e.message }));
   }
   if (state.selected === id && nb === "trash") state.selected = null;
+  refreshAfterWrite();
+}
+
+// Undo of the operations on notes and notebooks: after one, a bar offers to
+// undo it for a while, also with Cmd+Z or Ctrl+Z outside the fields. Undoing
+// runs the opposite operation; it offers no undo of its own.
+let undoAction = null;
+let undoTimer = 0;
+const UNDO_MS = 10000;
+
+function offerUndo(message, fn) {
+  undoAction = fn;
+  const bar = $("toast");
+  bar.querySelector(".toast-msg").textContent = message;
+  bar.querySelector("button").hidden = false;
+  bar.hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideToast, UNDO_MS);
+}
+
+function hideToast() {
+  $("toast").hidden = true;
+  undoAction = null;
+}
+
+async function runUndo() {
+  const fn = undoAction;
+  if (!fn) return;
+  undoAction = null;
+  const bar = $("toast");
+  bar.querySelector("button").hidden = true;
+  clearTimeout(undoTimer);
+  try {
+    await fn();
+    bar.querySelector(".toast-msg").textContent = t("undone");
+  } catch (e) {
+    bar.querySelector(".toast-msg").textContent = t("undoFailed", { error: e.message });
+  }
+  undoTimer = setTimeout(hideToast, 3000);
+}
+
+$("toast").querySelector("button").addEventListener("click", runUndo);
+
+// undoTrash takes note id back out of the trash and shows it.
+async function undoTrash(id) {
+  await api(`${noteURL(id)}/restore`, { method: "POST" });
+  state.selected = id;
   refreshAfterWrite();
 }
 
@@ -2119,7 +2385,7 @@ $("search-form").addEventListener("submit", (e) => e.preventDefault());
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("import-result").open || $("notebook-new").open) return;
+  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();
@@ -2135,6 +2401,11 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       cancelEdit();
     }
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === "z" && undoAction && !e.target.closest("input, textarea, select")) {
+    e.preventDefault();
+    runUndo();
     return;
   }
   if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;

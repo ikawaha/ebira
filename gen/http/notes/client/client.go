@@ -92,6 +92,14 @@ type Client struct {
 	// endpoint.
 	DeleteFileDoer goahttp.Doer
 
+	// History Doer is the HTTP client used to make requests to the history
+	// endpoint.
+	HistoryDoer goahttp.Doer
+
+	// HistoryVersion Doer is the HTTP client used to make requests to the
+	// history_version endpoint.
+	HistoryVersionDoer goahttp.Doer
+
 	// CheckFiles Doer is the HTTP client used to make requests to the check_files
 	// endpoint.
 	CheckFilesDoer goahttp.Doer
@@ -150,6 +158,8 @@ func NewClient(
 		AddFileDoer:               doer,
 		GetFileDoer:               doer,
 		DeleteFileDoer:            doer,
+		HistoryDoer:               doer,
+		HistoryVersionDoer:        doer,
 		CheckFilesDoer:            doer,
 		EventsDoer:                doer,
 		GitStatusDoer:             doer,
@@ -610,6 +620,44 @@ func (c *Client) DeleteFile() goa.Endpoint {
 		resp, err := c.DeleteFileDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "delete_file", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// History returns an endpoint that makes HTTP requests to the notes service
+// history server.
+func (c *Client) History() goa.Endpoint {
+	var (
+		decodeResponse = DecodeHistoryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildHistoryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.HistoryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "history", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// HistoryVersion returns an endpoint that makes HTTP requests to the notes
+// service history_version server.
+func (c *Client) HistoryVersion() goa.Endpoint {
+	var (
+		decodeResponse = DecodeHistoryVersionResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildHistoryVersionRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.HistoryVersionDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "history_version", err)
 		}
 		return decodeResponse(resp)
 	}

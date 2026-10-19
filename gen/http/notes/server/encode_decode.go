@@ -1592,6 +1592,161 @@ func EncodeDeleteFileError(encoder func(context.Context, http.ResponseWriter) go
 	}
 }
 
+// EncodeHistoryResponse returns an encoder for responses returned by the notes
+// history endpoint.
+func EncodeHistoryResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.([]*notes.NoteVersionSummary)
+		enc := encoder(ctx, w)
+		body := NewHistoryResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeHistoryRequest returns a decoder for requests sent to the notes
+// history endpoint.
+func DecodeHistoryRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.HistoryPayload, error) {
+	return func(r *http.Request) (*notes.HistoryPayload, error) {
+		var payload *notes.HistoryPayload
+		var (
+			id  string
+			err error
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return payload, err
+		}
+		payload = NewHistoryPayload(id)
+
+		return payload, nil
+	}
+}
+
+// EncodeHistoryError returns an encoder for errors returned by the history
+// notes endpoint.
+func EncodeHistoryError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeHistoryVersionResponse returns an encoder for responses returned by
+// the notes history_version endpoint.
+func EncodeHistoryVersionResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.NoteVersion)
+		enc := encoder(ctx, w)
+		body := NewHistoryVersionResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeHistoryVersionRequest returns a decoder for requests sent to the notes
+// history_version endpoint.
+func DecodeHistoryVersionRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.HistoryVersionPayload, error) {
+	return func(r *http.Request) (*notes.HistoryVersionPayload, error) {
+		var payload *notes.HistoryVersionPayload
+		var (
+			id  string
+			rev string
+			err error
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		rev = params["rev"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("rev", rev, "^[0-9]{1,20}$"))
+		if err != nil {
+			return payload, err
+		}
+		payload = NewHistoryVersionPayload(id, rev)
+
+		return payload, nil
+	}
+}
+
+// EncodeHistoryVersionError returns an encoder for errors returned by the
+// history_version notes endpoint.
+func EncodeHistoryVersionError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryVersionNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryVersionBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeCheckFilesResponse returns an encoder for responses returned by the
 // notes check_files endpoint.
 func EncodeCheckFilesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1870,6 +2025,20 @@ func marshalNotesNoteToNoteResponseBody(v *notes.Note) *NoteResponseBody {
 			}
 			res.BodyHighlights[i] = marshalNotesTextRangeToTextRangeResponseBody(val)
 		}
+	}
+
+	return res
+}
+
+// marshalNotesNoteVersionSummaryToNoteVersionSummaryResponse builds a value of
+// type *NoteVersionSummaryResponse from a value of type
+// *notes.NoteVersionSummary.
+func marshalNotesNoteVersionSummaryToNoteVersionSummaryResponse(v *notes.NoteVersionSummary) *NoteVersionSummaryResponse {
+	res := &NoteVersionSummaryResponse{
+		Rev:        v.Rev,
+		Title:      v.Title,
+		UpdatedAt:  v.UpdatedAt,
+		ReplacedAt: v.ReplacedAt,
 	}
 
 	return res

@@ -93,6 +93,27 @@ var NoteFile = Type("NoteFile", func() {
 	})
 })
 
+// NoteVersionTrait is the attributes that NoteVersion and
+// NoteVersionSummary share.
+var NoteVersionTrait = func() {
+	RequiredAttribute("rev", String, "ID of the version among those of the note", revDSL)
+	RequiredAttribute("title", String, "Title of the version")
+	RequiredAttribute("updated_at", String, "Last update time of the version", timeDSL)
+	RequiredAttribute("replaced_at", String, "When the version was replaced by a newer one", timeDSL)
+}
+
+// NoteVersionSummary is an entry of the history of a note.
+var NoteVersionSummary = Type("NoteVersionSummary", func() {
+	NoteVersionTrait()
+})
+
+// NoteVersion is an earlier version of a note, kept on this device.
+var NoteVersion = Type("NoteVersion", func() {
+	NoteVersionTrait()
+	RequiredAttribute("tags", ArrayOf(String), "Tags of the version")
+	RequiredAttribute("body", String, "Body of the version in Markdown")
+})
+
 // UnusedFile is a file of a note that no note body refers to.
 var UnusedFile = Type("UnusedFile", func() {
 	RequiredAttribute("note_id", String, "ID of the note holding the file", noteIDDSL)
@@ -772,6 +793,43 @@ var _ = Service("notes", func() {
 		HTTP(func() {
 			DELETE("/notes/{id}/files/{name}")
 			Response(StatusNoContent)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	// The history of a note: its earlier versions, kept on this device (not
+	// synced) when its title, tags or body is replaced, by a save or by a
+	// change of the file. For people only, so not an MCP tool: it would show
+	// AI clients what notes held before they were made private.
+	Method("history", func() {
+		Description("List the earlier versions of a note, newest first. A version is kept on this device whenever the title, tags or body is replaced, by a save or by a change of the file found by a sync; up to 50 per note, and those older than 30 days are dropped except the 5 newest. To put a version back, update the note with its content. For people only.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+		})
+		Result(ArrayOf(NoteVersionSummary))
+		Error("not_found", ErrorResult, "The note does not exist")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		HTTP(func() {
+			GET("/notes/{id}/history")
+			Response(StatusOK)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("history_version", func() {
+		Description("Get an earlier version of a note from its history. For people only.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("rev", String, "ID of the version", revDSL)
+		})
+		Result(NoteVersion)
+		Error("not_found", ErrorResult, "The note or the version does not exist")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		HTTP(func() {
+			GET("/notes/{id}/history/{rev}")
+			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
 		})

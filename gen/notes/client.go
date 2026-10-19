@@ -43,6 +43,8 @@ type Client struct {
 	AddFileEndpoint               goa.Endpoint
 	GetFileEndpoint               goa.Endpoint
 	DeleteFileEndpoint            goa.Endpoint
+	HistoryEndpoint               goa.Endpoint
+	HistoryVersionEndpoint        goa.Endpoint
 	CheckFilesEndpoint            goa.Endpoint
 	EventsEndpoint                goa.Endpoint
 	GitStatusEndpoint             goa.Endpoint
@@ -51,7 +53,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -80,6 +82,8 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		AddFileEndpoint:               addFile,
 		GetFileEndpoint:               getFile,
 		DeleteFileEndpoint:            deleteFile,
+		HistoryEndpoint:               history,
+		HistoryVersionEndpoint:        historyVersion,
 		CheckFilesEndpoint:            checkFiles,
 		EventsEndpoint:                events,
 		GitStatusEndpoint:             gitStatus,
@@ -439,6 +443,34 @@ func (c *Client) GetFile(ctx context.Context, p *GetFilePayload) (res *GetFileRe
 func (c *Client) DeleteFile(ctx context.Context, p *DeleteFilePayload) (err error) {
 	_, err = c.DeleteFileEndpoint(ctx, p)
 	return
+}
+
+// History calls the "history" endpoint of the "notes" service.
+// History may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - error: internal error
+func (c *Client) History(ctx context.Context, p *HistoryPayload) (res []*NoteVersionSummary, err error) {
+	var ires any
+	ires, err = c.HistoryEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.([]*NoteVersionSummary), nil
+}
+
+// HistoryVersion calls the "history_version" endpoint of the "notes" service.
+// HistoryVersion may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note or the version does not exist
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - error: internal error
+func (c *Client) HistoryVersion(ctx context.Context, p *HistoryVersionPayload) (res *NoteVersion, err error) {
+	var ires any
+	ires, err = c.HistoryVersionEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*NoteVersion), nil
 }
 
 // CheckFiles calls the "check_files" endpoint of the "notes" service.

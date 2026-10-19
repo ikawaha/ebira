@@ -109,6 +109,16 @@ func DeleteFileNotesPath(id string, name string) string {
 	return fmt.Sprintf("/notes/%v/files/%v", id, name)
 }
 
+// HistoryNotesPath returns the URL path to the notes service history HTTP endpoint.
+func HistoryNotesPath(id string) string {
+	return fmt.Sprintf("/notes/%v/history", id)
+}
+
+// HistoryVersionNotesPath returns the URL path to the notes service history_version HTTP endpoint.
+func HistoryVersionNotesPath(id string, rev string) string {
+	return fmt.Sprintf("/notes/%v/history/%v", id, rev)
+}
+
 // CheckFilesNotesPath returns the URL path to the notes service check_files HTTP endpoint.
 func CheckFilesNotesPath() string {
 	return "/files/check"

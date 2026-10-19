@@ -31,7 +31,21 @@ type editor struct {
 	orig        string // snapshot to detect unsaved changes
 	outside     bool   // the note was changed outside while editing
 	idFixed     string // shown after the ID of an existing note
+	// undo and redo hold earlier and undone states of the body, for ctrl+z
+	// and ctrl+y; typing is the kind of the last change, so that the letters
+	// of a word typed in a row are undone together.
+	undo, redo []bodyState
+	typing     bool
 }
+
+// bodyState is the body of the editor with its cursor.
+type bodyState struct {
+	value     string
+	line, col int
+}
+
+// maxUndo is the number of changes of the body that can be undone.
+const maxUndo = 200
 
 // newEditor edits n, or a new note in notebook when n is nil, with the
 // messages of tr.
@@ -136,12 +150,79 @@ func (e *editor) update(msg tea.KeyPressMsg) tea.Cmd {
 		e.inputs[e.field], cmd = e.inputs[e.field].Update(msg)
 		return cmd
 	}
-	if key == "shift+tab" || (key == "up" && e.body.Line() == 0) {
+	switch key {
+	case "shift+tab":
 		return e.focus(fieldTags)
+	case "up":
+		if e.body.Line() == 0 {
+			return e.focus(fieldTags)
+		}
+	case "ctrl+z":
+		e.step(&e.undo, &e.redo)
+		return nil
+	case "ctrl+y", "ctrl+shift+z":
+		e.step(&e.redo, &e.undo)
+		return nil
 	}
+	// A letter typed after a letter joins its change; a space, an enter, a
+	// deletion or a move of the cursor starts a new one.
+	typing := msg.Text != "" && strings.TrimSpace(msg.Text) == msg.Text
+	return e.updateBody(msg, typing, true)
+}
+
+// updateBody passes msg to the body, keeping the state before it for undo if
+// it changes the body. A change of the typing kind right after another one is
+// undone together with it. A key that leaves the body as it is, such as a
+// move of the cursor, ends the word being typed; other messages, such as the
+// blinks of the cursor, do not.
+func (e *editor) updateBody(msg tea.Msg, typing, key bool) tea.Cmd {
+	before := e.bodyState()
 	var cmd tea.Cmd
 	e.body, cmd = e.body.Update(msg)
+	if e.body.Value() == before.value {
+		if key {
+			e.typing = false
+		}
+		return cmd
+	}
+	if !typing || !e.typing || len(e.undo) == 0 {
+		e.undo = append(e.undo, before)
+		if len(e.undo) > maxUndo {
+			e.undo = e.undo[len(e.undo)-maxUndo:]
+		}
+	}
+	e.redo = nil
+	e.typing = typing
 	return cmd
+}
+
+func (e *editor) bodyState() bodyState {
+	return bodyState{value: e.body.Value(), line: e.body.Line(), col: e.body.Column()}
+}
+
+// step moves the body back to the last state of from, keeping the current
+// one in to: an undo with from = undo, a redo with from = redo.
+func (e *editor) step(from, to *[]bodyState) {
+	if len(*from) == 0 {
+		return
+	}
+	st := (*from)[len(*from)-1]
+	*from = (*from)[:len(*from)-1]
+	*to = append(*to, e.bodyState())
+	e.setBody(st)
+	e.typing = false
+}
+
+// setBody sets the body and puts the cursor back where it was. The textarea
+// moves the cursor by lines on the screen, so it goes down until it reaches
+// the line.
+func (e *editor) setBody(st bodyState) {
+	e.body.SetValue(st.value)
+	e.body.MoveToBegin()
+	for i := 0; e.body.Line() < st.line && i <= len(st.value); i++ {
+		e.body.CursorDown()
+	}
+	e.body.SetCursorColumn(st.col)
 }
 
 // updateOther passes a non-key message, such as a cursor blink or a paste,
@@ -149,7 +230,7 @@ func (e *editor) update(msg tea.KeyPressMsg) tea.Cmd {
 func (e *editor) updateOther(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	if e.field == fieldBody {
-		e.body, cmd = e.body.Update(msg)
+		cmd = e.updateBody(msg, false, false) // a paste is a change of its own
 	} else {
 		e.inputs[e.field], cmd = e.inputs[e.field].Update(msg)
 	}

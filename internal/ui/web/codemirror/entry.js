@@ -15,7 +15,7 @@ import { shell } from "@codemirror/legacy-modes/mode/shell";
 
 export { EditorView, keymap, placeholder } from "@codemirror/view";
 export { EditorState, EditorSelection } from "@codemirror/state";
-export { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+export { defaultKeymap, history, historyField, historyKeymap, indentWithTab } from "@codemirror/commands";
 export { indentUnit, syntaxHighlighting } from "@codemirror/language";
 export { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 export { classHighlighter, tagHighlighter, tags } from "@lezer/highlight";

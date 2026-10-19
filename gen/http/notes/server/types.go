@@ -431,6 +431,27 @@ type AddFileResponseBody struct {
 	Path string `form:"path" json:"path" xml:"path"`
 }
 
+// HistoryResponseBody is the type of the "notes" service "history" endpoint
+// HTTP response body.
+type HistoryResponseBody []*NoteVersionSummaryResponse
+
+// HistoryVersionResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body.
+type HistoryVersionResponseBody struct {
+	// ID of the version among those of the note
+	Rev string `form:"rev" json:"rev" xml:"rev"`
+	// Title of the version
+	Title string `form:"title" json:"title" xml:"title"`
+	// Last update time of the version
+	UpdatedAt string `form:"updated_at" json:"updated_at" xml:"updated_at"`
+	// When the version was replaced by a newer one
+	ReplacedAt string `form:"replaced_at" json:"replaced_at" xml:"replaced_at"`
+	// Tags of the version
+	Tags []string `form:"tags" json:"tags" xml:"tags"`
+	// Body of the version in Markdown
+	Body string `form:"body" json:"body" xml:"body"`
+}
+
 // CheckFilesResponseBody is the type of the "notes" service "check_files"
 // endpoint HTTP response body.
 type CheckFilesResponseBody struct {
@@ -1145,6 +1166,78 @@ type DeleteFileBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// HistoryNotFoundResponseBody is the type of the "notes" service "history"
+// endpoint HTTP response body for the "not_found" error.
+type HistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// HistoryBadRequestResponseBody is the type of the "notes" service "history"
+// endpoint HTTP response body for the "bad_request" error.
+type HistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// HistoryVersionNotFoundResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body for the "not_found" error.
+type HistoryVersionNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// HistoryVersionBadRequestResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body for the "bad_request" error.
+type HistoryVersionBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // GitSyncForbiddenResponseBody is the type of the "notes" service "git_sync"
 // endpoint HTTP response body for the "forbidden" error.
 type GitSyncForbiddenResponseBody struct {
@@ -1303,6 +1396,18 @@ type NoteResponseBody struct {
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
 	BodyHighlights []*TextRangeResponseBody `form:"body_highlights,omitempty" json:"body_highlights,omitempty" xml:"body_highlights,omitempty"`
+}
+
+// NoteVersionSummaryResponse is used to define fields on response body types.
+type NoteVersionSummaryResponse struct {
+	// ID of the version among those of the note
+	Rev string `form:"rev" json:"rev" xml:"rev"`
+	// Title of the version
+	Title string `form:"title" json:"title" xml:"title"`
+	// Last update time of the version
+	UpdatedAt string `form:"updated_at" json:"updated_at" xml:"updated_at"`
+	// When the version was replaced by a newer one
+	ReplacedAt string `form:"replaced_at" json:"replaced_at" xml:"replaced_at"`
 }
 
 // UnusedFileResponseBody is used to define fields on response body types.
@@ -1739,6 +1844,41 @@ func NewAddFileResponseBody(res *notes.NoteFile) *AddFileResponseBody {
 	body := &AddFileResponseBody{
 		Name: res.Name,
 		Path: res.Path,
+	}
+	return body
+}
+
+// NewHistoryResponseBody builds the HTTP response body from the result of the
+// "history" endpoint of the "notes" service.
+func NewHistoryResponseBody(res []*notes.NoteVersionSummary) []*NoteVersionSummaryResponse {
+	body := make([]*NoteVersionSummaryResponse, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalNotesNoteVersionSummaryToNoteVersionSummaryResponse(val)
+	}
+	return body
+}
+
+// NewHistoryVersionResponseBody builds the HTTP response body from the result
+// of the "history_version" endpoint of the "notes" service.
+func NewHistoryVersionResponseBody(res *notes.NoteVersion) *HistoryVersionResponseBody {
+	body := &HistoryVersionResponseBody{
+		Rev:        res.Rev,
+		Title:      res.Title,
+		UpdatedAt:  res.UpdatedAt,
+		ReplacedAt: res.ReplacedAt,
+		Body:       res.Body,
+	}
+	if res.Tags != nil {
+		body.Tags = make([]string, len(res.Tags))
+		for i, val := range res.Tags {
+			body.Tags[i] = val
+		}
+	} else {
+		body.Tags = []string{}
 	}
 	return body
 }
@@ -2351,6 +2491,62 @@ func NewDeleteFileBadRequestResponseBody(res *goa.ServiceError) *DeleteFileBadRe
 	return body
 }
 
+// NewHistoryNotFoundResponseBody builds the HTTP response body from the result
+// of the "history" endpoint of the "notes" service.
+func NewHistoryNotFoundResponseBody(res *goa.ServiceError) *HistoryNotFoundResponseBody {
+	body := &HistoryNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewHistoryBadRequestResponseBody builds the HTTP response body from the
+// result of the "history" endpoint of the "notes" service.
+func NewHistoryBadRequestResponseBody(res *goa.ServiceError) *HistoryBadRequestResponseBody {
+	body := &HistoryBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewHistoryVersionNotFoundResponseBody builds the HTTP response body from the
+// result of the "history_version" endpoint of the "notes" service.
+func NewHistoryVersionNotFoundResponseBody(res *goa.ServiceError) *HistoryVersionNotFoundResponseBody {
+	body := &HistoryVersionNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewHistoryVersionBadRequestResponseBody builds the HTTP response body from
+// the result of the "history_version" endpoint of the "notes" service.
+func NewHistoryVersionBadRequestResponseBody(res *goa.ServiceError) *HistoryVersionBadRequestResponseBody {
+	body := &HistoryVersionBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewGitSyncForbiddenResponseBody builds the HTTP response body from the
 // result of the "git_sync" endpoint of the "notes" service.
 func NewGitSyncForbiddenResponseBody(res *goa.ServiceError) *GitSyncForbiddenResponseBody {
@@ -2588,6 +2784,24 @@ func NewDeleteFilePayload(id string, name string) *notes.DeleteFilePayload {
 	v := &notes.DeleteFilePayload{}
 	v.ID = id
 	v.Name = name
+
+	return v
+}
+
+// NewHistoryPayload builds a notes service history endpoint payload.
+func NewHistoryPayload(id string) *notes.HistoryPayload {
+	v := &notes.HistoryPayload{}
+	v.ID = id
+
+	return v
+}
+
+// NewHistoryVersionPayload builds a notes service history_version endpoint
+// payload.
+func NewHistoryVersionPayload(id string, rev string) *notes.HistoryVersionPayload {
+	v := &notes.HistoryVersionPayload{}
+	v.ID = id
+	v.Rev = rev
 
 	return v
 }

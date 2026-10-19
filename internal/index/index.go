@@ -106,7 +106,26 @@ type Index struct {
 	// Mode.ngram). Search merges
 	// their results in this order.
 	fts []ftsTable
+	// onReplace, if set, is called with the content of a note that Upsert
+	// replaced with a different title, tags or body.
+	onReplace func(Replaced)
 }
+
+// Replaced is the content of a note before Upsert replaced it.
+type Replaced struct {
+	ID        string
+	Title     string
+	Tags      []string
+	Body      string
+	UpdatedAt time.Time
+}
+
+// OnReplace sets fn to be called, after the change is committed, with the
+// content of each note that Upsert replaces with a different title, tags or
+// body: by a save, or by a change of the file found by Sync. Moves and
+// reordering, which keep the content, do not call it, nor do new notes and
+// rebuilds of the index. Set it before the index is used.
+func (ix *Index) OnReplace(fn func(Replaced)) { ix.onReplace = fn }
 
 // ftsTable is a full-text table and the analyzer that fills it.
 type ftsTable struct {
@@ -293,6 +312,12 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 		return err
 	}
 	defer tx.Rollback()
+	var old *Replaced
+	if ix.onReplace != nil {
+		if old, err = replaced(ctx, tx, n, string(tags)); err != nil {
+			return err
+		}
+	}
 	// An update keeps the note's seq, and so its rowid in the full-text tables.
 	var seq int64
 	if err := tx.QueryRowContext(ctx, `
@@ -323,7 +348,35 @@ RETURNING seq`,
 			return err
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if old != nil {
+		ix.onReplace(*old)
+	}
+	return nil
+}
+
+// replaced returns the content of note n in the index if n replaces it with a
+// different title, tags (as JSON) or body, or nil.
+func replaced(ctx context.Context, tx *sql.Tx, n *store.Note, tags string) (*Replaced, error) {
+	var title, oldTags, body, updated string
+	err := tx.QueryRowContext(ctx, `SELECT title, tags, body, updated_at FROM notes WHERE id = ?`, n.ID).Scan(&title, &oldTags, &body, &updated)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if title == n.Title && oldTags == tags && body == n.Body {
+		return nil, nil
+	}
+	r := &Replaced{ID: n.ID, Title: title, Body: body}
+	if err := json.Unmarshal([]byte(oldTags), &r.Tags); err != nil {
+		return nil, err
+	}
+	r.UpdatedAt, _ = time.Parse(time.RFC3339, updated) // a broken time is left zero
+	return r, nil
 }
 
 // Delete removes the note from the index.

@@ -2262,6 +2262,226 @@ func DecodeDeleteFileResponse(decoder func(*http.Response) goahttp.Decoder, rest
 	}
 }
 
+// BuildHistoryRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "history" endpoint
+func (c *Client) BuildHistoryRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.HistoryPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "history", "*notes.HistoryPayload", v)
+		}
+		id = p.ID
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryNotesPath(id)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "history", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeHistoryResponse returns a decoder for responses returned by the notes
+// history endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeHistoryResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - error: internal error
+func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "history", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body []*NoteVersionSummaryResponse
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := validateNoteVersionSummaryResponse(e, "body[*]"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history", err)
+			}
+			res := NewHistoryNoteVersionSummaryOK(body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body HistoryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			err = ValidateHistoryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history", err)
+			}
+			return nil, NewHistoryNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body HistoryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			err = ValidateHistoryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history", err)
+			}
+			return nil, NewHistoryBadRequest(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "history", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildHistoryVersionRequest instantiates a HTTP request object with method
+// and path set to call the "notes" service "history_version" endpoint
+func (c *Client) BuildHistoryVersionRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id  string
+		rev string
+	)
+	{
+		p, ok := v.(*notes.HistoryVersionPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "history_version", "*notes.HistoryVersionPayload", v)
+		}
+		id = p.ID
+		rev = p.Rev
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryVersionNotesPath(id, rev)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "history_version", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeHistoryVersionResponse returns a decoder for responses returned by the
+// notes history_version endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+// DecodeHistoryVersionResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - error: internal error
+func DecodeHistoryVersionResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "history_version", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body HistoryVersionResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			err = ValidateHistoryVersionResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history_version", err)
+			}
+			res := NewHistoryVersionNoteVersionOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body HistoryVersionNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			err = ValidateHistoryVersionNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history_version", err)
+			}
+			return nil, NewHistoryVersionNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body HistoryVersionBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			err = ValidateHistoryVersionBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history_version", err)
+			}
+			return nil, NewHistoryVersionBadRequest(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "history_version", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildCheckFilesRequest instantiates a HTTP request object with method and
 // path set to call the "notes" service "check_files" endpoint
 func (c *Client) BuildCheckFilesRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -2784,6 +3004,20 @@ func unmarshalNoteResponseBodyToNotesNote(v *NoteResponseBody) *notes.Note {
 			}
 			res.BodyHighlights[i] = unmarshalTextRangeResponseBodyToNotesTextRange(val)
 		}
+	}
+
+	return res
+}
+
+// unmarshalNoteVersionSummaryResponseToNotesNoteVersionSummary builds a value
+// of type *notes.NoteVersionSummary from a value of type
+// *NoteVersionSummaryResponse.
+func unmarshalNoteVersionSummaryResponseToNotesNoteVersionSummary(v *NoteVersionSummaryResponse) *notes.NoteVersionSummary {
+	res := &notes.NoteVersionSummary{
+		Rev:        *v.Rev,
+		Title:      *v.Title,
+		UpdatedAt:  *v.UpdatedAt,
+		ReplacedAt: *v.ReplacedAt,
 	}
 
 	return res

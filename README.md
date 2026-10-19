@@ -74,6 +74,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 - **Assistant** — ask questions about your notes in the web UI; it searches and reads them, and answers with links. Claude or Gemini.
 - **Import** — Markdown files with their front matter and images.
 - **Safe edits** — conflicts are detected with ETags; deleted notes go to the trash first.
+- **Undo and history** — undo in the editor even after saving; undo moves, reordering and changes of notebooks from a bar or with Cmd+Z; and put back an earlier version of a note from its history, which ebira keeps on each machine (up to 50 versions per note, not synced).
 - **One binary, no cgo**
 
 ## Installation
@@ -174,7 +175,7 @@ Run any command with `-h` for all its flags.
 └── trash/
 ```
 
-Only the notes are in the notes directory: the index and the server's state stay on each machine, in `~/.cache/ebira` and `~/.local/state/ebira`.
+Only the notes are in the notes directory: the index and the server's state, with the earlier versions of the notes, stay on each machine, in `~/.cache/ebira` and `~/.local/state/ebira`. The earlier versions are in `history/` there; old ones are dropped by themselves (see above), and you may delete the folder to drop them all, which leaves the notes as they are.
 
 - A **notebook** is a folder. `inbox` and `trash` always exist; deleting a note moves it to the trash first.
 - A **note** has `title`, `tags`, `created_at`, `updated_at` and a Markdown `body`. ebira adds `order` when you reorder notes by hand and `created_by: ai` when an AI wrote the note.
