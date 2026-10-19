@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"flag"
@@ -38,11 +39,11 @@ func runServer(args []string) error {
 		return serverRestart(ctx, args[1:])
 	case "stop", "status":
 		fs := flag.NewFlagSet("server "+args[0], flag.ContinueOnError)
-		dataDir := fs.String("data-dir", defaultDataDir(), "data directory of the server")
+		notesDir := fs.String("notes", defaultNotesDir(), "notes directory of the server")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
-		dir, err := absDir(*dataDir)
+		dir, err := absDir(*notesDir)
 		if err != nil {
 			return err
 		}
@@ -63,7 +64,7 @@ func serverStart(ctx context.Context, args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
-	dir, err := dataDirOf(fs, *o.dataDir, false, nil, nil)
+	dir, err := notesDirOf(fs, *o.notesDir, false, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -76,8 +77,8 @@ func serverStart(ctx context.Context, args []string) error {
 	return startWithFlags(ctx, dir, setFlags(fs))
 }
 
-// serverRestart stops the server of the data directory, if it runs, and
-// starts it again in the background. Without flags other than -data-dir, the
+// serverRestart stops the server of the notes directory, if it runs, and
+// starts it again in the background. Without flags other than -notes, the
 // flags of the stopped server are used again; the environment, such as the
 // API keys of the assistant, is the one of this command.
 func serverRestart(ctx context.Context, args []string) error {
@@ -88,7 +89,7 @@ func serverRestart(ctx context.Context, args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
-	dir, err := absDir(*o.dataDir)
+	dir, err := absDir(*o.notesDir)
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func serverRestart(ctx context.Context, args []string) error {
 			return err
 		}
 	} else {
-		if dir, err = dataDirOf(fs, *o.dataDir, false, nil, nil); err != nil {
+		if dir, err = notesDirOf(fs, *o.notesDir, false, nil, nil); err != nil {
 			return err
 		}
 		fmt.Println("The server is not running; starting it.")
@@ -132,14 +133,14 @@ func keptFlags(st daemon.State) []string {
 }
 
 // startWithFlags starts the server of dir in the background with flags of
-// serve other than -data-dir, and prints where it runs.
+// serve other than -notes, and prints where it runs.
 func startWithFlags(ctx context.Context, dir string, flags []string) error {
 	fs, o := newServeFlags("serve")
 	if err := fs.Parse(flags); err != nil {
 		return err
 	}
-	// The data directory goes as an absolute path.
-	s, err := startServer(ctx, dir, *o.addr, append([]string{"-data-dir", dir}, flags...), os.Stdout)
+	// The notes directory goes as an absolute path.
+	s, err := startServer(ctx, dir, *o.addr, append([]string{"-notes", dir}, flags...), os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -273,65 +274,96 @@ func serverStatus(ctx context.Context, dir string, out io.Writer) error {
 	if st.Version != daemon.Version() {
 		build = "another build than this ebira (" + daemon.Version() + ")"
 	}
-	fmt.Fprintf(out, "data dir:  %s\naddress:   http://%s\npid:       %d\nstarted:   %s\nversion:   %s, %s\nanswers:   %s\nlog:       %s\n",
-		st.DataDir, st.Addr, st.PID, st.StartedAt.Local().Format(time.DateTime), st.Version, build, answers, filepath.Join(sd, daemon.LogFile))
+	fmt.Fprintf(out, "notes:     %s\naddress:   http://%s\npid:       %d\nstarted:   %s\nversion:   %s, %s\nanswers:   %s\nlog:       %s\n",
+		cmp.Or(st.NotesDir, dir), st.Addr, st.PID, st.StartedAt.Local().Format(time.DateTime), st.Version, build, answers, filepath.Join(sd, daemon.LogFile))
 	return nil
 }
 
-// absDir returns the absolute path of the data directory.
-func absDir(dataDir string) (string, error) {
-	return filepath.Abs(dataDir)
+// absDir returns the absolute path of the notes directory.
+func absDir(notesDir string) (string, error) {
+	return filepath.Abs(notesDir)
 }
 
-// stateDir returns the state directory of the data directory dir: the
+// stateDir returns the state directory of the notes directory dir: the
 // server's lock, server.json and log.
 func stateDir(dir string) (string, error) { return config.StateDir(dir) }
 
-// legacyDir returns the directory in the data directory dir where earlier
-// builds kept the state and the index.
-func legacyDir(dir string) string { return filepath.Join(dir, ".ebira") }
+// legacyDirs returns the state and cache directories that earlier builds
+// kept for the notes directory dir, when they took the directory above it,
+// with dir as its notes/, for the data directory; "" for those that do not
+// exist. They are told by the file of the data directory in them, as this
+// build writes another file to its own.
+func legacyDirs(dir string) (state, cache string, err error) {
+	if filepath.Base(dir) != "notes" {
+		return "", "", nil
+	}
+	data := filepath.Dir(dir)
+	of := func(d string, err error) (string, error) {
+		if err != nil {
+			return "", err
+		}
+		b, err := os.ReadFile(filepath.Join(d, config.LegacyDataDirFile))
+		if err != nil || strings.TrimSuffix(string(b), "\n") != data {
+			return "", nil
+		}
+		return d, nil
+	}
+	if state, err = of(config.StateDir(data)); err != nil {
+		return "", "", err
+	}
+	cache, err = of(config.CacheDir(data))
+	return state, cache, err
+}
 
-// legacyFiles are the files that earlier builds kept in legacyDir.
+// legacyFiles are the files that earlier builds kept in the directories of
+// legacyDirs.
 var legacyFiles = []string{
-	daemon.LockFile, daemon.StateFile, daemon.LogFile,
+	config.LegacyDataDirFile, daemon.LockFile, daemon.StateFile, daemon.LogFile,
 	"index.sqlite", "index.sqlite-wal", "index.sqlite-shm", "index.sqlite-journal",
 }
 
-// removeLegacyDir removes legacyDir of the data directory dir when it holds
-// only the files of earlier builds; the index is built again in the cache
-// directory. It fails while a server of an earlier build runs there, so that
-// two servers do not run for one data directory.
-func removeLegacyDir(dir string) error {
-	old := legacyDir(dir)
-	entries, err := os.ReadDir(old)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
+// removeLegacyDirs removes the directories of legacyDirs of the notes
+// directory dir that hold only the files of earlier builds; the index is
+// built again in the cache directory of dir. It fails while a server of an
+// earlier build runs for dir, so that two servers do not run for one notes
+// directory.
+func removeLegacyDirs(dir string) error {
+	state, cache, err := legacyDirs(dir)
 	if err != nil {
 		return err
 	}
-	if running, err := daemon.Running(old); err != nil {
-		return err
-	} else if running {
-		return fmt.Errorf("%w (%s, by an earlier build); stop it with ebira server stop", daemon.ErrRunning, dir)
-	}
-	for _, e := range entries {
-		if !slices.Contains(legacyFiles, e.Name()) {
-			slog.Warn("not removing the directory of earlier builds, which has other files", "dir", old, "file", e.Name())
-			return nil
+	if state != "" {
+		if running, err := daemon.Running(state); err != nil {
+			return err
+		} else if running {
+			return fmt.Errorf("%w (%s, by an earlier build); stop it with ebira server stop", daemon.ErrRunning, dir)
 		}
 	}
-	if err := os.RemoveAll(old); err != nil {
-		return err
+	for _, old := range []string{state, cache} {
+		if old == "" {
+			continue
+		}
+		entries, err := os.ReadDir(old)
+		if err != nil {
+			return err
+		}
+		other := slices.IndexFunc(entries, func(e fs.DirEntry) bool { return !slices.Contains(legacyFiles, e.Name()) })
+		if other >= 0 {
+			slog.Warn("not removing the directory of earlier builds, which has other files", "dir", old, "file", entries[other].Name())
+			continue
+		}
+		if err := os.RemoveAll(old); err != nil {
+			return err
+		}
+		slog.Info("removed the directory of earlier builds", "dir", old)
 	}
-	slog.Info("removed the directory of earlier builds; the index is now in the cache directory", "dir", old)
 	return nil
 }
 
-// serverDir returns the state directory of the server of the data directory
+// serverDir returns the state directory of the server of the notes directory
 // dir and whether the server runs. A server of an earlier build, which kept
-// its state in legacyDir, is found too, so that it can be stopped or
-// restarted with this build.
+// its state for the directory above dir (see legacyDirs), is found too, so
+// that it can be stopped or restarted with this build.
 func serverDir(dir string) (string, bool, error) {
 	sd, err := stateDir(dir)
 	if err != nil {
@@ -340,7 +372,10 @@ func serverDir(dir string) (string, bool, error) {
 	if running, err := daemon.Running(sd); err != nil || running {
 		return sd, running, err
 	}
-	old := legacyDir(dir)
+	old, _, err := legacyDirs(dir)
+	if err != nil || old == "" {
+		return sd, false, err
+	}
 	if running, err := daemon.Running(old); err != nil {
 		return "", false, err
 	} else if running {

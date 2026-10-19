@@ -4,18 +4,19 @@
 //
 //   - the settings file: $XDG_CONFIG_HOME/ebira/config.yaml (~/.config), or
 //     the file named by $EBIRA_CONFIG.
-//   - the state of a data directory (the server's lock, server.json and log):
-//     $XDG_STATE_HOME/ebira/<name>-<hash>/ (~/.local/state).
-//   - the cache of a data directory (the index): $XDG_CACHE_HOME/ebira/index/<name>-<hash>/
+//   - the state of a notes directory (the server's lock, server.json and
+//     log): $XDG_STATE_HOME/ebira/<name>-<hash>/ (~/.local/state).
+//   - the cache of a notes directory (the index): $XDG_CACHE_HOME/ebira/index/<name>-<hash>/
 //     (~/.cache).
 //
-// <name> is the base name of the data directory and <hash> the first 12 hex
+// <name> is the base name of the notes directory and <hash> the first 12 hex
 // digits of the SHA-256 of its absolute path with symbolic links resolved.
-// Each of those directories has a file data-dir with that path.
+// Each of those directories has a file notes-dir with that path.
 //
 // The settings file holds the settings of this machine and user. The
 // settings shared with the notes, such as the search mode, are in
-// notes/_ebira.yaml instead (see internal/store), and secrets in neither.
+// _ebira.yaml of the notes directory instead (see internal/store), and
+// secrets in neither.
 package config
 
 import (
@@ -37,16 +38,21 @@ import (
 // file.
 const Env = "EBIRA_CONFIG"
 
-// DataDirFile is the file in a state or cache directory with the path of its
-// data directory.
-const DataDirFile = "data-dir"
+// NotesDirFile is the file in a state or cache directory with the path of
+// its notes directory.
+const NotesDirFile = "notes-dir"
+
+// LegacyDataDirFile is the file in a state or cache directory of earlier
+// builds with the path of its data directory, the directory above the notes
+// directory then.
+const LegacyDataDirFile = "data-dir"
 
 // Config is the settings file. Unset values are zero; the commands use them
 // as the defaults of their flags.
 type Config struct {
-	// DataDir is the default data directory. ~ and paths relative to the
+	// NotesDir is the default notes directory. ~ and paths relative to the
 	// settings file are resolved by Load.
-	DataDir string `yaml:"data_dir"`
+	NotesDir string `yaml:"notes_dir"`
 	// Addr is the address the server listens on.
 	Addr string `yaml:"addr"`
 	// Watch tells whether the server watches the notes directory.
@@ -58,6 +64,10 @@ type Config struct {
 	Lang string `yaml:"lang"`
 	// GitSync is the interval of syncing the notes with git, such as 10m.
 	GitSync string `yaml:"git_sync"`
+
+	// LegacyDataDir is data_dir of earlier builds, the directory above the
+	// notes directory; Load fails with it, telling what to write instead.
+	LegacyDataDir string `yaml:"data_dir"`
 }
 
 // Path returns the path of the settings file.
@@ -92,9 +102,12 @@ func Load() (Config, error) {
 	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) { // io.EOF: an empty file
 		return c, fmt.Errorf("%s: %w", p, err)
 	}
-	if c.DataDir != "" {
-		if c.DataDir, err = resolve(c.DataDir, filepath.Dir(p)); err != nil {
-			return c, fmt.Errorf("%s: data_dir: %w", p, err)
+	if c.LegacyDataDir != "" {
+		return c, fmt.Errorf("%s: data_dir is replaced by notes_dir, the notes directory itself: write notes_dir: %s", p, filepath.Join(c.LegacyDataDir, "notes"))
+	}
+	if c.NotesDir != "" {
+		if c.NotesDir, err = resolve(c.NotesDir, filepath.Dir(p)); err != nil {
+			return c, fmt.Errorf("%s: notes_dir: %w", p, err)
 		}
 	}
 	return c, nil
@@ -115,41 +128,45 @@ func resolve(path, dir string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-// StateDir returns the state directory of the data directory dataDir.
-func StateDir(dataDir string) (string, error) {
+// StateDir returns the state directory of the notes directory notesDir.
+func StateDir(notesDir string) (string, error) {
 	d, err := base("XDG_STATE_HOME", filepath.Join(".local", "state"))
 	if err != nil {
 		return "", err
 	}
-	return under(filepath.Join(d, "ebira"), dataDir)
+	return under(filepath.Join(d, "ebira"), notesDir)
 }
 
-// CacheDir returns the cache directory of the data directory dataDir.
-func CacheDir(dataDir string) (string, error) {
+// CacheDir returns the cache directory of the notes directory notesDir.
+func CacheDir(notesDir string) (string, error) {
 	d, err := base("XDG_CACHE_HOME", ".cache")
 	if err != nil {
 		return "", err
 	}
-	return under(filepath.Join(d, "ebira", "index"), dataDir)
+	return under(filepath.Join(d, "ebira", "index"), notesDir)
 }
 
 // Prepare creates dir, a directory of StateDir or CacheDir, and writes the
-// path of its data directory to DataDirFile in it.
-func Prepare(dir, dataDir string) error {
+// path of its notes directory to NotesDirFile in it.
+func Prepare(dir, notesDir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	p := filepath.Join(dir, DataDirFile)
-	want := dataDir + "\n"
+	// The same path may have been a data directory of an earlier build.
+	if err := os.Remove(filepath.Join(dir, LegacyDataDirFile)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	p := filepath.Join(dir, NotesDirFile)
+	want := notesDir + "\n"
 	if b, err := os.ReadFile(p); err == nil && string(b) == want {
 		return nil
 	}
 	return os.WriteFile(p, []byte(want), 0o644)
 }
 
-// under returns the directory of dataDir under root.
-func under(root, dataDir string) (string, error) {
-	abs, err := filepath.Abs(dataDir)
+// under returns the directory of dir under root.
+func under(root, dir string) (string, error) {
+	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return "", err
 	}
@@ -178,8 +195,8 @@ func base(env, def string) (string, error) {
 	return filepath.Join(home, def), nil
 }
 
-// Save adds the set values of c, data_dir, lang and git_sync, to the settings file,
-// creating the file when it does not exist. A data directory under the home
+// Save adds the set values of c, notes_dir, lang and git_sync, to the settings
+// file, creating the file when it does not exist. A notes directory under the home
 // directory is written with ~. The keys are appended, so the rest of the
 // file, with its comments, is kept; the file must not have them yet.
 func Save(c Config) (string, error) {
@@ -188,7 +205,7 @@ func Save(c Config) (string, error) {
 		return "", err
 	}
 	var add []byte
-	for _, kv := range [][2]string{{"data_dir", homeRel(c.DataDir)}, {"lang", c.Lang}, {"git_sync", c.GitSync}} {
+	for _, kv := range [][2]string{{"notes_dir", homeRel(c.NotesDir)}, {"lang", c.Lang}, {"git_sync", c.GitSync}} {
 		if kv[1] == "" {
 			continue
 		}

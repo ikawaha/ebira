@@ -24,7 +24,7 @@ import (
 )
 
 // defaultSetupDir is the directory setup suggests for the notes.
-const defaultSetupDir = "~/ebira"
+const defaultSetupDir = "~/notes"
 
 // defaultSetupGitSync is the interval of syncing with git setup suggests.
 const defaultSetupGitSync = "10m"
@@ -34,28 +34,32 @@ const defaultSetupGitSync = "10m"
 // not saved to the settings file.
 var setupFlags []string
 
-// errNoNotes is returned when no data directory is given and the current
-// directory has no notes.
+// errNoNotes is returned when no notes directory is given and the current
+// directory has no notes/.
 var errNoNotes = errors.New("no notes found")
 
-// dataDirOf returns the data directory of a command with fs, whose -data-dir
-// is dataDir. A data directory given by -data-dir or the settings file is
-// used as is, and created if needed. Otherwise the current directory is used
-// when it has notes; when it has none, setup asks where to keep them if
-// interactive, else it fails, so that notes/ is not made in a place by
+// notesDirOf returns the notes directory of a command with fs, whose -notes
+// is notesDir. A notes directory given by -notes or the settings file is used
+// as is, and created if needed. Otherwise notes/ in the current directory is
+// used when it exists; when it does not, setup asks where to keep the notes
+// if interactive, else it fails, so that notes/ is not made in a place by
 // accident.
-func dataDirOf(fs *flag.FlagSet, dataDir string, interactive bool, in io.Reader, out io.Writer) (string, error) {
-	dir, err := absDir(dataDir)
+func notesDirOf(fs *flag.FlagSet, notesDir string, interactive bool, in io.Reader, out io.Writer) (string, error) {
+	dir, err := absDir(notesDir)
 	if err != nil {
 		return "", err
 	}
-	if flagSet(fs, "data-dir") || settings.DataDir != "" || hasNotes(dir) {
+	if flagSet(fs, "notes") || settings.NotesDir != "" || isDir(dir) {
 		return dir, nil
 	}
 	if !interactive {
-		return "", fmt.Errorf("%w in %s (no notes/ directory); run ebira in a terminal to set up, or pass -data-dir", errNoNotes, dir)
+		return "", fmt.Errorf("%w: no %s; run ebira in a terminal to set up, or pass -notes", errNoNotes, dir)
 	}
-	return setup(dir, in, out)
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	return setup(cwd, in, out)
 }
 
 // flagSet reports whether the flag name was given on fs.
@@ -65,10 +69,31 @@ func flagSet(fs *flag.FlagSet, name string) bool {
 	return set
 }
 
-// hasNotes reports whether dir is a data directory, with notes/ in it.
-func hasNotes(dir string) bool {
-	fi, err := os.Stat(filepath.Join(dir, "notes"))
+// isDir reports whether dir is a directory.
+func isDir(dir string) bool {
+	fi, err := os.Stat(dir)
 	return err == nil && fi.IsDir()
+}
+
+// hasFiles reports whether the directory dir has files other than .DS_Store.
+func hasFiles(dir string) bool {
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if e.Name() != ".DS_Store" {
+			return true
+		}
+	}
+	return false
+}
+
+// hasNotes reports whether dir is a notes directory of ebira, with the inbox
+// or the settings shared with the notes.
+func hasNotes(dir string) bool {
+	if isDir(filepath.Join(dir, store.Inbox)) {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(dir, store.ConfigFile))
+	return err == nil
 }
 
 // interactive reports whether the standard input is a terminal, to ask the
@@ -80,7 +105,7 @@ func interactive() bool {
 // setup asks where to keep the notes, with the current directory cwd lacking
 // them, whether to sync them with a git repository and how often, how to
 // search them and, unless the settings file has it, the language of the web
-// UI; it creates the data directory, cloning the notes from the repository
+// UI; it creates the notes directory, cloning the notes from the repository
 // when it has some, else pushing them to it, and saves the directory, the
 // language and the interval to the settings file if the user agrees.
 func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
@@ -90,22 +115,17 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Fprintf(out, "No notes found: no -data-dir, no data_dir in %s, and no notes/ in %s.\nLet's set up ebira.\n\n", cfgPath, cwd)
+	fmt.Fprintf(out, "No notes found: no -notes, no notes_dir in %s, and no notes/ in %s.\nLet's set up ebira.\n\n", cfgPath, cwd)
 
-	answer, err := ask(r, out, "Directory to keep the notes in", defaultSetupDir)
-	if err != nil {
-		return "", err
-	}
-	dir, err := expandDir(answer, cwd)
+	dir, err := askDir(r, out, cwd)
 	if err != nil {
 		return "", err
 	}
 
-	notes := filepath.Join(dir, "notes")
 	url, remoteNotes := "", false
 	if svc := syncedFolder(dir); svc != "" {
 		fmt.Fprintf(out, "\nThe notes are in %s, which syncs them among machines. When a note is changed on two\nmachines, ebira makes the copy %s leaves into a note, titled as a conflict copy.\nGit is not used: a git repository in a synced folder can break.\n", svc, svc)
-	} else if url, remoteNotes, err = askRemote(ctx, r, out, notes); err != nil {
+	} else if url, remoteNotes, err = askRemote(ctx, r, out, dir); err != nil {
 		return "", err
 	}
 
@@ -141,7 +161,7 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		}
 	}
 	fmt.Fprintln(out)
-	what := "the directory as data_dir"
+	what := "the directory as notes_dir"
 	if lang != "" {
 		what += ", the language as lang"
 	}
@@ -153,10 +173,10 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		return "", err
 	}
 
-	fmt.Fprintf(out, "\nNotes:        %s\n", filepath.Join(dir, "notes"))
+	fmt.Fprintf(out, "\nNotes:        %s\n", dir)
 	switch {
 	case url == "":
-	case remoteNotes && !hasNotes(dir):
+	case remoteNotes && !hasFiles(dir):
 		fmt.Fprintf(out, "Git:          clone %s\n", url)
 	default:
 		fmt.Fprintf(out, "Git:          push to %s\n", url)
@@ -165,7 +185,7 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		fmt.Fprintf(out, "Sync:         every %s\n", gitSync)
 	}
 	if mode != "" {
-		fmt.Fprintf(out, "Search mode:  %s (in notes/%s)\n", mode, store.ConfigFile)
+		fmt.Fprintf(out, "Search mode:  %s (in %s)\n", mode, store.ConfigFile)
 	}
 	if lang != "" {
 		fmt.Fprintf(out, "Web UI:       %s\n", lang)
@@ -183,10 +203,10 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		return "", err
 	}
 	if save {
-		if _, err := config.Save(config.Config{DataDir: dir, Lang: lang, GitSync: gitSync}); err != nil {
+		if _, err := config.Save(config.Config{NotesDir: dir, Lang: lang, GitSync: gitSync}); err != nil {
 			return "", err
 		}
-		settings.DataDir = dir
+		settings.NotesDir = dir
 		settings.Lang = cmp.Or(lang, settings.Lang)
 		settings.GitSync = cmp.Or(gitSync, settings.GitSync)
 	} else {
@@ -201,8 +221,8 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	return dir, nil
 }
 
-// makeNotes creates the notes of the data directory dir: it clones them from
-// the git repository url when it has notes (remoteNotes) and dir has none,
+// makeNotes creates the notes directory dir: it clones the notes from the git
+// repository url when it has notes (remoteNotes) and dir has no files,
 // else creates them with the search mode, unless empty, and pushes them to
 // url, unless empty. A directory dir made here is removed on a failure.
 func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode string, out io.Writer) (err error) {
@@ -213,29 +233,28 @@ func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode stri
 			}
 		}()
 	}
-	notes := filepath.Join(dir, "notes")
-	if url != "" && remoteNotes && !hasNotes(dir) {
+	if url != "" && remoteNotes && !hasFiles(dir) {
 		fmt.Fprintf(out, "Cloning %s...\n", url)
-		return gitsync.Clone(ctx, url, notes)
+		return gitsync.Clone(ctx, url, dir)
 	}
 	if mode != "" {
-		if err := os.MkdirAll(notes, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(notes, store.ConfigFile), []byte("search: "+mode+"\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, store.ConfigFile), []byte("search: "+mode+"\n"), 0o644); err != nil {
 			return err
 		}
 	}
 	if url == "" {
 		return nil
 	}
-	st, err := store.New(notes)
+	st, err := store.New(dir)
 	if err != nil {
 		return err
 	}
 	label := "conflict " + time.Now().Format("2006-01-02 15:04")
 	fmt.Fprintf(out, "Pushing the notes to %s...\n", url)
-	_, err = gitsync.Connect(ctx, notes, url, func(f func() error) error { return f() }, store.IsNotePath,
+	_, err = gitsync.Connect(ctx, dir, url, func(f func() error) error { return f() }, store.IsNotePath,
 		func(p string, theirs []byte) (string, error) { return st.ConflictCopy(p, theirs, label) })
 	return err
 }
@@ -289,6 +308,26 @@ func syncedFolder(dir string) string {
 		return "Google Drive"
 	}
 	return ""
+}
+
+// askDir asks for the notes directory, relative to cwd. A directory with
+// files that are not notes of ebira, such as notes of another app, is
+// confirmed, as ebira takes the folders in it for notebooks.
+func askDir(r *bufio.Reader, out io.Writer, cwd string) (string, error) {
+	for {
+		answer, err := ask(r, out, "Directory to keep the notes in", defaultSetupDir)
+		if err != nil {
+			return "", err
+		}
+		dir, err := expandDir(answer, cwd)
+		if err != nil || !hasFiles(dir) || hasNotes(dir) {
+			return dir, err
+		}
+		fmt.Fprintf(out, "%s has files, but no notes of ebira. ebira takes the folders in it for notebooks\nand its YAML files for notes; other files are left as they are.\n", dir)
+		if ok, err := confirm(r, out, "Keep the notes there", false); err != nil || ok {
+			return dir, err
+		}
+	}
 }
 
 // askRemote asks for the URL of a git repository to sync the notes

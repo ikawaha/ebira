@@ -28,53 +28,53 @@ func setupEnv(t *testing.T) string {
 	return home
 }
 
-// dataDirFlags returns a flag set with -data-dir parsed from args.
-func dataDirFlags(t *testing.T, args ...string) (*flag.FlagSet, *string) {
+// notesDirFlags returns a flag set with -notes parsed from args.
+func notesDirFlags(t *testing.T, args ...string) (*flag.FlagSet, *string) {
 	t.Helper()
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	d := fs.String("data-dir", ".", "")
+	d := fs.String("notes", "notes", "")
 	if err := fs.Parse(args); err != nil {
 		t.Fatal(err)
 	}
 	return fs, d
 }
 
-func TestDataDirOf(t *testing.T) {
+func TestNotesDirOf(t *testing.T) {
 	setupEnv(t)
 	cwd := t.TempDir()
 	t.Chdir(cwd)
 
 	// No notes here, and nothing given: an error when not interactive.
-	fs, d := dataDirFlags(t)
-	if _, err := dataDirOf(fs, *d, false, nil, nil); !errors.Is(err, errNoNotes) {
+	fs, d := notesDirFlags(t)
+	if _, err := notesDirOf(fs, *d, false, nil, nil); !errors.Is(err, errNoNotes) {
 		t.Errorf("no notes: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(cwd, "notes")); !errors.Is(err, os.ErrNotExist) {
 		t.Error("notes/ was made")
 	}
 
-	// A data directory given by the flag is used as is.
+	// A notes directory given by the flag is used as is.
 	other := t.TempDir()
-	fs, d = dataDirFlags(t, "-data-dir", other)
-	if dir, err := dataDirOf(fs, *d, false, nil, nil); err != nil || dir != other {
-		t.Errorf("-data-dir: %s, %v", dir, err)
+	fs, d = notesDirFlags(t, "-notes", other)
+	if dir, err := notesDirOf(fs, *d, false, nil, nil); err != nil || dir != other {
+		t.Errorf("-notes: %s, %v", dir, err)
 	}
 
 	// So is one of the settings file.
-	settings.DataDir = other
-	fs, d = dataDirFlags(t)
+	settings.NotesDir = other
+	fs, d = notesDirFlags(t)
 	*d = other
-	if dir, err := dataDirOf(fs, *d, false, nil, nil); err != nil || dir != other {
-		t.Errorf("data_dir: %s, %v", dir, err)
+	if dir, err := notesDirOf(fs, *d, false, nil, nil); err != nil || dir != other {
+		t.Errorf("notes_dir: %s, %v", dir, err)
 	}
-	settings.DataDir = ""
+	settings.NotesDir = ""
 
-	// The current directory with notes.
+	// notes/ in the current directory.
 	if err := os.Mkdir(filepath.Join(cwd, "notes"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	fs, d = dataDirFlags(t)
-	if dir, err := dataDirOf(fs, *d, false, nil, nil); err != nil || dir != cwd {
+	fs, d = notesDirFlags(t)
+	if dir, err := notesDirOf(fs, *d, false, nil, nil); err != nil || dir != filepath.Join(cwd, "notes") {
 		t.Errorf("notes here: %s, %v", dir, err)
 	}
 }
@@ -84,26 +84,26 @@ func TestSetup(t *testing.T) {
 	cwd := t.TempDir()
 	var out strings.Builder
 
-	// All defaults: ~/ebira, no git, ja search, ja for $LANG, saved.
+	// All defaults: ~/notes, no git, ja search, ja for $LANG, saved.
 	dir, err := setup(cwd, strings.NewReader("\n\n\n\n\n\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
-	if want := filepath.Join(home, "ebira"); dir != want {
+	if want := filepath.Join(home, "notes"); dir != want {
 		t.Errorf("dir: %s, want %s", dir, want)
 	}
-	b, err := os.ReadFile(filepath.Join(dir, "notes", "_ebira.yaml"))
+	b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml"))
 	if err != nil || string(b) != "search: ja\n" {
 		t.Errorf("_ebira.yaml: %q, %v", b, err)
 	}
 	b, err = os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml"))
-	if err != nil || string(b) != "data_dir: ~/ebira\nlang: ja\n" {
+	if err != nil || string(b) != "notes_dir: ~/notes\nlang: ja\n" {
 		t.Errorf("config.yaml: %q, %v", b, err)
 	}
-	if c, err := config.Load(); err != nil || c.DataDir != dir {
+	if c, err := config.Load(); err != nil || c.NotesDir != dir {
 		t.Errorf("Load: %+v, %v", c, err)
 	}
-	if settings.DataDir != dir || settings.Lang != "ja" || setupFlags != nil {
+	if settings.NotesDir != dir || settings.Lang != "ja" || setupFlags != nil {
 		t.Errorf("settings: %+v, flags %v", settings, setupFlags)
 	}
 }
@@ -122,7 +122,7 @@ func TestSetupAnswers(t *testing.T) {
 	if want := filepath.Join(cwd, "my notes"); dir != want {
 		t.Errorf("dir: %s, want %s", dir, want)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "notes", "_ebira.yaml")); string(b) != "search: bigram\n" {
+	if b, _ := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); string(b) != "search: bigram\n" {
 		t.Errorf("_ebira.yaml: %q", b)
 	}
 	if !slices.Equal(setupFlags, []string{"-lang", "en"}) {
@@ -145,6 +145,20 @@ func TestSetupAnswers(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "Use ja") || strings.Contains(out.String(), "Language") {
 		t.Errorf("asked the search mode:\n%s", out.String())
+	}
+
+	// A directory with files that are not notes of ebira is confirmed.
+	out.Reset()
+	foreign := filepath.Join(cwd, "foreign")
+	if err := os.MkdirAll(filepath.Join(foreign, "memo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := setup(cwd, strings.NewReader("foreign\n\nforeign\ny\n\nn\nn\n\n"), &out)
+	if err != nil || got != foreign {
+		t.Fatalf("foreign: %s, %v\n%s", got, err, out.String())
+	}
+	if strings.Count(out.String(), "has files, but no notes of ebira") != 2 || !strings.Contains(out.String(), "Use ja") {
+		t.Errorf("foreign:\n%s", out.String())
 	}
 
 	// Canceled at the end: nothing is made.
@@ -197,7 +211,7 @@ func TestSetupGit(t *testing.T) {
 	if log, err := exec.Command("git", "-C", remote, "log", "--format=%s", "--all").CombinedOutput(); err != nil || !strings.Contains(string(log), "Update notes") {
 		t.Errorf("not pushed: %s, %v", log, err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "notes", ".git")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
 		t.Errorf("the notes are not a repository: %v", err)
 	}
 
@@ -212,7 +226,7 @@ func TestSetupGit(t *testing.T) {
 	if strings.Contains(out.String(), "Use ja") || !strings.Contains(out.String(), "Git:          clone "+remote) {
 		t.Errorf("output:\n%s", out.String())
 	}
-	if b, err := os.ReadFile(filepath.Join(dir, "notes", "_ebira.yaml")); err != nil || string(b) != "search: ja\n" {
+	if b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); err != nil || string(b) != "search: ja\n" {
 		t.Errorf("cloned _ebira.yaml: %q, %v", b, err)
 	}
 	if !slices.Equal(setupFlags, []string{"-lang", "en", "-git-sync", "5m"}) {

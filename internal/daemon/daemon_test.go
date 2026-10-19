@@ -36,7 +36,7 @@ func TestLock(t *testing.T) {
 
 func TestStateAndHealth(t *testing.T) {
 	dir := t.TempDir()
-	s := State{PID: os.Getpid(), Addr: "localhost:8080", Version: Version(), DataDir: dir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: []string{"-addr=localhost:8080", "-watch=false"}}
+	s := State{PID: os.Getpid(), Addr: "localhost:8080", Version: Version(), NotesDir: dir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: []string{"-addr=localhost:8080", "-watch=false"}}
 	if err := WriteState(dir, s); err != nil {
 		t.Fatal(err)
 	}

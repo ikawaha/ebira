@@ -12,11 +12,11 @@
 #                                              (ebira server restart), with the
 #                                              keys and the flags it ran with
 #
-# The TUI (ebira) uses a server already running for the data directory, so
+# The TUI (ebira) uses a server already running for the notes directory, so
 # start the server with this script first to give the assistant its keys.
 #
-# Without -data-dir, the data of the repository is used: notes/ at its top,
-# ignored by git. The index and the server's state are outside the data
+# Without -notes, the notes of the repository are used: notes/ at its top,
+# ignored by git. The index and the server's state are outside the notes
 # directory (see ebira help).
 #
 # Environment:
@@ -54,7 +54,7 @@ if [ ${#vars[@]} -eq 0 ]; then
 fi
 
 # Build outside the repository and run from the current directory, so that a
-# relative -data-dir is relative to where the script is called.
+# relative -notes is relative to where the script is called.
 mkdir -p "$(dirname "$bin")"
 go -C "$repo" build -o "$bin" ./cmd/ebira
 
@@ -66,14 +66,14 @@ start | restart)
 	;;
 esac
 
-has_data=false
+has_notes=false
 for arg in "$@"; do
 	case $arg in
-	-data-dir | -data-dir=* | --data-dir | --data-dir=*) has_data=true ;;
+	-notes | -notes=* | --notes | --notes=*) has_notes=true ;;
 	esac
 done
-if ! $has_data; then
-	set -- -data-dir "$repo" "$@"
+if ! $has_notes; then
+	set -- -notes "$repo/notes" "$@"
 fi
 
 # ${vars[@]+...} keeps an empty array from failing under set -u in bash 3.2,

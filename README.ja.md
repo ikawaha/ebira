@@ -62,7 +62,7 @@ flowchart LR
 
 ## 機能
 
-- **フォルダに置く YAML のノート** — `notes/<ノートブック>/<id>.yaml`。更新してもコメントや知らないキーは残ります。画像はノートの隣に置きます。
+- **フォルダに置く YAML のノート** — ノートのディレクトリの `<ノートブック>/<id>.yaml`。更新してもコメントや知らないキーは残ります。画像はノートの隣に置きます。
 - **3 つの検索方式** — `bigram`（既定）、`ja`（[kagome](https://github.com/ikawaha/kagome) による日本語の形態素解析と bigram）、`like`。一致した箇所を一覧とノートで強調します。
 - **Dropbox や iCloud Drive などで同期** — ノートを同期フォルダに置けます。サービスが残す「衝突したコピー」はノートになるので、どの変更も埋もれません。
 - **お望みなら git で同期** — `ebira sync`、メニュー、または数分ごとに、コミット・マージ・push をまとめて行います。2 台で同じノートを直しても衝突のしるしは残らず、もう一方の版は新しいノートになります。
@@ -88,14 +88,14 @@ macOS と Linux で動きます。
 
 ## はじめかた
 
-1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI の言語を聞かれ、答えは `~/.config/ebira/config.yaml` に保存されます。複数の端末でノートを共有するなら、`~/Dropbox/ebira` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
+1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI の言語を聞かれ、答えは `~/.config/ebira/config.yaml` に保存されます。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
 
    ```console
    $ ebira web
-   No notes found: no -data-dir, no data_dir in ~/.config/ebira/config.yaml, and no notes/ in ~/work.
+   No notes found: no -notes, no notes_dir in ~/.config/ebira/config.yaml, and no notes/ in ~/work.
    Let's set up ebira.
 
-   Directory to keep the notes in [~/ebira]:
+   Directory to keep the notes in [~/notes]:
    ...
    ```
 
@@ -104,7 +104,7 @@ macOS と Linux で動きます。
 2. **ノートを書きます。** Web UI で（`c` で新しいノート）、またはファイルとして:
 
    ```yaml
-   # ~/ebira/notes/inbox/weekend.yaml
+   # ~/notes/inbox/weekend.yaml
    title: 週末にやること
    tags: [todo]
    created_at: 2026-10-18T10:00:00+09:00
@@ -149,9 +149,9 @@ macOS と Linux で動きます。
 
 | フラグ | 既定値 | 説明 |
 | --- | --- | --- |
-| `-data-dir` | 設定ファイルの `data_dir`、無ければ起動したディレクトリ | `notes/` のあるディレクトリ |
+| `-notes` | 設定ファイルの `notes_dir`、無ければ `./notes` | ノートのディレクトリ |
 | `-addr` | `localhost:8080` | 待ち受けるアドレス |
-| `-search` | `notes/_ebira.yaml` の `search`、無ければ `bigram` | `like`、`bigram`、`ja` |
+| `-search` | ノートのディレクトリの `_ebira.yaml` の `search`、無ければ `bigram` | `like`、`bigram`、`ja` |
 | `-watch` | `true` | ノートを監視して索引を更新する |
 | `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja` |
 | `-provider`、`-model` | API キーが設定されているプロバイダー | アシスタントのモデル: `anthropic` か `gemini` |
@@ -162,18 +162,19 @@ macOS と Linux で動きます。
 ## ノートの置き方
 
 ```
-~/ebira/
-└── notes/
-    ├── _ebira.yaml              # ノートと一緒に同期する設定（検索方式など）
-    ├── inbox/
-    │   └── 3f9a1c0e7b2d4a.yaml
-    ├── development/
-    │   ├── _notebook.yaml       # ノートブックの表示名・並び順・種別・ノートの並べ方
-    │   ├── 8c21d0f4a9e3b7.yaml
-    │   └── 8c21d0f4a9e3b7.assets/
-    │       └── diagram.png
-    └── trash/
+~/notes/
+├── _ebira.yaml              # ノートと一緒に同期する設定（検索方式など）
+├── inbox/
+│   └── 3f9a1c0e7b2d4a.yaml
+├── development/
+│   ├── _notebook.yaml       # ノートブックの表示名・並び順・種別・ノートの並べ方
+│   ├── 8c21d0f4a9e3b7.yaml
+│   └── 8c21d0f4a9e3b7.assets/
+│       └── diagram.png
+└── trash/
 ```
+
+ノートのディレクトリに置くのはノートだけです。索引とサーバーの状態は、各端末の `~/.cache/ebira` と `~/.local/state/ebira` に置きます。
 
 - **ノートブック** はフォルダです。`inbox` と `trash` は必ずあり、ノートを削除するとまずゴミ箱へ移ります。
 - **ノート** は `title`、`tags`、`created_at`、`updated_at` と Markdown の `body` を持ちます。手で並べ替えると `order` が、AI が書いたノートには `created_by: ai` が付きます。
@@ -189,16 +190,16 @@ git を使うかは自由です。使わなくても ebira は同じように動
 2. ブランチに上流のブランチがあれば、fetch してマージします。
 3. push します。
 
-リポジトリは、ebira が作る場合はノートのディレクトリそのもの（`~/ebira/notes`）です。ノートのディレクトリを含む上のリポジトリでもかまいません。同期先のリモートとブランチは git の設定のままで、ebira は今のブランチの上流のブランチと同期します。変えるときは `git remote set-url` や `git branch --set-upstream-to` を使ってください。ebira はあなたの `git` を呼ぶので、認証・SSH の鍵・Git LFS の設定がそのまま使われます。パスワードは聞かないので、裏で同期させるには credential helper か SSH agent を用意してください。
+リポジトリは、ebira が作る場合はノートのディレクトリそのもの（`~/notes`）です。ノートのディレクトリを含む上のリポジトリでもかまいません。同期先のリモートとブランチは git の設定のままで、ebira は今のブランチの上流のブランチと同期します。変えるときは `git remote set-url` や `git branch --set-upstream-to` を使ってください。ebira はあなたの `git` を呼ぶので、認証・SSH の鍵・Git LFS の設定がそのまま使われます。パスワードは聞かないので、裏で同期させるには credential helper か SSH agent を用意してください。
 
 マージは衝突で止まりません。2 台で直したノートは、この端末の版を残し、もう一方の版を *Plan (conflict 2026-10-18 20:00)* のようなタイトルの新しいノートとして隣に置きます。見比べて、要らない方を消してください。ノート以外のファイルが両方で変わったときはこちらの版を、片方で消えて片方で変わったときは変わった版を残します。もう一方の版はマージのコミットに残っています。git がファイルを変えている間、ノートの書き込みは待たされ、索引はそのあと追従します。手でマージして衝突のしるしが残ったノートは、ebira が知らせ、直前の正しい内容を表示し続けます。
 
 ## Dropbox や iCloud Drive で同期する
 
-データのディレクトリを、Dropbox、iCloud Drive、OneDrive、Google Drive、Syncthing などが同期するフォルダに置きます。ebira 側の設定は要りません。そこに置かれるのは `notes/` だけで、索引とサーバーの状態は各端末に残ります。
+ノートのディレクトリを、Dropbox、iCloud Drive、OneDrive、Google Drive、Syncthing などが同期するフォルダに置きます。ebira 側の設定は要りません。そこに置かれるのはノートだけで、索引とサーバーの状態は各端末に残ります。
 
-1. **1 台目** では、初期設定で同期フォルダの中のディレクトリ（`~/Dropbox/ebira` など）を答えます。同期フォルダであることが表示され、git は聞かれません。
-2. **2 台目以降** では、サービスがフォルダを同期し終えるのを待ってから、同じディレクトリを答えます。ebira はノートを見つけ、検索方式などの設定をそのまま使い、その端末で索引を作ります。端末ごとにパスが違ってもかまいません。それぞれの `data_dir` が保存されます。
+1. **1 台目** では、初期設定で同期フォルダの中のディレクトリ（`~/Dropbox/notes` など）を答えます。同期フォルダであることが表示され、git は聞かれません。
+2. **2 台目以降** では、サービスがフォルダを同期し終えるのを待ってから、同じディレクトリを答えます。ebira はノートを見つけ、検索方式などの設定をそのまま使い、その端末で索引を作ります。端末ごとにパスが違ってもかまいません。それぞれの `notes_dir` が保存されます。
 
 同期が終わる前に 2 台目で始めると、空のノートが新しく作られ、その設定が 1 台目の設定とぶつかります。
 
@@ -215,7 +216,7 @@ git を使うかは自由です。使わなくても ebira は同じように動
 | `ja` | kagome で日本語を単語に分け、動詞と形容詞を基本形にそろえる。bigram でも探す | 日本語のノート。動詞で探すと、その活用形も見つかる |
 | `like` | SQL の `LIKE` | ノートが少ないとき |
 
-文字列は NFKC で正規化して小文字にそろえるので、全角と半角、大文字と小文字の違いは区別しません。どの端末でも同じ方式にするには、`notes/_ebira.yaml` に書きます:
+文字列は NFKC で正規化して小文字にそろえるので、全角と半角、大文字と小文字の違いは区別しません。どの端末でも同じ方式にするには、ノートのディレクトリの `_ebira.yaml` に書きます:
 
 ```yaml
 search: ja
@@ -298,7 +299,7 @@ inbox は、変えなければ `drop` です。ゴミ箱は AI からは見え�
 ### 守れること、守れないこと
 
 - ログインはありません。サーバーは localhost（と `-addr` のホスト）宛てのリクエストだけに答え、ほかのサイトの Web ページからノートを変えるリクエストは拒みます。サーバーは手元のマシンで動かしてください。
-- 種別による制限は、MCP もアシスタントも含め、ebira の API を通るすべての AI に効きます。ただ、`notes/` のファイルを直接読めるプログラム（ファイルを読める AI エージェントなど）は防げません。`private` は「AI に見せない」という目印で、暗号化ではありません。
+- 種別による制限は、MCP もアシスタントも含め、ebira の API を通るすべての AI に効きます。ただ、ノートのファイルを直接読めるプログラム（ファイルを読める AI エージェントなど）は防げません。`private` は「AI に見せない」という目印で、暗号化ではありません。
 
 ## アシスタント
 
@@ -313,12 +314,12 @@ op run --env-file=.env -- ebira server restart
 `~/.config/ebira/config.yaml` には、この端末の設定を書きます。各キーはフラグの既定値になります:
 
 ```yaml
-data_dir: ~/ebira
+notes_dir: ~/notes
 addr: localhost:8080
 lang: ja
 ```
 
-キーは `data_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`git_sync` です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
+キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`git_sync` です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
 ## ライセンス
 

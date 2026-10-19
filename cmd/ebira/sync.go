@@ -18,10 +18,10 @@ import (
 func runSync(args []string) error {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", defaultDataDir(), "data directory whose server syncs, started in the background if needed")
-		addr    = fs.String("addr", defaultAddr(), "address of a server started for the sync")
-		server  = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
-		remote  = fs.String("remote", "", "URL of a remote repository to connect the notes to first, as the remote origin: the notes directory becomes a repository unless it is one, and the notes are pushed, merging those already there")
+		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server syncs, started in the background if needed")
+		addr     = fs.String("addr", defaultAddr(), "address of a server started for the sync")
+		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
+		remote   = fs.String("remote", "", "URL of a remote repository to connect the notes to first, as the remote origin: the notes directory becomes a repository unless it is one, and the notes are pushed, merging those already there")
 	)
 	fs.Usage = func() {
 		fmt.Fprintln(fs.Output(), `usage: ebira sync [flags]
@@ -45,7 +45,7 @@ with -remote, once; an empty one, or one with notes from another machine.`)
 	ctx := context.Background()
 	base := *server
 	if base == "" {
-		dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+		dir, err := notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout)
 		if err != nil {
 			return err
 		}

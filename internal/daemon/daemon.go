@@ -1,11 +1,11 @@
-// Package daemon runs the ebira server in the background, one per data
+// Package daemon runs the ebira server in the background, one per notes
 // directory: the TUI starts it when it is not running, and it keeps running
 // after the TUI exits, so that MCP clients and the web UI can use it.
 //
-// The files are in the state directory of the data directory (see
+// The files are in the state directory of the notes directory (see
 // config.StateDir):
 //   - server.lock: held with flock by the running server, so that a second
-//     server for the same data directory fails to start. The OS releases it
+//     server for the same notes directory fails to start. The OS releases it
 //     when the process ends, so a stale file needs no cleaning.
 //   - server.json: the State of the running server, to find and stop it.
 //   - server.log: the output of a server started in the background.
@@ -34,7 +34,7 @@ const (
 )
 
 // ErrRunning is returned by Lock when a server holds the lock.
-var ErrRunning = errors.New("a server is already running for this data directory")
+var ErrRunning = errors.New("a server is already running for this notes directory")
 
 // State describes a running server. It is written to server.json and served
 // at GET /health.
@@ -42,9 +42,9 @@ type State struct {
 	PID       int       `json:"pid"`
 	Addr      string    `json:"addr"`
 	Version   string    `json:"version"`
-	DataDir   string    `json:"data_dir"`
+	NotesDir  string    `json:"notes_dir"`
 	StartedAt time.Time `json:"started_at"`
-	// Flags are the flags of ebira serve other than -data-dir, so that
+	// Flags are the flags of ebira serve other than -notes, so that
 	// ebira server restart starts the server again in the same way.
 	Flags []string `json:"flags,omitempty"`
 }

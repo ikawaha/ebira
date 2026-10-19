@@ -15,15 +15,15 @@ import (
 	"github.com/ikawaha/ebira/internal/ui/tui"
 )
 
-// runTUI opens the TUI on the server of the data directory, starting it in
+// runTUI opens the TUI on the server of the notes directory, starting it in
 // the background when it is not running, or on the server given by -server.
 func runTUI(args []string) error {
 	fs := flag.NewFlagSet("ebira", flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", defaultDataDir(), "data directory whose server the TUI uses, started in the background if needed")
-		addr    = fs.String("addr", defaultAddr(), "address of a server started for the TUI")
-		server  = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
-		light   = fs.Bool("light", false, "use colors for a light terminal background")
+		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server the TUI uses, started in the background if needed")
+		addr     = fs.String("addr", defaultAddr(), "address of a server started for the TUI")
+		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
+		light    = fs.Bool("light", false, "use colors for a light terminal background")
 	)
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), usage+"\nflags of the TUI:\n")
@@ -40,7 +40,7 @@ func runTUI(args []string) error {
 
 	url := *server
 	if url == "" {
-		dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+		dir, err := notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout)
 		if err != nil {
 			return err
 		}
@@ -60,11 +60,11 @@ func runTUI(args []string) error {
 	return err
 }
 
-// ensureServer returns the address of the server of dataDir, starting it on
+// ensureServer returns the address of the server of notesDir, starting it on
 // addr when it is not running. A server of another build is restarted if the
 // user agrees, so that the TUI does not talk to an outdated API.
-func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out io.Writer) (string, error) {
-	dir, err := absDir(dataDir)
+func ensureServer(ctx context.Context, notesDir, addr string, in io.Reader, out io.Writer) (string, error) {
+	dir, err := absDir(notesDir)
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +73,7 @@ func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out i
 		return "", err
 	}
 	if !running {
-		s, err := startServer(ctx, dir, addr, append([]string{"-data-dir", dir, "-addr", addr}, setupFlags...), out)
+		s, err := startServer(ctx, dir, addr, append([]string{"-notes", dir, "-addr", addr}, setupFlags...), out)
 		if err != nil {
 			return "", err
 		}
@@ -94,7 +94,7 @@ func ensureServer(ctx context.Context, dataDir, addr string, in io.Reader, out i
 	if err := stopServer(ctx, dir, out); err != nil {
 		return "", err
 	}
-	s, err = startServer(ctx, dir, s.Addr, append([]string{"-data-dir", dir}, keptFlags(s)...), out)
+	s, err = startServer(ctx, dir, s.Addr, append([]string{"-notes", dir}, keptFlags(s)...), out)
 	if err != nil {
 		return "", err
 	}

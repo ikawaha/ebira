@@ -12,14 +12,14 @@ import (
 	"github.com/ikawaha/ebira/internal/ui/web"
 )
 
-// runWeb opens the web UI in the browser on the server of the data directory,
+// runWeb opens the web UI in the browser on the server of the notes directory,
 // starting the server in the background when it is not running.
 func runWeb(args []string) error {
 	fs := flag.NewFlagSet("web", flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", defaultDataDir(), "data directory whose server the web UI uses, started in the background if needed")
-		addr    = fs.String("addr", defaultAddr(), "address of a server started for the web UI")
-		noOpen  = fs.Bool("no-open", false, "only print the URL, without opening the browser")
+		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server the web UI uses, started in the background if needed")
+		addr     = fs.String("addr", defaultAddr(), "address of a server started for the web UI")
+		noOpen   = fs.Bool("no-open", false, "only print the URL, without opening the browser")
 	)
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -27,7 +27,7 @@ func runWeb(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
-	dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+	dir, err := notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout)
 	if err != nil {
 		return err
 	}

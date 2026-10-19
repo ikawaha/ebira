@@ -41,29 +41,29 @@ import (
 // serveOptions are the flags of ebira serve, which ebira server start passes
 // on to the server it starts.
 type serveOptions struct {
-	dataDir, addr, search, stopW, stopT, prov, model, lang, gitSync *string
-	watch                                                           *bool
+	notesDir, addr, search, stopW, stopT, prov, model, lang, gitSync *string
+	watch                                                            *bool
 }
 
 // newServeFlags defines the flags of ebira serve on a new flag set.
 func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", defaultDataDir(), "data directory: note YAML files and settings in notes/ (default: data_dir of the settings file, else the current directory)")
-		addr    = fs.String("addr", defaultAddr(), "address to listen on")
-		search  = fs.String("search", "", "search mode: like, bigram, or ja (Japanese morphological analysis) (default: search in notes/"+store.ConfigFile+", else "+string(index.ModeBigram)+")")
-		watchF  = fs.Bool("watch", settings.Watch == nil || *settings.Watch, "watch the notes directory and update the index on changes")
-		stopW   = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
-		stopT   = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of notes/"+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
-		prov    = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
-		lang    = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
-		modelF  = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
-		gitSync = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file)")
+		notesDir = fs.String("notes", defaultNotesDir(), "notes directory: the notebooks, with the note YAML files, and "+store.ConfigFile+" (default: notes_dir of the settings file, else ./notes)")
+		addr     = fs.String("addr", defaultAddr(), "address to listen on")
+		search   = fs.String("search", "", "search mode: like, bigram, or ja (Japanese morphological analysis) (default: search in "+store.ConfigFile+" of the notes directory, else "+string(index.ModeBigram)+")")
+		watchF   = fs.Bool("watch", settings.Watch == nil || *settings.Watch, "watch the notes directory and update the index on changes")
+		stopW    = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
+		stopT    = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
+		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
+		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
+		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
+		gitSync  = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file)")
 	)
-	return fs, &serveOptions{dataDir: dataDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, gitSync: gitSync, watch: watchF}
+	return fs, &serveOptions{notesDir: notesDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, gitSync: gitSync, watch: watchF}
 }
 
-// setFlags returns the flags set on fs other than -data-dir, as -name=value.
+// setFlags returns the flags set on fs other than -notes, as -name=value.
 // The files of -stopwords and -stoptags become absolute paths, so that the
 // flags work from another directory.
 func setFlags(fs *flag.FlagSet) []string {
@@ -71,7 +71,7 @@ func setFlags(fs *flag.FlagSet) []string {
 	fs.Visit(func(f *flag.Flag) {
 		v := f.Value.String()
 		switch f.Name {
-		case "data-dir":
+		case "notes":
 			return
 		case "stopwords", "stoptags":
 			if v != "" {
@@ -104,22 +104,22 @@ func runServe(args []string) error {
 	if err != nil {
 		return err
 	}
-	dataDir, addr, search, stopW, stopT, prov, modelF, watchF := o.dataDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
-	abs, err := dataDirOf(fs, *dataDir, false, nil, nil)
+	notesDir, addr, search, stopW, stopT, prov, modelF, watchF := o.notesDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
+	abs, err := notesDirOf(fs, *notesDir, false, nil, nil)
 	if err != nil {
 		return err
 	}
-	*dataDir = abs
-	stateDir, err := config.StateDir(*dataDir)
+	*notesDir = abs
+	stateDir, err := config.StateDir(*notesDir)
 	if err != nil {
 		return err
 	}
-	if err := config.Prepare(stateDir, *dataDir); err != nil {
+	if err := config.Prepare(stateDir, *notesDir); err != nil {
 		return err
 	}
 	lock, err := daemon.Lock(stateDir)
 	if errors.Is(err, daemon.ErrRunning) {
-		return fmt.Errorf("%w (%s); see ebira server status", err, *dataDir)
+		return fmt.Errorf("%w (%s); see ebira server status", err, *notesDir)
 	}
 	if err != nil {
 		return err
@@ -127,18 +127,18 @@ func runServe(args []string) error {
 	if lock != nil {
 		defer lock.Close()
 	}
-	if err := removeLegacyDir(*dataDir); err != nil {
+	if err := removeLegacyDirs(*notesDir); err != nil {
 		return err
 	}
-	cacheDir, err := config.CacheDir(*dataDir)
+	cacheDir, err := config.CacheDir(*notesDir)
 	if err != nil {
 		return err
 	}
-	if err := config.Prepare(cacheDir, *dataDir); err != nil {
+	if err := config.Prepare(cacheDir, *notesDir); err != nil {
 		return err
 	}
 
-	st, err := store.New(filepath.Join(*dataDir, "notes"))
+	st, err := store.New(*notesDir)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func runServe(args []string) error {
 	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(asst), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
-	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), DataDir: *dataDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
+	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
 	root.Handle(web.Prefix, web.Handler(*o.lang))

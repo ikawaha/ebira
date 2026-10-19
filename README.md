@@ -62,7 +62,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 
 ## Features
 
-- **YAML notes in folders** — `notes/<notebook>/<id>.yaml`. Comments and unknown keys survive every update. Images live next to their note.
+- **YAML notes in folders** — `<notebook>/<id>.yaml` in your notes directory. Comments and unknown keys survive every update. Images live next to their note.
 - **Three search modes** — `bigram` (default), `ja` (Japanese morphological analysis with [kagome](https://github.com/ikawaha/kagome), plus bigrams), and `like`. Matches are highlighted in the list and the note.
 - **Sync with Dropbox, iCloud Drive and the like** — keep the notes in a synced folder; the conflicted copies the services leave become notes, so no change is hidden.
 - **Sync with git, if you like** — `ebira sync`, a menu item, or every few minutes: commit, merge and push in one step. A note changed on two machines never ends in conflict markers; the other version becomes a new note.
@@ -88,14 +88,14 @@ ebira runs on macOS and Linux.
 
 ## Quick Start
 
-1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI, and saves the answers to `~/.config/ebira/config.yaml`. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/ebira`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
+1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI, and saves the answers to `~/.config/ebira/config.yaml`. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/notes`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
 
    ```console
    $ ebira web
-   No notes found: no -data-dir, no data_dir in ~/.config/ebira/config.yaml, and no notes/ in ~/work.
+   No notes found: no -notes, no notes_dir in ~/.config/ebira/config.yaml, and no notes/ in ~/work.
    Let's set up ebira.
 
-   Directory to keep the notes in [~/ebira]:
+   Directory to keep the notes in [~/notes]:
    ...
    ```
 
@@ -104,7 +104,7 @@ ebira runs on macOS and Linux.
 2. **Write notes**, in the web UI (`c` for a new note) or as files:
 
    ```yaml
-   # ~/ebira/notes/inbox/weekend.yaml
+   # ~/notes/inbox/weekend.yaml
    title: Ideas for the weekend
    tags: [todo]
    created_at: 2026-10-18T10:00:00+09:00
@@ -149,9 +149,9 @@ Flags of `serve` (also taken by `server start` and `server restart`):
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `-data-dir` | `data_dir` of the settings file, else the current directory | The directory with `notes/` |
+| `-notes` | `notes_dir` of the settings file, else `./notes` | The notes directory |
 | `-addr` | `localhost:8080` | Address to listen on |
-| `-search` | `search` of `notes/_ebira.yaml`, else `bigram` | `like`, `bigram` or `ja` |
+| `-search` | `search` of `_ebira.yaml` in the notes directory, else `bigram` | `like`, `bigram` or `ja` |
 | `-watch` | `true` | Watch the notes and update the index |
 | `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` |
 | `-provider`, `-model` | the provider whose API key is set | Model of the assistant: `anthropic` or `gemini` |
@@ -162,18 +162,19 @@ Run any command with `-h` for all its flags.
 ## Your notes
 
 ```
-~/ebira/
-└── notes/
-    ├── _ebira.yaml              # settings shared with the notes, such as the search mode
-    ├── inbox/
-    │   └── 3f9a1c0e7b2d4a.yaml
-    ├── development/
-    │   ├── _notebook.yaml       # display name, order, kind and sort of the notebook
-    │   ├── 8c21d0f4a9e3b7.yaml
-    │   └── 8c21d0f4a9e3b7.assets/
-    │       └── diagram.png
-    └── trash/
+~/notes/
+├── _ebira.yaml              # settings shared with the notes, such as the search mode
+├── inbox/
+│   └── 3f9a1c0e7b2d4a.yaml
+├── development/
+│   ├── _notebook.yaml       # display name, order, kind and sort of the notebook
+│   ├── 8c21d0f4a9e3b7.yaml
+│   └── 8c21d0f4a9e3b7.assets/
+│       └── diagram.png
+└── trash/
 ```
+
+Only the notes are in the notes directory: the index and the server's state stay on each machine, in `~/.cache/ebira` and `~/.local/state/ebira`.
 
 - A **notebook** is a folder. `inbox` and `trash` always exist; deleting a note moves it to the trash first.
 - A **note** has `title`, `tags`, `created_at`, `updated_at` and a Markdown `body`. ebira adds `order` when you reorder notes by hand and `created_by: ai` when an AI wrote the note.
@@ -189,16 +190,16 @@ git is optional. Without it, ebira works the same, and the notes are plain files
 2. If the branch has an upstream branch, fetch it and merge it.
 3. Push.
 
-The repository is the notes directory itself (`~/ebira/notes`), as set up by ebira, or one above it that tracks it. The remote and the branch are those of git: ebira syncs with the upstream branch of the current branch, so change them with `git remote set-url` and `git branch --set-upstream-to`. ebira runs your `git`, so your credentials, SSH keys and Git LFS settings apply; it never asks for a password, so set up a credential helper or an SSH agent for syncing in the background.
+The repository is the notes directory itself (`~/notes`), as set up by ebira, or one above it that tracks it. The remote and the branch are those of git: ebira syncs with the upstream branch of the current branch, so change them with `git remote set-url` and `git branch --set-upstream-to`. ebira runs your `git`, so your credentials, SSH keys and Git LFS settings apply; it never asks for a password, so set up a credential helper or an SSH agent for syncing in the background.
 
 A merge never stops in conflict. A note changed on both machines keeps this machine's version, and the other version becomes a new note next to it, titled like *Plan (conflict 2026-10-18 20:00)*: compare them and delete the one you do not need. Another file changed on both sides keeps this side's version, and a file deleted on one side and changed on the other keeps the changed one; the merge commit has the other versions. Writes of notes wait while git changes the files, and the index follows. If you merge by hand and leave conflict markers in a note, ebira reports the note and keeps showing its last good version.
 
 ## Sync with Dropbox, iCloud Drive and others
 
-Put the data directory in a folder that a file sync service syncs, such as Dropbox, iCloud Drive, OneDrive, Google Drive or Syncthing. ebira needs no settings for it. Only `notes/` is there: the index and the server's state stay on each machine.
+Put the notes directory in a folder that a file sync service syncs, such as Dropbox, iCloud Drive, OneDrive, Google Drive or Syncthing. ebira needs no settings for it. Only the notes are there: the index and the server's state stay on each machine.
 
-1. **On the first machine**, answer a directory in the synced folder when ebira sets up, such as `~/Dropbox/ebira`. Setup tells you that the folder is synced, and does not offer git.
-2. **On the other machines**, wait until the service has synced the folder, then answer the same directory. ebira finds the notes and uses their settings, such as the search mode, and builds an index of them on that machine. The path may differ between machines; each saves its own `data_dir`.
+1. **On the first machine**, answer a directory in the synced folder when ebira sets up, such as `~/Dropbox/notes`. Setup tells you that the folder is synced, and does not offer git.
+2. **On the other machines**, wait until the service has synced the folder, then answer the same directory. ebira finds the notes and uses their settings, such as the search mode, and builds an index of them on that machine. The path may differ between machines; each saves its own `notes_dir`.
 
 Starting the second machine before the folder is synced makes new, empty notes, whose settings then clash with the first machine's.
 
@@ -215,7 +216,7 @@ When a note is changed on two machines, the service keeps one version and leaves
 | `ja` | Splits Japanese into words with kagome, with the verbs and adjectives in their base form, and also searches bigrams | Notes in Japanese: a search for a verb finds its other forms |
 | `like` | SQL `LIKE` | Small collections |
 
-Text is normalized with NFKC and lowercased, so full-width and half-width characters, and upper and lower case, match each other. Set the mode for all your machines in `notes/_ebira.yaml`:
+Text is normalized with NFKC and lowercased, so full-width and half-width characters, and upper and lower case, match each other. Set the mode for all your machines in `_ebira.yaml` of the notes directory:
 
 ```yaml
 search: ja
@@ -298,7 +299,7 @@ Once connected, ask in your own words, for example:
 ### What it guards, and what it does not
 
 - There is no login: the server answers only requests to localhost (and the host of `-addr`), and refuses requests that change notes from web pages of other sites. Keep it on your machine.
-- The kinds hold for every AI that goes through ebira's API, MCP and the assistant alike. They cannot stop a program on your machine that reads the files under `notes/` directly, such as an AI agent with file access; `private` marks what AI is not to see, and is not encryption.
+- The kinds hold for every AI that goes through ebira's API, MCP and the assistant alike. They cannot stop a program on your machine that reads the note files directly, such as an AI agent with file access; `private` marks what AI is not to see, and is not encryption.
 
 ## Assistant
 
@@ -313,12 +314,12 @@ op run --env-file=.env -- ebira server restart
 `~/.config/ebira/config.yaml` holds the settings of this machine. Each key is the default of a flag:
 
 ```yaml
-data_dir: ~/ebira
+notes_dir: ~/notes
 addr: localhost:8080
 lang: en
 ```
 
-The keys are `data_dir`, `addr`, `watch`, `provider`, `model`, `lang` and `git_sync`. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang` and `git_sync`. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
 ## License
 

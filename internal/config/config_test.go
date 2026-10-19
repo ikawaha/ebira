@@ -73,18 +73,24 @@ func TestLoad(t *testing.T) {
 		t.Errorf("empty file: %+v, %v", c, err)
 	}
 
-	write("data_dir: ~/notes\naddr: localhost:9090\nwatch: false\nprovider: gemini\nmodel: m\ngit_sync: 10m\n")
+	write("notes_dir: ~/notes\naddr: localhost:9090\nwatch: false\nprovider: gemini\nmodel: m\ngit_sync: 10m\n")
 	c, err = Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.DataDir != filepath.Join(home, "notes") || c.Addr != "localhost:9090" || c.Watch == nil || *c.Watch || c.Provider != "gemini" || c.Model != "m" || c.GitSync != "10m" {
+	if c.NotesDir != filepath.Join(home, "notes") || c.Addr != "localhost:9090" || c.Watch == nil || *c.Watch || c.Provider != "gemini" || c.Model != "m" || c.GitSync != "10m" {
 		t.Errorf("got %+v", c)
 	}
 
-	write("data_dir: data\n")
-	if c, _ := Load(); c.DataDir != filepath.Join(dir, "data") {
-		t.Errorf("relative data_dir: %s", c.DataDir)
+	write("notes_dir: data\n")
+	if c, _ := Load(); c.NotesDir != filepath.Join(dir, "data") {
+		t.Errorf("relative notes_dir: %s", c.NotesDir)
+	}
+
+	// data_dir of earlier builds tells what to write instead.
+	write("data_dir: ~/ebira\n")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "notes_dir: ~/ebira/notes") {
+		t.Errorf("data_dir: %v", err)
 	}
 
 	write("serach: ja\n")
@@ -125,7 +131,7 @@ func TestStateAndCacheDir(t *testing.T) {
 	}
 	other, _ := StateDir(filepath.Join(home, "other", "My Notes"))
 	if other == sd {
-		t.Errorf("another data directory has the same state dir %s", sd)
+		t.Errorf("another notes directory has the same state dir %s", sd)
 	}
 
 	t.Setenv("XDG_STATE_HOME", filepath.Join(home, "st"))
@@ -145,25 +151,36 @@ func TestPrepare(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	b, err := os.ReadFile(filepath.Join(dir, DataDirFile))
+	b, err := os.ReadFile(filepath.Join(dir, NotesDirFile))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(b) != "/data/notes\n" {
-		t.Errorf("%s: %q", DataDirFile, b)
+		t.Errorf("%s: %q", NotesDirFile, b)
+	}
+
+	// The file of an earlier build, of the same path as a data directory, goes.
+	if err := os.WriteFile(filepath.Join(dir, LegacyDataDirFile), []byte("/data/notes\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Prepare(dir, "/data/notes"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, LegacyDataDirFile)); !os.IsNotExist(err) {
+		t.Errorf("%s is left: %v", LegacyDataDirFile, err)
 	}
 }
 
 func TestSave(t *testing.T) {
 	home := setHome(t)
-	p, err := Save(Config{DataDir: filepath.Join(home, "notes dir"), Lang: "ja"})
+	p, err := Save(Config{NotesDir: filepath.Join(home, "notes dir"), Lang: "ja"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(p); string(b) != "data_dir: ~/notes dir\nlang: ja\n" {
+	if b, _ := os.ReadFile(p); string(b) != "notes_dir: ~/notes dir\nlang: ja\n" {
 		t.Errorf("new file: %q", b)
 	}
-	if c, err := Load(); err != nil || c.DataDir != filepath.Join(home, "notes dir") || c.Lang != "ja" {
+	if c, err := Load(); err != nil || c.NotesDir != filepath.Join(home, "notes dir") || c.Lang != "ja" {
 		t.Errorf("new file: %+v, %v", c, err)
 	}
 
@@ -171,10 +188,10 @@ func TestSave(t *testing.T) {
 	if err := os.WriteFile(p, []byte("# mine\naddr: localhost:9090"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Save(Config{DataDir: "/srv/notes"}); err != nil {
+	if _, err := Save(Config{NotesDir: "/srv/notes"}); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(p); string(b) != "# mine\naddr: localhost:9090\ndata_dir: /srv/notes\n" {
+	if b, _ := os.ReadFile(p); string(b) != "# mine\naddr: localhost:9090\nnotes_dir: /srv/notes\n" {
 		t.Errorf("appended: %q", b)
 	}
 }

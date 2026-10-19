@@ -28,7 +28,7 @@ import (
 func runImport(args []string) error {
 	fs := flag.NewFlagSet("import", flag.ContinueOnError)
 	var (
-		dataDir  = fs.String("data-dir", defaultDataDir(), "data directory whose server is used, started in the background if needed")
+		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server is used, started in the background if needed")
 		addr     = fs.String("addr", defaultAddr(), "address of a server started for the import")
 		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
 		notebook = fs.String("notebook", "", "notebook ID to import into (default inbox)")
@@ -58,7 +58,7 @@ func runImport(args []string) error {
 	if !*dryRun {
 		base := *server
 		if base == "" {
-			dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+			dir, err := notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout)
 			if err != nil {
 				return err
 			}

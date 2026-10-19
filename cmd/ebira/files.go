@@ -23,10 +23,10 @@ func runFiles(args []string) error {
 	}
 	fs := flag.NewFlagSet("files check", flag.ContinueOnError)
 	var (
-		dataDir = fs.String("data-dir", defaultDataDir(), "data directory whose server is used, started in the background if needed")
-		addr    = fs.String("addr", defaultAddr(), "address of a server started for the check")
-		server  = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
-		del     = fs.Bool("delete", false, "delete the unused files, except those added within the last hour")
+		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server is used, started in the background if needed")
+		addr     = fs.String("addr", defaultAddr(), "address of a server started for the check")
+		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
+		del      = fs.Bool("delete", false, "delete the unused files, except those added within the last hour")
 	)
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
@@ -37,7 +37,7 @@ func runFiles(args []string) error {
 	ctx := context.Background()
 	base := *server
 	if base == "" {
-		dir, err := dataDirOf(fs, *dataDir, interactive(), os.Stdin, os.Stdout)
+		dir, err := notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout)
 		if err != nil {
 			return err
 		}

@@ -11,11 +11,11 @@
 //	ebira files check [flags]     list the unused files of notes and the broken references to files
 //	ebira import [flags] path...  import Markdown files as notes
 //
-// One server runs per data directory; the server started in the background
+// One server runs per notes directory; the server started in the background
 // keeps running after the TUI exits or the browser closes.
 //
 // The settings file (see internal/config) gives the defaults of the flags,
-// such as the data directory.
+// such as the notes directory.
 package main
 
 import (
@@ -31,9 +31,9 @@ import (
 // settings is the settings file, read by run before the flags.
 var settings config.Config
 
-// defaultDataDir returns the default of -data-dir: data_dir of the settings
-// file, else the current directory.
-func defaultDataDir() string { return cmp.Or(settings.DataDir, ".") }
+// defaultNotesDir returns the default of -notes: notes_dir of the settings
+// file, else notes in the current directory.
+func defaultNotesDir() string { return cmp.Or(settings.NotesDir, "notes") }
 
 // defaultAddr returns the default of -addr: addr of the settings file, else
 // localhost:8080.
@@ -57,8 +57,8 @@ const usage = `usage:
 Run a command with -h for its flags.
 
 The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
-file of $EBIRA_CONFIG), gives the defaults of the flags: data_dir, addr, watch,
-provider, model, lang and git_sync. Without -data-dir, data_dir and notes/
+file of $EBIRA_CONFIG), gives the defaults of the flags: notes_dir, addr,
+watch, provider, model, lang and git_sync. Without -notes, notes_dir and notes/
 in the current directory, the commands that open the notes in a terminal ask
 where to keep them, how to search them and the language of the web UI, and
 set them up. The index is kept in ~/.cache/ebira and the server's state and
