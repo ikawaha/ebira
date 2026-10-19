@@ -176,5 +176,6 @@
   "toastReordered": "Moved {title} in the order.",
   "toastRenamed": "Renamed the notebook to {name}.",
   "toastKind": "Made {name} {kind}.",
-  "toastNotebookTrashed": "Moved the notebook {name} to the trash."
+  "toastNotebookTrashed": "Moved the notebook {name} to the trash.",
+  "searchClear": "Clear the search (Esc)"
 }

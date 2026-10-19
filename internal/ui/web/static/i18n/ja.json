@@ -176,5 +176,6 @@
   "toastReordered": "「{title}」を並べ替えました。",
   "toastRenamed": "ノートブックの名前を「{name}」にしました。",
   "toastKind": "「{name}」の種別を {kind} にしました。",
-  "toastNotebookTrashed": "ノートブック「{name}」をゴミ箱へ移しました。"
+  "toastNotebookTrashed": "ノートブック「{name}」をゴミ箱へ移しました。",
+  "searchClear": "検索を消す（Esc）"
 }

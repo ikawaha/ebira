@@ -2367,7 +2367,19 @@ window.addEventListener("hashchange", openLinkedNote);
 
 let searchTimer;
 
+// The clear button shows while the search box has text.
+function showSearchClear() {
+  $("q-clear").hidden = !$("q").value;
+}
+
+$("q-clear").addEventListener("click", () => {
+  $("q").value = "";
+  $("q").dispatchEvent(new Event("input"));
+  $("q").focus();
+});
+
 $("q").addEventListener("input", () => {
+  showSearchClear();
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     const q = $("q").value.trim();

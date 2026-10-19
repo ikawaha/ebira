@@ -84,10 +84,10 @@ mark.current { background: var(--mark-current); }
   background: var(--bg-side);
 }
 .logo { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .02em; }
-.search { flex: 1; max-width: 560px; }
+.search { flex: 1; max-width: 560px; position: relative; }
 .search input {
   width: 100%;
-  padding: 6px 10px;
+  padding: 6px 30px 6px 10px; /* room for the clear button */
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -95,6 +95,10 @@ mark.current { background: var(--mark-current); }
   font: inherit;
 }
 .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; } /* the clear button stands in for it */
+.search-clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.search-clear:hover, .search-clear:focus-visible { background: var(--bg-side); color: var(--fg); }
+.search-clear[hidden] { display: none; }
 .mode { color: var(--fg-muted); font-size: 12px; }
 .status { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-muted); margin-left: auto; }
 .status.ok { background: var(--ok); }
