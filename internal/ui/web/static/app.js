@@ -2526,8 +2526,14 @@ function scheduleReload(event) {
 function connect() {
   const es = new EventSource("/events");
   const status = $("status");
-  es.addEventListener("open", () => { status.className = "status ok"; status.title = t("eventsConnected"); });
-  es.addEventListener("error", () => { status.className = "status ng"; status.title = t("eventsReconnecting"); });
+  // The state is told by the color of the dot and by words, as in the TUI.
+  const show = (cls, text, title) => {
+    status.className = `status ${cls}`;
+    status.querySelector(".status-text").textContent = t(text);
+    status.title = t(title);
+  };
+  es.addEventListener("open", () => show("ok", "statusLive", "eventsConnected"));
+  es.addEventListener("error", () => show("ng", "statusOffline", "eventsReconnecting"));
   es.addEventListener("ready", () => scheduleReload());
   es.addEventListener("notebooks", () => scheduleReload({ type: "notebooks", id: null }));
   for (const type of ["created", "updated", "deleted"]) {

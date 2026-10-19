@@ -182,5 +182,8 @@
   "themeAuto": "自動",
   "themeAutoTitle": "システムのライト・ダークモードに合わせる",
   "themeLight": "ライト",
-  "themeDark": "ダーク"
+  "themeDark": "ダーク",
+  "statusConnecting": "接続しています",
+  "statusLive": "接続中",
+  "statusOffline": "切断"
 }

@@ -182,5 +182,8 @@
   "themeAuto": "Auto",
   "themeAutoTitle": "Follow the light or dark mode of the system",
   "themeLight": "Light",
-  "themeDark": "Dark"
+  "themeDark": "Dark",
+  "statusConnecting": "connecting",
+  "statusLive": "live",
+  "statusOffline": "offline"
 }

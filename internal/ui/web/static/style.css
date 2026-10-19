@@ -119,9 +119,13 @@ mark.current { background: var(--mark-current); }
 .search-clear:hover, .search-clear:focus-visible { background: var(--bg-side); color: var(--fg); }
 .search-clear[hidden] { display: none; }
 .mode { color: var(--fg-muted); font-size: 12px; }
-.status { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-muted); margin-left: auto; }
-.status.ok { background: var(--ok); }
-.status.ng { background: var(--ng); }
+.status { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--fg-muted); font-size: 12px; white-space: nowrap; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-muted); flex: none; }
+.status.ok .status-dot { background: var(--ok); }
+.status.ok .status-text { color: var(--ok); }
+.status.ng .status-dot { background: var(--ng); }
+.status.ng .status-text { color: var(--ng); }
+@media (max-width: 640px) { .status-text { display: none; } } /* the dot, with its title, on narrow screens */
 
 /* Panes */
 
