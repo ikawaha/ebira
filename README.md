@@ -289,7 +289,7 @@ Each notebook has a kind, which you set in the web UI or the TUI:
 | `drop` | — (only its name) | only new notes, with IDs ebira chooses |
 | `private` | — (not even its name) | — |
 
-The inbox is `drop` unless you change it, and the trash is invisible to AI. Notes an AI writes are marked with `created_by: ai`, and shown with 🤖 in the web UI and the TUI.
+The inbox is `drop` unless you change it, and the trash is invisible to AI. Notes an AI writes are marked with `created_by: ai`, and shown with ✨ in the web UI and ✦ in the TUI.
 
 ### Asking
 

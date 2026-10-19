@@ -289,7 +289,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `drop` | —（名前だけ） | 新しいノートを置くだけ（ID は ebira が決める） |
 | `private` | —（名前も見えない） | — |
 
-inbox は、変えなければ `drop` です。ゴミ箱は AI からは見えません。AI が書いたノートには `created_by: ai` が付き、Web UI と TUI では 🤖 が表示されます。
+inbox は、変えなければ `drop` です。ゴミ箱は AI からは見えません。AI が書いたノートには `created_by: ai` が付き、Web UI では ✨、TUI では ✦ が表示されます。
 
 ### 頼み方の例
 

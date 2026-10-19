@@ -424,14 +424,14 @@ func (m Model) renderNotebooks(w, h int) string {
 	return m.box(title, lines, w, h, m.focus == focusNotebooks)
 }
 
-// kindIcon is the icon of a notebook kind: a robot for the notebooks people
-// share with AI (AI clients may write their notes), an inbox tray for the drop
-// ones (AI clients may only add notes), a lock for the private ones (hidden
-// from AI clients), and none for the default kind.
+// kindIcon is the icon of a notebook kind: people in silhouette for the
+// notebooks people share with AI (AI clients may write their notes), an inbox
+// tray for the drop ones (AI clients may only add notes), a lock for the
+// private ones (hidden from AI clients), and none for the default kind.
 func kindIcon(kind string) string {
 	switch kind {
 	case "collab":
-		return "🤖"
+		return "👥"
 	case "drop":
 		return "📥"
 	case "private":
@@ -441,8 +441,10 @@ func kindIcon(kind string) string {
 }
 
 // aiMark is the mark of a note created by an AI client, shown at the end of
-// its line in the list and of the preview's meta line.
-const aiMark = "🤖"
+// its line in the list and of the preview's meta line: a four pointed star,
+// the sparkles that apps put on what AI made, as a narrow character that
+// keeps the columns aligned in every terminal and takes the color of the text.
+const aiMark = "\u2726"
 
 func createdByAI(v *string) bool { return v != nil && *v == "ai" }
 

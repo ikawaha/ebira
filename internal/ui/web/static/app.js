@@ -430,13 +430,16 @@ function renderBody(el, body, ranges) {
 
 // Formatting
 
-const kindIcon = (kind) => ({ collab: "🤖", drop: "📥", private: "🔒" })[kind] || "";
+const kindIcon = (kind) => ({ collab: "👥", drop: "📥", private: "🔒" })[kind] || "";
 
 // aiMark returns the mark of a note created by an AI client, which goes at the
-// end of a row rather than right after the title.
+// end of a row rather than right after the title: sparkles, as apps mark what
+// AI made.
+const AI_MARK = "\u2728";
+
 function aiMark(note, label) {
   if (note.created_by !== "ai") return null;
-  const m = el("span", "ai-mark", label ? `🤖 ${label}` : "🤖");
+  const m = el("span", "ai-mark", label ? `${AI_MARK} ${label}` : AI_MARK);
   m.title = t("aiNote");
   return m;
 }
