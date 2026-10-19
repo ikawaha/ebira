@@ -391,6 +391,86 @@ func ValidateMakeNotebookPrivatePayloadTransport(body *MakeNotebookPrivatePayloa
 	return
 }
 
+// ValidateMoveAiNotePayloadTransport runs the validations defined on MoveAiNotePayloadTransport.
+func ValidateMoveAiNotePayloadTransport(body *MoveAiNotePayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.After != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *body.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateMoveAiNoteResultTransport runs the validations defined on MoveAiNoteResultTransport.
+func ValidateMoveAiNoteResultTransport(body *MoveAiNoteResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Tags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "body"))
+	}
+	if body.CreatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
+	}
+	if body.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if body.Body == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("body", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
+	}
+	if body.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.CreatedBy != nil {
+		if !(*body.CreatedBy == "ai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if body.TrashedFrom != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	for _, e := range body.TitleHighlights {
+		if e != nil {
+			if err2 := ValidateTextRangeTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.BodyHighlights {
+		if e != nil {
+			if err2 := ValidateTextRangeTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
 // ValidateSearchNotesPayloadTransport runs the validations defined on SearchNotesPayloadTransport.
 func ValidateSearchNotesPayloadTransport(body *SearchNotesPayloadTransport) (err error) {
 	if body.Q == nil {

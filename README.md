@@ -48,7 +48,7 @@ flowchart LR
 
 The same notes, from the browser or from the terminal; both talk to the same local server, and each shows the other's changes as they happen.
 
-**Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; edit Markdown with list continuation and code coloring, paste images, and see math and diagrams rendered.
+**Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; create, rename, retype and trash notebooks from their menus, and drag notes onto a notebook to move them; edit Markdown with list continuation and code coloring, paste images, and see math and diagrams rendered.
 
 <p align="center">
   <img src="assets/screenshots/web-editor.png" width="800" alt="Editing a note in the web UI: the title, notebook and tags above, and the Markdown body with a Go code block colored">
@@ -271,6 +271,7 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `import_ai_note` | Import a Markdown file, with its front matter, as a new note, the same way |
 | `update_ai_note` | Change a note in a `collab` notebook; needs the version from `get_note` |
 | `delete_ai_note` | Move a note in a `collab` notebook to the trash; needs the version from `get_note` |
+| `move_ai_note` | Reorder a note in a `collab` notebook: put it after another note, or first |
 | `create_ai_notebook` | Make a new `collab` notebook, for the AI to write in |
 | `make_notebook_private` | Hide a notebook from AI; only you can undo it |
 

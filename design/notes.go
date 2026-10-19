@@ -429,6 +429,7 @@ var _ = Service("notes", func() {
 	})
 
 	// move is for people, who arrange notes by hand; it is not an MCP tool.
+	// AI clients reorder the notes of collab notebooks only, with move_ai_note.
 	Method("move", func() {
 		Description("Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
 		Payload(func() {
@@ -664,6 +665,19 @@ var _ = Service("notes", func() {
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
 		Tool("delete_ai_note", "Move a note in a notebook shared with AI (kind collab) to the trash; pass the version from get_note")
+	})
+
+	Method("move_ai_note", func() {
+		Description("Put a note of a notebook of the collab kind right after another note of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			Attribute("after", String, "ID of the note of the same notebook to put the note after; omit to put it first", noteIDDSL)
+		})
+		Result(Note)
+		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "after is not another note of the note's notebook")
+		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
+		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note of the notebook, or first")
 	})
 
 	Method("create_ai_notebook", func() {

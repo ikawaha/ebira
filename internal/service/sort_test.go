@@ -183,3 +183,68 @@ func TestListPages(t *testing.T) {
 		t.Errorf("tag filter: %+v, %v; want total 0", res, err)
 	}
 }
+
+// TestMoveAiNote checks that AI clients reorder the notes of collab notebooks
+// only: the notes of people's notebooks are forbidden, and the notes hidden
+// from AI clients are not found.
+func TestMoveAiNote(t *testing.T) {
+	svc, _ := newTestService(t)
+	person := AsPerson(context.Background())
+	ai := context.Background() // no mark of people
+	base := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)
+	var now time.Time
+	svc.now = func() time.Time { return now }
+	for nb, kind := range map[string]string{"shared": "collab", "people": "default", "secret": "private"} {
+		if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: nb, Kind: &kind}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, id := range []string{"a", "b", "c"} {
+		now = base.Add(time.Duration(i) * time.Minute)
+		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("shared"), Title: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, id := range []string{"mine", "hidden"} {
+		nb := map[string]string{"mine": "people", "hidden": "secret"}[id]
+		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr(nb), Title: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	order := func() []string {
+		t.Helper()
+		res, err := svc.List(ai, &gennotes.ListPayload{Notebook: ptr("shared"), Sort: ptr("order"), Limit: 50})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, n := range res.Notes {
+			ids = append(ids, n.ID)
+		}
+		return ids
+	}
+	if got := order(); !slices.Equal(got, []string{"c", "b", "a"}) {
+		t.Fatalf("before: %v", got)
+	}
+	// The newest note goes last, after the oldest one.
+	n, err := svc.MoveAiNote(ai, &gennotes.MoveAiNotePayload{ID: "c", After: ptr("a")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := base.Add(2 * time.Minute).Format(time.RFC3339); n.UpdatedAt != want {
+		t.Errorf("updated_at changed: %v", n.UpdatedAt)
+	}
+	if got := order(); !slices.Equal(got, []string{"b", "a", "c"}) {
+		t.Errorf("after the move: %v", got)
+	}
+	// After a note of another notebook is a bad request.
+	if _, err := svc.MoveAiNote(ai, &gennotes.MoveAiNotePayload{ID: "c", After: ptr("mine")}); errorName(err) != "bad_request" {
+		t.Errorf("after another notebook's note: %v", err)
+	}
+	if _, err := svc.MoveAiNote(ai, &gennotes.MoveAiNotePayload{ID: "mine"}); errorName(err) != "forbidden" {
+		t.Errorf("a note of people: %v", err)
+	}
+	if _, err := svc.MoveAiNote(ai, &gennotes.MoveAiNotePayload{ID: "hidden"}); errorName(err) != "not_found" {
+		t.Errorf("a private note: %v", err)
+	}
+}

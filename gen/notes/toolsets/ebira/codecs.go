@@ -150,6 +150,22 @@ func MakeNotebookPrivatePayloadCodec() tools.JSONCodec[*MakeNotebookPrivatePaylo
 	}
 }
 
+// MoveAiNotePayloadCodec returns a fresh codec for *MoveAiNotePayload.
+func MoveAiNotePayloadCodec() tools.JSONCodec[*MoveAiNotePayload] {
+	return tools.JSONCodec[*MoveAiNotePayload]{
+		ToJSON:   MarshalMoveAiNotePayload,
+		FromJSON: UnmarshalMoveAiNotePayload,
+	}
+}
+
+// MoveAiNoteResultCodec returns a fresh codec for *MoveAiNoteResult.
+func MoveAiNoteResultCodec() tools.JSONCodec[*MoveAiNoteResult] {
+	return tools.JSONCodec[*MoveAiNoteResult]{
+		ToJSON:   MarshalMoveAiNoteResult,
+		FromJSON: UnmarshalMoveAiNoteResult,
+	}
+}
+
 // SearchNotesPayloadCodec returns a fresh codec for *SearchNotesPayload.
 func SearchNotesPayloadCodec() tools.JSONCodec[*SearchNotesPayload] {
 	return tools.JSONCodec[*SearchNotesPayload]{
@@ -389,6 +405,32 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalMakeNotebookPrivatePayload(data)
+		},
+	}
+	// moveAiNotePayloadCodec provides an untyped codec for *MoveAiNotePayload.
+	moveAiNotePayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*MoveAiNotePayload); ok {
+				return MarshalMoveAiNotePayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *MoveAiNotePayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalMoveAiNotePayload(data)
+		},
+	}
+	// moveAiNoteResultCodec provides an untyped codec for *MoveAiNoteResult.
+	moveAiNoteResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*MoveAiNoteResult); ok {
+				return MarshalMoveAiNoteResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *MoveAiNoteResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalMoveAiNoteResult(data)
 		},
 	}
 	// searchNotesPayloadCodec provides an untyped codec for *SearchNotesPayload.
@@ -1152,6 +1194,126 @@ var makeNotebookPrivatePayloadFields = []tools.FieldMetadata{
 		Description: "Notebook ID",
 	},
 }
+var moveAiNotePayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Note ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("after")},
+		JSONType:    "string",
+		Description: "ID of the note of the same notebook to put the note after; omit to put it first",
+	},
+}
+var moveAiNoteResultFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook (directory) the note is in",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Title",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("tags")},
+		JSONType:    "array",
+		Description: "Tags",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("tags"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Tags",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("created_at")},
+		JSONType:    "string",
+		Description: "Creation time",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("updated_at")},
+		JSONType:    "string",
+		Description: "Last update time",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_notebook")},
+		JSONType:    "string",
+		Description: "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("created_by")},
+		JSONType:    "string",
+		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
+		JSONType:    "string",
+		Description: "Body in Markdown",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("version")},
+		JSONType:    "string",
+		Description: "Strong entity tag of the note file. Sent as the ETag header over HTTP",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_from")},
+		JSONType:    "string",
+		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights")},
+		JSONType:    "array",
+		Description: "Ranges of the title matched by the query of get, sorted and not overlapping",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights"), tools.DynamicField{}},
+		JSONType:    "object",
+		Description: "Ranges of the title matched by the query of get, sorted and not overlapping",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights"), tools.DynamicField{}, tools.FixedField("start")},
+		JSONType:    "integer",
+		Description: "Offset of the first character",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights"), tools.DynamicField{}, tools.FixedField("end")},
+		JSONType:    "integer",
+		Description: "Offset just past the last character",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("body_highlights")},
+		JSONType:    "array",
+		Description: "Ranges of the body matched by the query of get, sorted and not overlapping",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("body_highlights"), tools.DynamicField{}},
+		JSONType:    "object",
+		Description: "Ranges of the body matched by the query of get, sorted and not overlapping",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("body_highlights"), tools.DynamicField{}, tools.FixedField("start")},
+		JSONType:    "integer",
+		Description: "Offset of the first character",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("body_highlights"), tools.DynamicField{}, tools.FixedField("end")},
+		JSONType:    "integer",
+		Description: "Offset just past the last character",
+	},
+}
 var searchNotesPayloadFields = []tools.FieldMetadata{
 	{
 		JSONType: "object",
@@ -1724,6 +1886,40 @@ func enrichMakeNotebookPrivatePayloadValidationError(err error) error {
 	}
 	return tools.NewValidationError(ve.Error(), issues, m)
 }
+func enrichMoveAiNotePayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(moveAiNotePayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichMoveAiNoteResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(moveAiNoteResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
 func enrichSearchNotesPayloadValidationError(err error) error {
 	var ve *tools.ValidationError
 	if !errors.As(err, &ve) {
@@ -2268,6 +2464,68 @@ func invalidMakeNotebookPrivatePayloadFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(makeNotebookPrivatePayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidMoveAiNotePayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "MoveAiNotePayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(moveAiNotePayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidMoveAiNoteResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "MoveAiNoteResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(moveAiNoteResultFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -3283,6 +3541,154 @@ func UnmarshalMakeNotebookPrivatePayload(data []byte) (*MakeNotebookPrivatePaylo
 	return out, nil
 }
 
+// MarshalMoveAiNotePayload serializes *MoveAiNotePayload into JSON.
+func MarshalMoveAiNotePayload(v *MoveAiNotePayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("moveAiNotePayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.MoveAiNotePayloadTransport
+	out = &toolhttp.MoveAiNotePayloadTransport{
+		ID:    &in.ID,
+		After: in.After,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalMoveAiNotePayload deserializes JSON into *MoveAiNotePayload.
+func UnmarshalMoveAiNotePayload(data []byte) (*MoveAiNotePayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("moveAiNotePayload JSON is empty")
+	}
+	var tv toolhttp.MoveAiNotePayloadTransport
+	if err := validateMoveAiNotePayloadJSON(data); err != nil {
+		return nil, invalidMoveAiNotePayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidMoveAiNotePayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateMoveAiNotePayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichMoveAiNotePayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *MoveAiNotePayload
+	out = &MoveAiNotePayload{
+		ID:    *in.ID,
+		After: in.After,
+	}
+	return out, nil
+}
+
+// MarshalMoveAiNoteResult serializes *MoveAiNoteResult into JSON.
+func MarshalMoveAiNoteResult(v *MoveAiNoteResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("moveAiNoteResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.MoveAiNoteResultTransport
+	out = &toolhttp.MoveAiNoteResultTransport{
+		ID:              &in.ID,
+		Notebook:        &in.Notebook,
+		Title:           &in.Title,
+		CreatedAt:       &in.CreatedAt,
+		UpdatedAt:       &in.UpdatedAt,
+		TrashedNotebook: in.TrashedNotebook,
+		CreatedBy:       in.CreatedBy,
+		Body:            &in.Body,
+		Version:         &in.Version,
+		TrashedFrom:     in.TrashedFrom,
+	}
+	out.Tags = make([]string, len(in.Tags))
+	for i, val := range in.Tags {
+		out.Tags[i] = val
+	}
+	if in.TitleHighlights != nil {
+		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
+		for i, val := range in.TitleHighlights {
+			if val == nil {
+				out.TitleHighlights[i] = nil
+				continue
+			}
+			out.TitleHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+		}
+	}
+	if in.BodyHighlights != nil {
+		out.BodyHighlights = make([]*toolhttp.TextRangeTransport, len(in.BodyHighlights))
+		for i, val := range in.BodyHighlights {
+			if val == nil {
+				out.BodyHighlights[i] = nil
+				continue
+			}
+			out.BodyHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+		}
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalMoveAiNoteResult deserializes JSON into *MoveAiNoteResult.
+func UnmarshalMoveAiNoteResult(data []byte) (*MoveAiNoteResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("moveAiNoteResult JSON is empty")
+	}
+	var tv toolhttp.MoveAiNoteResultTransport
+	if err := validateGetNoteResultJSON(data); err != nil {
+		return nil, invalidMoveAiNoteResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidMoveAiNoteResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateMoveAiNoteResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichMoveAiNoteResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *MoveAiNoteResult
+	out = &MoveAiNoteResult{
+		ID:              *in.ID,
+		Notebook:        *in.Notebook,
+		Title:           *in.Title,
+		CreatedAt:       *in.CreatedAt,
+		UpdatedAt:       *in.UpdatedAt,
+		TrashedNotebook: in.TrashedNotebook,
+		CreatedBy:       in.CreatedBy,
+		Body:            *in.Body,
+		Version:         *in.Version,
+		TrashedFrom:     in.TrashedFrom,
+	}
+	out.Tags = make([]string, len(in.Tags))
+	for i, val := range in.Tags {
+		out.Tags[i] = val
+	}
+	if in.TitleHighlights != nil {
+		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
+		for i, val := range in.TitleHighlights {
+			if val == nil {
+				out.TitleHighlights[i] = nil
+				continue
+			}
+			out.TitleHighlights[i] = decodeTextRangeTransportToTextRange(val)
+		}
+	}
+	if in.BodyHighlights != nil {
+		out.BodyHighlights = make([]*TextRange, len(in.BodyHighlights))
+		for i, val := range in.BodyHighlights {
+			if val == nil {
+				out.BodyHighlights[i] = nil
+				continue
+			}
+			out.BodyHighlights[i] = decodeTextRangeTransportToTextRange(val)
+		}
+	}
+	return out, nil
+}
+
 // MarshalSearchNotesPayload serializes *SearchNotesPayload into JSON.
 func MarshalSearchNotesPayload(v *SearchNotesPayload) ([]byte, error) {
 	if v == nil {
@@ -3781,6 +4187,21 @@ func validateDeleteAiNotePayloadJSON(data []byte) error {
 		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateDeleteAiNotePayloadJSONValue("", root, "")
+}
+
+// validateMoveAiNotePayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateMoveAiNotePayloadJSON(data []byte) error {
+	var root any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&root); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("multiple JSON documents")
+	}
+	return validateMoveAiNotePayloadJSONValue("", root, "")
 }
 
 // validateCreateAiNotebookPayloadJSON parses one JSON document and checks the exact value
@@ -5052,6 +5473,50 @@ func validateDeleteAiNotePayloadJSONValue(path string, value any, description st
 			return unknownJSONFieldError(path, key, []string{
 				"id",
 				"version",
+			})
+		}
+	}
+	return nil
+}
+
+// validateMoveAiNotePayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateMoveAiNotePayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "after":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note of the same notebook to put the note after; omit to put it first",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Note ID",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"after",
+				"id",
 			})
 		}
 	}

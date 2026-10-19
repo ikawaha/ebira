@@ -6,7 +6,9 @@
 
 const state = {
   notebooks: [],
+  trashed: [], // notebooks in the trash, deleted as a whole
   notebook: null, // selected notebook ID; null for all but the trash
+  trashedNotebook: null, // with notebook "trash": the selected notebook in the trash, whose notes are listed
   tags: [], // tags with their note counts
   tag: null, // selected tag; the list then has the notes with it in all notebooks
   side: loadSide(), // what the left column lists: "notebooks" or "tags"
@@ -443,6 +445,11 @@ function notebookName(id) {
   return nb ? nb.name : id;
 }
 
+// trashedName is the display name of a notebook in the trash.
+function trashedName(id) {
+  return state.trashed.find((n) => n.id === id)?.name ?? id;
+}
+
 function formatTime(s) {
   const d = new Date(s);
   if (isNaN(d)) return s;
@@ -481,11 +488,15 @@ function tagList(tags, link = false) {
 // loadNotebooks reads the notebooks and the tags, which change together with
 // the notes.
 async function loadNotebooks() {
-  const [notebooks, tags] = await Promise.all([api("/notebooks"), api("/tags")]);
+  const [notebooks, tags, trashed] = await Promise.all([api("/notebooks"), api("/tags"), api("/trash/notebooks")]);
   state.notebooks = notebooks;
   state.tags = tags;
+  state.trashed = trashed;
   if (state.notebook && !state.notebooks.some((n) => n.id === state.notebook)) {
     state.notebook = null; // deleted
+  }
+  if (state.trashedNotebook && !state.trashed.some((n) => n.id === state.trashedNotebook)) {
+    state.trashedNotebook = null; // restored or deleted
   }
   renderNotebooks();
 }
@@ -493,6 +504,7 @@ async function loadNotebooks() {
 // renderNotebooks renders the left column: the notebooks or the tags, each
 // below "all notes".
 function renderNotebooks() {
+  if (renaming) return; // drawn again when the new name is saved or dropped
   for (const b of document.querySelectorAll("#side-tabs button")) {
     b.setAttribute("aria-selected", String(b.dataset.side === state.side));
   }
@@ -506,20 +518,38 @@ function renderNotebooks() {
     renderTags(ul);
     return;
   }
-  const item = (id, name, icon, count, cls) => {
+  const item = (id, name, icon, count, cls, trashed = null) => {
     const li = el("li", cls || "", el("span", "name", name));
     if (icon) li.append(el("span", "icon", icon));
     li.append(el("span", "count", String(count)));
-    if (!state.tag && state.notebook === id) li.classList.add("active");
-    li.addEventListener("click", () => selectNotebook(id));
+    if (!state.tag && state.notebook === id && state.trashedNotebook === trashed) li.classList.add("active");
+    li.addEventListener("click", () => selectNotebook(id, trashed));
+    li.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openNotebookMenu(li, id, trashed, e);
+    });
+    const more = button("…", (e) => {
+      e.stopPropagation();
+      openNotebookMenu(li, id, trashed);
+    }, { cls: "nb-more", title: t("notebookActions") });
+    more.setAttribute("aria-haspopup", "menu");
+    more.setAttribute("aria-label", t("notebookActions"));
+    li.append(more);
     li.dataset.notebook = id;
-    acceptImport(li, id);
+    if (!trashed) {
+      acceptImport(li, id);
+      acceptNote(li, id);
+    }
     return li;
   };
   for (const nb of state.notebooks) {
     const li = item(nb.id, nb.name, kindIcon(nb.kind), nb.count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
     ul.append(li);
+    if (nb.id !== "trash") continue;
+    for (const tn of state.trashed) {
+      ul.append(item("trash", "↳ " + tn.name, kindIcon(tn.kind), tn.count, "trashed", tn.id));
+    }
   }
 }
 
@@ -619,13 +649,244 @@ async function moveNotebook(id, before) {
   loadNotebooks().catch(() => {});
 }
 
-function selectNotebook(id) {
-  if (!state.tag && id === state.notebook) return;
+// selectNotebook lists the notes of notebook id; with id "trash" and
+// trashed, those of the notebook trashed, which is in the trash.
+function selectNotebook(id, trashed = null) {
+  if (!state.tag && id === state.notebook && trashed === state.trashedNotebook) return;
   state.tag = null;
   state.notebook = id;
+  state.trashedNotebook = id === "trash" ? trashed : null;
   renderNotebooks();
   loadNotes({ chosen: true, first: true });
 }
+
+
+// Notebook actions: the menu of a notebook row, opened with its "…" button or
+// a right click. The kinds follow the rules of the TUI: inbox cannot be
+// collab, and the trash has no kind.
+
+const KINDS = ["default", "collab", "drop", "private"];
+const KIND_LABEL = { default: "kindDefault", collab: "kindCollab", drop: "kindDrop", private: "kindPrivate" };
+
+let menuRow = null; // the row whose menu is open
+
+function openNotebookMenu(li, id, trashed, e) {
+  const m = $("notebook-menu");
+  m.replaceChildren();
+  const item = (label, fn, cls) => {
+    const b = button(label, () => {
+      closeNotebookMenu();
+      fn();
+    }, { cls });
+    b.setAttribute("role", "menuitem");
+    m.append(b);
+  };
+  const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
+  if (trashed) {
+    item(t("notebookRestore"), () => restoreNotebook(trashed));
+    item(t("notebookDeletePermanently"), () => purgeNotebook(trashed), "danger");
+  } else {
+    const nb = state.notebooks.find((n) => n.id === id);
+    if (!nb) return;
+    item(t("notebookRename"), () => renameNotebook(id));
+    if (id !== "trash") {
+      sep();
+      m.append(el("div", "menu-label", t("notebookKind")));
+      for (const k of KINDS) {
+        if (id === "inbox" && k === "collab") continue;
+        const b = button(`${k} ${kindIcon(k)}`.trim(), () => {
+          closeNotebookMenu();
+          if (k !== nb.kind) setNotebookKind(nb, k);
+        });
+        b.title = t(KIND_LABEL[k]);
+        b.setAttribute("role", "menuitemradio");
+        b.setAttribute("aria-checked", String(k === nb.kind));
+        m.append(b);
+      }
+    }
+    if (!nb.reserved) {
+      sep();
+      item(t("notebookToTrash"), () => trashNotebook(nb), "danger");
+    }
+  }
+  closeNotebookMenu();
+  menuRow = li;
+  li.classList.add("menu-open");
+  m.hidden = false;
+  // At the pointer for a right click, else beside the row; kept on screen.
+  const r = li.getBoundingClientRect();
+  const x = e ? e.clientX : r.right - 8;
+  const y = e ? e.clientY : r.bottom;
+  m.style.left = Math.min(x, innerWidth - m.offsetWidth - 8) + "px";
+  m.style.top = Math.min(y, innerHeight - m.offsetHeight - 8) + "px";
+  m.querySelector("button")?.focus();
+}
+
+function closeNotebookMenu() {
+  $("notebook-menu").hidden = true;
+  menuRow?.classList.remove("menu-open");
+  menuRow = null;
+}
+
+document.addEventListener("click", (e) => {
+  if (!$("notebook-menu").hidden && !e.target.closest("#notebook-menu")) closeNotebookMenu();
+});
+$("notebooks").addEventListener("scroll", closeNotebookMenu);
+window.addEventListener("resize", closeNotebookMenu);
+$("notebook-menu").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    const row = menuRow;
+    closeNotebookMenu();
+    row?.querySelector(".nb-more")?.focus();
+  }
+});
+
+// notebookFailed shows why an operation on a notebook failed and reloads the
+// notebooks, which may have changed meanwhile.
+function notebookFailed(e) {
+  alert(t("notebookFailed", { error: e.message }));
+  loadNotebooks().catch(() => {});
+}
+
+// renameNotebook turns the name of the notebook row into a field: Enter or
+// leaving it saves, Esc drops the change. The folder (the ID) keeps its name.
+let renaming = null;
+
+function renameNotebook(id) {
+  const nb = state.notebooks.find((n) => n.id === id);
+  const li = [...$("notebooks").children].find((x) => x.dataset.notebook === id && !x.classList.contains("trashed"));
+  if (!nb || !li) return;
+  renaming = id;
+  li.draggable = false;
+  const input = el("input", "nb-rename");
+  input.value = nb.name;
+  input.maxLength = 100;
+  input.title = t("notebookRenameHint", { id });
+  input.setAttribute("aria-label", t("notebookName"));
+  li.querySelector(".name").replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    renaming = null;
+    const name = input.value.trim();
+    if (save && name && name !== nb.name) {
+      try {
+        await api(`/notebooks/${encodeURIComponent(id)}`, { method: "PUT", body: { name } });
+      } catch (e) {
+        notebookFailed(e);
+        return;
+      }
+      await loadNotebooks().catch(() => {});
+      loadNotes();
+      return;
+    }
+    renderNotebooks();
+  };
+  input.addEventListener("click", (e) => e.stopPropagation());
+  input.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if (e.isComposing) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      finish(true);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener("blur", () => finish(true));
+}
+
+async function setNotebookKind(nb, kind) {
+  if (nb.kind === "private" && (kind === "default" || kind === "collab") && !confirm(t("confirmUnprivate", { name: nb.name }))) return;
+  try {
+    await api(`/notebooks/${encodeURIComponent(nb.id)}`, { method: "PUT", body: { kind } });
+  } catch (e) {
+    notebookFailed(e);
+    return;
+  }
+  loadNotebooks().catch(() => {});
+}
+
+// trashNotebook moves a notebook with its notes to the trash, where it is
+// listed under the trash and can be restored, and shows it there.
+async function trashNotebook(nb) {
+  if (!confirm(t("confirmTrashNotebook", { name: nb.name, n: nb.count }))) return;
+  try {
+    await api(`/notebooks/${encodeURIComponent(nb.id)}`, { method: "DELETE" });
+  } catch (e) {
+    notebookFailed(e);
+    return;
+  }
+  await loadNotebooks().catch(() => {});
+  if (state.notebook === nb.id) selectNotebook("trash", nb.id);
+}
+
+async function restoreNotebook(id) {
+  try {
+    await api(`/trash/notebooks/${encodeURIComponent(id)}/restore`, { method: "POST" });
+  } catch (e) {
+    notebookFailed(e);
+    return;
+  }
+  await loadNotebooks().catch(() => {});
+  selectNotebook(id);
+}
+
+async function purgeNotebook(id) {
+  const tn = state.trashed.find((n) => n.id === id);
+  if (!confirm(t("confirmPurgeNotebook", { name: tn?.name ?? id, n: tn?.count ?? 0 }))) return;
+  try {
+    await api(`/trash/notebooks/${encodeURIComponent(id)}`, { method: "DELETE" });
+  } catch (e) {
+    notebookFailed(e);
+    return;
+  }
+  if (state.trashedNotebook === id) {
+    state.trashedNotebook = null;
+    state.selected = null;
+  }
+  await loadNotebooks().catch(() => {});
+  loadNotes();
+  loadNote();
+}
+
+// The dialog of a new notebook: its name and kind. The ID, the name of its
+// folder, is made from the name by the server.
+function openNewNotebook() {
+  const d = $("notebook-new");
+  $("notebook-new-form").reset();
+  $("notebook-new-error").hidden = true;
+  d.showModal();
+  $("notebook-new-name").focus();
+}
+
+$("notebook-add").addEventListener("click", openNewNotebook);
+$("notebook-new-form").addEventListener("submit", async (e) => {
+  if (e.submitter?.value === "cancel") return; // the dialog closes
+  e.preventDefault();
+  const name = $("notebook-new-name").value.trim();
+  if (!name) return;
+  const kind = new FormData($("notebook-new-form")).get("kind");
+  let nb;
+  try {
+    nb = await api("/notebooks", { method: "POST", body: { name, kind } });
+  } catch (err) {
+    const msg = $("notebook-new-error");
+    msg.textContent = err.status === 409 ? t("notebookNameTaken", { name }) : t("notebookFailed", { error: err.message });
+    msg.hidden = false;
+    return;
+  }
+  $("notebook-new").close();
+  if (state.side !== "notebooks") setSide("notebooks");
+  await loadNotebooks().catch(() => {});
+  selectNotebook(nb.id);
+});
 
 // selectTag lists the notes with tag in all notebooks but the trash, as
 // choosing a notebook does.
@@ -634,6 +895,7 @@ function selectTag(tag) {
   if (tag === state.tag) return;
   state.tag = tag;
   state.notebook = null;
+  state.trashedNotebook = null;
   renderNotebooks();
   loadNotes({ chosen: true, first: true });
 }
@@ -668,13 +930,19 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       notes = r.notes;
       total = r.total;
       mode = r.mode;
+      if (state.trashedNotebook) {
+        // The search takes no notebook in the trash: the notes of the trash
+        // are narrowed here.
+        notes = notes.filter((n) => n.trashed_notebook === state.trashedNotebook);
+        total = notes.length;
+      }
     } else {
       // A notebook's list comes in its own sort, which the server knows.
       // Pages are read until the notes shown so far, so that a reload keeps
       // the pages read with "load more".
       notes = [];
       do {
-        const r = await api("/notes", { params: { notebook: state.notebook, tag: state.tag, sort: state.notebook ? null : state.allSort, limit: LIST_PAGE, offset: notes.length } });
+        const r = await api("/notes", { params: { notebook: state.notebook, trashed_notebook: state.trashedNotebook, tag: state.tag, sort: state.notebook ? null : state.allSort, limit: LIST_PAGE, offset: notes.length } });
         notes.push(...r.notes);
         total = r.total;
         if (!r.notes.length) break;
@@ -684,7 +952,9 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     state.notes = notes;
     state.total = total;
     if (mode) $("mode").textContent = mode;
-    const where = state.tag ? "#" + state.tag : state.notebook ? notebookName(state.notebook) : t("all");
+    const where = state.tag ? "#" + state.tag
+      : state.trashedNotebook ? notebookName("trash") + " / " + trashedName(state.trashedNotebook)
+      : state.notebook ? notebookName(state.notebook) : t("all");
     info.textContent = state.query
       ? t(total > notes.length ? "searchInfoTop" : "searchInfo", { where, query: state.query, total, shown: notes.length })
       : t(total > notes.length ? "listInfoPart" : "listInfo", { where, total, shown: notes.length });
@@ -803,18 +1073,23 @@ function dropAfter(li, e) {
   return { after: i > 0 ? others[i - 1].id : null, below };
 }
 
-function enableDrag(li) {
+// enableDrag lets the note li be dragged onto a notebook, to move it there,
+// and, with reorder, within the list.
+function enableDrag(li, reorder) {
   li.draggable = true;
   li.addEventListener("dragstart", (e) => {
     dragID = li.dataset.id;
     e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", li.querySelector(".title")?.textContent || "");
     li.classList.add("dragging");
   });
   li.addEventListener("dragend", () => {
     dragID = null;
     li.classList.remove("dragging");
     for (const x of $("notes").children) x.classList.remove("drop-above", "drop-below");
+    for (const x of $("notebooks").children) x.classList.remove("drop-into");
   });
+  if (!reorder) return;
   li.addEventListener("dragover", (e) => {
     if (!dragID || dragID === li.dataset.id) return;
     e.preventDefault();
@@ -840,7 +1115,7 @@ function renderNotes() {
   for (const n of state.notes) {
     const li = el("li", n.id === state.selected ? "active" : "");
     li.dataset.id = n.id;
-    if (reorder) enableDrag(li);
+    if (n.notebook !== "trash") enableDrag(li, reorder);
     const head = el("div", "title-row", el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
     const mark = aiMark(n);
     if (mark) head.append(mark);
@@ -915,7 +1190,8 @@ async function loadNote() {
   const keepScroll = pv.dataset.id === id ? pv.scrollTop : 0;
   state.note = n;
   const meta = el("div", "meta",
-    el("span", "", notebookName(n.notebook) + (n.trashed_from ? t("trashedFrom", { notebook: notebookName(n.trashed_from) }) : "")),
+    el("span", "", notebookName(n.notebook) + (n.trashed_notebook ? " / " + trashedName(n.trashed_notebook) : "")
+      + (n.trashed_from ? t("trashedFrom", { notebook: notebookName(n.trashed_from) }) : "")),
     el("span", "", t("updatedAt", { time: formatTime(n.updated_at) })),
     ...tagList(n.tags, true));
   const mark = aiMark(n, t("createdByAI"));
@@ -1491,6 +1767,49 @@ function acceptImport(li, id) {
   });
 }
 
+// acceptNote lets a note dragged from the list be dropped on the notebook row
+// li, which moves it there; dropped on the trash, it goes to the trash.
+function acceptNote(li, id) {
+  const target = () => {
+    if (!dragID) return false;
+    const n = state.notes.find((x) => x.id === dragID);
+    return !!n && n.notebook !== id;
+  };
+  li.addEventListener("dragover", (e) => {
+    if (!target()) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    li.classList.add("drop-into");
+  });
+  li.addEventListener("dragleave", () => li.classList.remove("drop-into"));
+  li.addEventListener("drop", (e) => {
+    if (!target()) return;
+    e.preventDefault();
+    li.classList.remove("drop-into");
+    moveNoteTo(dragID, id);
+  });
+}
+
+// moveNoteTo moves note id to notebook nb, or to the trash. A note being
+// edited is left alone, as the editor would save it back.
+async function moveNoteTo(id, nb) {
+  if (state.editing?.note?.id === id) {
+    alert(t("moveWhileEditing"));
+    return;
+  }
+  try {
+    if (nb === "trash") {
+      await api(noteURL(id), { method: "DELETE" });
+    } else {
+      await api(noteURL(id), { method: "PATCH", body: { notebook: nb } });
+    }
+  } catch (e) {
+    alert(t("moveToNotebookFailed", { error: e.message }));
+  }
+  if (state.selected === id && nb === "trash") state.selected = null;
+  refreshAfterWrite();
+}
+
 // imageRefs returns the relative paths of the images a Markdown file refers
 // to, as internal/importer finds them.
 function imageRefs(md) {
@@ -1795,11 +2114,11 @@ $("search-form").addEventListener("submit", (e) => e.preventDefault());
 
 // Keys: / search, Esc clear, j/k or arrows move, n/N jump between matches,
 // e edit, c create, u restore, s sort, J/K move the note in the manual order,
-// a assistant; in the editor, ⌘S / Ctrl+S save and Esc cancel; in the
+// a assistant, F2 rename the notebook; in the editor, ⌘S / Ctrl+S save and Esc cancel; in the
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("import-result").open) return;
+  if ($("conflict").open || $("files-check").open || $("import-result").open || $("notebook-new").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();
@@ -1845,6 +2164,12 @@ document.addEventListener("keydown", (e) => {
     case "u": restoreNote(); break;
     case "a": e.preventDefault(); toggleAssistant(true); break;
     case "T": e.preventDefault(); setSide(state.side === "tags" ? "notebooks" : "tags"); break;
+    case "F2":
+      if (state.side === "notebooks" && state.notebook && !state.trashedNotebook) {
+        e.preventDefault();
+        renameNotebook(state.notebook);
+      }
+      break;
     case "Escape": if (!$("assistant").hidden) toggleAssistant(false); break;
   }
 });

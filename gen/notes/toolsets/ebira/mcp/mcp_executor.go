@@ -41,6 +41,8 @@ func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 			return runtime.ExecuteMCPTool(ctx, caller, call, "list_tags", genebira.SpecListTags())
 		case genebira.MakeNotebookPrivate:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "make_notebook_private", genebira.SpecMakeNotebookPrivate())
+		case genebira.MoveAiNote:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "move_ai_note", genebira.SpecMoveAiNote())
 		case genebira.SearchNotes:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "search_notes", genebira.SpecSearchNotes())
 		case genebira.UpdateAiNote:

@@ -143,6 +143,16 @@ mark.current { background: var(--mark-current); }
 .side-tabs button { flex: 1; border: none; border-radius: 4px; padding: 3px 0; background: none; color: var(--fg-muted); font: inherit; font-size: 12px; cursor: pointer; }
 .side-tabs button[aria-selected="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 .notebooks li.empty { color: var(--fg-muted); cursor: default; }
+/* The "…" of a notebook row shows on the row that is hovered, selected or
+   focused, and stays while its menu is open. */
+.notebooks .nb-more { flex: none; visibility: hidden; border: none; background: none; color: var(--fg-muted); padding: 0 4px; line-height: 1.2; font-size: 14px; }
+.notebooks li:hover .nb-more, .notebooks li.active .nb-more, .notebooks li.menu-open .nb-more, .notebooks .nb-more:focus-visible { visibility: visible; }
+.notebooks .nb-more:hover { background: var(--bg-hover); color: var(--fg); }
+.notebooks li.menu-open { background: var(--bg-hover); }
+.notebooks li.trashed { padding-left: 28px; color: var(--fg-muted); }
+.notebooks li.trashed.active { color: var(--fg); }
+.notebooks .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: 3px; background: var(--bg); color: var(--fg); }
+.menu.notebook-menu { position: fixed; bottom: auto; }
 .notebooks li.empty:hover { background: none; }
 
 .list { border-right: 1px solid var(--border); }
@@ -319,6 +329,20 @@ dialog {
 dialog::backdrop { background: rgb(0 0 0 / .3); }
 .dialog-actions { display: flex; flex-direction: column; gap: 6px; }
 .dialog-actions button { font-size: 13px; padding: 6px 10px; text-align: left; }
+
+/* New notebook */
+
+dialog.notebook-new { width: min(420px, calc(100vw - 32px)); padding: 12px 16px; }
+.notebook-new h2 { margin: 0 0 10px; font-size: 16px; }
+.notebook-new .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--fg-muted); }
+.notebook-new .field input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.notebook-new .kinds { margin: 12px 0 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; gap: 4px; }
+.notebook-new .kinds legend { font-size: 12px; color: var(--fg-muted); padding: 0 4px; }
+.notebook-new .kinds label { display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
+.notebook-new .kinds label > span > span { color: var(--fg-muted); font-size: 12px; }
+.notebook-new p.error { color: var(--ng); margin: 8px 0 0; }
+.notebook-new .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.notebook-new .form-actions button { font-size: 13px; padding: 4px 14px; }
 
 /* Check of the files of notes */
 

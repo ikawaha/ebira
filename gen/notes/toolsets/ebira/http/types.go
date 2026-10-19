@@ -249,6 +249,53 @@ type (
 		// Notebook ID
 		ID *string `json:"id"`
 	}
+	// MoveAiNotePayloadTransport is the internal JSON transport type for MoveAiNotePayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	MoveAiNotePayloadTransport struct {
+		// Note ID
+		ID *string `json:"id"`
+		// ID of the note of the same notebook to put the note after; omit to put it
+		// first
+		After *string `json:"after,omitempty"`
+	}
+	// MoveAiNoteResultTransport is the internal JSON transport type for MoveAiNoteResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	MoveAiNoteResultTransport struct {
+		// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+		// unique across notebooks
+		ID *string `json:"id"`
+		// Notebook (directory) the note is in
+		Notebook *string `json:"notebook"`
+		// Title
+		Title *string `json:"title"`
+		// Tags
+		Tags []string `json:"tags"`
+		// Creation time
+		CreatedAt *string `json:"created_at"`
+		// Last update time
+		UpdatedAt *string `json:"updated_at"`
+		// For a note of a notebook deleted as a whole: the ID of that notebook, which
+		// is in the trash. notebook is then trash, and restoring the note puts it back
+		// into that notebook
+		TrashedNotebook *string `json:"trashed_notebook,omitempty"`
+		// Who created the note: ai for a note created by an AI client
+		// (create_ai_note); absent for people
+		CreatedBy *string `json:"created_by,omitempty"`
+		// Body in Markdown
+		Body *string `json:"body"`
+		// Strong entity tag of the note file. Sent as the ETag header over HTTP
+		Version *string `json:"version"`
+		// Notebook the note was in before it was moved to the trash
+		TrashedFrom *string `json:"trashed_from,omitempty"`
+		// Ranges of the title matched by the query of get, sorted and not overlapping
+		TitleHighlights []*TextRangeTransport `json:"title_highlights,omitempty"`
+		// Ranges of the body matched by the query of get, sorted and not overlapping
+		BodyHighlights []*TextRangeTransport `json:"body_highlights,omitempty"`
+	}
 	// SearchNotesPayloadTransport is the internal JSON transport type for SearchNotesPayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into

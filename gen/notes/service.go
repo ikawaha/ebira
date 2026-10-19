@@ -104,6 +104,13 @@ type Service interface {
 	// Move a note in a notebook of the collab kind to the trash, where people can
 	// restore it. The version from get_note is required.
 	DeleteAiNote(context.Context, *DeleteAiNotePayload) (err error)
+	// Put a note of a notebook of the collab kind right after another note of the
+	// same notebook in the manual order (the order sort of list_notes), or first
+	// when after is omitted. To put it last, pass the ID of the last note of
+	// list_notes with sort order. Only the order changes; the content and
+	// updated_at are kept, so no version is needed. Notes of other notebooks are
+	// ordered by people only.
+	MoveAiNote(context.Context, *MoveAiNotePayload) (res *Note, err error)
 	// Create a new notebook of the collab kind, where AI clients may write notes.
 	// Existing notebooks cannot be turned into collab notebooks by AI clients;
 	// people do that. The ID of the notebook is derived from the name: a name with
@@ -169,7 +176,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [31]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "git_status", "git_sync", "sync"}
+var MethodNames = [32]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "check_files", "events", "git_status", "git_sync", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -459,6 +466,16 @@ type ListPayload struct {
 type MakeNotebookPrivatePayload struct {
 	// Notebook ID
 	ID string
+}
+
+// MoveAiNotePayload is the payload type of the notes service move_ai_note
+// method.
+type MoveAiNotePayload struct {
+	// Note ID
+	ID string
+	// ID of the note of the same notebook to put the note after; omit to put it
+	// first
+	After *string
 }
 
 // MovePayload is the payload type of the notes service move method.

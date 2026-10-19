@@ -201,6 +201,47 @@ type (
 		// Notebook ID
 		ID string
 	}
+	// MoveAiNotePayload defines the JSON payload for the ebira.move_ai_note tool.
+	MoveAiNotePayload = struct {
+		// Note ID
+		ID string
+		// ID of the note of the same notebook to put the note after; omit to put it
+		// first
+		After *string
+	}
+	// MoveAiNoteResult defines the JSON result for the ebira.move_ai_note tool.
+	MoveAiNoteResult = struct {
+		// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+		// unique across notebooks
+		ID string
+		// Notebook (directory) the note is in
+		Notebook string
+		// Title
+		Title string
+		// Tags
+		Tags []string
+		// Creation time
+		CreatedAt string
+		// Last update time
+		UpdatedAt string
+		// For a note of a notebook deleted as a whole: the ID of that notebook, which
+		// is in the trash. notebook is then trash, and restoring the note puts it back
+		// into that notebook
+		TrashedNotebook *string
+		// Who created the note: ai for a note created by an AI client
+		// (create_ai_note); absent for people
+		CreatedBy *string
+		// Body in Markdown
+		Body string
+		// Strong entity tag of the note file. Sent as the ETag header over HTTP
+		Version string
+		// Notebook the note was in before it was moved to the trash
+		TrashedFrom *string
+		// Ranges of the title matched by the query of get, sorted and not overlapping
+		TitleHighlights []*TextRange
+		// Ranges of the body matched by the query of get, sorted and not overlapping
+		BodyHighlights []*TextRange
+	}
 	// SearchNotesPayload defines the JSON payload for the ebira.search_notes tool.
 	SearchNotesPayload = struct {
 		// Search terms separated by spaces, combined with AND

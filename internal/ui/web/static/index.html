@@ -29,6 +29,7 @@
     <ul id="notebooks"></ul>
     <div class="side-foot">
       <button type="button" id="settings" class="gear" aria-haspopup="menu" aria-expanded="false" aria-controls="settings-menu" data-i18n-title="settings" data-i18n-aria-label="settings">⚙</button>
+      <button type="button" id="notebook-add" class="gear" data-i18n-title="notebookNew" data-i18n-aria-label="notebookNew">＋</button>
       <div class="menu" id="settings-menu" role="menu" hidden>
         <button type="button" role="menuitem" id="import-open" data-i18n-title="importMarkdownTitle" data-i18n="importMarkdown"></button>
         <button type="button" role="menuitem" id="files-check-open" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
@@ -79,6 +80,25 @@
     <button value="reload" data-i18n="conflictReload"></button>
     <button value="overwrite" data-i18n="conflictOverwrite"></button>
     <button value="cancel" autofocus data-i18n="conflictCancel"></button>
+  </form>
+</dialog>
+<div class="menu notebook-menu" id="notebook-menu" role="menu" hidden></div>
+<dialog id="notebook-new" class="notebook-new" data-i18n-aria-label="notebookNew">
+  <form method="dialog" id="notebook-new-form">
+    <h2 data-i18n="notebookNew"></h2>
+    <label class="field"><span data-i18n="notebookName"></span><input id="notebook-new-name" maxlength="100" required autocomplete="off"></label>
+    <fieldset class="kinds">
+      <legend data-i18n="notebookKind"></legend>
+      <label><input type="radio" name="kind" value="default" checked><span><b>default</b> <span data-i18n="kindDefault"></span></span></label>
+      <label><input type="radio" name="kind" value="collab"><span><b>collab</b> 🤖 <span data-i18n="kindCollab"></span></span></label>
+      <label><input type="radio" name="kind" value="drop"><span><b>drop</b> 📥 <span data-i18n="kindDrop"></span></span></label>
+      <label><input type="radio" name="kind" value="private"><span><b>private</b> 🔒 <span data-i18n="kindPrivate"></span></span></label>
+    </fieldset>
+    <p class="error" id="notebook-new-error" hidden></p>
+    <div class="form-actions">
+      <button type="submit" value="cancel" formnovalidate data-i18n="cancel"></button>
+      <button type="submit" value="create" class="primary" data-i18n="notebookCreate"></button>
+    </div>
   </form>
 </dialog>
 <dialog id="files-check" class="files-check" data-i18n-aria-label="filesCheck"></dialog>

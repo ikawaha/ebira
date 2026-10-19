@@ -707,6 +707,22 @@ func (s *Notes) DeleteAiNote(ctx context.Context, p *gennotes.DeleteAiNotePayloa
 	return s.Delete(ctx, &gennotes.DeletePayload{ID: p.ID, IfMatch: &p.Version})
 }
 
+// MoveAiNote reorders a note in a notebook of the collab kind for an AI
+// client, as Move does. Notes hidden from AI clients are not found, and notes
+// of other kinds are forbidden, so that AI clients do not rearrange the notes
+// of people. No version is needed: only the order of the note changes, on
+// the note as read when it is written.
+func (s *Notes) MoveAiNote(ctx context.Context, p *gennotes.MoveAiNotePayload) (*gennotes.Note, error) {
+	n, err := s.Get(ctx, &gennotes.GetPayload{ID: p.ID})
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireAINotebook(n.Notebook); err != nil {
+		return nil, err
+	}
+	return s.Move(ctx, &gennotes.MovePayload{ID: p.ID, After: p.After})
+}
+
 // notebooks lists the notebooks: inbox first, then the others by order, name
 // and ID, and trash last.
 func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {

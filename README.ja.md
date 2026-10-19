@@ -48,7 +48,7 @@ flowchart LR
 
 同じノートを、ブラウザからもターミナルからも扱えます。どちらも手元の同じサーバーにつながっていて、一方での変更はもう一方にすぐ反映されます。
 
-**Web UI** — `ebira web`。左にノートブックとタグ、中央にノートの一覧、右にノートを表示します。リストの続きやコードの色付けができるエディタで Markdown を書き、画像を貼り付け、数式や図をその場で表示できます。
+**Web UI** — `ebira web`。左にノートブックとタグ、中央にノートの一覧、右にノートを表示します。ノートブックはメニューから作成・名前の変更・種別の変更・ゴミ箱への移動ができ、ノートはノートブックへドラッグして移せます。リストの続きやコードの色付けができるエディタで Markdown を書き、画像を貼り付け、数式や図をその場で表示できます。
 
 <p align="center">
   <img src="assets/screenshots/web-editor-ja.png" width="800" alt="Web UI でノートを編集しているところ: 上にタイトル・ノートブック・タグ、下に Go のコードが色付けされた Markdown の本文">
@@ -271,6 +271,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `import_ai_note` | Markdown のファイルを、front matter ごと新しいノートとして同じように取り込む |
 | `update_ai_note` | `collab` のノートブックのノートを書き換える。`get_note` の版が要る |
 | `delete_ai_note` | `collab` のノートブックのノートをゴミ箱へ移す。`get_note` の版が要る |
+| `move_ai_note` | `collab` のノートブックのノートを並べ替える（別のノートの後ろか、先頭へ） |
 | `create_ai_notebook` | AI が書くための、新しい `collab` のノートブックを作る |
 | `make_notebook_private` | ノートブックを AI から見えなくする。戻せるのはあなただけ |
 

@@ -37,6 +37,7 @@ type Endpoints struct {
 	ImportAiNote          goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
+	MoveAiNote            goa.Endpoint
 	CreateAiNotebook      goa.Endpoint
 	MakeNotebookPrivate   goa.Endpoint
 	AddFile               goa.Endpoint
@@ -98,6 +99,7 @@ func NewEndpoints(s Service) *Endpoints {
 		ImportAiNote:          NewImportAiNoteEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
+		MoveAiNote:            NewMoveAiNoteEndpoint(s),
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
 		MakeNotebookPrivate:   NewMakeNotebookPrivateEndpoint(s),
 		AddFile:               NewAddFileEndpoint(s),
@@ -134,6 +136,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.ImportAiNote = m(e.ImportAiNote)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
+	e.MoveAiNote = m(e.MoveAiNote)
 	e.CreateAiNotebook = m(e.CreateAiNotebook)
 	e.MakeNotebookPrivate = m(e.MakeNotebookPrivate)
 	e.AddFile = m(e.AddFile)
@@ -330,6 +333,15 @@ func NewDeleteAiNoteEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeleteAiNotePayload)
 		return nil, s.DeleteAiNote(ctx, p)
+	}
+}
+
+// NewMoveAiNoteEndpoint returns an endpoint function that calls the method
+// "move_ai_note" of service "notes".
+func NewMoveAiNoteEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*MoveAiNotePayload)
+		return s.MoveAiNote(ctx, p)
 	}
 }
 

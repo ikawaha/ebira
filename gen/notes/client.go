@@ -37,6 +37,7 @@ type Client struct {
 	ImportAiNoteEndpoint          goa.Endpoint
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
+	MoveAiNoteEndpoint            goa.Endpoint
 	CreateAiNotebookEndpoint      goa.Endpoint
 	MakeNotebookPrivateEndpoint   goa.Endpoint
 	AddFileEndpoint               goa.Endpoint
@@ -50,7 +51,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -73,6 +74,7 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		ImportAiNoteEndpoint:          importAiNote,
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
+		MoveAiNoteEndpoint:            moveAiNote,
 		CreateAiNotebookEndpoint:      createAiNotebook,
 		MakeNotebookPrivateEndpoint:   makeNotebookPrivate,
 		AddFileEndpoint:               addFile,
@@ -356,6 +358,21 @@ func (c *Client) UpdateAiNote(ctx context.Context, p *UpdateAiNotePayload) (res 
 func (c *Client) DeleteAiNote(ctx context.Context, p *DeleteAiNotePayload) (err error) {
 	_, err = c.DeleteAiNoteEndpoint(ctx, p)
 	return
+}
+
+// MoveAiNote calls the "move_ai_note" endpoint of the "notes" service.
+// MoveAiNote may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): after is not another note of the note's notebook
+//   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
+//   - error: internal error
+func (c *Client) MoveAiNote(ctx context.Context, p *MoveAiNotePayload) (res *Note, err error) {
+	var ires any
+	ires, err = c.MoveAiNoteEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Note), nil
 }
 
 // CreateAiNotebook calls the "create_ai_notebook" endpoint of the "notes"
