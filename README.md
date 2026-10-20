@@ -147,6 +147,8 @@ ebira runs on macOS and Linux.
 | `ebira import [-notebook ID] [-force] [-dry-run] path...` | Import Markdown files, and the images they refer to, as notes |
 | `ebira files check [-delete]` | List unused images and broken image references |
 | `ebira sync [-remote URL]` | Sync the notes with their git repository: commit, merge the upstream branch and push; `-remote` connects them to a repository first |
+| `ebira auth passkey [-no-open]` | Register a passkey for the web UI, on a one-time URL (experimental; see [What it guards](#what-it-guards-and-what-it-does-not)) |
+| `ebira auth reset [-yes]` | Remove every passkey and end every session, such as when the passkeys are lost |
 
 Flags of `serve` (also taken by `server start` and `server restart`):
 
@@ -159,6 +161,7 @@ Flags of `serve` (also taken by `server start` and `server restart`):
 | `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` (the TUI takes `ebira -lang` or `lang` of the settings file, else `$LANG`) |
 | `-provider`, `-model` | the provider whose API key is set | Model of the assistant: `anthropic` or `gemini` |
 | `-git-sync` | `git_sync` of the settings file, else off | Sync with git at the start and at this interval, such as `10m` |
+| `-auth` | `auth` of the settings file, else `none` | `none`, or `passkey` to treat only the web UI signed in with a passkey as you (experimental) |
 
 Run any command with `-h` for all its flags.
 
@@ -304,7 +307,8 @@ Once connected, ask in your own words, for example:
 
 ### What it guards, and what it does not
 
-- There is no login: the server answers only requests to localhost (and the host of `-addr`), and refuses requests that change notes from web pages of other sites. Keep it on your machine.
+- There is no login by default: the server answers only requests to localhost (and the host of `-addr`), and refuses requests that change notes from web pages of other sites. Keep it on your machine.
+- Every request to the REST API is taken as from you, so an AI agent on your machine that can run `curl` could act as you. To stop that, require a passkey (experimental): run `ebira auth passkey` to register one on a one-time URL, then set `auth: passkey` in the settings file and restart the server. The web UI then asks you to sign in with the passkey, and REST requests without the sign-in are refused. MCP stays as it is. The TUI signs in through the web UI: it shows a URL and a code, and you approve the code in the web UI signed in with the passkey (press `o` to open the URL). The commands that call the server, such as `ebira sync`, sign in the same way. Important operations, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, ask for the passkey again unless you signed in within 5 minutes. Manage the passkeys, and end the other sessions, from **Manage passkeys…** in the settings menu; if you lose them, `ebira auth reset` removes every passkey.
 - The kinds hold for every AI that goes through ebira's API, MCP and the assistant alike. They cannot stop a program on your machine that reads the note files directly, such as an AI agent with file access; `private` marks what AI is not to see, and is not encryption.
 
 ## Assistant
@@ -325,7 +329,7 @@ addr: localhost:13579
 lang: en
 ```
 
-The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) and `git_sync`. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) `git_sync` and `auth` (`none` or `passkey`). API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
 ## License
 

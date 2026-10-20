@@ -106,7 +106,20 @@ func DecodeToolsCallRequest(mux goahttp.Muxer, decoder func(*http.Request) goaht
 		if err != nil {
 			return payload, err
 		}
-		payload = NewToolsCallPayload(&body)
+
+		var (
+			httpCredential0 *string
+			c               *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var httpCredential0Raw string
+		if c != nil {
+			httpCredential0Raw = c.Value
+		}
+		if httpCredential0Raw != "" {
+			httpCredential0 = &httpCredential0Raw
+		}
+		payload = NewToolsCallPayload(&body, httpCredential0)
 
 		return payload, nil
 	}

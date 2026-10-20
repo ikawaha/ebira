@@ -147,6 +147,8 @@ macOS と Linux で動きます。
 | `ebira import [-notebook ID] [-force] [-dry-run] パス...` | Markdown ファイルと、それが参照する画像をノートとして取り込む |
 | `ebira files check [-delete]` | 使われていない画像と、切れた画像の参照を一覧する |
 | `ebira sync [-remote URL]` | ノートを git のリポジトリと同期する（コミット、上流のブランチのマージ、push）。`-remote` で先にリポジトリにつなぐ |
+| `ebira auth passkey [-no-open]` | Web UI のパスキーを、使い捨ての URL で登録する（試作。[守れること](#守れること守れないこと)） |
+| `ebira auth reset [-yes]` | パスキーをすべて消し、すべてのセッションを終える（パスキーを無くしたときなど） |
 
 `serve` のフラグ（`server start` と `server restart` でも使えます）:
 
@@ -159,6 +161,7 @@ macOS と Linux で動きます。
 | `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja`（TUI の言語は `ebira -lang` か設定ファイルの `lang`、無ければ `$LANG`） |
 | `-provider`、`-model` | API キーが設定されているプロバイダー | アシスタントのモデル: `anthropic` か `gemini` |
 | `-git-sync` | 設定ファイルの `git_sync`、無ければ同期しない | 起動時と、この間隔（`10m` など）で git と同期する |
+| `-auth` | 設定ファイルの `auth`、無ければ `none` | `none` か、パスキーでログインした Web UI だけをあなたとして扱う `passkey`（試作） |
 
 どのコマンドも `-h` でフラグの一覧が出ます。
 
@@ -304,7 +307,8 @@ inbox は、変えなければ `drop` です。ゴミ箱は AI からは見え�
 
 ### 守れること、守れないこと
 
-- ログインはありません。サーバーは localhost（と `-addr` のホスト）宛てのリクエストだけに答え、ほかのサイトの Web ページからノートを変えるリクエストは拒みます。サーバーは手元のマシンで動かしてください。
+- 既定ではログインはありません。サーバーは localhost（と `-addr` のホスト）宛てのリクエストだけに答え、ほかのサイトの Web ページからノートを変えるリクエストは拒みます。サーバーは手元のマシンで動かしてください。
+- REST API へのリクエストはすべてあなたからのものとして扱うので、手元で `curl` を実行できる AI エージェントは、あなたとして振る舞えます。防ぐには、パスキーを求めます（試作）: `ebira auth passkey` を実行して使い捨ての URL でパスキーを登録し、設定ファイルに `auth: passkey` と書いてサーバーを起動し直します。Web UI はパスキーでのログインを求め、ログインしていない REST のリクエストは断ります。MCP は変わりません。TUI は Web UI を通してログインします。TUI に出る URL を、パスキーでログインした Web UI で開き、同じコードが出ているのを確かめて承認します（`o` で URL を開けます）。サーバーを呼ぶコマンド（`ebira sync` など）も同じようにログインします。private のノートブックを AI に見せる、ノートの履歴を見る、ゴミ箱を空にする、などの大事な操作は、ログインから 5 分を過ぎていれば、もう一度パスキーを求めます。パスキーの管理と、ほかのセッションの終了は、歯車のメニューの **パスキーの管理…** で行います。パスキーを無くしたら、`ebira auth reset` ですべて消せます。
 - 種別による制限は、MCP もアシスタントも含め、ebira の API を通るすべての AI に効きます。ただ、ノートのファイルを直接読めるプログラム（ファイルを読める AI エージェントなど）は防げません。`private` は「AI に見せない」という目印で、暗号化ではありません。
 
 ## アシスタント
@@ -325,7 +329,7 @@ addr: localhost:13579
 lang: ja
 ```
 
-キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync` です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
+キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
 ## ライセンス
 

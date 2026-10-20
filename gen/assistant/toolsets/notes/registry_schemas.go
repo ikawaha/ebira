@@ -446,8 +446,8 @@ func (declarations registryDeclarations) schema30() *genregistry.ToolSchema {
 	return &genregistry.ToolSchema{
 		Name:                   "notes.search",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
@@ -458,17 +458,17 @@ func (declarations registryDeclarations) schema30() *genregistry.ToolSchema {
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 				Description:     "Full-text search over notes. Japanese terms are supported",
 				Search: &genregistry.ToolSearchDocument{
 					Length: 12,
 					Terms:  map[string]int{"are": 1, "full": 1, "japanese": 1, "notes": 2, "over": 1, "search": 3, "supported": 1, "terms": 1, "text": 1},
 				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata61(),
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+				Payload:       declarations.metadata62(),
 			},
 			Payload: declarations.metadata31(),
-			Result:  declarations.metadata37(),
+			Result:  declarations.metadata38(),
 		},
 	}
 }
@@ -478,13 +478,14 @@ func (declarations registryDeclarations) metadata31() *genregistry.ToolTypeMetad
 	registryText1 := "SearchPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
 			declarations.field32(),
 			declarations.field33(),
 			declarations.field34(),
 			declarations.field35(),
 			declarations.field36(),
+			declarations.field37(),
 		},
 	}
 }
@@ -500,6 +501,19 @@ func (registryDeclarations) field32() *genregistry.ToolFieldMetadata {
 // field33 constructs one generated field declaration.
 func (registryDeclarations) field33() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
+	registryText2 := "Session of people signed in with a passkey, set as a cookie by the server"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("session")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field34 constructs one generated field declaration.
+func (registryDeclarations) field34() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
 	registryText2 := "Search terms separated by spaces, combined with AND"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
@@ -510,8 +524,8 @@ func (registryDeclarations) field33() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field34 constructs one generated field declaration.
-func (registryDeclarations) field34() *genregistry.ToolFieldMetadata {
+// field35 constructs one generated field declaration.
+func (registryDeclarations) field35() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -523,8 +537,8 @@ func (registryDeclarations) field34() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field35 constructs one generated field declaration.
-func (registryDeclarations) field35() *genregistry.ToolFieldMetadata {
+// field36 constructs one generated field declaration.
+func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -536,8 +550,8 @@ func (registryDeclarations) field35() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field36 constructs one generated field declaration.
-func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
+// field37 constructs one generated field declaration.
+func (registryDeclarations) field37() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{
@@ -549,14 +563,13 @@ func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata37 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata37() *genregistry.ToolTypeMetadata {
+// metadata38 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata38() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field38(),
 			declarations.field39(),
 			declarations.field40(),
 			declarations.field41(),
@@ -579,20 +592,21 @@ func (declarations registryDeclarations) metadata37() *genregistry.ToolTypeMetad
 			declarations.field58(),
 			declarations.field59(),
 			declarations.field60(),
+			declarations.field61(),
 		},
 	}
 }
 
-// field38 constructs one generated field declaration.
-func (registryDeclarations) field38() *genregistry.ToolFieldMetadata {
+// field39 constructs one generated field declaration.
+func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field39 constructs one generated field declaration.
-func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
+// field40 constructs one generated field declaration.
+func (registryDeclarations) field40() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Search mode used"
 	return &genregistry.ToolFieldMetadata{
@@ -604,8 +618,8 @@ func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field40 constructs one generated field declaration.
-func (registryDeclarations) field40() *genregistry.ToolFieldMetadata {
+// field41 constructs one generated field declaration.
+func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Number of matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -617,8 +631,8 @@ func (registryDeclarations) field40() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field41 constructs one generated field declaration.
-func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
+// field42 constructs one generated field declaration.
+func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -630,8 +644,8 @@ func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field42 constructs one generated field declaration.
-func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
+// field43 constructs one generated field declaration.
+func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -644,8 +658,8 @@ func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field43 constructs one generated field declaration.
-func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
+// field44 constructs one generated field declaration.
+func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -659,8 +673,8 @@ func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field44 constructs one generated field declaration.
-func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
+// field45 constructs one generated field declaration.
+func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -674,8 +688,8 @@ func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field45 constructs one generated field declaration.
-func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
+// field46 constructs one generated field declaration.
+func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -689,8 +703,8 @@ func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field46 constructs one generated field declaration.
-func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
+// field47 constructs one generated field declaration.
+func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -704,8 +718,8 @@ func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field47 constructs one generated field declaration.
-func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
+// field48 constructs one generated field declaration.
+func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -720,8 +734,8 @@ func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field48 constructs one generated field declaration.
-func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
+// field49 constructs one generated field declaration.
+func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -735,8 +749,8 @@ func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field49 constructs one generated field declaration.
-func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
+// field50 constructs one generated field declaration.
+func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -750,8 +764,8 @@ func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field50 constructs one generated field declaration.
-func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
+// field51 constructs one generated field declaration.
+func (registryDeclarations) field51() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -765,8 +779,8 @@ func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field51 constructs one generated field declaration.
-func (registryDeclarations) field51() *genregistry.ToolFieldMetadata {
+// field52 constructs one generated field declaration.
+func (registryDeclarations) field52() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -780,8 +794,8 @@ func (registryDeclarations) field51() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field52 constructs one generated field declaration.
-func (registryDeclarations) field52() *genregistry.ToolFieldMetadata {
+// field53 constructs one generated field declaration.
+func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Excerpt around the matched terms (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -795,8 +809,8 @@ func (registryDeclarations) field52() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field53 constructs one generated field declaration.
-func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
+// field54 constructs one generated field declaration.
+func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -810,8 +824,8 @@ func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field54 constructs one generated field declaration.
-func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
+// field55 constructs one generated field declaration.
+func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -820,23 +834,6 @@ func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
 			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field55 constructs one generated field declaration.
-func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notes")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
 		},
 		JSONType:    &registryText1,
 		Description: &registryText2,
@@ -846,6 +843,23 @@ func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
 // field56 constructs one generated field declaration.
 func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field57 constructs one generated field declaration.
+func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
@@ -860,8 +874,8 @@ func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field57 constructs one generated field declaration.
-func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
+// field58 constructs one generated field declaration.
+func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -875,8 +889,8 @@ func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field58 constructs one generated field declaration.
-func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
+// field59 constructs one generated field declaration.
+func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -891,8 +905,8 @@ func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field59 constructs one generated field declaration.
-func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
+// field60 constructs one generated field declaration.
+func (registryDeclarations) field60() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -908,8 +922,8 @@ func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field60 constructs one generated field declaration.
-func (registryDeclarations) field60() *genregistry.ToolFieldMetadata {
+// field61 constructs one generated field declaration.
+func (registryDeclarations) field61() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -925,32 +939,46 @@ func (registryDeclarations) field60() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata61 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata61() *genregistry.ToolTypeMetadata {
+// metadata62 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata62() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND\",\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field62(),
 			declarations.field63(),
 			declarations.field64(),
 			declarations.field65(),
 			declarations.field66(),
+			declarations.field67(),
+			declarations.field68(),
 		},
 	}
 }
 
-// field62 constructs one generated field declaration.
-func (registryDeclarations) field62() *genregistry.ToolFieldMetadata {
+// field63 constructs one generated field declaration.
+func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field63 constructs one generated field declaration.
-func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
+// field64 constructs one generated field declaration.
+func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Session of people signed in with a passkey, set as a cookie by the server"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("session")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field65 constructs one generated field declaration.
+func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Search terms separated by spaces, combined with AND"
 	return &genregistry.ToolFieldMetadata{
@@ -962,8 +990,8 @@ func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field64 constructs one generated field declaration.
-func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
+// field66 constructs one generated field declaration.
+func (registryDeclarations) field66() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -975,8 +1003,8 @@ func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field65 constructs one generated field declaration.
-func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
+// field67 constructs one generated field declaration.
+func (registryDeclarations) field67() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -988,8 +1016,8 @@ func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field66 constructs one generated field declaration.
-func (registryDeclarations) field66() *genregistry.ToolFieldMetadata {
+// field68 constructs one generated field declaration.
+func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{

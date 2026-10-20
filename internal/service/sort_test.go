@@ -103,7 +103,7 @@ func TestSortAndMove(t *testing.T) {
 	}
 	check("d last", list(nil), "b", "a", "c", "d")
 	// The order survives a rebuild of the index from the files.
-	if _, err := svc.Sync(ctx); err != nil {
+	if _, err := svc.Sync(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	check("after sync", list(nil), "b", "a", "c", "d")
@@ -139,7 +139,7 @@ func TestMoveRespace(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := svc.Sync(ctx); err != nil {
+	if _, err := svc.Sync(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	// p (11) and q (10) have no key between them.

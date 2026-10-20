@@ -67,6 +67,9 @@ func (s *Notes) History(ctx context.Context, p *gennotes.HistoryPayload) ([]*gen
 	if !fromPerson(ctx) {
 		return nil, gennotes.MakeNotFound(errors.New("no such note"))
 	}
+	if err := requireVerified(ctx); err != nil {
+		return nil, err
+	}
 	if _, err := s.store.Stat(p.ID); err != nil {
 		return nil, mapErr(err)
 	}
@@ -88,6 +91,9 @@ func (s *Notes) History(ctx context.Context, p *gennotes.HistoryPayload) ([]*gen
 func (s *Notes) HistoryVersion(ctx context.Context, p *gennotes.HistoryVersionPayload) (*gennotes.NoteVersion, error) {
 	if !fromPerson(ctx) {
 		return nil, gennotes.MakeNotFound(errors.New("no such note"))
+	}
+	if err := requireVerified(ctx); err != nil {
+		return nil, err
 	}
 	if _, err := s.store.Stat(p.ID); err != nil {
 		return nil, mapErr(err)

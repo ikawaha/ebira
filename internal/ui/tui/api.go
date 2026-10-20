@@ -14,15 +14,32 @@ import (
 	goa "goa.design/goa/v3/pkg"
 
 	genassistant "github.com/ikawaha/ebira/gen/assistant"
+	genauth "github.com/ikawaha/ebira/gen/auth"
 	assistantcli "github.com/ikawaha/ebira/gen/http/assistant/client"
+	authcli "github.com/ikawaha/ebira/gen/http/auth/client"
 	notescli "github.com/ikawaha/ebira/gen/http/notes/client"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/authclient"
 )
 
 // Clients holds the API clients of the services the UI uses.
 type Clients struct {
 	Notes     *gennotes.Client
 	Assistant *genassistant.Client
+	Auth      *genauth.Client
+	// Web is the URL of the web UI, where people sign in with a passkey:
+	// on localhost, which passkeys belong to.
+	Web string
+	// session is sent with every request once the TUI is signed in, through
+	// a device flow approved in the web UI (see internal/authclient).
+	session *authclient.Cookie
+}
+
+// SetSession makes the clients send session with every request.
+func (c *Clients) SetSession(session string) {
+	if c.session != nil {
+		c.session.Set(session)
+	}
 }
 
 // NewClient returns the API clients for the server at rawURL, such as
@@ -35,13 +52,23 @@ func NewClient(rawURL string) (*Clients, error) {
 	if u.Scheme == "" || u.Host == "" {
 		return nil, fmt.Errorf("invalid server URL %q", rawURL)
 	}
-	c := notescli.NewClient(u.Scheme, u.Host, http.DefaultClient, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
-	a := assistantcli.NewClient(u.Scheme, u.Host, http.DefaultClient, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	session := authclient.NewCookie()
+	hc := &http.Client{Transport: session}
+	c := notescli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	a := assistantcli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	au := authcli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	web := u.Scheme + "://localhost/"
+	if p := u.Port(); p != "" {
+		web = u.Scheme + "://localhost:" + p + "/"
+	}
 	return &Clients{
 		Notes: gennotes.NewClient(c.List(), c.Get(), c.Create(), c.Update(), c.Delete(), c.Search(), c.Restore(), c.Move(), c.Notebooks(), c.Tags(), c.CreateNotebook(), c.SaveNotebook(), c.DeleteNotebook(), c.TrashedNotebooks(), c.RestoreNotebook(), c.DeleteTrashedNotebook(), c.EmptyTrash(), c.Import(),
 			nil, nil, nil, nil, nil, nil, nil, // the methods for AI clients have no HTTP endpoints
 			c.AddFile(), c.GetFile(), c.DeleteFile(), c.History(), c.HistoryVersion(), c.CheckFiles(), c.Events(), c.GitStatus(), c.GitSync(), c.Sync()),
 		Assistant: genassistant.NewClient(a.Ask()),
+		Auth:      genauth.NewClient(au.Status(), au.RegisterBegin(), au.RegisterFinish(), au.LoginBegin(), au.LoginFinish(), au.DeviceStart(), au.DeviceToken(), au.DeviceApprove(), au.Passkeys(), au.DeletePasskey(), au.RevokeSessions(), au.Logout()),
+		Web:       web,
+		session:   session,
 	}, nil
 }
 
@@ -80,7 +107,7 @@ func WatchEvents(ctx context.Context, api *gennotes.Client, send func(tea.Msg)) 
 }
 
 func readEvents(ctx context.Context, api *gennotes.Client, fn func(*gennotes.NoteEvent)) error {
-	stream, err := api.Events(ctx)
+	stream, err := api.Events(ctx, &gennotes.EventsPayload{})
 	if err != nil {
 		return err
 	}

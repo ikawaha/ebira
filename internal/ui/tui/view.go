@@ -263,6 +263,10 @@ func (m Model) render() string {
 	}
 	l := m.computeLayout()
 	var panes []string
+	if m.passkey != nil {
+		// Nothing else can be shown until the TUI signs in.
+		return strings.Join([]string{m.renderHeader(), m.renderSignIn(m.width, l.paneH), m.renderFooter()}, "\n")
+	}
 	if l.showNotebooks {
 		panes = append(panes, m.renderNotebooks(l.notebookW, l.paneH))
 	}
@@ -572,6 +576,13 @@ func (m Model) renderFooter() string {
 		return m.th.style(m.th.warn).Render(ansi.Truncate(reason, max(10, m.width-ansi.StringWidth(keys)-1), "…")) + keys
 	}
 	var hints [][2]string
+	if m.passkey != nil && m.prompt == promptNone {
+		if m.passkey.device != nil {
+			hints = append(hints, [2]string{"o", "key.openSignIn"})
+		}
+		hints = append(hints, [2]string{"q", "key.quit"})
+		return m.withStatus(m.keys(hints))
+	}
 	switch m.focus {
 	case focusSearch:
 		hints = [][2]string{{"enter", "key.done"}, {"esc", "key.clear"}, {"↑↓", "key.move"}}
@@ -634,7 +645,11 @@ func (m Model) renderFooter() string {
 		}
 		hints = append(hints, [2]string{"q", "key.quit"})
 	}
-	left := m.keys(hints)
+	return m.withStatus(m.keys(hints))
+}
+
+// withStatus puts the status on the right of the key hints left.
+func (m Model) withStatus(left string) string {
 	if m.status == "" {
 		return left
 	}
@@ -756,3 +771,92 @@ func formatTime(s string) string {
 	}
 	return t.Local().Format("2006-01-02 15:04")
 }
+
+// renderSignIn tells how to sign in while the server requires a passkey,
+// across the width of the screen, so that the URL fits.
+func (m Model) renderSignIn(w, h int) string {
+	innerW := max(0, w-2)
+	lines := []string{""}
+	for _, l := range m.passkeyLines() {
+		if l.code {
+			// Not wrapped, so that it is copied whole; o opens the URL
+			// anyway when it is cut at the border.
+			lines = append(lines, "   "+m.th.style(m.th.accent).Render(l.text))
+			continue
+		}
+		for _, wl := range wrapText(l.text, innerW-2) {
+			if l.style != nil {
+				wl = l.style.Render(wl)
+			}
+			lines = append(lines, " "+wl)
+		}
+	}
+	return m.box(m.tr.t("pane.signIn"), lines, w, h, true)
+}
+
+// guideLine is a line of the guide in the note list: text, wrapped to the
+// pane, or code, such as a URL or a command, which is not.
+type guideLine struct {
+	text  string
+	code  bool
+	style *lipgloss.Style // of the text, applied after wrapping it
+}
+
+// passkeyLines tells how to sign in while the server requires a passkey:
+// approve the request of the device flow in the web UI.
+func (m Model) passkeyLines() []guideLine {
+	text := func(s string) guideLine { return guideLine{text: s} }
+	styled := func(c color.Color, s string) guideLine {
+		st := m.th.style(c)
+		return guideLine{text: s, style: &st}
+	}
+	code := func(s string) guideLine { return guideLine{text: s, code: true} }
+	lines := []guideLine{styled(m.th.warn, m.tr.t("passkey.required")), text("")}
+	switch g := m.passkey; {
+	case !g.registered:
+		lines = append(lines, text(m.tr.t("passkey.register")), code("ebira auth passkey"))
+	case g.device == nil:
+		lines = append(lines, text(m.tr.t("passkey.starting")))
+	default:
+		lines = append(lines,
+			text(m.tr.t("passkey.device")), code(g.device.VerificationURI),
+			styled(m.th.dim, m.tr.t("passkey.open")), text(""),
+			text(m.tr.t("passkey.code")), code(g.device.UserCode), text(""),
+			styled(m.th.dim, m.tr.t("passkey.waiting")))
+	}
+	return append(lines, text(""), text(m.tr.t("passkey.none")), code("ebira server restart -auth=none"))
+}
+
+// wrapText wraps the plain text s to width w: at spaces, or anywhere in text
+// with wide characters, such as Japanese, which has no spaces between words.
+// There a character that does not begin a line, such as a comma or a closing
+// bracket, takes the last character of the line before with it.
+func wrapText(s string, w int) []string {
+	if ansi.StringWidth(s) <= w {
+		return []string{s}
+	}
+	if ansi.StringWidth(s) == len([]rune(s)) {
+		return strings.Split(ansi.Wrap(s, w, " "), "\n")
+	}
+	var lines []string
+	var cur []rune
+	curW := 0
+	for _, r := range s {
+		rw := ansi.StringWidth(string(r))
+		if curW+rw > w && len(cur) > 0 {
+			next := []rune{}
+			if strings.ContainsRune(noLineStart, r) && len(cur) > 1 {
+				next = append(next, cur[len(cur)-1])
+				cur = cur[:len(cur)-1]
+			}
+			lines = append(lines, string(cur))
+			cur, curW = next, ansi.StringWidth(string(next))
+		}
+		cur = append(cur, r)
+		curW += rw
+	}
+	return append(lines, string(cur))
+}
+
+// noLineStart are the characters that do not begin a line in Japanese text.
+const noLineStart = "、。，．,.)）」』】〉》・ー：；:;？！?!ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ"

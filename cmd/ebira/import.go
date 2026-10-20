@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -72,7 +71,11 @@ func runImport(args []string) error {
 		if err != nil || u.Host == "" {
 			return fmt.Errorf("invalid server URL %q", base)
 		}
-		send = notescli.NewClient(u.Scheme, u.Host, http.DefaultClient, goahttp.RequestEncoder, goahttp.ResponseDecoder, false).Import()
+		hc, err := signedInClient(ctx, u)
+		if err != nil {
+			return err
+		}
+		send = notescli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false).Import()
 	}
 	return importFiles(ctx, files, *notebook, *force, send, os.Stdout)
 }

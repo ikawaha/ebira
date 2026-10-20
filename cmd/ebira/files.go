@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -51,14 +50,18 @@ func runFiles(args []string) error {
 	if err != nil || u.Host == "" {
 		return fmt.Errorf("invalid server URL %q", base)
 	}
-	c := notescli.NewClient(u.Scheme, u.Host, http.DefaultClient, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	hc, err := signedInClient(ctx, u)
+	if err != nil {
+		return err
+	}
+	c := notescli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
 	return checkFiles(ctx, c.CheckFiles(), c.DeleteFile(), *del, os.Stdout)
 }
 
 // checkFiles prints the unused files and the broken references, and deletes
 // the unused files that are not recent when del is set.
 func checkFiles(ctx context.Context, check, deleteFile func(context.Context, any) (any, error), del bool, out io.Writer) error {
-	v, err := check(ctx, nil)
+	v, err := check(ctx, &gennotes.CheckFilesPayload{})
 	if err != nil {
 		return err
 	}

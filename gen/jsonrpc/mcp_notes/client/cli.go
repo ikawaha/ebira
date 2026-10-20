@@ -72,7 +72,7 @@ func BuildToolsListPayload(mcpNotesToolsListBody *string) (*mcpnotes.ToolsListPa
 
 // BuildToolsCallPayload builds the payload for the mcp_notes tools/call
 // endpoint from CLI flags.
-func BuildToolsCallPayload(mcpNotesToolsCallBody *string) (*mcpnotes.ToolsCallPayload, error) {
+func BuildToolsCallPayload(mcpNotesToolsCallBody *string, mcpNotesToolsCallHTTPCredential0 *string) (*mcpnotes.ToolsCallPayload, error) {
 	var err error
 	var body ToolsCallRequestBody
 	{
@@ -90,6 +90,12 @@ func BuildToolsCallPayload(mcpNotesToolsCallBody *string) (*mcpnotes.ToolsCallPa
 			return nil, err
 		}
 	}
+	var httpCredential0 *string
+	{
+		if mcpNotesToolsCallHTTPCredential0 != nil {
+			httpCredential0 = mcpNotesToolsCallHTTPCredential0
+		}
+	}
 	v := &mcpnotes.ToolsCallPayload{
 		Name:         body.Name,
 		Arguments:    body.Arguments,
@@ -104,6 +110,7 @@ func BuildToolsCallPayload(mcpNotesToolsCallBody *string) (*mcpnotes.ToolsCallPa
 			v.InputResponses[tk] = tv
 		}
 	}
+	v.HTTPCredential0 = httpCredential0
 
 	return v, nil
 }

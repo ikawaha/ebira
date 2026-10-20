@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 
@@ -59,7 +58,11 @@ with -remote, once; an empty one, or one with notes from another machine.`)
 	if err != nil || u.Host == "" {
 		return fmt.Errorf("invalid server URL %q", base)
 	}
-	c := notescli.NewClient(u.Scheme, u.Host, http.DefaultClient, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	hc, err := signedInClient(ctx, u)
+	if err != nil {
+		return err
+	}
+	c := notescli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
 	p := &gennotes.GitSyncPayload{}
 	if *remote != "" {
 		p.Remote = remote

@@ -116,6 +116,9 @@ func (s *Notes) Get(ctx context.Context, p *gennotes.GetPayload) (*gennotes.Note
 }
 
 func (s *Notes) Create(ctx context.Context, p *gennotes.CreatePayload) (*gennotes.Note, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
 	return s.create(ctx, p, "")
 }
 
@@ -154,6 +157,14 @@ func (s *Notes) create(ctx context.Context, p *gennotes.CreatePayload, createdBy
 }
 
 func (s *Notes) Update(ctx context.Context, p *gennotes.UpdatePayload) (*gennotes.Note, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
+	return s.updateNote(ctx, p)
+}
+
+// updateNote updates a note, for people and for AI clients after their checks.
+func (s *Notes) updateNote(ctx context.Context, p *gennotes.UpdatePayload) (*gennotes.Note, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	n, err := s.load(p.ID, p.IfMatch)
@@ -191,6 +202,14 @@ func (s *Notes) Update(ctx context.Context, p *gennotes.UpdatePayload) (*gennote
 }
 
 func (s *Notes) Delete(ctx context.Context, p *gennotes.DeletePayload) error {
+	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
+	return s.deleteNote(ctx, p)
+}
+
+// deleteNote moves a note to the trash, or deletes it from the trash, for people and for AI clients after their checks.
+func (s *Notes) deleteNote(ctx context.Context, p *gennotes.DeletePayload) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	f, err := s.store.Stat(p.ID)
@@ -226,6 +245,9 @@ func (s *Notes) Delete(ctx context.Context, p *gennotes.DeletePayload) error {
 }
 
 func (s *Notes) Restore(ctx context.Context, p *gennotes.RestorePayload) (*gennotes.Note, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	n, err := s.load(p.ID, p.IfMatch)
@@ -267,6 +289,14 @@ const sortStep = 1000
 // When the neighbors leave no room, the notes of the notebook are spaced
 // again, which writes them all; this is rare, as keys start seconds apart.
 func (s *Notes) Move(ctx context.Context, p *gennotes.MovePayload) (*gennotes.Note, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
+	return s.moveNote(ctx, p)
+}
+
+// moveNote reorders a note, for people and for AI clients after their checks.
+func (s *Notes) moveNote(ctx context.Context, p *gennotes.MovePayload) (*gennotes.Note, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	n, err := s.load(p.ID, nil)
@@ -357,7 +387,7 @@ func (s *Notes) respace(ctx context.Context, keys []index.SortKey, pos int, n *s
 	return nil
 }
 
-func (s *Notes) Notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
+func (s *Notes) Notebooks(ctx context.Context, _ *gennotes.NotebooksPayload) ([]*gennotes.Notebook, error) {
 	nbs, err := s.notebooks(ctx)
 	if err != nil {
 		return nil, err
@@ -398,6 +428,22 @@ func (s *Notes) Tags(ctx context.Context, p *gennotes.TagsPayload) ([]*gennotes.
 }
 
 func (s *Notes) SaveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayload) (*gennotes.Notebook, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
+	// Making a private notebook visible to AI is an important operation.
+	if p.Kind != nil && storeKind(*p.Kind) != store.KindPrivate {
+		if m, err := s.store.NotebookMeta(p.ID); err == nil && m.Kind == store.KindPrivate {
+			if err := requireVerified(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return s.saveNotebook(ctx, p)
+}
+
+// saveNotebook saves the settings of a notebook, for people and for AI clients after their checks.
+func (s *Notes) saveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayload) (*gennotes.Notebook, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	reserved := p.ID == store.Inbox || p.ID == store.Trash
@@ -446,6 +492,14 @@ func (s *Notes) SaveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayloa
 // (see store.NotebookID). A display name already in use is rejected, so that
 // notebooks can be told apart.
 func (s *Notes) CreateNotebook(ctx context.Context, p *gennotes.CreateNotebookPayload) (*gennotes.Notebook, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
+	return s.createNotebook(ctx, p)
+}
+
+// createNotebook creates a notebook, for people and for AI clients after their checks.
+func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPayload) (*gennotes.Notebook, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	name := strings.TrimSpace(norm.NFC.String(p.Name))
@@ -496,6 +550,9 @@ func (s *Notes) CreateNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 
 // DeleteNotebook moves a notebook with its notes and settings into the trash.
 func (s *Notes) DeleteNotebook(ctx context.Context, p *gennotes.DeleteNotebookPayload) error {
+	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.store.TrashNotebook(p.ID); err != nil {
@@ -507,7 +564,7 @@ func (s *Notes) DeleteNotebook(ctx context.Context, p *gennotes.DeleteNotebookPa
 
 // TrashedNotebooks lists the notebooks in the trash. AI clients cannot see
 // the trash.
-func (s *Notes) TrashedNotebooks(ctx context.Context) ([]*gennotes.TrashedNotebook, error) {
+func (s *Notes) TrashedNotebooks(ctx context.Context, _ *gennotes.TrashedNotebooksPayload) ([]*gennotes.TrashedNotebook, error) {
 	res := []*gennotes.TrashedNotebook{}
 	if !fromPerson(ctx) {
 		return res, nil
@@ -532,6 +589,9 @@ func (s *Notes) TrashedNotebooks(ctx context.Context) ([]*gennotes.TrashedNotebo
 
 // RestoreNotebook moves a notebook out of the trash with its notes.
 func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebookPayload) (*gennotes.Notebook, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.store.RestoreNotebook(p.ID); err != nil {
@@ -555,6 +615,9 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 // DeleteTrashedNotebook permanently deletes a notebook in the trash with its
 // notes.
 func (s *Notes) DeleteTrashedNotebook(ctx context.Context, p *gennotes.DeleteTrashedNotebookPayload) error {
+	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.store.DeleteTrashedNotebook(p.ID); err != nil {
@@ -567,7 +630,13 @@ func (s *Notes) DeleteTrashedNotebook(ctx context.Context, p *gennotes.DeleteTra
 // EmptyTrash permanently deletes everything in the trash. The sync after it
 // drops the notes from the index, tells the clients and forgets their
 // history, as for notes deleted elsewhere.
-func (s *Notes) EmptyTrash(ctx context.Context) error {
+func (s *Notes) EmptyTrash(ctx context.Context, _ *gennotes.EmptyTrashPayload) error {
+	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
+	if err := requireVerified(ctx); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.store.EmptyTrash(); err != nil {
@@ -625,7 +694,7 @@ func apiKind(kind string) string {
 // CreateAiNotebook creates a new notebook of the collab kind for an AI client. AI
 // clients cannot turn existing notebooks into collab notebooks.
 func (s *Notes) CreateAiNotebook(ctx context.Context, p *gennotes.CreateAiNotebookPayload) (*gennotes.Notebook, error) {
-	return s.CreateNotebook(ctx, &gennotes.CreateNotebookPayload{Name: p.Name, Kind: store.KindCollab})
+	return s.createNotebook(ctx, &gennotes.CreateNotebookPayload{Name: p.Name, Kind: store.KindCollab})
 }
 
 // MakeNotebookPrivate hides a notebook from AI clients. They may do it to any
@@ -647,7 +716,7 @@ func (s *Notes) MakeNotebookPrivate(ctx context.Context, p *gennotes.MakeNoteboo
 		return gennotes.MakeBadRequest(errors.New("the trash keeps the default kind; it is hidden from AI clients anyway"))
 	}
 	kind := store.KindPrivate
-	_, err = s.SaveNotebook(ctx, &gennotes.SaveNotebookPayload{ID: p.ID, Kind: &kind})
+	_, err = s.saveNotebook(ctx, &gennotes.SaveNotebookPayload{ID: p.ID, Kind: &kind})
 	return err
 }
 
@@ -707,7 +776,7 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 			return nil, err
 		}
 	}
-	return s.Update(ctx, &gennotes.UpdatePayload{ID: p.ID, Notebook: p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body, IfMatch: &p.Version})
+	return s.updateNote(ctx, &gennotes.UpdatePayload{ID: p.ID, Notebook: p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body, IfMatch: &p.Version})
 }
 
 // DeleteAiNote moves a note in a notebook of the collab kind to the trash for an AI
@@ -720,7 +789,7 @@ func (s *Notes) DeleteAiNote(ctx context.Context, p *gennotes.DeleteAiNotePayloa
 	if err := s.requireAINotebook(n.Notebook); err != nil {
 		return err
 	}
-	return s.Delete(ctx, &gennotes.DeletePayload{ID: p.ID, IfMatch: &p.Version})
+	return s.deleteNote(ctx, &gennotes.DeletePayload{ID: p.ID, IfMatch: &p.Version})
 }
 
 // MoveAiNote reorders a note in a notebook of the collab kind for an AI
@@ -736,7 +805,7 @@ func (s *Notes) MoveAiNote(ctx context.Context, p *gennotes.MoveAiNotePayload) (
 	if err := s.requireAINotebook(n.Notebook); err != nil {
 		return nil, err
 	}
-	return s.Move(ctx, &gennotes.MovePayload{ID: p.ID, After: p.After})
+	return s.moveNote(ctx, &gennotes.MovePayload{ID: p.ID, After: p.After})
 }
 
 // notebooks lists the notebooks: inbox first, then the others by order, name
@@ -821,7 +890,7 @@ func (s *Notes) Search(ctx context.Context, p *gennotes.SearchPayload) (*gennote
 	return &gennotes.SearchResult{Mode: string(s.index.Mode()), Total: total, Notes: summaries(res, true)}, nil
 }
 
-func (s *Notes) Sync(ctx context.Context) (*gennotes.SyncResult, error) {
+func (s *Notes) Sync(ctx context.Context, _ *gennotes.SyncPayload) (*gennotes.SyncResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.sync(ctx)

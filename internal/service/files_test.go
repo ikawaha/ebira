@@ -140,7 +140,7 @@ func TestCheckFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := svc.CheckFiles(person)
+	res, err := svc.CheckFiles(person, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestCheckFiles(t *testing.T) {
 		t.Errorf("broken = %q, want %q", broken, want)
 	}
 
-	if res, err := svc.CheckFiles(ai); err != nil || len(res.Unused)+len(res.Broken) != 0 {
+	if res, err := svc.CheckFiles(ai, nil); err != nil || len(res.Unused)+len(res.Broken) != 0 {
 		t.Errorf("CheckFiles by AI = %+v, %v", res, err)
 	}
 }

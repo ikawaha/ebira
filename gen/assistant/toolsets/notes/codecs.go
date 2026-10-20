@@ -228,6 +228,11 @@ var searchPayloadFields = []tools.FieldMetadata{
 		JSONType: "object",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("session")},
+		JSONType:    "string",
+		Description: "Session of people signed in with a passkey, set as a cookie by the server",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
 		Description: "Search terms separated by spaces, combined with AND",
@@ -743,6 +748,7 @@ func MarshalSearchPayload(v *SearchPayload) ([]byte, error) {
 	_ = in
 	var out *toolhttp.SearchPayloadTransport
 	out = &toolhttp.SearchPayloadTransport{
+		Session:  in.Session,
 		Q:        &in.Q,
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
@@ -772,6 +778,7 @@ func UnmarshalSearchPayload(data []byte) (*SearchPayload, error) {
 	_ = in
 	var out *SearchPayload
 	out = &SearchPayload{
+		Session:  in.Session,
 		Q:        *in.Q,
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
@@ -944,6 +951,13 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 			); err != nil {
 				return err
 			}
+		case "session":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Session of people signed in with a passkey, set as a cookie by the server",
+			); err != nil {
+				return err
+			}
 		case "tag":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -956,6 +970,7 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 				"limit",
 				"notebook",
 				"q",
+				"session",
 				"tag",
 			})
 		}

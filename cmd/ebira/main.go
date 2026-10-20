@@ -10,6 +10,8 @@
 //	ebira server status [flags]   show the server's state
 //	ebira files check [flags]     list the unused files of notes and the broken references to files
 //	ebira import [flags] path...  import Markdown files as notes
+//	ebira auth passkey [flags]    register a passkey for the web UI
+//	ebira auth reset [flags]      remove the passkeys and end every session
 //
 // One server runs per notes directory; the server started in the background
 // keeps running after the TUI exits or the browser closes.
@@ -58,12 +60,14 @@ const usage = `usage:
   ebira import [flags] path...  import Markdown files, and the images they refer to, as notes
   ebira sync [flags]            sync the notes with their git repository: commit, merge the
                                 upstream branch and push
+  ebira auth passkey [flags]    register a passkey for the web UI, through a one-time URL
+  ebira auth reset [flags]      remove the passkeys and end every session, such as when they are lost
 
 Run a command with -h for its flags.
 
 The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
 file of $EBIRA_CONFIG), gives the defaults of the flags: notes_dir, addr,
-watch, provider, model, lang, theme and git_sync. Without -notes, notes_dir and notes/
+watch, provider, model, lang, theme, git_sync and auth. Without -notes, notes_dir and notes/
 in the current directory, the commands that open the notes in a terminal ask
 where to keep them, how to search them and the language of the web UI and
 the TUI, and set them up. The index is kept in ~/.cache/ebira and the server's state and
@@ -103,6 +107,8 @@ func run(args []string) error {
 			return runImport(args[1:])
 		case "sync":
 			return runSync(args[1:])
+		case "auth":
+			return runAuth(args[1:])
 		}
 	}
 	return runTUI(args)

@@ -97,6 +97,8 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 // List calls the "list" endpoint of the "notes" service.
 // List may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): trashed_notebook is given without notebook=trash
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) List(ctx context.Context, p *ListPayload) (res *NoteList, err error) {
 	var ires any
@@ -111,6 +113,8 @@ func (c *Client) List(ctx context.Context, p *ListPayload) (res *NoteList, err e
 // Get may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from the client
 //   - "bad_request" (type *goa.ServiceError): The ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Get(ctx context.Context, p *GetPayload) (res *Note, err error) {
 	var ires any
@@ -125,6 +129,8 @@ func (c *Client) Get(ctx context.Context, p *GetPayload) (res *Note, err error) 
 // Create may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The notebook is the trash or invalid
 //   - "already_exists" (type *goa.ServiceError): A note with the ID exists (in any notebook, including the trash)
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Create(ctx context.Context, p *CreatePayload) (res *Note, err error) {
 	var ires any
@@ -140,6 +146,8 @@ func (c *Client) Create(ctx context.Context, p *CreatePayload) (res *Note, err e
 //   - "not_found" (type *goa.ServiceError): The note does not exist
 //   - "bad_request" (type *goa.ServiceError): The notebook to move the note to is the trash or invalid
 //   - "precondition_failed" (type *goa.ServiceError): If-Match does not match the note's current version
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Update(ctx context.Context, p *UpdatePayload) (res *Note, err error) {
 	var ires any
@@ -155,6 +163,8 @@ func (c *Client) Update(ctx context.Context, p *UpdatePayload) (res *Note, err e
 //   - "not_found" (type *goa.ServiceError): The note does not exist
 //   - "bad_request" (type *goa.ServiceError): The note cannot be deleted, such as when its ID is used in more than one notebook
 //   - "precondition_failed" (type *goa.ServiceError): If-Match does not match the note's current version
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Delete(ctx context.Context, p *DeletePayload) (err error) {
 	_, err = c.DeleteEndpoint(ctx, p)
@@ -162,6 +172,10 @@ func (c *Client) Delete(ctx context.Context, p *DeletePayload) (err error) {
 }
 
 // Search calls the "search" endpoint of the "notes" service.
+// Search may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
 func (c *Client) Search(ctx context.Context, p *SearchPayload) (res *SearchResult, err error) {
 	var ires any
 	ires, err = c.SearchEndpoint(ctx, p)
@@ -176,6 +190,8 @@ func (c *Client) Search(ctx context.Context, p *SearchPayload) (res *SearchResul
 //   - "not_found" (type *goa.ServiceError): The note does not exist
 //   - "bad_request" (type *goa.ServiceError): The note is not in the trash, or its notebook exists with another kind
 //   - "precondition_failed" (type *goa.ServiceError): If-Match does not match the note's current version
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Restore(ctx context.Context, p *RestorePayload) (res *Note, err error) {
 	var ires any
@@ -190,6 +206,8 @@ func (c *Client) Restore(ctx context.Context, p *RestorePayload) (res *Note, err
 // Move may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist
 //   - "bad_request" (type *goa.ServiceError): The note is in the trash, or after is not another note of its notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Move(ctx context.Context, p *MovePayload) (res *Note, err error) {
 	var ires any
@@ -201,9 +219,13 @@ func (c *Client) Move(ctx context.Context, p *MovePayload) (res *Note, err error
 }
 
 // Notebooks calls the "notebooks" endpoint of the "notes" service.
-func (c *Client) Notebooks(ctx context.Context) (res []*Notebook, err error) {
+// Notebooks may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) Notebooks(ctx context.Context, p *NotebooksPayload) (res []*Notebook, err error) {
 	var ires any
-	ires, err = c.NotebooksEndpoint(ctx, nil)
+	ires, err = c.NotebooksEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -211,6 +233,10 @@ func (c *Client) Notebooks(ctx context.Context) (res []*Notebook, err error) {
 }
 
 // Tags calls the "tags" endpoint of the "notes" service.
+// Tags may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
 func (c *Client) Tags(ctx context.Context, p *TagsPayload) (res []*TagCount, err error) {
 	var ires any
 	ires, err = c.TagsEndpoint(ctx, p)
@@ -224,6 +250,8 @@ func (c *Client) Tags(ctx context.Context, p *TagsPayload) (res []*TagCount, err
 // CreateNotebook may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The name is empty
 //   - "already_exists" (type *goa.ServiceError): A notebook with the name exists
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) CreateNotebook(ctx context.Context, p *CreateNotebookPayload) (res *Notebook, err error) {
 	var ires any
@@ -238,6 +266,8 @@ func (c *Client) CreateNotebook(ctx context.Context, p *CreateNotebookPayload) (
 // SaveNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist
 //   - "bad_request" (type *goa.ServiceError): The change is not allowed for the notebook, such as an order for inbox or trash
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) SaveNotebook(ctx context.Context, p *SaveNotebookPayload) (res *Notebook, err error) {
 	var ires any
@@ -253,6 +283,8 @@ func (c *Client) SaveNotebook(ctx context.Context, p *SaveNotebookPayload) (res 
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist
 //   - "bad_request" (type *goa.ServiceError): The notebook is inbox or trash
 //   - "already_exists" (type *goa.ServiceError): The trash holds a notebook with the same ID
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) DeleteNotebook(ctx context.Context, p *DeleteNotebookPayload) (err error) {
 	_, err = c.DeleteNotebookEndpoint(ctx, p)
@@ -261,9 +293,13 @@ func (c *Client) DeleteNotebook(ctx context.Context, p *DeleteNotebookPayload) (
 
 // TrashedNotebooks calls the "trashed_notebooks" endpoint of the "notes"
 // service.
-func (c *Client) TrashedNotebooks(ctx context.Context) (res []*TrashedNotebook, err error) {
+// TrashedNotebooks may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) TrashedNotebooks(ctx context.Context, p *TrashedNotebooksPayload) (res []*TrashedNotebook, err error) {
 	var ires any
-	ires, err = c.TrashedNotebooksEndpoint(ctx, nil)
+	ires, err = c.TrashedNotebooksEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -275,6 +311,8 @@ func (c *Client) TrashedNotebooks(ctx context.Context) (res []*TrashedNotebook, 
 //   - "not_found" (type *goa.ServiceError): The notebook is not in the trash
 //   - "bad_request" (type *goa.ServiceError): The notebook ID is invalid
 //   - "already_exists" (type *goa.ServiceError): A notebook with the same ID exists
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) RestoreNotebook(ctx context.Context, p *RestoreNotebookPayload) (res *Notebook, err error) {
 	var ires any
@@ -290,6 +328,8 @@ func (c *Client) RestoreNotebook(ctx context.Context, p *RestoreNotebookPayload)
 // DeleteTrashedNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook is not in the trash
 //   - "bad_request" (type *goa.ServiceError): The notebook ID is invalid
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) DeleteTrashedNotebook(ctx context.Context, p *DeleteTrashedNotebookPayload) (err error) {
 	_, err = c.DeleteTrashedNotebookEndpoint(ctx, p)
@@ -297,14 +337,20 @@ func (c *Client) DeleteTrashedNotebook(ctx context.Context, p *DeleteTrashedNote
 }
 
 // EmptyTrash calls the "empty_trash" endpoint of the "notes" service.
-func (c *Client) EmptyTrash(ctx context.Context) (err error) {
-	_, err = c.EmptyTrashEndpoint(ctx, nil)
+// EmptyTrash may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) EmptyTrash(ctx context.Context, p *EmptyTrashPayload) (err error) {
+	_, err = c.EmptyTrashEndpoint(ctx, p)
 	return
 }
 
 // Import calls the "import" endpoint of the "notes" service.
 // Import may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The notebook is the trash or invalid, or the file is too large
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) Import(ctx context.Context, p *ImportPayload) (res *ImportResult, err error) {
 	var ires any
@@ -320,6 +366,8 @@ func (c *Client) Import(ctx context.Context, p *ImportPayload) (res *ImportResul
 //   - "bad_request" (type *goa.ServiceError): The ID is given for a drop notebook, or the notebook is invalid
 //   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab or drop kind
 //   - "already_exists" (type *goa.ServiceError): A note with the ID exists
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) CreateAiNote(ctx context.Context, p *CreateAiNotePayload) (res *Note, err error) {
 	var ires any
@@ -334,6 +382,8 @@ func (c *Client) CreateAiNote(ctx context.Context, p *CreateAiNotePayload) (res 
 // ImportAiNote may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The notebook is invalid, or the file is too large
 //   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab or drop kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) ImportAiNote(ctx context.Context, p *ImportAiNotePayload) (res *ImportResult, err error) {
 	var ires any
@@ -350,6 +400,8 @@ func (c *Client) ImportAiNote(ctx context.Context, p *ImportAiNotePayload) (res 
 //   - "bad_request" (type *goa.ServiceError): The notebook to move the note to is invalid
 //   - "forbidden" (type *goa.ServiceError): The note, or the notebook to move it to, is not of the collab kind
 //   - "precondition_failed" (type *goa.ServiceError): The version does not match the note's current version
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) UpdateAiNote(ctx context.Context, p *UpdateAiNotePayload) (res *Note, err error) {
 	var ires any
@@ -366,6 +418,8 @@ func (c *Client) UpdateAiNote(ctx context.Context, p *UpdateAiNotePayload) (res 
 //   - "bad_request" (type *goa.ServiceError): The note cannot be deleted
 //   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
 //   - "precondition_failed" (type *goa.ServiceError): The version does not match the note's current version
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) DeleteAiNote(ctx context.Context, p *DeleteAiNotePayload) (err error) {
 	_, err = c.DeleteAiNoteEndpoint(ctx, p)
@@ -377,6 +431,8 @@ func (c *Client) DeleteAiNote(ctx context.Context, p *DeleteAiNotePayload) (err 
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
 //   - "bad_request" (type *goa.ServiceError): after is not another note of the note's notebook
 //   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) MoveAiNote(ctx context.Context, p *MoveAiNotePayload) (res *Note, err error) {
 	var ires any
@@ -392,6 +448,8 @@ func (c *Client) MoveAiNote(ctx context.Context, p *MoveAiNotePayload) (res *Not
 // CreateAiNotebook may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The name is empty
 //   - "already_exists" (type *goa.ServiceError): A notebook with the name exists
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) CreateAiNotebook(ctx context.Context, p *CreateAiNotebookPayload) (res *Notebook, err error) {
 	var ires any
@@ -407,6 +465,8 @@ func (c *Client) CreateAiNotebook(ctx context.Context, p *CreateAiNotebookPayloa
 // MakeNotebookPrivate may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist, or is not in the notebook list of the client
 //   - "bad_request" (type *goa.ServiceError): The notebook is the trash
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) MakeNotebookPrivate(ctx context.Context, p *MakeNotebookPrivatePayload) (err error) {
 	_, err = c.MakeNotebookPrivateEndpoint(ctx, p)
@@ -418,6 +478,8 @@ func (c *Client) MakeNotebookPrivate(ctx context.Context, p *MakeNotebookPrivate
 //   - "not_found" (type *goa.ServiceError): The note does not exist
 //   - "bad_request" (type *goa.ServiceError): The file is not a supported image, or the note ID is used in more than one notebook
 //   - "too_large" (type *goa.ServiceError): The file is larger than 10 MB
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) AddFile(ctx context.Context, p *AddFilePayload, req io.ReadCloser) (res *NoteFile, err error) {
 	var ires any
@@ -432,6 +494,8 @@ func (c *Client) AddFile(ctx context.Context, p *AddFilePayload, req io.ReadClos
 // GetFile may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note or the file does not exist, or the file is not of an accepted type
 //   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) GetFile(ctx context.Context, p *GetFilePayload) (res *GetFileResult, resp io.ReadCloser, err error) {
 	var ires any
@@ -447,6 +511,8 @@ func (c *Client) GetFile(ctx context.Context, p *GetFilePayload) (res *GetFileRe
 // DeleteFile may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note or the file does not exist
 //   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) DeleteFile(ctx context.Context, p *DeleteFilePayload) (err error) {
 	_, err = c.DeleteFileEndpoint(ctx, p)
@@ -457,6 +523,8 @@ func (c *Client) DeleteFile(ctx context.Context, p *DeleteFilePayload) (err erro
 // History may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist
 //   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) History(ctx context.Context, p *HistoryPayload) (res []*NoteVersionSummary, err error) {
 	var ires any
@@ -471,6 +539,8 @@ func (c *Client) History(ctx context.Context, p *HistoryPayload) (res []*NoteVer
 // HistoryVersion may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note or the version does not exist
 //   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) HistoryVersion(ctx context.Context, p *HistoryVersionPayload) (res *NoteVersion, err error) {
 	var ires any
@@ -482,9 +552,13 @@ func (c *Client) HistoryVersion(ctx context.Context, p *HistoryVersionPayload) (
 }
 
 // CheckFiles calls the "check_files" endpoint of the "notes" service.
-func (c *Client) CheckFiles(ctx context.Context) (res *FileCheck, err error) {
+// CheckFiles may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) CheckFiles(ctx context.Context, p *CheckFilesPayload) (res *FileCheck, err error) {
 	var ires any
-	ires, err = c.CheckFilesEndpoint(ctx, nil)
+	ires, err = c.CheckFilesEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -492,9 +566,13 @@ func (c *Client) CheckFiles(ctx context.Context) (res *FileCheck, err error) {
 }
 
 // Events calls the "events" endpoint of the "notes" service.
-func (c *Client) Events(ctx context.Context) (res EventsClientStream, err error) {
+// Events may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) Events(ctx context.Context, p *EventsPayload) (res EventsClientStream, err error) {
 	var ires any
-	ires, err = c.EventsEndpoint(ctx, nil)
+	ires, err = c.EventsEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -502,9 +580,13 @@ func (c *Client) Events(ctx context.Context) (res EventsClientStream, err error)
 }
 
 // GitStatus calls the "git_status" endpoint of the "notes" service.
-func (c *Client) GitStatus(ctx context.Context) (res *GitStatus, err error) {
+// GitStatus may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) GitStatus(ctx context.Context, p *GitStatusPayload) (res *GitStatus, err error) {
 	var ires any
-	ires, err = c.GitStatusEndpoint(ctx, nil)
+	ires, err = c.GitStatusEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -515,6 +597,8 @@ func (c *Client) GitStatus(ctx context.Context) (res *GitStatus, err error) {
 // GitSync may return the following errors:
 //   - "forbidden" (type *goa.ServiceError): The caller is not a person
 //   - "bad_request" (type *goa.ServiceError): The notes are not in a git repository, the repository is in the middle of an operation such as a merge, a file outside the notes changed on both sides, the remote origin is another repository, or a git command failed, such as a push
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) GitSync(ctx context.Context, p *GitSyncPayload) (res *GitSyncResult, err error) {
 	var ires any
@@ -526,9 +610,13 @@ func (c *Client) GitSync(ctx context.Context, p *GitSyncPayload) (res *GitSyncRe
 }
 
 // Sync calls the "sync" endpoint of the "notes" service.
-func (c *Client) Sync(ctx context.Context) (res *SyncResult, err error) {
+// Sync may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) Sync(ctx context.Context, p *SyncPayload) (res *SyncResult, err error) {
 	var ires any
-	ires, err = c.SyncEndpoint(ctx, nil)
+	ires, err = c.SyncEndpoint(ctx, p)
 	if err != nil {
 		return
 	}

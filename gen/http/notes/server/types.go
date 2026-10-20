@@ -533,6 +533,42 @@ type ListBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// ListUnauthorizedResponseBody is the type of the "notes" service "list"
+// endpoint HTTP response body for the "unauthorized" error.
+type ListUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ListVerificationRequiredResponseBody is the type of the "notes" service
+// "list" endpoint HTTP response body for the "verification_required" error.
+type ListVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // GetNotFoundResponseBody is the type of the "notes" service "get" endpoint
 // HTTP response body for the "not_found" error.
 type GetNotFoundResponseBody struct {
@@ -569,6 +605,42 @@ type GetBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// GetUnauthorizedResponseBody is the type of the "notes" service "get"
+// endpoint HTTP response body for the "unauthorized" error.
+type GetUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GetVerificationRequiredResponseBody is the type of the "notes" service "get"
+// endpoint HTTP response body for the "verification_required" error.
+type GetVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // CreateBadRequestResponseBody is the type of the "notes" service "create"
 // endpoint HTTP response body for the "bad_request" error.
 type CreateBadRequestResponseBody struct {
@@ -590,6 +662,42 @@ type CreateBadRequestResponseBody struct {
 // CreateAlreadyExistsResponseBody is the type of the "notes" service "create"
 // endpoint HTTP response body for the "already_exists" error.
 type CreateAlreadyExistsResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// CreateUnauthorizedResponseBody is the type of the "notes" service "create"
+// endpoint HTTP response body for the "unauthorized" error.
+type CreateUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// CreateVerificationRequiredResponseBody is the type of the "notes" service
+// "create" endpoint HTTP response body for the "verification_required" error.
+type CreateVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -659,6 +767,42 @@ type UpdatePreconditionFailedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// UpdateUnauthorizedResponseBody is the type of the "notes" service "update"
+// endpoint HTTP response body for the "unauthorized" error.
+type UpdateUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UpdateVerificationRequiredResponseBody is the type of the "notes" service
+// "update" endpoint HTTP response body for the "verification_required" error.
+type UpdateVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // DeleteNotFoundResponseBody is the type of the "notes" service "delete"
 // endpoint HTTP response body for the "not_found" error.
 type DeleteNotFoundResponseBody struct {
@@ -698,6 +842,78 @@ type DeleteBadRequestResponseBody struct {
 // DeletePreconditionFailedResponseBody is the type of the "notes" service
 // "delete" endpoint HTTP response body for the "precondition_failed" error.
 type DeletePreconditionFailedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteUnauthorizedResponseBody is the type of the "notes" service "delete"
+// endpoint HTTP response body for the "unauthorized" error.
+type DeleteUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteVerificationRequiredResponseBody is the type of the "notes" service
+// "delete" endpoint HTTP response body for the "verification_required" error.
+type DeleteVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SearchUnauthorizedResponseBody is the type of the "notes" service "search"
+// endpoint HTTP response body for the "unauthorized" error.
+type SearchUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SearchVerificationRequiredResponseBody is the type of the "notes" service
+// "search" endpoint HTTP response body for the "verification_required" error.
+type SearchVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -767,6 +983,42 @@ type RestorePreconditionFailedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// RestoreUnauthorizedResponseBody is the type of the "notes" service "restore"
+// endpoint HTTP response body for the "unauthorized" error.
+type RestoreUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestoreVerificationRequiredResponseBody is the type of the "notes" service
+// "restore" endpoint HTTP response body for the "verification_required" error.
+type RestoreVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // MoveNotFoundResponseBody is the type of the "notes" service "move" endpoint
 // HTTP response body for the "not_found" error.
 type MoveNotFoundResponseBody struct {
@@ -788,6 +1040,115 @@ type MoveNotFoundResponseBody struct {
 // MoveBadRequestResponseBody is the type of the "notes" service "move"
 // endpoint HTTP response body for the "bad_request" error.
 type MoveBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveUnauthorizedResponseBody is the type of the "notes" service "move"
+// endpoint HTTP response body for the "unauthorized" error.
+type MoveUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveVerificationRequiredResponseBody is the type of the "notes" service
+// "move" endpoint HTTP response body for the "verification_required" error.
+type MoveVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// NotebooksUnauthorizedResponseBody is the type of the "notes" service
+// "notebooks" endpoint HTTP response body for the "unauthorized" error.
+type NotebooksUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// NotebooksVerificationRequiredResponseBody is the type of the "notes" service
+// "notebooks" endpoint HTTP response body for the "verification_required"
+// error.
+type NotebooksVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TagsUnauthorizedResponseBody is the type of the "notes" service "tags"
+// endpoint HTTP response body for the "unauthorized" error.
+type TagsUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TagsVerificationRequiredResponseBody is the type of the "notes" service
+// "tags" endpoint HTTP response body for the "verification_required" error.
+type TagsVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -839,6 +1200,43 @@ type CreateNotebookAlreadyExistsResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// CreateNotebookUnauthorizedResponseBody is the type of the "notes" service
+// "create_notebook" endpoint HTTP response body for the "unauthorized" error.
+type CreateNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// CreateNotebookVerificationRequiredResponseBody is the type of the "notes"
+// service "create_notebook" endpoint HTTP response body for the
+// "verification_required" error.
+type CreateNotebookVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // SaveNotebookNotFoundResponseBody is the type of the "notes" service
 // "save_notebook" endpoint HTTP response body for the "not_found" error.
 type SaveNotebookNotFoundResponseBody struct {
@@ -860,6 +1258,43 @@ type SaveNotebookNotFoundResponseBody struct {
 // SaveNotebookBadRequestResponseBody is the type of the "notes" service
 // "save_notebook" endpoint HTTP response body for the "bad_request" error.
 type SaveNotebookBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveNotebookUnauthorizedResponseBody is the type of the "notes" service
+// "save_notebook" endpoint HTTP response body for the "unauthorized" error.
+type SaveNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveNotebookVerificationRequiredResponseBody is the type of the "notes"
+// service "save_notebook" endpoint HTTP response body for the
+// "verification_required" error.
+type SaveNotebookVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -914,6 +1349,80 @@ type DeleteNotebookBadRequestResponseBody struct {
 // DeleteNotebookAlreadyExistsResponseBody is the type of the "notes" service
 // "delete_notebook" endpoint HTTP response body for the "already_exists" error.
 type DeleteNotebookAlreadyExistsResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteNotebookUnauthorizedResponseBody is the type of the "notes" service
+// "delete_notebook" endpoint HTTP response body for the "unauthorized" error.
+type DeleteNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteNotebookVerificationRequiredResponseBody is the type of the "notes"
+// service "delete_notebook" endpoint HTTP response body for the
+// "verification_required" error.
+type DeleteNotebookVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TrashedNotebooksUnauthorizedResponseBody is the type of the "notes" service
+// "trashed_notebooks" endpoint HTTP response body for the "unauthorized" error.
+type TrashedNotebooksUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TrashedNotebooksVerificationRequiredResponseBody is the type of the "notes"
+// service "trashed_notebooks" endpoint HTTP response body for the
+// "verification_required" error.
+type TrashedNotebooksVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -984,6 +1493,43 @@ type RestoreNotebookAlreadyExistsResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// RestoreNotebookUnauthorizedResponseBody is the type of the "notes" service
+// "restore_notebook" endpoint HTTP response body for the "unauthorized" error.
+type RestoreNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestoreNotebookVerificationRequiredResponseBody is the type of the "notes"
+// service "restore_notebook" endpoint HTTP response body for the
+// "verification_required" error.
+type RestoreNotebookVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // DeleteTrashedNotebookNotFoundResponseBody is the type of the "notes" service
 // "delete_trashed_notebook" endpoint HTTP response body for the "not_found"
 // error.
@@ -1022,9 +1568,120 @@ type DeleteTrashedNotebookBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// DeleteTrashedNotebookUnauthorizedResponseBody is the type of the "notes"
+// service "delete_trashed_notebook" endpoint HTTP response body for the
+// "unauthorized" error.
+type DeleteTrashedNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteTrashedNotebookVerificationRequiredResponseBody is the type of the
+// "notes" service "delete_trashed_notebook" endpoint HTTP response body for
+// the "verification_required" error.
+type DeleteTrashedNotebookVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// EmptyTrashUnauthorizedResponseBody is the type of the "notes" service
+// "empty_trash" endpoint HTTP response body for the "unauthorized" error.
+type EmptyTrashUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// EmptyTrashVerificationRequiredResponseBody is the type of the "notes"
+// service "empty_trash" endpoint HTTP response body for the
+// "verification_required" error.
+type EmptyTrashVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // ImportBadRequestResponseBody is the type of the "notes" service "import"
 // endpoint HTTP response body for the "bad_request" error.
 type ImportBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ImportUnauthorizedResponseBody is the type of the "notes" service "import"
+// endpoint HTTP response body for the "unauthorized" error.
+type ImportUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ImportVerificationRequiredResponseBody is the type of the "notes" service
+// "import" endpoint HTTP response body for the "verification_required" error.
+type ImportVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -1094,6 +1751,42 @@ type AddFileTooLargeResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// AddFileUnauthorizedResponseBody is the type of the "notes" service
+// "add_file" endpoint HTTP response body for the "unauthorized" error.
+type AddFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// AddFileVerificationRequiredResponseBody is the type of the "notes" service
+// "add_file" endpoint HTTP response body for the "verification_required" error.
+type AddFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // GetFileNotFoundResponseBody is the type of the "notes" service "get_file"
 // endpoint HTTP response body for the "not_found" error.
 type GetFileNotFoundResponseBody struct {
@@ -1115,6 +1808,42 @@ type GetFileNotFoundResponseBody struct {
 // GetFileBadRequestResponseBody is the type of the "notes" service "get_file"
 // endpoint HTTP response body for the "bad_request" error.
 type GetFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GetFileUnauthorizedResponseBody is the type of the "notes" service
+// "get_file" endpoint HTTP response body for the "unauthorized" error.
+type GetFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GetFileVerificationRequiredResponseBody is the type of the "notes" service
+// "get_file" endpoint HTTP response body for the "verification_required" error.
+type GetFileVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -1166,6 +1895,43 @@ type DeleteFileBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// DeleteFileUnauthorizedResponseBody is the type of the "notes" service
+// "delete_file" endpoint HTTP response body for the "unauthorized" error.
+type DeleteFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeleteFileVerificationRequiredResponseBody is the type of the "notes"
+// service "delete_file" endpoint HTTP response body for the
+// "verification_required" error.
+type DeleteFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // HistoryNotFoundResponseBody is the type of the "notes" service "history"
 // endpoint HTTP response body for the "not_found" error.
 type HistoryNotFoundResponseBody struct {
@@ -1187,6 +1953,42 @@ type HistoryNotFoundResponseBody struct {
 // HistoryBadRequestResponseBody is the type of the "notes" service "history"
 // endpoint HTTP response body for the "bad_request" error.
 type HistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// HistoryUnauthorizedResponseBody is the type of the "notes" service "history"
+// endpoint HTTP response body for the "unauthorized" error.
+type HistoryUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// HistoryVerificationRequiredResponseBody is the type of the "notes" service
+// "history" endpoint HTTP response body for the "verification_required" error.
+type HistoryVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -1238,6 +2040,153 @@ type HistoryVersionBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// HistoryVersionUnauthorizedResponseBody is the type of the "notes" service
+// "history_version" endpoint HTTP response body for the "unauthorized" error.
+type HistoryVersionUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// HistoryVersionVerificationRequiredResponseBody is the type of the "notes"
+// service "history_version" endpoint HTTP response body for the
+// "verification_required" error.
+type HistoryVersionVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// CheckFilesUnauthorizedResponseBody is the type of the "notes" service
+// "check_files" endpoint HTTP response body for the "unauthorized" error.
+type CheckFilesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// CheckFilesVerificationRequiredResponseBody is the type of the "notes"
+// service "check_files" endpoint HTTP response body for the
+// "verification_required" error.
+type CheckFilesVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// EventsUnauthorizedResponseBody is the type of the "notes" service "events"
+// endpoint HTTP response body for the "unauthorized" error.
+type EventsUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// EventsVerificationRequiredResponseBody is the type of the "notes" service
+// "events" endpoint HTTP response body for the "verification_required" error.
+type EventsVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GitStatusUnauthorizedResponseBody is the type of the "notes" service
+// "git_status" endpoint HTTP response body for the "unauthorized" error.
+type GitStatusUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GitStatusVerificationRequiredResponseBody is the type of the "notes" service
+// "git_status" endpoint HTTP response body for the "verification_required"
+// error.
+type GitStatusVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // GitSyncForbiddenResponseBody is the type of the "notes" service "git_sync"
 // endpoint HTTP response body for the "forbidden" error.
 type GitSyncForbiddenResponseBody struct {
@@ -1256,9 +2205,81 @@ type GitSyncForbiddenResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// GitSyncVerificationRequiredResponseBody is the type of the "notes" service
+// "git_sync" endpoint HTTP response body for the "verification_required" error.
+type GitSyncVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // GitSyncBadRequestResponseBody is the type of the "notes" service "git_sync"
 // endpoint HTTP response body for the "bad_request" error.
 type GitSyncBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// GitSyncUnauthorizedResponseBody is the type of the "notes" service
+// "git_sync" endpoint HTTP response body for the "unauthorized" error.
+type GitSyncUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SyncUnauthorizedResponseBody is the type of the "notes" service "sync"
+// endpoint HTTP response body for the "unauthorized" error.
+type SyncUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SyncVerificationRequiredResponseBody is the type of the "notes" service
+// "sync" endpoint HTTP response body for the "verification_required" error.
+type SyncVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -1999,6 +3020,34 @@ func NewListBadRequestResponseBody(res *goa.ServiceError) *ListBadRequestRespons
 	return body
 }
 
+// NewListUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "list" endpoint of the "notes" service.
+func NewListUnauthorizedResponseBody(res *goa.ServiceError) *ListUnauthorizedResponseBody {
+	body := &ListUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewListVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "list" endpoint of the "notes" service.
+func NewListVerificationRequiredResponseBody(res *goa.ServiceError) *ListVerificationRequiredResponseBody {
+	body := &ListVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewGetNotFoundResponseBody builds the HTTP response body from the result of
 // the "get" endpoint of the "notes" service.
 func NewGetNotFoundResponseBody(res *goa.ServiceError) *GetNotFoundResponseBody {
@@ -2027,6 +3076,34 @@ func NewGetBadRequestResponseBody(res *goa.ServiceError) *GetBadRequestResponseB
 	return body
 }
 
+// NewGetUnauthorizedResponseBody builds the HTTP response body from the result
+// of the "get" endpoint of the "notes" service.
+func NewGetUnauthorizedResponseBody(res *goa.ServiceError) *GetUnauthorizedResponseBody {
+	body := &GetUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGetVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "get" endpoint of the "notes" service.
+func NewGetVerificationRequiredResponseBody(res *goa.ServiceError) *GetVerificationRequiredResponseBody {
+	body := &GetVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewCreateBadRequestResponseBody builds the HTTP response body from the
 // result of the "create" endpoint of the "notes" service.
 func NewCreateBadRequestResponseBody(res *goa.ServiceError) *CreateBadRequestResponseBody {
@@ -2045,6 +3122,34 @@ func NewCreateBadRequestResponseBody(res *goa.ServiceError) *CreateBadRequestRes
 // result of the "create" endpoint of the "notes" service.
 func NewCreateAlreadyExistsResponseBody(res *goa.ServiceError) *CreateAlreadyExistsResponseBody {
 	body := &CreateAlreadyExistsResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewCreateUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "create" endpoint of the "notes" service.
+func NewCreateUnauthorizedResponseBody(res *goa.ServiceError) *CreateUnauthorizedResponseBody {
+	body := &CreateUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewCreateVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "create" endpoint of the "notes" service.
+func NewCreateVerificationRequiredResponseBody(res *goa.ServiceError) *CreateVerificationRequiredResponseBody {
+	body := &CreateVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2097,6 +3202,34 @@ func NewUpdatePreconditionFailedResponseBody(res *goa.ServiceError) *UpdatePreco
 	return body
 }
 
+// NewUpdateUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "update" endpoint of the "notes" service.
+func NewUpdateUnauthorizedResponseBody(res *goa.ServiceError) *UpdateUnauthorizedResponseBody {
+	body := &UpdateUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUpdateVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "update" endpoint of the "notes" service.
+func NewUpdateVerificationRequiredResponseBody(res *goa.ServiceError) *UpdateVerificationRequiredResponseBody {
+	body := &UpdateVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewDeleteNotFoundResponseBody builds the HTTP response body from the result
 // of the "delete" endpoint of the "notes" service.
 func NewDeleteNotFoundResponseBody(res *goa.ServiceError) *DeleteNotFoundResponseBody {
@@ -2129,6 +3262,62 @@ func NewDeleteBadRequestResponseBody(res *goa.ServiceError) *DeleteBadRequestRes
 // the result of the "delete" endpoint of the "notes" service.
 func NewDeletePreconditionFailedResponseBody(res *goa.ServiceError) *DeletePreconditionFailedResponseBody {
 	body := &DeletePreconditionFailedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "delete" endpoint of the "notes" service.
+func NewDeleteUnauthorizedResponseBody(res *goa.ServiceError) *DeleteUnauthorizedResponseBody {
+	body := &DeleteUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "delete" endpoint of the "notes" service.
+func NewDeleteVerificationRequiredResponseBody(res *goa.ServiceError) *DeleteVerificationRequiredResponseBody {
+	body := &DeleteVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSearchUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "search" endpoint of the "notes" service.
+func NewSearchUnauthorizedResponseBody(res *goa.ServiceError) *SearchUnauthorizedResponseBody {
+	body := &SearchUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSearchVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "search" endpoint of the "notes" service.
+func NewSearchVerificationRequiredResponseBody(res *goa.ServiceError) *SearchVerificationRequiredResponseBody {
+	body := &SearchVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2181,6 +3370,34 @@ func NewRestorePreconditionFailedResponseBody(res *goa.ServiceError) *RestorePre
 	return body
 }
 
+// NewRestoreUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "restore" endpoint of the "notes" service.
+func NewRestoreUnauthorizedResponseBody(res *goa.ServiceError) *RestoreUnauthorizedResponseBody {
+	body := &RestoreUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestoreVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "restore" endpoint of the "notes" service.
+func NewRestoreVerificationRequiredResponseBody(res *goa.ServiceError) *RestoreVerificationRequiredResponseBody {
+	body := &RestoreVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewMoveNotFoundResponseBody builds the HTTP response body from the result of
 // the "move" endpoint of the "notes" service.
 func NewMoveNotFoundResponseBody(res *goa.ServiceError) *MoveNotFoundResponseBody {
@@ -2199,6 +3416,90 @@ func NewMoveNotFoundResponseBody(res *goa.ServiceError) *MoveNotFoundResponseBod
 // of the "move" endpoint of the "notes" service.
 func NewMoveBadRequestResponseBody(res *goa.ServiceError) *MoveBadRequestResponseBody {
 	body := &MoveBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "move" endpoint of the "notes" service.
+func NewMoveUnauthorizedResponseBody(res *goa.ServiceError) *MoveUnauthorizedResponseBody {
+	body := &MoveUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "move" endpoint of the "notes" service.
+func NewMoveVerificationRequiredResponseBody(res *goa.ServiceError) *MoveVerificationRequiredResponseBody {
+	body := &MoveVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewNotebooksUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "notebooks" endpoint of the "notes" service.
+func NewNotebooksUnauthorizedResponseBody(res *goa.ServiceError) *NotebooksUnauthorizedResponseBody {
+	body := &NotebooksUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewNotebooksVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "notebooks" endpoint of the "notes" service.
+func NewNotebooksVerificationRequiredResponseBody(res *goa.ServiceError) *NotebooksVerificationRequiredResponseBody {
+	body := &NotebooksVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTagsUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "tags" endpoint of the "notes" service.
+func NewTagsUnauthorizedResponseBody(res *goa.ServiceError) *TagsUnauthorizedResponseBody {
+	body := &TagsUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTagsVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "tags" endpoint of the "notes" service.
+func NewTagsVerificationRequiredResponseBody(res *goa.ServiceError) *TagsVerificationRequiredResponseBody {
+	body := &TagsVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2237,6 +3538,35 @@ func NewCreateNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *CreateNo
 	return body
 }
 
+// NewCreateNotebookUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "create_notebook" endpoint of the "notes" service.
+func NewCreateNotebookUnauthorizedResponseBody(res *goa.ServiceError) *CreateNotebookUnauthorizedResponseBody {
+	body := &CreateNotebookUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewCreateNotebookVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "create_notebook" endpoint of the "notes"
+// service.
+func NewCreateNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *CreateNotebookVerificationRequiredResponseBody {
+	body := &CreateNotebookVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewSaveNotebookNotFoundResponseBody builds the HTTP response body from the
 // result of the "save_notebook" endpoint of the "notes" service.
 func NewSaveNotebookNotFoundResponseBody(res *goa.ServiceError) *SaveNotebookNotFoundResponseBody {
@@ -2255,6 +3585,34 @@ func NewSaveNotebookNotFoundResponseBody(res *goa.ServiceError) *SaveNotebookNot
 // result of the "save_notebook" endpoint of the "notes" service.
 func NewSaveNotebookBadRequestResponseBody(res *goa.ServiceError) *SaveNotebookBadRequestResponseBody {
 	body := &SaveNotebookBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveNotebookUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "save_notebook" endpoint of the "notes" service.
+func NewSaveNotebookUnauthorizedResponseBody(res *goa.ServiceError) *SaveNotebookUnauthorizedResponseBody {
+	body := &SaveNotebookUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveNotebookVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "save_notebook" endpoint of the "notes" service.
+func NewSaveNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *SaveNotebookVerificationRequiredResponseBody {
+	body := &SaveNotebookVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2307,6 +3665,64 @@ func NewDeleteNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *DeleteNo
 	return body
 }
 
+// NewDeleteNotebookUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "delete_notebook" endpoint of the "notes" service.
+func NewDeleteNotebookUnauthorizedResponseBody(res *goa.ServiceError) *DeleteNotebookUnauthorizedResponseBody {
+	body := &DeleteNotebookUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteNotebookVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "delete_notebook" endpoint of the "notes"
+// service.
+func NewDeleteNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *DeleteNotebookVerificationRequiredResponseBody {
+	body := &DeleteNotebookVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTrashedNotebooksUnauthorizedResponseBody builds the HTTP response body
+// from the result of the "trashed_notebooks" endpoint of the "notes" service.
+func NewTrashedNotebooksUnauthorizedResponseBody(res *goa.ServiceError) *TrashedNotebooksUnauthorizedResponseBody {
+	body := &TrashedNotebooksUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTrashedNotebooksVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "trashed_notebooks" endpoint of the "notes"
+// service.
+func NewTrashedNotebooksVerificationRequiredResponseBody(res *goa.ServiceError) *TrashedNotebooksVerificationRequiredResponseBody {
+	body := &TrashedNotebooksVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewRestoreNotebookNotFoundResponseBody builds the HTTP response body from
 // the result of the "restore_notebook" endpoint of the "notes" service.
 func NewRestoreNotebookNotFoundResponseBody(res *goa.ServiceError) *RestoreNotebookNotFoundResponseBody {
@@ -2349,6 +3765,35 @@ func NewRestoreNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *Restore
 	return body
 }
 
+// NewRestoreNotebookUnauthorizedResponseBody builds the HTTP response body
+// from the result of the "restore_notebook" endpoint of the "notes" service.
+func NewRestoreNotebookUnauthorizedResponseBody(res *goa.ServiceError) *RestoreNotebookUnauthorizedResponseBody {
+	body := &RestoreNotebookUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestoreNotebookVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "restore_notebook" endpoint of the "notes"
+// service.
+func NewRestoreNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *RestoreNotebookVerificationRequiredResponseBody {
+	body := &RestoreNotebookVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewDeleteTrashedNotebookNotFoundResponseBody builds the HTTP response body
 // from the result of the "delete_trashed_notebook" endpoint of the "notes"
 // service.
@@ -2379,10 +3824,96 @@ func NewDeleteTrashedNotebookBadRequestResponseBody(res *goa.ServiceError) *Dele
 	return body
 }
 
+// NewDeleteTrashedNotebookUnauthorizedResponseBody builds the HTTP response
+// body from the result of the "delete_trashed_notebook" endpoint of the
+// "notes" service.
+func NewDeleteTrashedNotebookUnauthorizedResponseBody(res *goa.ServiceError) *DeleteTrashedNotebookUnauthorizedResponseBody {
+	body := &DeleteTrashedNotebookUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteTrashedNotebookVerificationRequiredResponseBody builds the HTTP
+// response body from the result of the "delete_trashed_notebook" endpoint of
+// the "notes" service.
+func NewDeleteTrashedNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *DeleteTrashedNotebookVerificationRequiredResponseBody {
+	body := &DeleteTrashedNotebookVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewEmptyTrashUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "empty_trash" endpoint of the "notes" service.
+func NewEmptyTrashUnauthorizedResponseBody(res *goa.ServiceError) *EmptyTrashUnauthorizedResponseBody {
+	body := &EmptyTrashUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewEmptyTrashVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "empty_trash" endpoint of the "notes" service.
+func NewEmptyTrashVerificationRequiredResponseBody(res *goa.ServiceError) *EmptyTrashVerificationRequiredResponseBody {
+	body := &EmptyTrashVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewImportBadRequestResponseBody builds the HTTP response body from the
 // result of the "import" endpoint of the "notes" service.
 func NewImportBadRequestResponseBody(res *goa.ServiceError) *ImportBadRequestResponseBody {
 	body := &ImportBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewImportUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "import" endpoint of the "notes" service.
+func NewImportUnauthorizedResponseBody(res *goa.ServiceError) *ImportUnauthorizedResponseBody {
+	body := &ImportUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewImportVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "import" endpoint of the "notes" service.
+func NewImportVerificationRequiredResponseBody(res *goa.ServiceError) *ImportVerificationRequiredResponseBody {
+	body := &ImportVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2435,6 +3966,34 @@ func NewAddFileTooLargeResponseBody(res *goa.ServiceError) *AddFileTooLargeRespo
 	return body
 }
 
+// NewAddFileUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "add_file" endpoint of the "notes" service.
+func NewAddFileUnauthorizedResponseBody(res *goa.ServiceError) *AddFileUnauthorizedResponseBody {
+	body := &AddFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewAddFileVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "add_file" endpoint of the "notes" service.
+func NewAddFileVerificationRequiredResponseBody(res *goa.ServiceError) *AddFileVerificationRequiredResponseBody {
+	body := &AddFileVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewGetFileNotFoundResponseBody builds the HTTP response body from the result
 // of the "get_file" endpoint of the "notes" service.
 func NewGetFileNotFoundResponseBody(res *goa.ServiceError) *GetFileNotFoundResponseBody {
@@ -2453,6 +4012,34 @@ func NewGetFileNotFoundResponseBody(res *goa.ServiceError) *GetFileNotFoundRespo
 // result of the "get_file" endpoint of the "notes" service.
 func NewGetFileBadRequestResponseBody(res *goa.ServiceError) *GetFileBadRequestResponseBody {
 	body := &GetFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGetFileUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "get_file" endpoint of the "notes" service.
+func NewGetFileUnauthorizedResponseBody(res *goa.ServiceError) *GetFileUnauthorizedResponseBody {
+	body := &GetFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGetFileVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "get_file" endpoint of the "notes" service.
+func NewGetFileVerificationRequiredResponseBody(res *goa.ServiceError) *GetFileVerificationRequiredResponseBody {
+	body := &GetFileVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2491,6 +4078,34 @@ func NewDeleteFileBadRequestResponseBody(res *goa.ServiceError) *DeleteFileBadRe
 	return body
 }
 
+// NewDeleteFileUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "delete_file" endpoint of the "notes" service.
+func NewDeleteFileUnauthorizedResponseBody(res *goa.ServiceError) *DeleteFileUnauthorizedResponseBody {
+	body := &DeleteFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeleteFileVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "delete_file" endpoint of the "notes" service.
+func NewDeleteFileVerificationRequiredResponseBody(res *goa.ServiceError) *DeleteFileVerificationRequiredResponseBody {
+	body := &DeleteFileVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewHistoryNotFoundResponseBody builds the HTTP response body from the result
 // of the "history" endpoint of the "notes" service.
 func NewHistoryNotFoundResponseBody(res *goa.ServiceError) *HistoryNotFoundResponseBody {
@@ -2509,6 +4124,34 @@ func NewHistoryNotFoundResponseBody(res *goa.ServiceError) *HistoryNotFoundRespo
 // result of the "history" endpoint of the "notes" service.
 func NewHistoryBadRequestResponseBody(res *goa.ServiceError) *HistoryBadRequestResponseBody {
 	body := &HistoryBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewHistoryUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "history" endpoint of the "notes" service.
+func NewHistoryUnauthorizedResponseBody(res *goa.ServiceError) *HistoryUnauthorizedResponseBody {
+	body := &HistoryUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewHistoryVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "history" endpoint of the "notes" service.
+func NewHistoryVerificationRequiredResponseBody(res *goa.ServiceError) *HistoryVerificationRequiredResponseBody {
+	body := &HistoryVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2547,10 +4190,137 @@ func NewHistoryVersionBadRequestResponseBody(res *goa.ServiceError) *HistoryVers
 	return body
 }
 
+// NewHistoryVersionUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "history_version" endpoint of the "notes" service.
+func NewHistoryVersionUnauthorizedResponseBody(res *goa.ServiceError) *HistoryVersionUnauthorizedResponseBody {
+	body := &HistoryVersionUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewHistoryVersionVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "history_version" endpoint of the "notes"
+// service.
+func NewHistoryVersionVerificationRequiredResponseBody(res *goa.ServiceError) *HistoryVersionVerificationRequiredResponseBody {
+	body := &HistoryVersionVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewCheckFilesUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "check_files" endpoint of the "notes" service.
+func NewCheckFilesUnauthorizedResponseBody(res *goa.ServiceError) *CheckFilesUnauthorizedResponseBody {
+	body := &CheckFilesUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewCheckFilesVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "check_files" endpoint of the "notes" service.
+func NewCheckFilesVerificationRequiredResponseBody(res *goa.ServiceError) *CheckFilesVerificationRequiredResponseBody {
+	body := &CheckFilesVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewEventsUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "events" endpoint of the "notes" service.
+func NewEventsUnauthorizedResponseBody(res *goa.ServiceError) *EventsUnauthorizedResponseBody {
+	body := &EventsUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewEventsVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "events" endpoint of the "notes" service.
+func NewEventsVerificationRequiredResponseBody(res *goa.ServiceError) *EventsVerificationRequiredResponseBody {
+	body := &EventsVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGitStatusUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "git_status" endpoint of the "notes" service.
+func NewGitStatusUnauthorizedResponseBody(res *goa.ServiceError) *GitStatusUnauthorizedResponseBody {
+	body := &GitStatusUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGitStatusVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "git_status" endpoint of the "notes" service.
+func NewGitStatusVerificationRequiredResponseBody(res *goa.ServiceError) *GitStatusVerificationRequiredResponseBody {
+	body := &GitStatusVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewGitSyncForbiddenResponseBody builds the HTTP response body from the
 // result of the "git_sync" endpoint of the "notes" service.
 func NewGitSyncForbiddenResponseBody(res *goa.ServiceError) *GitSyncForbiddenResponseBody {
 	body := &GitSyncForbiddenResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewGitSyncVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "git_sync" endpoint of the "notes" service.
+func NewGitSyncVerificationRequiredResponseBody(res *goa.ServiceError) *GitSyncVerificationRequiredResponseBody {
+	body := &GitSyncVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -2575,8 +4345,50 @@ func NewGitSyncBadRequestResponseBody(res *goa.ServiceError) *GitSyncBadRequestR
 	return body
 }
 
+// NewGitSyncUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "git_sync" endpoint of the "notes" service.
+func NewGitSyncUnauthorizedResponseBody(res *goa.ServiceError) *GitSyncUnauthorizedResponseBody {
+	body := &GitSyncUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSyncUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "sync" endpoint of the "notes" service.
+func NewSyncUnauthorizedResponseBody(res *goa.ServiceError) *SyncUnauthorizedResponseBody {
+	body := &SyncUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSyncVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "sync" endpoint of the "notes" service.
+func NewSyncVerificationRequiredResponseBody(res *goa.ServiceError) *SyncVerificationRequiredResponseBody {
+	body := &SyncVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewListPayload builds a notes service list endpoint payload.
-func NewListPayload(notebook *string, tag *string, limit int, offset int, trashedNotebook *string, sort *string) *notes.ListPayload {
+func NewListPayload(notebook *string, tag *string, limit int, offset int, trashedNotebook *string, sort *string, session *string) *notes.ListPayload {
 	v := &notes.ListPayload{}
 	v.Notebook = notebook
 	v.Tag = tag
@@ -2584,21 +4396,23 @@ func NewListPayload(notebook *string, tag *string, limit int, offset int, trashe
 	v.Offset = offset
 	v.TrashedNotebook = trashedNotebook
 	v.Sort = sort
+	v.Session = session
 
 	return v
 }
 
 // NewGetPayload builds a notes service get endpoint payload.
-func NewGetPayload(id string, q *string) *notes.GetPayload {
+func NewGetPayload(id string, q *string, session *string) *notes.GetPayload {
 	v := &notes.GetPayload{}
 	v.ID = id
 	v.Q = q
+	v.Session = session
 
 	return v
 }
 
 // NewCreatePayload builds a notes service create endpoint payload.
-func NewCreatePayload(body *CreateRequestBody) *notes.CreatePayload {
+func NewCreatePayload(body *CreateRequestBody, session *string) *notes.CreatePayload {
 	v := &notes.CreatePayload{
 		ID:       body.ID,
 		Notebook: body.Notebook,
@@ -2611,12 +4425,13 @@ func NewCreatePayload(body *CreateRequestBody) *notes.CreatePayload {
 			v.Tags[i] = val
 		}
 	}
+	v.Session = session
 
 	return v
 }
 
 // NewUpdatePayload builds a notes service update endpoint payload.
-func NewUpdatePayload(body *UpdateRequestBody, id string, ifMatch *string) *notes.UpdatePayload {
+func NewUpdatePayload(body *UpdateRequestBody, id string, ifMatch *string, session *string) *notes.UpdatePayload {
 	v := &notes.UpdatePayload{
 		Notebook: body.Notebook,
 		Title:    body.Title,
@@ -2630,60 +4445,74 @@ func NewUpdatePayload(body *UpdateRequestBody, id string, ifMatch *string) *note
 	}
 	v.ID = id
 	v.IfMatch = ifMatch
+	v.Session = session
 
 	return v
 }
 
 // NewDeletePayload builds a notes service delete endpoint payload.
-func NewDeletePayload(id string, ifMatch *string) *notes.DeletePayload {
+func NewDeletePayload(id string, ifMatch *string, session *string) *notes.DeletePayload {
 	v := &notes.DeletePayload{}
 	v.ID = id
 	v.IfMatch = ifMatch
+	v.Session = session
 
 	return v
 }
 
 // NewSearchPayload builds a notes service search endpoint payload.
-func NewSearchPayload(q string, notebook *string, tag *string, limit int) *notes.SearchPayload {
+func NewSearchPayload(q string, notebook *string, tag *string, limit int, session *string) *notes.SearchPayload {
 	v := &notes.SearchPayload{}
 	v.Q = q
 	v.Notebook = notebook
 	v.Tag = tag
 	v.Limit = limit
+	v.Session = session
 
 	return v
 }
 
 // NewRestorePayload builds a notes service restore endpoint payload.
-func NewRestorePayload(id string, ifMatch *string) *notes.RestorePayload {
+func NewRestorePayload(id string, ifMatch *string, session *string) *notes.RestorePayload {
 	v := &notes.RestorePayload{}
 	v.ID = id
 	v.IfMatch = ifMatch
+	v.Session = session
 
 	return v
 }
 
 // NewMovePayload builds a notes service move endpoint payload.
-func NewMovePayload(body *MoveRequestBody, id string) *notes.MovePayload {
+func NewMovePayload(body *MoveRequestBody, id string, session *string) *notes.MovePayload {
 	v := &notes.MovePayload{
 		After: body.After,
 	}
 	v.ID = id
+	v.Session = session
+
+	return v
+}
+
+// NewNotebooksPayload builds a notes service notebooks endpoint payload.
+func NewNotebooksPayload(session *string) *notes.NotebooksPayload {
+	v := &notes.NotebooksPayload{}
+	v.Session = session
 
 	return v
 }
 
 // NewTagsPayload builds a notes service tags endpoint payload.
-func NewTagsPayload(notebook *string) *notes.TagsPayload {
+func NewTagsPayload(notebook *string, session *string) *notes.TagsPayload {
 	v := &notes.TagsPayload{}
 	v.Notebook = notebook
+	v.Session = session
 
 	return v
 }
 
 // NewCreateNotebookPayload builds a notes service create_notebook endpoint
 // payload.
-func NewCreateNotebookPayload(body *CreateNotebookRequestBody) *notes.CreateNotebookPayload {
+func NewCreateNotebookPayload(body *CreateNotebookRequestBody, session *string) *notes.CreateNotebookPayload {
 	v := &notes.CreateNotebookPayload{
 		Name:  *body.Name,
 		Order: body.Order,
@@ -2694,12 +4523,13 @@ func NewCreateNotebookPayload(body *CreateNotebookRequestBody) *notes.CreateNote
 	if body.Kind == nil {
 		v.Kind = "default"
 	}
+	v.Session = session
 
 	return v
 }
 
 // NewSaveNotebookPayload builds a notes service save_notebook endpoint payload.
-func NewSaveNotebookPayload(body *SaveNotebookRequestBody, id string) *notes.SaveNotebookPayload {
+func NewSaveNotebookPayload(body *SaveNotebookRequestBody, id string, session *string) *notes.SaveNotebookPayload {
 	v := &notes.SaveNotebookPayload{
 		Name:  body.Name,
 		Order: body.Order,
@@ -2707,39 +4537,60 @@ func NewSaveNotebookPayload(body *SaveNotebookRequestBody, id string) *notes.Sav
 		Sort:  body.Sort,
 	}
 	v.ID = id
+	v.Session = session
 
 	return v
 }
 
 // NewDeleteNotebookPayload builds a notes service delete_notebook endpoint
 // payload.
-func NewDeleteNotebookPayload(id string) *notes.DeleteNotebookPayload {
+func NewDeleteNotebookPayload(id string, session *string) *notes.DeleteNotebookPayload {
 	v := &notes.DeleteNotebookPayload{}
 	v.ID = id
+	v.Session = session
+
+	return v
+}
+
+// NewTrashedNotebooksPayload builds a notes service trashed_notebooks endpoint
+// payload.
+func NewTrashedNotebooksPayload(session *string) *notes.TrashedNotebooksPayload {
+	v := &notes.TrashedNotebooksPayload{}
+	v.Session = session
 
 	return v
 }
 
 // NewRestoreNotebookPayload builds a notes service restore_notebook endpoint
 // payload.
-func NewRestoreNotebookPayload(id string) *notes.RestoreNotebookPayload {
+func NewRestoreNotebookPayload(id string, session *string) *notes.RestoreNotebookPayload {
 	v := &notes.RestoreNotebookPayload{}
 	v.ID = id
+	v.Session = session
 
 	return v
 }
 
 // NewDeleteTrashedNotebookPayload builds a notes service
 // delete_trashed_notebook endpoint payload.
-func NewDeleteTrashedNotebookPayload(id string) *notes.DeleteTrashedNotebookPayload {
+func NewDeleteTrashedNotebookPayload(id string, session *string) *notes.DeleteTrashedNotebookPayload {
 	v := &notes.DeleteTrashedNotebookPayload{}
 	v.ID = id
+	v.Session = session
+
+	return v
+}
+
+// NewEmptyTrashPayload builds a notes service empty_trash endpoint payload.
+func NewEmptyTrashPayload(session *string) *notes.EmptyTrashPayload {
+	v := &notes.EmptyTrashPayload{}
+	v.Session = session
 
 	return v
 }
 
 // NewImportPayload builds a notes service import endpoint payload.
-func NewImportPayload(body *ImportRequestBody) *notes.ImportPayload {
+func NewImportPayload(body *ImportRequestBody, session *string) *notes.ImportPayload {
 	v := &notes.ImportPayload{
 		Notebook:   body.Notebook,
 		Name:       *body.Name,
@@ -2757,60 +4608,99 @@ func NewImportPayload(body *ImportRequestBody) *notes.ImportPayload {
 			v.Files[i] = unmarshalImportFileRequestBodyToNotesImportFile(val)
 		}
 	}
+	v.Session = session
 
 	return v
 }
 
 // NewAddFilePayload builds a notes service add_file endpoint payload.
-func NewAddFilePayload(id string, name string) *notes.AddFilePayload {
+func NewAddFilePayload(id string, name string, session *string) *notes.AddFilePayload {
 	v := &notes.AddFilePayload{}
 	v.ID = id
 	v.Name = name
+	v.Session = session
 
 	return v
 }
 
 // NewGetFilePayload builds a notes service get_file endpoint payload.
-func NewGetFilePayload(id string, name string) *notes.GetFilePayload {
+func NewGetFilePayload(id string, name string, session *string) *notes.GetFilePayload {
 	v := &notes.GetFilePayload{}
 	v.ID = id
 	v.Name = name
+	v.Session = session
 
 	return v
 }
 
 // NewDeleteFilePayload builds a notes service delete_file endpoint payload.
-func NewDeleteFilePayload(id string, name string) *notes.DeleteFilePayload {
+func NewDeleteFilePayload(id string, name string, session *string) *notes.DeleteFilePayload {
 	v := &notes.DeleteFilePayload{}
 	v.ID = id
 	v.Name = name
+	v.Session = session
 
 	return v
 }
 
 // NewHistoryPayload builds a notes service history endpoint payload.
-func NewHistoryPayload(id string) *notes.HistoryPayload {
+func NewHistoryPayload(id string, session *string) *notes.HistoryPayload {
 	v := &notes.HistoryPayload{}
 	v.ID = id
+	v.Session = session
 
 	return v
 }
 
 // NewHistoryVersionPayload builds a notes service history_version endpoint
 // payload.
-func NewHistoryVersionPayload(id string, rev string) *notes.HistoryVersionPayload {
+func NewHistoryVersionPayload(id string, rev string, session *string) *notes.HistoryVersionPayload {
 	v := &notes.HistoryVersionPayload{}
 	v.ID = id
 	v.Rev = rev
+	v.Session = session
+
+	return v
+}
+
+// NewCheckFilesPayload builds a notes service check_files endpoint payload.
+func NewCheckFilesPayload(session *string) *notes.CheckFilesPayload {
+	v := &notes.CheckFilesPayload{}
+	v.Session = session
+
+	return v
+}
+
+// NewEventsPayload builds a notes service events endpoint payload.
+func NewEventsPayload(session *string) *notes.EventsPayload {
+	v := &notes.EventsPayload{}
+	v.Session = session
+
+	return v
+}
+
+// NewGitStatusPayload builds a notes service git_status endpoint payload.
+func NewGitStatusPayload(session *string) *notes.GitStatusPayload {
+	v := &notes.GitStatusPayload{}
+	v.Session = session
 
 	return v
 }
 
 // NewGitSyncPayload builds a notes service git_sync endpoint payload.
-func NewGitSyncPayload(body *GitSyncRequestBody) *notes.GitSyncPayload {
+func NewGitSyncPayload(body *GitSyncRequestBody, session *string) *notes.GitSyncPayload {
 	v := &notes.GitSyncPayload{
 		Remote: body.Remote,
 	}
+	v.Session = session
+
+	return v
+}
+
+// NewSyncPayload builds a notes service sync endpoint payload.
+func NewSyncPayload(session *string) *notes.SyncPayload {
+	v := &notes.SyncPayload{}
+	v.Session = session
 
 	return v
 }

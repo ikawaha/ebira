@@ -48,6 +48,8 @@ type (
 	}
 	// SearchPayload defines the JSON payload for the notes.search tool.
 	SearchPayload = struct {
+		// Session of people signed in with a passkey, set as a cookie by the server
+		Session *string
 		// Search terms separated by spaces, combined with AND
 		Q string
 		// Only notes in this notebook. Omit for all notebooks except the trash

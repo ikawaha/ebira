@@ -55,22 +55,6 @@ func NewMCPAdapter(endpoints *notes.Endpoints, opts *MCPAdapterOptions) *MCPAdap
 	return adapter
 }
 
-// validateNoArguments accepts omitted arguments or an empty JSON object for a
-// method with no payload. Any supplied property is an argument error.
-func validateNoArguments(arguments json.RawMessage) error {
-	if len(arguments) == 0 {
-		return nil
-	}
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(arguments, &fields); err != nil {
-		return fmt.Errorf("arguments must be an empty JSON object: %w", err)
-	}
-	if fields == nil || len(fields) > 0 {
-		return fmt.Errorf("arguments must be an empty JSON object")
-	}
-	return nil
-}
-
 // mapError applies the host's disclosure policy after classifying the original
 // endpoint error. Internal failures remain protocol errors after redaction.
 func (a *MCPAdapter) mapError(err error, internal bool) endpointFailure {
@@ -202,11 +186,11 @@ func (a *MCPAdapter) invokeMCPMethod2(ctx context.Context, payload *notes.Search
 
 // invokeMCPMethod3 sends validated input to the configured Notebooks endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod3(ctx context.Context) ([]*notes.Notebook, error) {
+func (a *MCPAdapter) invokeMCPMethod3(ctx context.Context, payload *notes.NotebooksPayload) ([]*notes.Notebook, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "notebooks")
-	raw, err := a.endpoints.Notebooks(ctx, nil)
+	raw, err := a.endpoints.Notebooks(ctx, payload)
 	var zero []*notes.Notebook
 	if err != nil {
 		return zero, err
@@ -357,6 +341,76 @@ func (e *endpointResultError) Error() string {
 	return fmt.Sprintf("endpoint %s returned an unexpected Go result type", e.method)
 }
 
+// fillinvokeMCPMethod0Inputs places transport values and typed host answers in
+// the original service payload. Full validation runs before endpoint dispatch;
+// invalid credentials return a fixed error without disclosing their values.
+func fillinvokeMCPMethod0Inputs(payload *notes.ListPayload, credential0 *string) error {
+	if credential0 != nil {
+		value := string(*credential0)
+		payload.Session = &value
+	}
+	if err := mcpcodec.ValidateListInputValue(payload); err != nil {
+		return goa.PermanentError("invalid_params", "HTTP credentials do not match the service contract")
+	}
+	return nil
+}
+
+// fillinvokeMCPMethod1Inputs places transport values and typed host answers in
+// the original service payload. Full validation runs before endpoint dispatch;
+// invalid credentials return a fixed error without disclosing their values.
+func fillinvokeMCPMethod1Inputs(payload *notes.GetPayload, credential0 *string) error {
+	if credential0 != nil {
+		value := string(*credential0)
+		payload.Session = &value
+	}
+	if err := mcpcodec.ValidateGetInputValue(payload); err != nil {
+		return goa.PermanentError("invalid_params", "HTTP credentials do not match the service contract")
+	}
+	return nil
+}
+
+// fillinvokeMCPMethod2Inputs places transport values and typed host answers in
+// the original service payload. Full validation runs before endpoint dispatch;
+// invalid credentials return a fixed error without disclosing their values.
+func fillinvokeMCPMethod2Inputs(payload *notes.SearchPayload, credential0 *string) error {
+	if credential0 != nil {
+		value := string(*credential0)
+		payload.Session = &value
+	}
+	if err := mcpcodec.ValidateSearchInputValue(payload); err != nil {
+		return goa.PermanentError("invalid_params", "HTTP credentials do not match the service contract")
+	}
+	return nil
+}
+
+// fillinvokeMCPMethod3Inputs places transport values and typed host answers in
+// the original service payload. Full validation runs before endpoint dispatch;
+// invalid credentials return a fixed error without disclosing their values.
+func fillinvokeMCPMethod3Inputs(payload *notes.NotebooksPayload, credential0 *string) error {
+	if credential0 != nil {
+		value := string(*credential0)
+		payload.Session = &value
+	}
+	if err := mcpcodec.ValidateNotebooksInputValue(payload); err != nil {
+		return goa.PermanentError("invalid_params", "HTTP credentials do not match the service contract")
+	}
+	return nil
+}
+
+// fillinvokeMCPMethod4Inputs places transport values and typed host answers in
+// the original service payload. Full validation runs before endpoint dispatch;
+// invalid credentials return a fixed error without disclosing their values.
+func fillinvokeMCPMethod4Inputs(payload *notes.TagsPayload, credential0 *string) error {
+	if credential0 != nil {
+		value := string(*credential0)
+		payload.Session = &value
+	}
+	if err := mcpcodec.ValidateTagsInputValue(payload); err != nil {
+		return goa.PermanentError("invalid_params", "HTTP credentials do not match the service contract")
+	}
+	return nil
+}
+
 // ToolsList returns either the fixed catalog or an authenticated page of
 // declared tool names. The generated tool definitions keep their exact schemas.
 func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*ToolsListResult, error) {
@@ -403,7 +457,7 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 			Name:         "list_notebooks",
 			Description:  stringPtr("List notebooks with their kinds and note counts; other tools take a notebook by its id, and people know it by its name"),
 			Annotations:  &ToolAnnotations{ReadOnlyHint: boolPtr(true)},
-			InputSchema:  json.RawMessage("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}"),
+			InputSchema:  json.RawMessage("{\"$defs\":{\"NotebooksPayload\":{\"title\":\"NotebooksPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"title\":\"NotebooksPayload\",\"type\":\"object\"}"),
 			OutputSchema: json.RawMessage("{\"$defs\":{\"Notebook\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"reserved\",\"kind\",\"sort\"],\"title\":\"Notebook\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/Notebook\"},\"type\":\"array\"}"),
 		},
 		{
@@ -557,6 +611,11 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
+		if err := fillinvokeMCPMethod1Inputs(payload, p.HTTPCredential0); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return toolCallError(err.Error()), nil
+		}
 		result, err := a.invokeMCPMethod1(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
@@ -609,10 +668,20 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 			StructuredContent: json.RawMessage(encoded),
 		})}, nil
 	case "list_notebooks":
-		if err := validateNoArguments(p.Arguments); err != nil {
+		arguments := p.Arguments
+		if len(arguments) == 0 {
+			arguments = json.RawMessage("{}")
+		}
+		payload, err := mcpcodec.DecodeNotebooksPayload(arguments)
+		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod3(ctx)
+		if err := fillinvokeMCPMethod3Inputs(payload, p.HTTPCredential0); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return toolCallError(err.Error()), nil
+		}
+		result, err := a.invokeMCPMethod3(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -641,6 +710,11 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		payload, err := mcpcodec.DecodeListPayload(arguments)
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
+		}
+		if err := fillinvokeMCPMethod0Inputs(payload, p.HTTPCredential0); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return toolCallError(err.Error()), nil
 		}
 		result, err := a.invokeMCPMethod0(ctx, payload)
 		if err != nil {
@@ -671,6 +745,11 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		payload, err := mcpcodec.DecodeTagsPayload(arguments)
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
+		}
+		if err := fillinvokeMCPMethod4Inputs(payload, p.HTTPCredential0); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return toolCallError(err.Error()), nil
 		}
 		result, err := a.invokeMCPMethod4(ctx, payload)
 		if err != nil {
@@ -751,6 +830,11 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		payload, err := mcpcodec.DecodeSearchPayload(arguments)
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
+		}
+		if err := fillinvokeMCPMethod2Inputs(payload, p.HTTPCredential0); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return toolCallError(err.Error()), nil
 		}
 		result, err := a.invokeMCPMethod2(ctx, payload)
 		if err != nil {

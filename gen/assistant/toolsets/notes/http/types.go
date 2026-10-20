@@ -57,6 +57,8 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	SearchPayloadTransport struct {
+		// Session of people signed in with a passkey, set as a cookie by the server
+		Session *string `json:"session,omitempty"`
 		// Search terms separated by spaces, combined with AND
 		Q *string `json:"q"`
 		// Only notes in this notebook. Omit for all notebooks except the trash

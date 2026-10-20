@@ -68,6 +68,7 @@ func InitGetToolResult(in *notes.Note) *GetResult {
 func InitSearchMethodPayload(in *SearchPayload) *notes.SearchPayload {
 	var out *notes.SearchPayload
 	out = &notes.SearchPayload{
+		Session:  in.Session,
 		Q:        in.Q,
 		Notebook: in.Notebook,
 		Tag:      in.Tag,

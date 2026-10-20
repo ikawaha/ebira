@@ -15,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	genassistant "github.com/ikawaha/ebira/gen/assistant"
+	genauth "github.com/ikawaha/ebira/gen/auth"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 )
 
@@ -67,7 +68,14 @@ type Model struct {
 	ctx context.Context
 	api *gennotes.Client
 	ask *genassistant.Client
-	th  theme
+	// auth tells how the server authenticates people, and web is the URL of
+	// the web UI; passkey is set while the server requires a passkey, which
+	// the TUI cannot sign in with yet.
+	auth    *genauth.Client
+	web     string
+	passkey *passkeyGuide
+	signIn  func(session string) // makes the clients send the session
+	th      theme
 
 	width, height int
 
@@ -145,6 +153,9 @@ func New(ctx context.Context, api *Clients, light bool, lang string) Model {
 		ctx:      ctx,
 		api:      api.Notes,
 		ask:      api.Assistant,
+		auth:     api.Auth,
+		web:      api.Web,
+		signIn:   api.SetSession,
 		th:       th,
 		md:       newMarkdown(glamourStyle),
 		vp:       viewport.New(),
@@ -213,17 +224,17 @@ type (
 )
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.loadList(), m.loadNotebooks())
+	return tea.Batch(m.loadList(), m.loadNotebooks(), m.checkAuth())
 }
 
 func (m *Model) loadNotebooks() tea.Cmd {
 	ctx, api := m.ctx, m.api
 	return func() tea.Msg {
-		res, err := api.Notebooks(ctx)
+		res, err := api.Notebooks(ctx, &gennotes.NotebooksPayload{})
 		if err != nil {
 			return notebooksMsg{err: err}
 		}
-		trashed, err := api.TrashedNotebooks(ctx)
+		trashed, err := api.TrashedNotebooks(ctx, &gennotes.TrashedNotebooksPayload{})
 		if err != nil {
 			return notebooksMsg{err: err}
 		}
@@ -785,7 +796,12 @@ func (m *Model) errText(err error) string {
 	if me, ok := errors.AsType[*msgError](err); ok {
 		return m.tr.t(me.key, me.args...)
 	}
-	return err.Error()
+	// An important operation asks for a fresh sign-in with the passkey,
+	// which the TUI, signed in through the web UI, cannot do.
+	if errorName(err) == "verification_required" {
+		return m.tr.t("error.verifyInWeb", "url", m.web)
+	}
+	return errorMessage(err)
 }
 
 func (m *Model) selected() *gennotes.NoteSummary {
@@ -832,6 +848,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case listMsg:
 		if msg.seq != m.listSeq {
 			return m, nil // stale response
+		}
+		if errorName(msg.err) == "unauthorized" {
+			return m, m.checkAuth()
 		}
 		if msg.err != nil {
 			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
@@ -918,7 +937,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case notebookOpMsg:
 		if msg.err != nil {
-			m.setStatusText(statusError, errorMessage(msg.err))
+			m.setStatusText(statusError, m.errText(msg.err))
 			return m, nil
 		}
 		m.setStatus(statusInfo, msg.status)
@@ -927,7 +946,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case notebookSavedMsg:
 		if msg.err != nil {
-			m.setStatus(statusError, "status.notebookNotSaved", "err", errorMessage(msg.err))
+			m.setStatus(statusError, "status.notebookNotSaved", "err", m.errText(msg.err))
 			return m, nil
 		}
 		if msg.created {
@@ -945,12 +964,15 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case movedMsg:
 		if msg.err != nil {
 			m.pending, m.moving = "", ""
-			m.setStatus(statusError, "status.notMoved", "err", errorMessage(msg.err))
+			m.setStatus(statusError, "status.notMoved", "err", m.errText(msg.err))
 			return m, nil
 		}
 		return m, m.loadList()
 
 	case notebooksMsg:
+		if errorName(msg.err) == "unauthorized" {
+			return m, m.checkAuth()
+		}
 		if msg.err != nil {
 			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
@@ -976,10 +998,26 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case connMsg:
 		m.live = msg.live
-		if !msg.live && msg.err != nil {
+		switch {
+		case msg.live && m.passkey != nil:
+			// The server no longer requires a passkey, such as after a
+			// restart with auth: none.
+			m.passkey = nil
+			m.setStatusText(statusInfo, "")
+			return m, tea.Batch(m.loadList(), m.loadNotebooks())
+		case errorName(msg.err) == "unauthorized":
+			// Ask again while no passkey is registered, to begin the sign-in
+			// once one is.
+			if m.passkey == nil || !m.passkey.registered {
+				return m, m.checkAuth()
+			}
+		case !msg.live && msg.err != nil:
 			m.setStatus(statusWarn, "status.disconnected")
 		}
 		return m, nil
+
+	case authMsg, deviceStartMsg, deviceTickMsg, deviceTokenMsg, browserOpenedMsg:
+		return m, m.handleAuth(msg)
 
 	case tea.MouseClickMsg:
 		return m, m.handleClick(msg.Mouse())
@@ -1233,7 +1271,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.prompt = promptNone
 		if key == "y" {
 			return m, m.notebookOp("status.trashEmptied", trashNotebook, func(ctx context.Context) error {
-				return m.api.EmptyTrash(ctx)
+				return m.api.EmptyTrash(ctx, &gennotes.EmptyTrashPayload{})
 			})
 		}
 		return m, nil
@@ -1383,6 +1421,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch key {
 	case "q":
 		return m, tea.Quit
+	case "o":
+		// While waiting for the approval of the sign-in, open its page.
+		if m.passkey != nil && m.passkey.device != nil {
+			return m, openURL(m.passkey.device.VerificationURI)
+		}
 	case "?":
 		m.prompt = promptAsk
 		m.promptIn.CharLimit = 2000 // as the API allows

@@ -12,6 +12,7 @@ import (
 	"io"
 
 	goa "goa.design/goa/v3/pkg"
+	"goa.design/goa/v3/security"
 )
 
 // Endpoints wraps the "notes" service endpoints.
@@ -74,31 +75,35 @@ type GetFileResponseData struct {
 // EventsEndpointInput holds both the payload and the server stream of the
 // "events" method.
 type EventsEndpointInput struct {
+	// Payload is the method payload.
+	Payload *EventsPayload
 	// Stream is the server stream used by the "events" method to send data.
 	Stream EventsServerStream
 }
 
 // NewEndpoints wraps the methods of the "notes" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
+	// Casting service to Auther interface
+	a := s.(Auther)
 	return &Endpoints{
-		List:                  NewListEndpoint(s),
-		Get:                   NewGetEndpoint(s),
-		Create:                NewCreateEndpoint(s),
-		Update:                NewUpdateEndpoint(s),
-		Delete:                NewDeleteEndpoint(s),
-		Search:                NewSearchEndpoint(s),
-		Restore:               NewRestoreEndpoint(s),
-		Move:                  NewMoveEndpoint(s),
-		Notebooks:             NewNotebooksEndpoint(s),
-		Tags:                  NewTagsEndpoint(s),
-		CreateNotebook:        NewCreateNotebookEndpoint(s),
-		SaveNotebook:          NewSaveNotebookEndpoint(s),
-		DeleteNotebook:        NewDeleteNotebookEndpoint(s),
-		TrashedNotebooks:      NewTrashedNotebooksEndpoint(s),
-		RestoreNotebook:       NewRestoreNotebookEndpoint(s),
-		DeleteTrashedNotebook: NewDeleteTrashedNotebookEndpoint(s),
-		EmptyTrash:            NewEmptyTrashEndpoint(s),
-		Import:                NewImportEndpoint(s),
+		List:                  NewListEndpoint(s, a.APIKeyAuth),
+		Get:                   NewGetEndpoint(s, a.APIKeyAuth),
+		Create:                NewCreateEndpoint(s, a.APIKeyAuth),
+		Update:                NewUpdateEndpoint(s, a.APIKeyAuth),
+		Delete:                NewDeleteEndpoint(s, a.APIKeyAuth),
+		Search:                NewSearchEndpoint(s, a.APIKeyAuth),
+		Restore:               NewRestoreEndpoint(s, a.APIKeyAuth),
+		Move:                  NewMoveEndpoint(s, a.APIKeyAuth),
+		Notebooks:             NewNotebooksEndpoint(s, a.APIKeyAuth),
+		Tags:                  NewTagsEndpoint(s, a.APIKeyAuth),
+		CreateNotebook:        NewCreateNotebookEndpoint(s, a.APIKeyAuth),
+		SaveNotebook:          NewSaveNotebookEndpoint(s, a.APIKeyAuth),
+		DeleteNotebook:        NewDeleteNotebookEndpoint(s, a.APIKeyAuth),
+		TrashedNotebooks:      NewTrashedNotebooksEndpoint(s, a.APIKeyAuth),
+		RestoreNotebook:       NewRestoreNotebookEndpoint(s, a.APIKeyAuth),
+		DeleteTrashedNotebook: NewDeleteTrashedNotebookEndpoint(s, a.APIKeyAuth),
+		EmptyTrash:            NewEmptyTrashEndpoint(s, a.APIKeyAuth),
+		Import:                NewImportEndpoint(s, a.APIKeyAuth),
 		CreateAiNote:          NewCreateAiNoteEndpoint(s),
 		ImportAiNote:          NewImportAiNoteEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
@@ -106,16 +111,16 @@ func NewEndpoints(s Service) *Endpoints {
 		MoveAiNote:            NewMoveAiNoteEndpoint(s),
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
 		MakeNotebookPrivate:   NewMakeNotebookPrivateEndpoint(s),
-		AddFile:               NewAddFileEndpoint(s),
-		GetFile:               NewGetFileEndpoint(s),
-		DeleteFile:            NewDeleteFileEndpoint(s),
-		History:               NewHistoryEndpoint(s),
-		HistoryVersion:        NewHistoryVersionEndpoint(s),
-		CheckFiles:            NewCheckFilesEndpoint(s),
-		Events:                NewEventsEndpoint(s),
-		GitStatus:             NewGitStatusEndpoint(s),
-		GitSync:               NewGitSyncEndpoint(s),
-		Sync:                  NewSyncEndpoint(s),
+		AddFile:               NewAddFileEndpoint(s, a.APIKeyAuth),
+		GetFile:               NewGetFileEndpoint(s, a.APIKeyAuth),
+		DeleteFile:            NewDeleteFileEndpoint(s, a.APIKeyAuth),
+		History:               NewHistoryEndpoint(s, a.APIKeyAuth),
+		HistoryVersion:        NewHistoryVersionEndpoint(s, a.APIKeyAuth),
+		CheckFiles:            NewCheckFilesEndpoint(s, a.APIKeyAuth),
+		Events:                NewEventsEndpoint(s, a.APIKeyAuth),
+		GitStatus:             NewGitStatusEndpoint(s, a.APIKeyAuth),
+		GitSync:               NewGitSyncEndpoint(s, a.APIKeyAuth),
+		Sync:                  NewSyncEndpoint(s, a.APIKeyAuth),
 	}
 }
 
@@ -160,159 +165,414 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 
 // NewListEndpoint returns an endpoint function that calls the method "list" of
 // service "notes".
-func NewListEndpoint(s Service) goa.Endpoint {
+func NewListEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*ListPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.List(ctx, p)
 	}
 }
 
 // NewGetEndpoint returns an endpoint function that calls the method "get" of
 // service "notes".
-func NewGetEndpoint(s Service) goa.Endpoint {
+func NewGetEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*GetPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Get(ctx, p)
 	}
 }
 
 // NewCreateEndpoint returns an endpoint function that calls the method
 // "create" of service "notes".
-func NewCreateEndpoint(s Service) goa.Endpoint {
+func NewCreateEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*CreatePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Create(ctx, p)
 	}
 }
 
 // NewUpdateEndpoint returns an endpoint function that calls the method
 // "update" of service "notes".
-func NewUpdateEndpoint(s Service) goa.Endpoint {
+func NewUpdateEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*UpdatePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Update(ctx, p)
 	}
 }
 
 // NewDeleteEndpoint returns an endpoint function that calls the method
 // "delete" of service "notes".
-func NewDeleteEndpoint(s Service) goa.Endpoint {
+func NewDeleteEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeletePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return nil, s.Delete(ctx, p)
 	}
 }
 
 // NewSearchEndpoint returns an endpoint function that calls the method
 // "search" of service "notes".
-func NewSearchEndpoint(s Service) goa.Endpoint {
+func NewSearchEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*SearchPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Search(ctx, p)
 	}
 }
 
 // NewRestoreEndpoint returns an endpoint function that calls the method
 // "restore" of service "notes".
-func NewRestoreEndpoint(s Service) goa.Endpoint {
+func NewRestoreEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*RestorePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Restore(ctx, p)
 	}
 }
 
 // NewMoveEndpoint returns an endpoint function that calls the method "move" of
 // service "notes".
-func NewMoveEndpoint(s Service) goa.Endpoint {
+func NewMoveEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*MovePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Move(ctx, p)
 	}
 }
 
 // NewNotebooksEndpoint returns an endpoint function that calls the method
 // "notebooks" of service "notes".
-func NewNotebooksEndpoint(s Service) goa.Endpoint {
+func NewNotebooksEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return s.Notebooks(ctx)
+		p := req.(*NotebooksPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.Notebooks(ctx, p)
 	}
 }
 
 // NewTagsEndpoint returns an endpoint function that calls the method "tags" of
 // service "notes".
-func NewTagsEndpoint(s Service) goa.Endpoint {
+func NewTagsEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*TagsPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Tags(ctx, p)
 	}
 }
 
 // NewCreateNotebookEndpoint returns an endpoint function that calls the method
 // "create_notebook" of service "notes".
-func NewCreateNotebookEndpoint(s Service) goa.Endpoint {
+func NewCreateNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*CreateNotebookPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.CreateNotebook(ctx, p)
 	}
 }
 
 // NewSaveNotebookEndpoint returns an endpoint function that calls the method
 // "save_notebook" of service "notes".
-func NewSaveNotebookEndpoint(s Service) goa.Endpoint {
+func NewSaveNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*SaveNotebookPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.SaveNotebook(ctx, p)
 	}
 }
 
 // NewDeleteNotebookEndpoint returns an endpoint function that calls the method
 // "delete_notebook" of service "notes".
-func NewDeleteNotebookEndpoint(s Service) goa.Endpoint {
+func NewDeleteNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeleteNotebookPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return nil, s.DeleteNotebook(ctx, p)
 	}
 }
 
 // NewTrashedNotebooksEndpoint returns an endpoint function that calls the
 // method "trashed_notebooks" of service "notes".
-func NewTrashedNotebooksEndpoint(s Service) goa.Endpoint {
+func NewTrashedNotebooksEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return s.TrashedNotebooks(ctx)
+		p := req.(*TrashedNotebooksPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.TrashedNotebooks(ctx, p)
 	}
 }
 
 // NewRestoreNotebookEndpoint returns an endpoint function that calls the
 // method "restore_notebook" of service "notes".
-func NewRestoreNotebookEndpoint(s Service) goa.Endpoint {
+func NewRestoreNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*RestoreNotebookPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.RestoreNotebook(ctx, p)
 	}
 }
 
 // NewDeleteTrashedNotebookEndpoint returns an endpoint function that calls the
 // method "delete_trashed_notebook" of service "notes".
-func NewDeleteTrashedNotebookEndpoint(s Service) goa.Endpoint {
+func NewDeleteTrashedNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeleteTrashedNotebookPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return nil, s.DeleteTrashedNotebook(ctx, p)
 	}
 }
 
 // NewEmptyTrashEndpoint returns an endpoint function that calls the method
 // "empty_trash" of service "notes".
-func NewEmptyTrashEndpoint(s Service) goa.Endpoint {
+func NewEmptyTrashEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return nil, s.EmptyTrash(ctx)
+		p := req.(*EmptyTrashPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.EmptyTrash(ctx, p)
 	}
 }
 
 // NewImportEndpoint returns an endpoint function that calls the method
 // "import" of service "notes".
-func NewImportEndpoint(s Service) goa.Endpoint {
+func NewImportEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*ImportPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.Import(ctx, p)
 	}
 }
@@ -382,18 +642,46 @@ func NewMakeNotebookPrivateEndpoint(s Service) goa.Endpoint {
 
 // NewAddFileEndpoint returns an endpoint function that calls the method
 // "add_file" of service "notes".
-func NewAddFileEndpoint(s Service) goa.Endpoint {
+func NewAddFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		ep := req.(*AddFileRequestData)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if ep.Payload.Session != nil {
+			key = string(*ep.Payload.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.AddFile(ctx, ep.Payload, ep.Body)
 	}
 }
 
 // NewGetFileEndpoint returns an endpoint function that calls the method
 // "get_file" of service "notes".
-func NewGetFileEndpoint(s Service) goa.Endpoint {
+func NewGetFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*GetFilePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		res, body, err := s.GetFile(ctx, p)
 		if err != nil {
 			return nil, err
@@ -404,69 +692,184 @@ func NewGetFileEndpoint(s Service) goa.Endpoint {
 
 // NewDeleteFileEndpoint returns an endpoint function that calls the method
 // "delete_file" of service "notes".
-func NewDeleteFileEndpoint(s Service) goa.Endpoint {
+func NewDeleteFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeleteFilePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return nil, s.DeleteFile(ctx, p)
 	}
 }
 
 // NewHistoryEndpoint returns an endpoint function that calls the method
 // "history" of service "notes".
-func NewHistoryEndpoint(s Service) goa.Endpoint {
+func NewHistoryEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*HistoryPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.History(ctx, p)
 	}
 }
 
 // NewHistoryVersionEndpoint returns an endpoint function that calls the method
 // "history_version" of service "notes".
-func NewHistoryVersionEndpoint(s Service) goa.Endpoint {
+func NewHistoryVersionEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*HistoryVersionPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.HistoryVersion(ctx, p)
 	}
 }
 
 // NewCheckFilesEndpoint returns an endpoint function that calls the method
 // "check_files" of service "notes".
-func NewCheckFilesEndpoint(s Service) goa.Endpoint {
+func NewCheckFilesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return s.CheckFiles(ctx)
+		p := req.(*CheckFilesPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.CheckFiles(ctx, p)
 	}
 }
 
 // NewEventsEndpoint returns an endpoint function that calls the method
 // "events" of service "notes".
-func NewEventsEndpoint(s Service) goa.Endpoint {
+func NewEventsEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		ep := req.(*EventsEndpointInput)
-		return nil, s.Events(ctx, ep.Stream)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if ep.Payload.Session != nil {
+			key = string(*ep.Payload.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.Events(ctx, ep.Payload, ep.Stream)
 	}
 }
 
 // NewGitStatusEndpoint returns an endpoint function that calls the method
 // "git_status" of service "notes".
-func NewGitStatusEndpoint(s Service) goa.Endpoint {
+func NewGitStatusEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return s.GitStatus(ctx)
+		p := req.(*GitStatusPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.GitStatus(ctx, p)
 	}
 }
 
 // NewGitSyncEndpoint returns an endpoint function that calls the method
 // "git_sync" of service "notes".
-func NewGitSyncEndpoint(s Service) goa.Endpoint {
+func NewGitSyncEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*GitSyncPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
 		return s.GitSync(ctx, p)
 	}
 }
 
 // NewSyncEndpoint returns an endpoint function that calls the method "sync" of
 // service "notes".
-func NewSyncEndpoint(s Service) goa.Endpoint {
+func NewSyncEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return s.Sync(ctx)
+		p := req.(*SyncPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.Sync(ctx, p)
 	}
 }

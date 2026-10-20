@@ -19,6 +19,7 @@ import (
 
 	rawjson "goa.design/goa-ai/runtime/agent/rawjson"
 	goa "goa.design/goa/v3/pkg"
+	"goa.design/goa/v3/security"
 )
 
 // CRUD and search for notes.
@@ -51,7 +52,7 @@ type Service interface {
 	Move(context.Context, *MovePayload) (res *Note, err error)
 	// List notebooks with their note counts: inbox first, then the others by order
 	// and name, trash last.
-	Notebooks(context.Context) (res []*Notebook, err error)
+	Notebooks(context.Context, *NotebooksPayload) (res []*Notebook, err error)
 	// List the tags of the notes with their note counts, by name
 	// (case-insensitive, full-width and half-width forms alike).
 	Tags(context.Context, *TagsPayload) (res []*TagCount, err error)
@@ -72,7 +73,7 @@ type Service interface {
 	DeleteNotebook(context.Context, *DeleteNotebookPayload) (err error)
 	// List the notebooks in the trash. List their notes with list, notebook=trash
 	// and trashed_notebook.
-	TrashedNotebooks(context.Context) (res []*TrashedNotebook, err error)
+	TrashedNotebooks(context.Context, *TrashedNotebooksPayload) (res []*TrashedNotebook, err error)
 	// Move a notebook out of the trash with its notes and settings. Fails with
 	// already_exists if a notebook with the same ID exists.
 	RestoreNotebook(context.Context, *RestoreNotebookPayload) (res *Notebook, err error)
@@ -80,7 +81,7 @@ type Service interface {
 	DeleteTrashedNotebook(context.Context, *DeleteTrashedNotebookPayload) (err error)
 	// Permanently delete everything in the trash: the notes deleted on their own
 	// and the notebooks deleted as a whole, with their notes and files.
-	EmptyTrash(context.Context) (err error)
+	EmptyTrash(context.Context, *EmptyTrashPayload) (err error)
 	// Import a Markdown file as a new note with a random ID. A file whose content
 	// was imported before, even if the note is in the trash, is skipped unless
 	// force is set. Images the file refers to by relative paths can be sent with
@@ -152,14 +153,14 @@ type Service interface {
 	// body, including in code, so that a file counts as used rather than not.
 	// Files added within the last hour are marked recent, as the note may still be
 	// being edited.
-	CheckFiles(context.Context) (res *FileCheck, err error)
+	CheckFiles(context.Context, *CheckFilesPayload) (res *FileCheck, err error)
 	// Stream note changes as Server-Sent Events. Events missed while disconnected
 	// are not replayed; the ready event sent on every (re)connection tells clients
 	// to reload the note list.
-	Events(context.Context, EventsServerStream) (err error)
+	Events(context.Context, *EventsPayload, EventsServerStream) (err error)
 	// Tell whether the notes are in a git repository, and its upstream branch,
 	// such as to offer git_sync. For people only; others are told there is none.
-	GitStatus(context.Context) (res *GitStatus, err error)
+	GitStatus(context.Context, *GitStatusPayload) (res *GitStatus, err error)
 	// Sync the notes with their git repository: commit the changes of the notes
 	// directory, then, when the branch has an upstream branch, fetch it, merge it
 	// and push. A merge never stops in conflict: a note changed on both sides
@@ -170,7 +171,13 @@ type Service interface {
 	GitSync(context.Context, *GitSyncPayload) (res *GitSyncResult, err error)
 	// Scan the notes directory and bring the SQLite index in line with the YAML
 	// files. Not needed while the server watches files.
-	Sync(context.Context) (res *SyncResult, err error)
+	Sync(context.Context, *SyncPayload) (res *SyncResult, err error)
+}
+
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// APIKeyAuth implements the authorization logic for the APIKey security scheme.
+	APIKeyAuth(ctx context.Context, key string, schema *security.APIKeyScheme) (context.Context, error)
 }
 
 // APIName is the name of the API as defined in the design.
@@ -209,6 +216,8 @@ type EventsClientStream interface {
 
 // AddFilePayload is the payload type of the notes service add_file method.
 type AddFilePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// File name, such as the name of the uploaded file
@@ -222,6 +231,13 @@ type BrokenFileRef struct {
 	Title string
 	// The path referred to
 	Path string
+}
+
+// CheckFilesPayload is the payload type of the notes service check_files
+// method.
+type CheckFilesPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 }
 
 // CreateAiNotePayload is the payload type of the notes service create_ai_note
@@ -249,6 +265,8 @@ type CreateAiNotebookPayload struct {
 // CreateNotebookPayload is the payload type of the notes service
 // create_notebook method.
 type CreateNotebookPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Display name
 	Name string
 	// Sort key; lower comes first. Omit to put the notebook after the others
@@ -264,6 +282,8 @@ type CreateNotebookPayload struct {
 
 // CreatePayload is the payload type of the notes service create method.
 type CreatePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID *string
 	// Notebook to put the note in (default inbox; not trash)
@@ -288,6 +308,8 @@ type DeleteAiNotePayload struct {
 // DeleteFilePayload is the payload type of the notes service delete_file
 // method.
 type DeleteFilePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// File name
@@ -297,12 +319,16 @@ type DeleteFilePayload struct {
 // DeleteNotebookPayload is the payload type of the notes service
 // delete_notebook method.
 type DeleteNotebookPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Notebook ID
 	ID string
 }
 
 // DeletePayload is the payload type of the notes service delete method.
 type DeletePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// Delete only if the note's current version matches. Omit to delete
@@ -313,8 +339,23 @@ type DeletePayload struct {
 // DeleteTrashedNotebookPayload is the payload type of the notes service
 // delete_trashed_notebook method.
 type DeleteTrashedNotebookPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Notebook ID
 	ID string
+}
+
+// EmptyTrashPayload is the payload type of the notes service empty_trash
+// method.
+type EmptyTrashPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
+// EventsPayload is the payload type of the notes service events method.
+type EventsPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 }
 
 // FileCheck is the result type of the notes service check_files method.
@@ -328,6 +369,8 @@ type FileCheck struct {
 
 // GetFilePayload is the payload type of the notes service get_file method.
 type GetFilePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// File name
@@ -344,6 +387,8 @@ type GetFileResult struct {
 
 // GetPayload is the payload type of the notes service get method.
 type GetPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// Search query to highlight
@@ -370,8 +415,16 @@ type GitStatus struct {
 	Upstream *string
 }
 
+// GitStatusPayload is the payload type of the notes service git_status method.
+type GitStatusPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
 // GitSyncPayload is the payload type of the notes service git_sync method.
 type GitSyncPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// URL of a remote repository to connect the notes to first, as the remote
 	// origin: the notes directory becomes a repository unless it is one, and the
 	// notes are pushed, setting the upstream branch; the notes already on the
@@ -399,6 +452,8 @@ type GitSyncResult struct {
 
 // HistoryPayload is the payload type of the notes service history method.
 type HistoryPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 }
@@ -406,6 +461,8 @@ type HistoryPayload struct {
 // HistoryVersionPayload is the payload type of the notes service
 // history_version method.
 type HistoryVersionPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// ID of the version
@@ -438,6 +495,8 @@ type ImportFile struct {
 
 // ImportPayload is the payload type of the notes service import method.
 type ImportPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Notebook to put the note in (default inbox; not trash)
 	Notebook *string
 	// File name of the Markdown file, the title when the file gives none
@@ -469,6 +528,8 @@ type ImportResult struct {
 
 // ListPayload is the payload type of the notes service list method.
 type ListPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Only notes in this notebook. Omit for all notebooks except the trash
 	Notebook *string
 	// Only notes with this tag
@@ -506,6 +567,8 @@ type MoveAiNotePayload struct {
 
 // MovePayload is the payload type of the notes service move method.
 type MovePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// ID of the note of the same notebook to put the note after; omit to put it
@@ -662,15 +725,25 @@ type Notebook struct {
 	Sort string
 }
 
+// NotebooksPayload is the payload type of the notes service notebooks method.
+type NotebooksPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
 // RestoreNotebookPayload is the payload type of the notes service
 // restore_notebook method.
 type RestoreNotebookPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Notebook ID
 	ID string
 }
 
 // RestorePayload is the payload type of the notes service restore method.
 type RestorePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// Restore only if the note's current version matches
@@ -680,6 +753,8 @@ type RestorePayload struct {
 // SaveNotebookPayload is the payload type of the notes service save_notebook
 // method.
 type SaveNotebookPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Notebook ID
 	ID string
 	// Display name; empty to reset it to the default
@@ -703,6 +778,8 @@ type SaveNotebookPayload struct {
 
 // SearchPayload is the payload type of the notes service search method.
 type SearchPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Search terms separated by spaces, combined with AND
 	Q string
 	// Only notes in this notebook. Omit for all notebooks except the trash
@@ -721,6 +798,12 @@ type SearchResult struct {
 	Total int
 	// Matched notes
 	Notes []*NoteSummary
+}
+
+// SyncPayload is the payload type of the notes service sync method.
+type SyncPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 }
 
 // SyncResult is the result type of the notes service sync method.
@@ -744,6 +827,8 @@ type TagCount struct {
 
 // TagsPayload is the payload type of the notes service tags method.
 type TagsPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Only notes in this notebook. Omit for all notebooks except the trash
 	Notebook *string
 }
@@ -765,6 +850,13 @@ type TrashedNotebook struct {
 	Kind string
 	// Number of notes
 	Count int
+}
+
+// TrashedNotebooksPayload is the payload type of the notes service
+// trashed_notebooks method.
+type TrashedNotebooksPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 }
 
 type UnusedFile struct {
@@ -804,6 +896,8 @@ type UpdateAiNotePayload struct {
 
 // UpdatePayload is the payload type of the notes service update method.
 type UpdatePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Note ID
 	ID string
 	// Notebook to move the note to (not trash)
@@ -817,6 +911,16 @@ type UpdatePayload struct {
 	// Update only if the note's current version matches. Omit to overwrite
 	// unconditionally
 	IfMatch *string
+}
+
+// MakeUnauthorized builds a goa.ServiceError from an error.
+func MakeUnauthorized(err error) *goa.ServiceError {
+	return goa.NewServiceError(err, "unauthorized", false, false, false)
+}
+
+// MakeVerificationRequired builds a goa.ServiceError from an error.
+func MakeVerificationRequired(err error) *goa.ServiceError {
+	return goa.NewServiceError(err, "verification_required", false, false, false)
 }
 
 // MakeBadRequest builds a goa.ServiceError from an error.

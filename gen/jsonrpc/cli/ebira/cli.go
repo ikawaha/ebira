@@ -70,12 +70,14 @@ func ParseEndpoint(
 		mcpNotesToolsListFlags    = flag.NewFlagSet("tools-list", flag.ExitOnError)
 		mcpNotesToolsListBodyFlag = new(cliStringFlag)
 
-		mcpNotesToolsCallFlags    = flag.NewFlagSet("tools-call", flag.ExitOnError)
-		mcpNotesToolsCallBodyFlag = new(cliStringFlag)
+		mcpNotesToolsCallFlags               = flag.NewFlagSet("tools-call", flag.ExitOnError)
+		mcpNotesToolsCallBodyFlag            = new(cliStringFlag)
+		mcpNotesToolsCallHTTPCredential0Flag = new(cliStringFlag)
 	)
 	mcpNotesServerDiscoverFlags.Var(mcpNotesServerDiscoverBodyFlag, "body", "")
 	mcpNotesToolsListFlags.Var(mcpNotesToolsListBodyFlag, "body", "")
 	mcpNotesToolsCallFlags.Var(mcpNotesToolsCallBodyFlag, "body", "")
+	mcpNotesToolsCallFlags.Var(mcpNotesToolsCallHTTPCredential0Flag, "http-credential0", "")
 
 	mcpNotesFlags.Usage = mcpNotesUsage
 	mcpNotesServerDiscoverFlags.Usage = mcpNotesServerDiscoverUsage
@@ -158,7 +160,7 @@ func ParseEndpoint(
 				data, err = mcpnotesc.BuildToolsListPayload(mcpNotesToolsListBodyFlag.value)
 			case "tools-call":
 				endpoint = c.ToolsCall()
-				data, err = mcpnotesc.BuildToolsCallPayload(mcpNotesToolsCallBodyFlag.value)
+				data, err = mcpnotesc.BuildToolsCallPayload(mcpNotesToolsCallBodyFlag.value, mcpNotesToolsCallHTTPCredential0Flag.value)
 			}
 		}
 	}
@@ -222,6 +224,7 @@ func mcpNotesToolsCallUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] mcp-notes tools-call", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -http-credential0 STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -230,8 +233,9 @@ func mcpNotesToolsCallUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -http-credential0 STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mcp-notes tools-call --body '{\n      \"_meta\": \"Voluptatem aliquid laborum autem nesciunt.\",\n      \"arguments\": \"Eligendi illum.\",\n      \"inputResponses\": {\n         \"Et nemo consequatur quia animi.\": \"Rerum illo ea in.\",\n         \"Ipsa aspernatur.\": \"Commodi error consectetur aliquid eveniet.\"\n      },\n      \"name\": \"Quo sit nemo dolor.\",\n      \"requestState\": \"Aut quasi asperiores et tempora minima.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mcp-notes tools-call --body '{\n      \"_meta\": \"Voluptatem aliquid laborum autem nesciunt.\",\n      \"arguments\": \"Eligendi illum.\",\n      \"inputResponses\": {\n         \"Et nemo consequatur quia animi.\": \"Rerum illo ea in.\",\n         \"Ipsa aspernatur.\": \"Commodi error consectetur aliquid eveniet.\"\n      },\n      \"name\": \"Quo sit nemo dolor.\",\n      \"requestState\": \"Aut quasi asperiores et tempora minima.\"\n   }' --http-credential0 \"Saepe mollitia voluptatem sequi.\"")
 }

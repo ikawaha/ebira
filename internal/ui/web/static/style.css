@@ -451,3 +451,10 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .toast[hidden] { display: none; }
 .toast .toast-msg { overflow-wrap: anywhere; }
 .toast button { flex: none; font-size: 13px; padding: 3px 10px; background: transparent; color: var(--bg); border: 1px solid currentColor; border-radius: 4px; cursor: pointer; }
+.auth { max-width: 420px; }
+.auth .files-actions { gap: 8px; }
+.auth .error:empty { display: none; }
+.auth .auth-cmd { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.auth .auth-cmd code { flex: 1; padding: 6px 8px; border-radius: 4px; background: var(--code-bg); user-select: all; }
+.auth p.msg { color: var(--fg-muted); }
+.auth .device-code code { font-size: 20px; letter-spacing: 0.1em; text-align: center; }

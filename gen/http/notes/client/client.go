@@ -374,10 +374,15 @@ func (c *Client) Move() goa.Endpoint {
 // notebooks server.
 func (c *Client) Notebooks() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeNotebooksRequest(c.encoder)
 		decodeResponse = DecodeNotebooksResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildNotebooksRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -465,10 +470,15 @@ func (c *Client) SaveNotebook() goa.Endpoint {
 // service delete_notebook server.
 func (c *Client) DeleteNotebook() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeDeleteNotebookRequest(c.encoder)
 		decodeResponse = DecodeDeleteNotebookResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildDeleteNotebookRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -484,10 +494,15 @@ func (c *Client) DeleteNotebook() goa.Endpoint {
 // service trashed_notebooks server.
 func (c *Client) TrashedNotebooks() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeTrashedNotebooksRequest(c.encoder)
 		decodeResponse = DecodeTrashedNotebooksResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildTrashedNotebooksRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -503,10 +518,15 @@ func (c *Client) TrashedNotebooks() goa.Endpoint {
 // service restore_notebook server.
 func (c *Client) RestoreNotebook() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeRestoreNotebookRequest(c.encoder)
 		decodeResponse = DecodeRestoreNotebookResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildRestoreNotebookRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -522,10 +542,15 @@ func (c *Client) RestoreNotebook() goa.Endpoint {
 // notes service delete_trashed_notebook server.
 func (c *Client) DeleteTrashedNotebook() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeDeleteTrashedNotebookRequest(c.encoder)
 		decodeResponse = DecodeDeleteTrashedNotebookResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildDeleteTrashedNotebookRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -541,10 +566,15 @@ func (c *Client) DeleteTrashedNotebook() goa.Endpoint {
 // empty_trash server.
 func (c *Client) EmptyTrash() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeEmptyTrashRequest(c.encoder)
 		decodeResponse = DecodeEmptyTrashResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildEmptyTrashRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -608,10 +638,15 @@ func (c *Client) AddFile() goa.Endpoint {
 // get_file server.
 func (c *Client) GetFile() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeGetFileRequest(c.encoder)
 		decodeResponse = DecodeGetFileResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildGetFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -634,10 +669,15 @@ func (c *Client) GetFile() goa.Endpoint {
 // delete_file server.
 func (c *Client) DeleteFile() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeDeleteFileRequest(c.encoder)
 		decodeResponse = DecodeDeleteFileResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildDeleteFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -653,10 +693,15 @@ func (c *Client) DeleteFile() goa.Endpoint {
 // history server.
 func (c *Client) History() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeHistoryRequest(c.encoder)
 		decodeResponse = DecodeHistoryResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildHistoryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -672,10 +717,15 @@ func (c *Client) History() goa.Endpoint {
 // service history_version server.
 func (c *Client) HistoryVersion() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeHistoryVersionRequest(c.encoder)
 		decodeResponse = DecodeHistoryVersionResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildHistoryVersionRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -691,10 +741,15 @@ func (c *Client) HistoryVersion() goa.Endpoint {
 // check_files server.
 func (c *Client) CheckFiles() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeCheckFilesRequest(c.encoder)
 		decodeResponse = DecodeCheckFilesResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildCheckFilesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -710,10 +765,15 @@ func (c *Client) CheckFiles() goa.Endpoint {
 // events server.
 func (c *Client) Events() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeEventsRequest(c.encoder)
 		decodeResponse = DecodeEventsResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildEventsRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -746,10 +806,15 @@ func (c *Client) Events() goa.Endpoint {
 // git_status server.
 func (c *Client) GitStatus() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeGitStatusRequest(c.encoder)
 		decodeResponse = DecodeGitStatusResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildGitStatusRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -789,10 +854,15 @@ func (c *Client) GitSync() goa.Endpoint {
 // server.
 func (c *Client) Sync() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeSyncRequest(c.encoder)
 		decodeResponse = DecodeSyncResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildSyncRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}

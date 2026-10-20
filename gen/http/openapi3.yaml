@@ -44,6 +44,488 @@ paths:
                                 name: unavailable
                                 temporary: false
                                 timeout: false
+    /auth:
+        get:
+            tags:
+                - auth
+            summary: status auth
+            description: Tell how the server authenticates people and whether the request is signed in.
+            operationId: auth#status
+            parameters:
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie
+                  schema:
+                    type: string
+                    description: Session cookie
+                    example: Qui voluptas perspiciatis sunt consequuntur suscipit fugit.
+                  example: Qui voluptas perspiciatis sunt consequuntur suscipit fugit.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/StatusResponseBody'
+                            example:
+                                mode: passkey
+                                registered: false
+                                signed_in: true
+    /auth/device:
+        post:
+            tags:
+                - auth
+            summary: device_start auth
+            description: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.
+            operationId: auth#device_start
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeviceStartResponseBody'
+                            example:
+                                device_code: Id sunt praesentium sit et nesciunt debitis.
+                                expires_in: 2410708439063718888
+                                interval: 1594048462833705464
+                                user_code: BCDF-GHJK
+                                verification_uri: Omnis inventore et rem dolorem.
+    /auth/device/approve:
+        post:
+            tags:
+                - auth
+            summary: device_approve auth
+            description: Approve the request of device_start with its user code, from the web UI signed in with a passkey.
+            operationId: auth#device_approve
+            parameters:
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie of the web UI
+                  schema:
+                    type: string
+                    description: Session cookie of the web UI
+                    example: Reiciendis accusantium.
+                  example: Reiciendis accusantium.
+            requestBody:
+                description: Request body for device_approve.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeviceApproveRequestBody'
+                        example:
+                            user_code: Fugit voluptate vel.
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The user code is unknown or expired'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+    /auth/device/token:
+        post:
+            tags:
+                - auth
+            summary: device_token auth
+            description: Ask whether people approved the request of device_start. Once approved, the result has the session, which the client keeps in memory only and sends as the session cookie; the request is then gone.
+            operationId: auth#device_token
+            requestBody:
+                description: Request body for device_token.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeviceTokenRequestBody'
+                        example:
+                            device_code: Perferendis maiores.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeviceTokenResponseBody'
+                            example:
+                                session: Qui neque voluptas vitae.
+                                status: expired
+    /auth/logout:
+        post:
+            tags:
+                - auth
+            summary: logout auth
+            description: 'Sign out: the response clears the session cookie.'
+            operationId: auth#logout
+            responses:
+                "204":
+                    description: No Content response.
+                    headers:
+                        Set-Cookie:
+                            description: Empty session
+                            schema:
+                                type: string
+                                description: Empty session
+                                example: Ipsa non sint.
+                            example: Ipsa non sint.
+    /auth/passkey/login/begin:
+        post:
+            tags:
+                - auth
+            summary: login_begin auth
+            description: Begin signing in with a passkey.
+            operationId: auth#login_begin
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Ceremony'
+                            example:
+                                ceremony: Sed quia labore.
+                                options: Necessitatibus explicabo ut quod incidunt vel.
+                "400":
+                    description: 'bad_request: No passkey is registered'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+    /auth/passkey/login/finish:
+        post:
+            tags:
+                - auth
+            summary: login_finish auth
+            description: Finish signing in with the passkey the browser used. The response sets the session cookie.
+            operationId: auth#login_finish
+            requestBody:
+                description: Request body for login_finish.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CeremonyFinish'
+                        example:
+                            ceremony: Assumenda dolorum commodi maxime magnam.
+                            credential: Aut doloribus nobis quia omnis.
+            responses:
+                "204":
+                    description: No Content response.
+                    headers:
+                        Set-Cookie:
+                            description: Session
+                            schema:
+                                type: string
+                                description: Session
+                                example: Perspiciatis asperiores reiciendis amet fuga.
+                            example: Perspiciatis asperiores reiciendis amet fuga.
+                "401":
+                    description: 'unauthorized: The ceremony is unknown or expired, or the passkey is not registered or its signature is invalid'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+    /auth/passkey/register/begin:
+        post:
+            tags:
+                - auth
+            summary: register_begin auth
+            description: 'Begin registering a passkey: with the one-time token of the URL that ebira auth passkey prints in the terminal, so that only people at the terminal can register the first passkey, or, to add another passkey, without a token from the web UI signed in and verified with a passkey.'
+            operationId: auth#register_begin
+            parameters:
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie
+                  schema:
+                    type: string
+                    description: Session cookie
+                    example: Dolorem molestiae officia porro voluptatem eius mollitia.
+                  example: Dolorem molestiae officia porro voluptatem eius mollitia.
+            requestBody:
+                description: Request body for register_begin.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RegisterBeginRequestBody'
+                        example:
+                            token: Et recusandae esse ad.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Ceremony'
+                            example:
+                                ceremony: Dolorum pariatur necessitatibus occaecati magnam.
+                                options: Maxime atque dolor ex saepe a consequatur.
+                "403":
+                    description: 'verification_required: Without a token: the session is missing, or not signed in with a passkey recently'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+    /auth/passkey/register/finish:
+        post:
+            tags:
+                - auth
+            summary: register_finish auth
+            description: Finish registering a passkey with the credential the browser created.
+            operationId: auth#register_finish
+            requestBody:
+                description: Request body for register_finish.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CeremonyFinish'
+                        example:
+                            ceremony: Tempore et unde assumenda pariatur facilis.
+                            credential: Quia quia tenetur assumenda consequatur eius.
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The ceremony is unknown or expired, or the credential is invalid'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+    /auth/passkeys:
+        get:
+            tags:
+                - auth
+            summary: passkeys auth
+            description: List the registered passkeys, for the web UI signed in with a passkey.
+            operationId: auth#passkeys
+            parameters:
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie
+                  schema:
+                    type: string
+                    description: Session cookie
+                    example: Doloribus velit.
+                  example: Doloribus velit.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/PasskeyInfo'
+                                example:
+                                    - created_at: "2026-10-20T09:30:00Z"
+                                      id: Occaecati corporis iusto et porro quia consequatur.
+                                      used_at: "2026-10-16T09:30:00Z"
+                                    - created_at: "2026-10-20T09:30:00Z"
+                                      id: Occaecati corporis iusto et porro quia consequatur.
+                                      used_at: "2026-10-16T09:30:00Z"
+                            example:
+                                - created_at: "2026-10-20T09:30:00Z"
+                                  id: Occaecati corporis iusto et porro quia consequatur.
+                                  used_at: "2026-10-16T09:30:00Z"
+                                - created_at: "2026-10-20T09:30:00Z"
+                                  id: Occaecati corporis iusto et porro quia consequatur.
+                                  used_at: "2026-10-16T09:30:00Z"
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+    /auth/passkeys/{id}:
+        delete:
+            tags:
+                - auth
+            summary: delete_passkey auth
+            description: Delete a registered passkey, from the web UI signed in and verified with a passkey. The only passkey cannot be deleted; ebira auth reset removes every passkey.
+            operationId: auth#delete_passkey
+            parameters:
+                - name: id
+                  in: path
+                  description: ID of the passkey
+                  required: true
+                  schema:
+                    type: string
+                    description: ID of the passkey
+                    example: Aut commodi laboriosam quam iste atque.
+                  example: Aut commodi laboriosam quam iste atque.
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie
+                  schema:
+                    type: string
+                    description: Session cookie
+                    example: Mollitia dolor qui quia.
+                  example: Mollitia dolor qui quia.
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The passkey is the only one'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: The session is not signed in with a passkey recently: sign in again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The passkey is not registered'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+    /auth/sessions/revoke:
+        post:
+            tags:
+                - auth
+            summary: revoke_sessions auth
+            description: End every session, such as those of other browsers and of the TUI, from the web UI signed in and verified with a passkey. The response sets a new session for the request.
+            operationId: auth#revoke_sessions
+            parameters:
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie
+                  schema:
+                    type: string
+                    description: Session cookie
+                    example: Ad repellendus dolor dolor laudantium.
+                  example: Ad repellendus dolor dolor laudantium.
+            responses:
+                "204":
+                    description: No Content response.
+                    headers:
+                        Set-Cookie:
+                            description: New session
+                            schema:
+                                type: string
+                                description: New session
+                                example: Sed vel est at sed quod.
+                            example: Sed vel est at sed quod.
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: The session is not signed in with a passkey recently: sign in again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
     /events:
         get:
             tags:
@@ -61,6 +543,34 @@ paths:
                             example:
                                 id: be4c1193735ee1
                                 type: updated
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /files/check:
         get:
             tags:
@@ -101,6 +611,34 @@ paths:
                                       recent: false
                                       size: 4123840254599638639
                                       title: Nesciunt nisi velit sed.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /git/status:
         get:
             tags:
@@ -118,6 +656,34 @@ paths:
                             example:
                                 repository: false
                                 upstream: origin/main
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /git/sync:
         post:
             tags:
@@ -177,8 +743,8 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
-                "403":
-                    description: 'forbidden: The caller is not a person'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -187,9 +753,24 @@ paths:
                                 fault: false
                                 id: 123abc
                                 message: parameter 'p' must be an integer
-                                name: forbidden
+                                name: unauthorized
                                 temporary: false
                                 timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /import:
         post:
             tags:
@@ -276,6 +857,34 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notebooks:
         get:
             tags:
@@ -336,6 +945,34 @@ paths:
                                   order: 5084316890005250992
                                   reserved: false
                                   sort: created
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
         post:
             tags:
                 - notes
@@ -381,6 +1018,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "409":
                     description: 'already_exists: A notebook with the name exists'
                     content:
@@ -394,6 +1057,8 @@ paths:
                                 name: already_exists
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notebooks/{id}:
         delete:
             tags:
@@ -428,6 +1093,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The notebook does not exist'
                     content:
@@ -454,6 +1145,8 @@ paths:
                                 name: already_exists
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
         put:
             tags:
                 - notes
@@ -511,6 +1204,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The notebook does not exist'
                     content:
@@ -524,6 +1243,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes:
         get:
             tags:
@@ -698,6 +1419,34 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
         post:
             tags:
                 - notes
@@ -774,6 +1523,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "409":
                     description: 'already_exists: A note with the ID exists (in any notebook, including the trash)'
                     content:
@@ -787,6 +1562,8 @@ paths:
                                 name: already_exists
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}:
         delete:
             tags:
@@ -829,6 +1606,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     content:
@@ -855,6 +1658,8 @@ paths:
                                 name: precondition_failed
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
         get:
             tags:
                 - notes
@@ -940,6 +1745,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist, or is hidden from the client'
                     content:
@@ -953,6 +1784,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
         patch:
             tags:
                 - notes
@@ -1047,6 +1880,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     content:
@@ -1073,6 +1932,8 @@ paths:
                                 name: precondition_failed
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/files:
         post:
             tags:
@@ -1126,6 +1987,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     content:
@@ -1152,6 +2039,8 @@ paths:
                                 name: too_large
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/files/{name}:
         delete:
             tags:
@@ -1195,6 +2084,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note or the file does not exist'
                     content:
@@ -1208,6 +2123,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
         get:
             tags:
                 - notes
@@ -1271,6 +2188,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note or the file does not exist, or the file is not of an accepted type'
                     content:
@@ -1284,6 +2227,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/history:
         get:
             tags:
@@ -1350,6 +2295,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     content:
@@ -1363,6 +2334,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/history/{rev}:
         get:
             tags:
@@ -1420,6 +2393,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note or the version does not exist'
                     content:
@@ -1433,6 +2432,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/move:
         post:
             tags:
@@ -1519,6 +2520,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     content:
@@ -1532,6 +2559,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/restore:
         post:
             tags:
@@ -1613,6 +2642,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     content:
@@ -1639,6 +2694,8 @@ paths:
                                 name: precondition_failed
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /search:
         get:
             tags:
@@ -1776,6 +2833,34 @@ paths:
                                       trashed_notebook: inbox
                                       updated_at: "2026-10-16T09:30:00Z"
                                 total: 5184544928014764202
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /sync:
         post:
             tags:
@@ -1798,6 +2883,34 @@ paths:
                                     - Fugit qui.
                                 removed: 7984183524541165872
                                 updated: 3278025811743792993
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /tags:
         get:
             tags:
@@ -1839,6 +2952,34 @@ paths:
                                   name: Reiciendis eum et maiores.
                                 - count: 6903405577005272120
                                   name: Reiciendis eum et maiores.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /trash:
         delete:
             tags:
@@ -1849,6 +2990,34 @@ paths:
             responses:
                 "204":
                     description: No Content response.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /trash/notebooks:
         get:
             tags:
@@ -1891,6 +3060,34 @@ paths:
                                   id: inbox
                                   kind: private
                                   name: Est aut velit ut ut.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /trash/notebooks/{id}:
         delete:
             tags:
@@ -1925,6 +3122,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The notebook is not in the trash'
                     content:
@@ -1938,6 +3161,8 @@ paths:
                                 name: not_found
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /trash/notebooks/{id}/restore:
         post:
             tags:
@@ -1984,6 +3209,32 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
                 "404":
                     description: 'not_found: The notebook is not in the trash'
                     content:
@@ -2010,6 +3261,8 @@ paths:
                                 name: already_exists
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
 components:
     schemas:
         AskRequestBody:
@@ -2061,6 +3314,39 @@ components:
                 - note_id
                 - title
                 - path
+        Ceremony:
+            type: object
+            properties:
+                ceremony:
+                    type: string
+                    description: ID of the ceremony, passed back when finishing it
+                    example: Dolorum pariatur necessitatibus occaecati magnam.
+                options:
+                    description: 'Options of the ceremony for the browser, in the JSON form of the Web Authentication API: PublicKeyCredentialCreationOptionsJSON for a registration, PublicKeyCredentialRequestOptionsJSON for a sign-in'
+                    example: Maxime atque dolor ex saepe a consequatur.
+            example:
+                ceremony: Dolorum pariatur necessitatibus occaecati magnam.
+                options: Maxime atque dolor ex saepe a consequatur.
+            required:
+                - ceremony
+                - options
+        CeremonyFinish:
+            type: object
+            properties:
+                ceremony:
+                    type: string
+                    description: ID of the ceremony, from its first step
+                    example: Tempore et unde assumenda pariatur facilis.
+                credential:
+                    description: Credential the browser created or used, as PublicKeyCredential.toJSON returns it
+                    example: Quia quia tenetur assumenda consequatur eius.
+            description: Request body for register_finish.
+            example:
+                ceremony: Tempore et unde assumenda pariatur facilis.
+                credential: Quia quia tenetur assumenda consequatur eius.
+            required:
+                - ceremony
+                - credential
         CreateNotebookRequestBody:
             type: object
             properties:
@@ -2138,6 +3424,87 @@ components:
                 title: r1
             required:
                 - title
+        DeviceApproveRequestBody:
+            type: object
+            properties:
+                user_code:
+                    type: string
+                    description: User code shown by the client
+                    example: Fugit voluptate vel.
+            description: Request body for device_approve.
+            example:
+                user_code: Fugit voluptate vel.
+            required:
+                - user_code
+        DeviceStartResponseBody:
+            type: object
+            properties:
+                device_code:
+                    type: string
+                    description: Secret code the client asks device_token with; never shown to people
+                    example: Id sunt praesentium sit et nesciunt debitis.
+                expires_in:
+                    type: integer
+                    description: Seconds until the request expires
+                    example: 2410708439063718888
+                    format: int64
+                interval:
+                    type: integer
+                    description: Seconds to wait between calls of device_token
+                    example: 1594048462833705464
+                    format: int64
+                user_code:
+                    type: string
+                    description: Code people compare with the one in the web UI before approving it
+                    example: BCDF-GHJK
+                verification_uri:
+                    type: string
+                    description: URL of the page of the web UI that approves the user code
+                    example: Omnis inventore et rem dolorem.
+            example:
+                device_code: Id sunt praesentium sit et nesciunt debitis.
+                expires_in: 2410708439063718888
+                interval: 1594048462833705464
+                user_code: BCDF-GHJK
+                verification_uri: Omnis inventore et rem dolorem.
+            required:
+                - device_code
+                - user_code
+                - verification_uri
+                - expires_in
+                - interval
+        DeviceTokenRequestBody:
+            type: object
+            properties:
+                device_code:
+                    type: string
+                    description: Device code from device_start
+                    example: Perferendis maiores.
+            description: Request body for device_token.
+            example:
+                device_code: Perferendis maiores.
+            required:
+                - device_code
+        DeviceTokenResponseBody:
+            type: object
+            properties:
+                session:
+                    type: string
+                    description: Session, when approved
+                    example: Qui neque voluptas vitae.
+                status:
+                    type: string
+                    description: 'pending: not approved yet; approved: the result has the session; expired: the request expired or is unknown, so begin again'
+                    example: expired
+                    enum:
+                        - pending
+                        - approved
+                        - expired
+            example:
+                session: Qui neque voluptas vitae.
+                status: expired
+            required:
+                - status
         Error:
             type: object
             properties:
@@ -3249,6 +4616,39 @@ components:
                 - reserved
                 - kind
                 - sort
+        PasskeyInfo:
+            type: object
+            properties:
+                created_at:
+                    type: string
+                    description: When the passkey was registered; empty for those registered before ebira kept it
+                    example: "2026-10-20T09:30:00Z"
+                id:
+                    type: string
+                    description: ID of the passkey
+                    example: Occaecati corporis iusto et porro quia consequatur.
+                used_at:
+                    type: string
+                    description: When the passkey was last used to sign in
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+            example:
+                created_at: "2026-10-20T09:30:00Z"
+                id: Occaecati corporis iusto et porro quia consequatur.
+                used_at: "2026-10-16T09:30:00Z"
+            required:
+                - id
+                - created_at
+        RegisterBeginRequestBody:
+            type: object
+            properties:
+                token:
+                    type: string
+                    description: One-time registration token; omit it to add a passkey from a verified session
+                    example: Et recusandae esse ad.
+            description: Request body for register_begin.
+            example:
+                token: Et recusandae esse ad.
         SaveNotebookRequestBody:
             type: object
             properties:
@@ -3467,6 +4867,32 @@ components:
                 - mode
                 - total
                 - notes
+        StatusResponseBody:
+            type: object
+            properties:
+                mode:
+                    type: string
+                    description: 'How the server authenticates people: none treats every REST request as from people; passkey requires signing in with a passkey'
+                    example: passkey
+                    enum:
+                        - none
+                        - passkey
+                registered:
+                    type: boolean
+                    description: Whether a passkey is registered
+                    example: false
+                signed_in:
+                    type: boolean
+                    description: Whether the request has a valid session
+                    example: true
+            example:
+                mode: passkey
+                registered: false
+                signed_in: true
+            required:
+                - mode
+                - registered
+                - signed_in
         SyncResult:
             type: object
             properties:
@@ -3666,8 +5092,16 @@ components:
                     - Ab accusantium.
                     - Omnis aliquid odit exercitationem magni voluptatem iure.
                 title: r3q
+    securitySchemes:
+        session_cookie_ebira_session:
+            type: apiKey
+            description: 'Session of people signed in with a passkey, sent as the ebira_session cookie. While the server requires passkeys (auth: passkey), only a REST request with a valid session passes, as from people, and the others fail with unauthorized (AI clients use MCP, which does not take sessions); without passkeys (auth: none), every REST request is from people'
+            name: ebira_session
+            in: cookie
 tags:
     - name: assistant
       description: Answers questions about the notes with the assistant agent.
     - name: notes
       description: CRUD and search for notes.
+    - name: auth
+      description: 'Passkeys: registering them and signing in with them, in the web UI and, through the web UI, in clients without a browser such as the TUI (a device flow). Not for AI clients, and not on MCP.'

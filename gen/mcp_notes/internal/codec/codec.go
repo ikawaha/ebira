@@ -305,6 +305,30 @@ func ValidateDeleteAiNotePayloadTransport(value *DeleteAiNotePayloadTransport) (
 	return err
 }
 
+// GetInputTransport stores JSON fields until they have been validated.
+type GetInputTransport struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string `json:"session,omitempty"`
+	// Note ID
+	ID *string `json:"id"`
+	// Search query to highlight
+	Q *string `json:"q,omitempty"`
+}
+
+// ValidateGetInputTransport checks decoded JSON before it becomes a service value.
+func ValidateGetInputTransport(value *GetInputTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // GetPayloadTransport stores JSON fields until they have been validated.
 type GetPayloadTransport struct {
 	// Note ID
@@ -658,6 +682,60 @@ func ValidateImportAiNoteResultTransport(value *ImportAiNoteResultTransport) (er
 	}
 	if value.DuplicateOf != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *value.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// ListInputTransport stores JSON fields until they have been validated.
+type ListInputTransport struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string `json:"session,omitempty"`
+	// Only notes in this notebook. Omit for all notebooks except the trash
+	Notebook *string `json:"notebook,omitempty"`
+	// Only notes with this tag
+	Tag *string `json:"tag,omitempty"`
+	// Maximum number of notes
+	Limit *int `json:"limit,omitempty"`
+	// Number of notes to skip
+	Offset *int `json:"offset,omitempty"`
+	// With notebook=trash, list the notes of this notebook in the trash instead of
+	// the notes deleted on their own
+	TrashedNotebook *string `json:"trashed_notebook,omitempty"`
+	// Order of the note list: order is the manual order (notes not moved with move
+	// come by creation time, newest first), created and updated are newest first,
+	// and title is by code point, ignoring case and width. Omit for the sort
+	// setting of the notebook (order without a notebook)
+	Sort *string `json:"sort,omitempty"`
+}
+
+// ValidateListInputTransport checks decoded JSON before it becomes a service value.
+func ValidateListInputTransport(value *ListInputTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Limit != nil {
+		if *value.Limit < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.limit", *value.Limit, 1, true))
+		}
+		if *value.Limit > 500 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.limit", *value.Limit, 500, false))
+		}
+	}
+	if value.Offset != nil {
+		if *value.Offset < 0 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.offset", *value.Offset, 0, true))
+		}
+	}
+	if value.TrashedNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Sort != nil {
+		if !(*value.Sort == "order" || *value.Sort == "created" || *value.Sort == "updated" || *value.Sort == "title") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *value.Sort, []any{"order", "created", "updated", "title"}))
+		}
 	}
 	return err
 }
@@ -1048,6 +1126,34 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 	return err
 }
 
+// NotebooksInputTransport stores JSON fields until they have been validated.
+type NotebooksInputTransport struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string `json:"session,omitempty"`
+}
+
+// ValidateNotebooksInputTransport checks decoded JSON before it becomes a service value.
+func ValidateNotebooksInputTransport(value *NotebooksInputTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// NotebooksPayloadTransport stores JSON fields until they have been validated.
+type NotebooksPayloadTransport struct {
+}
+
+// ValidateNotebooksPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateNotebooksPayloadTransport(value *NotebooksPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
 // NotebooksResultNotebookTransport stores JSON fields until they have been validated.
 type NotebooksResultNotebookTransport struct {
 	// Notebook ID, which is also its directory name. It is derived from the
@@ -1130,6 +1236,47 @@ func ValidateNotebooksResultTransport(value NotebooksResultTransport) (err error
 			if err2 := ValidateNotebooksResultNotebookTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// SearchInputTransport stores JSON fields until they have been validated.
+type SearchInputTransport struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string `json:"session,omitempty"`
+	// Search terms separated by spaces, combined with AND
+	Q *string `json:"q"`
+	// Only notes in this notebook. Omit for all notebooks except the trash
+	Notebook *string `json:"notebook,omitempty"`
+	// Only notes with this tag
+	Tag *string `json:"tag,omitempty"`
+	// Maximum number of notes
+	Limit *int `json:"limit,omitempty"`
+}
+
+// ValidateSearchInputTransport checks decoded JSON before it becomes a service value.
+func ValidateSearchInputTransport(value *SearchInputTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Q == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("q", "body"))
+	}
+	if value.Q != nil {
+		if utf8.RuneCountInString(*value.Q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1, true))
+		}
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Limit != nil {
+		if *value.Limit < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.limit", *value.Limit, 1, true))
+		}
+		if *value.Limit > 200 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.limit", *value.Limit, 200, false))
 		}
 	}
 	return err
@@ -1343,6 +1490,25 @@ func ValidateSearchResultTransport(value *SearchResultTransport) (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return err
+}
+
+// TagsInputTransport stores JSON fields until they have been validated.
+type TagsInputTransport struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string `json:"session,omitempty"`
+	// Only notes in this notebook. Omit for all notebooks except the trash
+	Notebook *string `json:"notebook,omitempty"`
+}
+
+// ValidateTagsInputTransport checks decoded JSON before it becomes a service value.
+func ValidateTagsInputTransport(value *TagsInputTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -1727,6 +1893,27 @@ func DecodeDeleteAiNotePayload(data []byte) (out *notes.DeleteAiNotePayload, err
 	return out, nil
 }
 
+// ValidateGetInputValue checks a service value against its declared field validation.
+func ValidateGetInputValue(in *notes.GetPayload) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "GetInput")
+	}
+
+	var body *GetInputTransport
+	{
+		body = &GetInputTransport{
+			Session: in.Session,
+			ID:      &in.ID,
+			Q:       in.Q,
+		}
+	}
+	if err := ValidateGetInputTransport(body); err != nil {
+		return fmt.Errorf("validate GetInput value: %w", err)
+	}
+	return nil
+}
+
 // DecodeGetPayload checks JSON field names from the Goa design and returns a service value.
 func DecodeGetPayload(data []byte) (out *notes.GetPayload, err error) {
 	var body *GetPayloadTransport
@@ -1855,6 +2042,31 @@ func EncodeImportAiNoteResult(in *notes.ImportResult) ([]byte, error) {
 		return nil, fmt.Errorf("encode ImportAiNoteResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateListInputValue checks a service value against its declared field validation.
+func ValidateListInputValue(in *notes.ListPayload) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ListInput")
+	}
+
+	var body *ListInputTransport
+	{
+		body = &ListInputTransport{
+			Session:         in.Session,
+			Notebook:        in.Notebook,
+			Tag:             in.Tag,
+			Limit:           &in.Limit,
+			Offset:          &in.Offset,
+			TrashedNotebook: in.TrashedNotebook,
+			Sort:            in.Sort,
+		}
+	}
+	if err := ValidateListInputTransport(body); err != nil {
+		return fmt.Errorf("validate ListInput value: %w", err)
+	}
+	return nil
 }
 
 // DecodeListPayload checks JSON field names from the Goa design and returns a service value.
@@ -2025,6 +2237,48 @@ func EncodeMoveAiNoteResult(in *notes.Note) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNotebooksInputValue checks a service value against its declared field validation.
+func ValidateNotebooksInputValue(in *notes.NotebooksPayload) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NotebooksInput")
+	}
+
+	var body *NotebooksInputTransport
+	{
+		body = &NotebooksInputTransport{
+			Session: in.Session,
+		}
+	}
+	if err := ValidateNotebooksInputTransport(body); err != nil {
+		return fmt.Errorf("validate NotebooksInput value: %w", err)
+	}
+	return nil
+}
+
+// DecodeNotebooksPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeNotebooksPayload(data []byte) (out *notes.NotebooksPayload, err error) {
+	var body *NotebooksPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode NotebooksPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode NotebooksPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode NotebooksPayload JSON after first value: %w", err)
+	}
+	if err := ValidateNotebooksPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate NotebooksPayload JSON: %w", err)
+	}
+	{
+		out = &notes.NotebooksPayload{}
+	}
+	return out, nil
+}
+
 // EncodeNotebooksResult turns a service value into JSON using the field names in the Goa design.
 func EncodeNotebooksResult(in []*notes.Notebook) ([]byte, error) {
 	var body NotebooksResultTransport
@@ -2046,6 +2300,29 @@ func EncodeNotebooksResult(in []*notes.Notebook) ([]byte, error) {
 		return nil, fmt.Errorf("encode NotebooksResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateSearchInputValue checks a service value against its declared field validation.
+func ValidateSearchInputValue(in *notes.SearchPayload) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "SearchInput")
+	}
+
+	var body *SearchInputTransport
+	{
+		body = &SearchInputTransport{
+			Session:  in.Session,
+			Q:        &in.Q,
+			Notebook: in.Notebook,
+			Tag:      in.Tag,
+			Limit:    &in.Limit,
+		}
+	}
+	if err := ValidateSearchInputTransport(body); err != nil {
+		return fmt.Errorf("validate SearchInput value: %w", err)
+	}
+	return nil
 }
 
 // DecodeSearchPayload checks JSON field names from the Goa design and returns a service value.
@@ -2106,6 +2383,26 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 		return nil, fmt.Errorf("encode SearchResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateTagsInputValue checks a service value against its declared field validation.
+func ValidateTagsInputValue(in *notes.TagsPayload) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "TagsInput")
+	}
+
+	var body *TagsInputTransport
+	{
+		body = &TagsInputTransport{
+			Session:  in.Session,
+			Notebook: in.Notebook,
+		}
+	}
+	if err := ValidateTagsInputTransport(body); err != nil {
+		return fmt.Errorf("validate TagsInput value: %w", err)
+	}
+	return nil
 }
 
 // DecodeTagsPayload checks JSON field names from the Goa design and returns a service value.

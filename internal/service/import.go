@@ -30,6 +30,9 @@ type importArgs struct {
 
 // Import imports a Markdown file as a new note, for people.
 func (s *Notes) Import(ctx context.Context, p *gennotes.ImportPayload) (*gennotes.ImportResult, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
 	a := importArgs{notebook: deref(p.Notebook), name: p.Name, content: p.Content, files: p.Files, force: p.Force != nil && *p.Force}
 	if p.ModifiedAt != nil {
 		t, err := time.Parse(time.RFC3339, *p.ModifiedAt)

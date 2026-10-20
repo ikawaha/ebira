@@ -12,7 +12,7 @@ import (
 )
 
 // GitStatus tells whether the notes are in a git repository.
-func (s *Notes) GitStatus(ctx context.Context) (*gennotes.GitStatus, error) {
+func (s *Notes) GitStatus(ctx context.Context, _ *gennotes.GitStatusPayload) (*gennotes.GitStatus, error) {
 	if !fromPerson(ctx) {
 		return &gennotes.GitStatus{}, nil
 	}

@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	assistantspecs "github.com/ikawaha/ebira/gen/assistant/agents/assistant/specs"
@@ -48,5 +50,37 @@ func TestAssistantTools(t *testing.T) {
 	slices.Sort(got)
 	if want := []string{"notes.get", "notes.search"}; !slices.Equal(got, want) {
 		t.Errorf("assistant tools = %v, want %v", got, want)
+	}
+}
+
+// TestMCPIgnoresSession checks that MCP calls are from AI even with the
+// session cookie of a browser, which the MCP adapter passes on to the
+// endpoints: they see neither the private notebooks nor their notes.
+func TestMCPIgnoresSession(t *testing.T) {
+	svc, _ := newTestService(t)
+	person := AsPerson(context.Background())
+	diary, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "diary", Kind: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("secret"), Notebook: &diary.ID, Title: "secret"}); err != nil {
+		t.Fatal(err)
+	}
+	adapter := mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil)
+	for _, c := range []struct{ tool, args string }{
+		{"list_notebooks", `{}`},
+		{"get_note", `{"id":"secret"}`},
+	} {
+		res, err := adapter.ToolsCall(context.Background(), &mcpnotes.ToolsCallPayload{Name: c.tool, Arguments: json.RawMessage(c.args), HTTPCredential0: ptr("a session")})
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := json.Marshal(res)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), diary.ID) || strings.Contains(string(b), `"secret"`) {
+			t.Errorf("%s with a session reveals the private notebook: %s", c.tool, b)
+		}
 	}
 }

@@ -71,10 +71,10 @@ func TestGitSync(t *testing.T) {
 	if _, err := a.GitSync(context.Background(), &gennotes.GitSyncPayload{}); errorName(err) != "forbidden" {
 		t.Errorf("not a person: %v", err)
 	}
-	if st, err := a.GitStatus(ctx); err != nil || !st.Repository || st.Upstream == nil || *st.Upstream != "origin/main" {
+	if st, err := a.GitStatus(ctx, nil); err != nil || !st.Repository || st.Upstream == nil || *st.Upstream != "origin/main" {
 		t.Errorf("status: %+v, %v", st, err)
 	}
-	if st, _ := a.GitStatus(context.Background()); st.Repository {
+	if st, _ := a.GitStatus(context.Background(), nil); st.Repository {
 		t.Error("status for others: a repository")
 	}
 
@@ -142,7 +142,7 @@ func TestGitSyncNoRepository(t *testing.T) {
 		t.Skip("git is not installed")
 	}
 	t.Setenv("GIT_CEILING_DIRECTORIES", filepath.Dir(t.TempDir()))
-	if st, err := svc.GitStatus(AsPerson(context.Background())); err != nil || st.Repository {
+	if st, err := svc.GitStatus(AsPerson(context.Background()), nil); err != nil || st.Repository {
 		t.Errorf("status: %+v, %v", st, err)
 	}
 	if _, err := svc.GitSync(AsPerson(context.Background()), &gennotes.GitSyncPayload{}); errorName(err) != "bad_request" || !strings.Contains(err.Error(), "git init") {

@@ -20,7 +20,7 @@ func TestSyncRepairsCopies(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "inbox", "plan (Mac's conflicted copy 2026-10-18).yaml"), []byte(other), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Sync(ctx); err != nil {
+	if _, err := svc.Sync(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	res, err := svc.Search(ctx, &gennotes.SearchPayload{Q: "theirs", Limit: 10})

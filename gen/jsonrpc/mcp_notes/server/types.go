@@ -942,7 +942,7 @@ func NewToolsListPayload(body *ToolsListRequestBody) *mcpnotes.ToolsListPayload 
 }
 
 // NewToolsCallPayload builds a mcp_notes service tools/call endpoint payload.
-func NewToolsCallPayload(body *ToolsCallRequestBody) *mcpnotes.ToolsCallPayload {
+func NewToolsCallPayload(body *ToolsCallRequestBody, httpCredential0 *string) *mcpnotes.ToolsCallPayload {
 	v := &mcpnotes.ToolsCallPayload{
 		Name:         *body.Name,
 		Arguments:    body.Arguments,
@@ -957,6 +957,7 @@ func NewToolsCallPayload(body *ToolsCallRequestBody) *mcpnotes.ToolsCallPayload 
 			v.InputResponses[tk] = tv
 		}
 	}
+	v.HTTPCredential0 = httpCredential0
 
 	return v
 }

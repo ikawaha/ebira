@@ -44,7 +44,9 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			offset          int
 			trashedNotebook *string
 			sort            *string
+			session         *string
 			err             error
+			c               *http.Cookie
 		)
 		qp := r.URL.Query()
 		notebookRaw := qp.Get("notebook")
@@ -105,10 +107,18 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("sort", *sort, []any{"order", "created", "updated", "title"}))
 			}
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewListPayload(notebook, tag, limit, offset, trashedNotebook, sort)
+		payload = NewListPayload(notebook, tag, limit, offset, trashedNotebook, sort, session)
 
 		return payload, nil
 	}
@@ -137,6 +147,32 @@ func EncodeListError(encoder func(context.Context, http.ResponseWriter) goahttp.
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewListUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewListVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -162,9 +198,11 @@ func DecodeGetRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 	return func(r *http.Request) (*notes.GetPayload, error) {
 		var payload *notes.GetPayload
 		var (
-			id  string
-			q   *string
-			err error
+			id      string
+			q       *string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
@@ -174,10 +212,18 @@ func DecodeGetRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if qRaw != "" {
 			q = &qRaw
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewGetPayload(id, q)
+		payload = NewGetPayload(id, q, session)
 
 		return payload, nil
 	}
@@ -218,6 +264,32 @@ func EncodeGetError(encoder func(context.Context, http.ResponseWriter) goahttp.E
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGetUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGetVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
 			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
@@ -262,7 +334,20 @@ func DecodeCreateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if err != nil {
 			return payload, err
 		}
-		payload = NewCreatePayload(&body)
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewCreatePayload(&body, session)
 
 		return payload, nil
 	}
@@ -303,6 +388,32 @@ func EncodeCreateError(encoder func(context.Context, http.ResponseWriter) goahtt
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusConflict)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCreateUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCreateVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
 			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
@@ -351,6 +462,8 @@ func DecodeUpdateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		var (
 			id      string
 			ifMatch *string
+			session *string
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
@@ -360,10 +473,18 @@ func DecodeUpdateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if ifMatchRaw != "" {
 			ifMatch = &ifMatchRaw
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewUpdatePayload(&body, id, ifMatch)
+		payload = NewUpdatePayload(&body, id, ifMatch, session)
 
 		return payload, nil
 	}
@@ -418,6 +539,32 @@ func EncodeUpdateError(encoder func(context.Context, http.ResponseWriter) goahtt
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusPreconditionFailed)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUpdateUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUpdateVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -441,7 +588,9 @@ func DecodeDeleteRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		var (
 			id      string
 			ifMatch *string
+			session *string
 			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
@@ -451,10 +600,18 @@ func DecodeDeleteRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if ifMatchRaw != "" {
 			ifMatch = &ifMatchRaw
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDeletePayload(id, ifMatch)
+		payload = NewDeletePayload(id, ifMatch, session)
 
 		return payload, nil
 	}
@@ -509,6 +666,32 @@ func EncodeDeleteError(encoder func(context.Context, http.ResponseWriter) goahtt
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusPreconditionFailed)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -537,7 +720,9 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 			notebook *string
 			tag      *string
 			limit    int
+			session  *string
 			err      error
+			c        *http.Cookie
 		)
 		qp := r.URL.Query()
 		q = qp.Get("q")
@@ -576,12 +761,62 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if limit > 200 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("limit", limit, 200, false))
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewSearchPayload(q, notebook, tag, limit)
+		payload = NewSearchPayload(q, notebook, tag, limit, session)
 
 		return payload, nil
+	}
+}
+
+// EncodeSearchError returns an encoder for errors returned by the search notes
+// endpoint.
+func EncodeSearchError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSearchUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSearchVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 
@@ -606,7 +841,9 @@ func DecodeRestoreRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 		var (
 			id      string
 			ifMatch *string
+			session *string
 			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
@@ -616,10 +853,18 @@ func DecodeRestoreRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 		if ifMatchRaw != "" {
 			ifMatch = &ifMatchRaw
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewRestorePayload(id, ifMatch)
+		payload = NewRestorePayload(id, ifMatch, session)
 
 		return payload, nil
 	}
@@ -674,6 +919,32 @@ func EncodeRestoreError(encoder func(context.Context, http.ResponseWriter) goaht
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusPreconditionFailed)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestoreUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestoreVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -719,16 +990,26 @@ func DecodeMoveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		}
 
 		var (
-			id string
+			id      string
+			session *string
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMovePayload(&body, id)
+		payload = NewMovePayload(&body, id, session)
 
 		return payload, nil
 	}
@@ -770,6 +1051,32 @@ func EncodeMoveError(encoder func(context.Context, http.ResponseWriter) goahttp.
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -785,6 +1092,71 @@ func EncodeNotebooksResponse(encoder func(context.Context, http.ResponseWriter) 
 		body := NewNotebooksResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
+	}
+}
+
+// DecodeNotebooksRequest returns a decoder for requests sent to the notes
+// notebooks endpoint.
+func DecodeNotebooksRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.NotebooksPayload, error) {
+	return func(r *http.Request) (*notes.NotebooksPayload, error) {
+		var payload *notes.NotebooksPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewNotebooksPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeNotebooksError returns an encoder for errors returned by the notebooks
+// notes endpoint.
+func EncodeNotebooksError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewNotebooksUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewNotebooksVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 
@@ -807,7 +1179,9 @@ func DecodeTagsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		var payload *notes.TagsPayload
 		var (
 			notebook *string
+			session  *string
 			err      error
+			c        *http.Cookie
 		)
 		notebookRaw := r.URL.Query().Get("notebook")
 		if notebookRaw != "" {
@@ -816,12 +1190,62 @@ func DecodeTagsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if notebook != nil {
 			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewTagsPayload(notebook)
+		payload = NewTagsPayload(notebook, session)
 
 		return payload, nil
+	}
+}
+
+// EncodeTagsError returns an encoder for errors returned by the tags notes
+// endpoint.
+func EncodeTagsError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTagsUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTagsVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 
@@ -861,7 +1285,20 @@ func DecodeCreateNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if err != nil {
 			return payload, err
 		}
-		payload = NewCreateNotebookPayload(&body)
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewCreateNotebookPayload(&body, session)
 
 		return payload, nil
 	}
@@ -902,6 +1339,32 @@ func EncodeCreateNotebookError(encoder func(context.Context, http.ResponseWriter
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusConflict)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCreateNotebookUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCreateNotebookVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
 			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
@@ -947,16 +1410,26 @@ func DecodeSaveNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request) go
 		}
 
 		var (
-			id string
+			id      string
+			session *string
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewSaveNotebookPayload(&body, id)
+		payload = NewSaveNotebookPayload(&body, id, session)
 
 		return payload, nil
 	}
@@ -998,6 +1471,32 @@ func EncodeSaveNotebookError(encoder func(context.Context, http.ResponseWriter) 
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveNotebookUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveNotebookVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1019,17 +1518,27 @@ func DecodeDeleteNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 	return func(r *http.Request) (*notes.DeleteNotebookPayload, error) {
 		var payload *notes.DeleteNotebookPayload
 		var (
-			id  string
-			err error
+			id      string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDeleteNotebookPayload(id)
+		payload = NewDeleteNotebookPayload(id, session)
 
 		return payload, nil
 	}
@@ -1084,6 +1593,32 @@ func EncodeDeleteNotebookError(encoder func(context.Context, http.ResponseWriter
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusConflict)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteNotebookUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteNotebookVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1099,6 +1634,71 @@ func EncodeTrashedNotebooksResponse(encoder func(context.Context, http.ResponseW
 		body := NewTrashedNotebooksResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
+	}
+}
+
+// DecodeTrashedNotebooksRequest returns a decoder for requests sent to the
+// notes trashed_notebooks endpoint.
+func DecodeTrashedNotebooksRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.TrashedNotebooksPayload, error) {
+	return func(r *http.Request) (*notes.TrashedNotebooksPayload, error) {
+		var payload *notes.TrashedNotebooksPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewTrashedNotebooksPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeTrashedNotebooksError returns an encoder for errors returned by the
+// trashed_notebooks notes endpoint.
+func EncodeTrashedNotebooksError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTrashedNotebooksUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTrashedNotebooksVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 
@@ -1120,17 +1720,27 @@ func DecodeRestoreNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request)
 	return func(r *http.Request) (*notes.RestoreNotebookPayload, error) {
 		var payload *notes.RestoreNotebookPayload
 		var (
-			id  string
-			err error
+			id      string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewRestoreNotebookPayload(id)
+		payload = NewRestoreNotebookPayload(id, session)
 
 		return payload, nil
 	}
@@ -1185,6 +1795,32 @@ func EncodeRestoreNotebookError(encoder func(context.Context, http.ResponseWrite
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusConflict)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestoreNotebookUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestoreNotebookVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1206,17 +1842,27 @@ func DecodeDeleteTrashedNotebookRequest(mux goahttp.Muxer, decoder func(*http.Re
 	return func(r *http.Request) (*notes.DeleteTrashedNotebookPayload, error) {
 		var payload *notes.DeleteTrashedNotebookPayload
 		var (
-			id  string
-			err error
+			id      string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDeleteTrashedNotebookPayload(id)
+		payload = NewDeleteTrashedNotebookPayload(id, session)
 
 		return payload, nil
 	}
@@ -1258,6 +1904,32 @@ func EncodeDeleteTrashedNotebookError(encoder func(context.Context, http.Respons
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteTrashedNotebookUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteTrashedNotebookVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1270,6 +1942,71 @@ func EncodeEmptyTrashResponse(encoder func(context.Context, http.ResponseWriter)
 	return func(ctx context.Context, w http.ResponseWriter, v any) error {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
+	}
+}
+
+// DecodeEmptyTrashRequest returns a decoder for requests sent to the notes
+// empty_trash endpoint.
+func DecodeEmptyTrashRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.EmptyTrashPayload, error) {
+	return func(r *http.Request) (*notes.EmptyTrashPayload, error) {
+		var payload *notes.EmptyTrashPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewEmptyTrashPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeEmptyTrashError returns an encoder for errors returned by the
+// empty_trash notes endpoint.
+func EncodeEmptyTrashError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewEmptyTrashUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewEmptyTrashVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 
@@ -1309,7 +2046,20 @@ func DecodeImportRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if err != nil {
 			return payload, err
 		}
-		payload = NewImportPayload(&body)
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewImportPayload(&body, session)
 
 		return payload, nil
 	}
@@ -1338,6 +2088,32 @@ func EncodeImportError(encoder func(context.Context, http.ResponseWriter) goahtt
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewImportUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewImportVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1362,9 +2138,11 @@ func DecodeAddFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 	return func(r *http.Request) (*notes.AddFilePayload, error) {
 		var payload *notes.AddFilePayload
 		var (
-			id   string
-			name string
-			err  error
+			id      string
+			name    string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
@@ -1380,10 +2158,18 @@ func DecodeAddFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 		if utf8.RuneCountInString(name) > 255 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("name", name, utf8.RuneCountInString(name), 255, false))
 		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewAddFilePayload(id, name)
+		payload = NewAddFilePayload(id, name, session)
 
 		return payload, nil
 	}
@@ -1438,6 +2224,32 @@ func EncodeAddFileError(encoder func(context.Context, http.ResponseWriter) goaht
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewAddFileUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewAddFileVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1466,19 +2278,29 @@ func DecodeGetFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 	return func(r *http.Request) (*notes.GetFilePayload, error) {
 		var payload *notes.GetFilePayload
 		var (
-			id   string
-			name string
-			err  error
+			id      string
+			name    string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 		name = params["name"]
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewGetFilePayload(id, name)
+		payload = NewGetFilePayload(id, name, session)
 
 		return payload, nil
 	}
@@ -1520,6 +2342,32 @@ func EncodeGetFileError(encoder func(context.Context, http.ResponseWriter) goaht
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGetFileUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGetFileVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1541,19 +2389,29 @@ func DecodeDeleteFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goah
 	return func(r *http.Request) (*notes.DeleteFilePayload, error) {
 		var payload *notes.DeleteFilePayload
 		var (
-			id   string
-			name string
-			err  error
+			id      string
+			name    string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 		name = params["name"]
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDeleteFilePayload(id, name)
+		payload = NewDeleteFilePayload(id, name, session)
 
 		return payload, nil
 	}
@@ -1595,6 +2453,32 @@ func EncodeDeleteFileError(encoder func(context.Context, http.ResponseWriter) go
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteFileUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeleteFileVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1619,17 +2503,27 @@ func DecodeHistoryRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 	return func(r *http.Request) (*notes.HistoryPayload, error) {
 		var payload *notes.HistoryPayload
 		var (
-			id  string
-			err error
+			id      string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewHistoryPayload(id)
+		payload = NewHistoryPayload(id, session)
 
 		return payload, nil
 	}
@@ -1671,6 +2565,32 @@ func EncodeHistoryError(encoder func(context.Context, http.ResponseWriter) goaht
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1695,9 +2615,11 @@ func DecodeHistoryVersionRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 	return func(r *http.Request) (*notes.HistoryVersionPayload, error) {
 		var payload *notes.HistoryVersionPayload
 		var (
-			id  string
-			rev string
-			err error
+			id      string
+			rev     string
+			session *string
+			err     error
+			c       *http.Cookie
 
 			params = mux.Vars(r)
 		)
@@ -1705,10 +2627,18 @@ func DecodeHistoryVersionRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 		rev = params["rev"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("rev", rev, "^[0-9]{1,20}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewHistoryVersionPayload(id, rev)
+		payload = NewHistoryVersionPayload(id, rev, session)
 
 		return payload, nil
 	}
@@ -1750,6 +2680,32 @@ func EncodeHistoryVersionError(encoder func(context.Context, http.ResponseWriter
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryVersionUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewHistoryVersionVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
 		}
@@ -1768,6 +2724,71 @@ func EncodeCheckFilesResponse(encoder func(context.Context, http.ResponseWriter)
 	}
 }
 
+// DecodeCheckFilesRequest returns a decoder for requests sent to the notes
+// check_files endpoint.
+func DecodeCheckFilesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.CheckFilesPayload, error) {
+	return func(r *http.Request) (*notes.CheckFilesPayload, error) {
+		var payload *notes.CheckFilesPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewCheckFilesPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeCheckFilesError returns an encoder for errors returned by the
+// check_files notes endpoint.
+func EncodeCheckFilesError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCheckFilesUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCheckFilesVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeEventsResponse returns an encoder for responses returned by the notes
 // events endpoint.
 func EncodeEventsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1780,6 +2801,71 @@ func EncodeEventsResponse(encoder func(context.Context, http.ResponseWriter) goa
 	}
 }
 
+// DecodeEventsRequest returns a decoder for requests sent to the notes events
+// endpoint.
+func DecodeEventsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.EventsPayload, error) {
+	return func(r *http.Request) (*notes.EventsPayload, error) {
+		var payload *notes.EventsPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewEventsPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeEventsError returns an encoder for errors returned by the events notes
+// endpoint.
+func EncodeEventsError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewEventsUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewEventsVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeGitStatusResponse returns an encoder for responses returned by the
 // notes git_status endpoint.
 func EncodeGitStatusResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1789,6 +2875,71 @@ func EncodeGitStatusResponse(encoder func(context.Context, http.ResponseWriter) 
 		body := NewGitStatusResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
+	}
+}
+
+// DecodeGitStatusRequest returns a decoder for requests sent to the notes
+// git_status endpoint.
+func DecodeGitStatusRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.GitStatusPayload, error) {
+	return func(r *http.Request) (*notes.GitStatusPayload, error) {
+		var payload *notes.GitStatusPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewGitStatusPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeGitStatusError returns an encoder for errors returned by the
+// git_status notes endpoint.
+func EncodeGitStatusError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGitStatusUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGitStatusVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 
@@ -1824,7 +2975,20 @@ func DecodeGitSyncRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 			return payload, goa.DecodePayloadError(err.Error())
 		}
-		payload = NewGitSyncPayload(&body)
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewGitSyncPayload(&body, session)
 
 		return payload, nil
 	}
@@ -1853,6 +3017,19 @@ func EncodeGitSyncError(encoder func(context.Context, http.ResponseWriter) goaht
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusForbidden)
 			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGitSyncVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
 		case "bad_request":
 			var res *goa.ServiceError
 			errors.As(v, &res)
@@ -1865,6 +3042,19 @@ func EncodeGitSyncError(encoder func(context.Context, http.ResponseWriter) goaht
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewGitSyncUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
 			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
@@ -1881,6 +3071,71 @@ func EncodeSyncResponse(encoder func(context.Context, http.ResponseWriter) goaht
 		body := NewSyncResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
+	}
+}
+
+// DecodeSyncRequest returns a decoder for requests sent to the notes sync
+// endpoint.
+func DecodeSyncRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SyncPayload, error) {
+	return func(r *http.Request) (*notes.SyncPayload, error) {
+		var payload *notes.SyncPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewSyncPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSyncError returns an encoder for errors returned by the sync notes
+// endpoint.
+func EncodeSyncError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSyncUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSyncVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 

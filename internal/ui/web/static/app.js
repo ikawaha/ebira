@@ -125,7 +125,8 @@ async function loadMessages() {
 // API
 
 // api calls the REST API. body is sent as JSON; raw, such as a File, as is.
-async function api(path, { method = "GET", params, body, raw, ifMatch, signal } = {}) {
+async function api(path, opts = {}) {
+  const { method = "GET", params, body, raw, ifMatch, signal } = opts;
   const url = new URL(path, location.origin);
   for (const [k, v] of Object.entries(params || {})) {
     if (v !== null && v !== undefined && v !== "") url.searchParams.set(k, v);
@@ -138,12 +139,23 @@ async function api(path, { method = "GET", params, body, raw, ifMatch, signal } 
   const res = await fetch(url, { method, headers, body: payload, signal });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
+    let name = "";
     try {
       const e = await res.json();
       if (e.message) msg = e.message;
+      name = e.name || "";
     } catch (_) { /* not JSON */ }
+    // An important operation asks to sign in with the passkey again: ask,
+    // then try once more.
+    if (name === "verification_required" && !opts.verified) {
+      await verifyPasskey();
+      return api(path, { ...opts, verified: true });
+    }
     const err = new Error(msg);
     err.status = res.status;
+    err.name = name || "Error";
+    // An invalid or expired session: sign in again.
+    if (res.status === 401 && !url.pathname.startsWith("/auth/")) showSignIn(t("authExpired"));
     throw err;
   }
   if (res.status === 204) return null;
@@ -2668,10 +2680,305 @@ function connect() {
   }
 }
 
+// Passkeys: with auth: passkey, the REST API treats only requests signed in
+// with a passkey as from people, and the others as from AI, which cannot see
+// private notebooks. The page asks to sign in before loading the notes. A
+// passkey is registered on the one-time URL that ebira auth passkey prints,
+// #register/<token>.
+
+let authState = { mode: "none", registered: false, signed_in: false };
+
+function showAuthState() {
+  const mode = t(authState.mode === "passkey" ? "authModePasskey" : "authModeNone");
+  $("auth-state").textContent = t(authState.signed_in ? "authStateSignedIn" : "authState", { mode });
+  $("logout").hidden = !authState.signed_in;
+  $("passkeys-open").hidden = !authState.signed_in;
+}
+
+const passkeysSupported = () => window.PublicKeyCredential
+  && typeof PublicKeyCredential.parseCreationOptionsFromJSON === "function"
+  && typeof PublicKeyCredential.parseRequestOptionsFromJSON === "function";
+
+// authDialog shows the auth dialog with a title, a message (text or an
+// element) and buttons; it returns the element for errors.
+function authDialog(title, message, ...buttons) {
+  const d = $("auth");
+  const msg = el("p", "error");
+  const body = typeof message === "string" ? el("p", "", message) : message;
+  d.replaceChildren(el("div", "files-head", el("h2", "", title)), body, msg, el("div", "files-actions", ...buttons));
+  if (!d.open) d.showModal();
+  buttons.at(-1)?.focus();
+  return msg;
+}
+
+// The sign-in cannot be skipped: without it the REST API refuses the requests
+// of the page.
+$("auth").addEventListener("cancel", (e) => {
+  if ($("auth").dataset.required) e.preventDefault();
+});
+
+let signingIn = false;
+
+function showSignIn(message) {
+  if (signingIn) return;
+  signingIn = true;
+  $("auth").dataset.required = "1";
+  if (!authState.registered) {
+    showNoPasskey();
+    return;
+  }
+  showSignInButton(message);
+}
+
+// registerCommand is the command that registers a passkey, in a terminal.
+const registerCommand = "ebira auth passkey";
+
+// showNoPasskey tells how to register a passkey when none is, and moves on to
+// the sign-in by itself once one is: it asks the server every few seconds
+// while the dialog is open.
+function showNoPasskey() {
+  const copy = button(t("authCopy"), async () => {
+    try {
+      await navigator.clipboard.writeText(registerCommand);
+      copy.textContent = t("authCopied");
+    } catch (_) {
+      copy.disabled = true; // the command stays selectable
+    }
+  });
+  authDialog(t("authTitle"), el("div", "",
+    el("p", "", t("authNoPasskey")),
+    el("div", "auth-cmd", el("code", "", registerCommand), copy),
+    el("p", "msg", t("authWaiting"))));
+  const timer = setInterval(async () => {
+    let st;
+    try {
+      st = await api("/auth");
+    } catch (_) {
+      return; // the server may be restarting; ask again
+    }
+    if (st.mode !== "passkey" || st.signed_in) {
+      clearInterval(timer);
+      location.reload();
+    } else if (st.registered) {
+      clearInterval(timer);
+      authState = st;
+      showSignInButton();
+    }
+  }, 3000);
+}
+
+function showSignInButton(message) {
+  let msg;
+  const go = button(t("authSignIn"), async () => {
+    go.disabled = true;
+    msg.textContent = "";
+    try {
+      await signIn();
+      location.reload();
+    } catch (e) {
+      msg.textContent = passkeyError(e);
+      go.disabled = false;
+    }
+  }, { cls: "primary" });
+  msg = authDialog(t("authTitle"), message || t("authSignInText"), go);
+}
+
+async function signIn() {
+  if (!passkeysSupported()) throw new Error(t("authUnsupported"));
+  const c = await api("/auth/passkey/login/begin", { method: "POST" });
+  const cred = await navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(c.options) });
+  await api("/auth/passkey/login/finish", { method: "POST", body: { ceremony: c.ceremony, credential: cred.toJSON() } });
+}
+
+function showRegister(token) {
+  let msg;
+  const close = button(t("cancel"), () => $("auth").close());
+  const go = button(t("authRegister"), async () => {
+    go.disabled = true;
+    msg.textContent = "";
+    try {
+      if (!passkeysSupported()) throw new Error(t("authUnsupported"));
+      const c = await api("/auth/passkey/register/begin", { method: "POST", body: { token } });
+      const cred = await navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(c.options) });
+      await api("/auth/passkey/register/finish", { method: "POST", body: { ceremony: c.ceremony, credential: cred.toJSON() } });
+    } catch (e) {
+      // The token is used once; a new one is needed after a failure.
+      msg.textContent = e.status === 403 ? t("authTokenInvalid") : passkeyError(e);
+      if (e.status !== 403 && e.status !== 400) go.disabled = false;
+      return;
+    }
+    const done = button(t("authDone"), () => location.reload(), { cls: "primary" });
+    authDialog(t("authRegisterTitle"), t(authState.mode === "passkey" ? "authRegistered" : "authRegisteredNone"), done);
+  }, { cls: "primary" });
+  msg = authDialog(t("authRegisterTitle"), t("authRegisterText"), close, go);
+}
+
+// verifyPasskey asks to sign in with the passkey again, for an important
+// operation, such as making a private notebook visible to AI or emptying the
+// trash; the new session counts as verified for a few minutes. It fails when
+// people cancel.
+function verifyPasskey() {
+  return new Promise((resolve, reject) => {
+    const d = $("auth");
+    delete d.dataset.required;
+    let msg;
+    const done = (err) => {
+      d.removeEventListener("close", onClose);
+      d.close();
+      if (err) reject(err); else resolve();
+    };
+    const onClose = () => reject(new Error(t("verifyCanceled")));
+    const cancel = button(t("cancel"), () => done(new Error(t("verifyCanceled"))));
+    const go = button(t("verifyGo"), async () => {
+      go.disabled = true;
+      msg.textContent = "";
+      try {
+        await signIn();
+      } catch (e) {
+        msg.textContent = passkeyError(e);
+        go.disabled = false;
+        return;
+      }
+      done();
+    }, { cls: "primary" });
+    msg = authDialog(t("verifyTitle"), t("verifyText"), cancel, go);
+    d.addEventListener("close", onClose, { once: true });
+  });
+}
+
+// openPasskeys shows the passkeys, to add or delete them, and to end the
+// other sessions.
+async function openPasskeys() {
+  const d = $("passkeys");
+  const head = el("div", "files-head", el("h2", "", t("passkeysTitle")), button("×", () => d.close(), { title: t("closeTitle") }));
+  const msg = el("p", "error");
+  let list;
+  try {
+    list = await api("/auth/passkeys");
+  } catch (e) {
+    d.replaceChildren(head, el("p", "error", t("authFailed", { error: e.message })));
+    if (!d.open) d.showModal();
+    return;
+  }
+  const run = async (f) => {
+    msg.textContent = "";
+    try {
+      await f();
+    } catch (e) {
+      msg.textContent = e.name === "InvalidStateError" ? t("passkeyAlreadyHere") : e.name === "NotAllowedError" ? t("authCanceled") : e.message;
+      return;
+    }
+    openPasskeys();
+  };
+  const rows = list.map((k, i) => el("li", "",
+    el("span", "files-name", t("passkeyName", { n: i + 1 })), " ",
+    el("span", "msg", t("passkeyCreated", { time: k.created_at ? formatTime(k.created_at) : "—" }) + (k.used_at ? " · " + t("passkeyUsed", { time: formatTime(k.used_at) }) : "")), " ",
+    (() => {
+      const b = button(t("passkeyDelete"), () => {
+        if (confirm(t("confirmDeletePasskey", { n: i + 1 }))) run(() => api(`/auth/passkeys/${encodeURIComponent(k.id)}`, { method: "DELETE" }));
+      });
+      // The only passkey stays; ebira auth reset removes every passkey.
+      if (list.length === 1) {
+        b.disabled = true;
+        b.title = t("passkeyLast");
+      }
+      return b;
+    })()));
+  const add = button(t("passkeyAdd"), () => run(async () => {
+    if (!passkeysSupported()) throw new Error(t("authUnsupported"));
+    const c = await api("/auth/passkey/register/begin", { method: "POST", body: {} });
+    const cred = await navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(c.options) });
+    await api("/auth/passkey/register/finish", { method: "POST", body: { ceremony: c.ceremony, credential: cred.toJSON() } });
+  }));
+  const revoke = button(t("revokeSessions"), () => {
+    if (confirm(t("confirmRevokeSessions"))) run(() => api("/auth/sessions/revoke", { method: "POST" }));
+  });
+  d.replaceChildren(head, el("ul", "files-list", ...rows), msg,
+    el("p", "msg", t("revokeSessionsText")),
+    el("div", "files-actions", revoke, add));
+  if (!d.open) d.showModal();
+}
+
+$("passkeys-open").addEventListener("click", () => openPasskeys());
+
+// showDeviceApprove asks to approve the sign-in of a client without a
+// browser, such as the TUI, which shows the same code and the URL of this
+// page with it (#device/<code>). The page must be signed in with a passkey.
+function showDeviceApprove(code) {
+  const d = $("auth");
+  delete d.dataset.required;
+  let msg;
+  const cancel = button(t("cancel"), () => d.close());
+  const go = button(t("deviceApprove"), async () => {
+    go.disabled = true;
+    msg.textContent = "";
+    try {
+      await api("/auth/device/approve", { method: "POST", body: { user_code: code } });
+    } catch (e) {
+      msg.textContent = e.status === 404 ? t("deviceNotFound") : t("authFailed", { error: e.message });
+      return;
+    }
+    authDialog(t("deviceTitle"), t("deviceApproved"), button(t("authDone"), () => d.close(), { cls: "primary" }));
+  }, { cls: "primary" });
+  msg = authDialog(t("deviceTitle"), el("div", "",
+    el("p", "", t("deviceText")),
+    el("div", "auth-cmd device-code", el("code", "", code))), cancel, go);
+}
+
+// passkeyError is the message of a failed ceremony; the browser tells a
+// canceled one with NotAllowedError.
+function passkeyError(e) {
+  if (e.name === "NotAllowedError") return t("authCanceled");
+  return t("authFailed", { error: e.message });
+}
+
+// openDeviceHash asks to approve the code of #device/<code>, the URL a
+// client without a browser shows.
+function openDeviceHash() {
+  const device = location.hash.match(/^#device\/([A-Za-z-]+)$/);
+  if (!device) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  if (authState.signed_in) showDeviceApprove(device[1]);
+}
+
+// The URLs of ebira auth passkey and of a client may also be opened in the
+// page already open, which changes only the hash.
+window.addEventListener("hashchange", () => {
+  const reg = location.hash.match(/^#register\/([\w-]+)$/);
+  if (reg) {
+    history.replaceState(null, "", location.pathname + location.search);
+    showRegister(reg[1]);
+    return;
+  }
+  openDeviceHash();
+});
+
+$("logout").addEventListener("click", async () => {
+  try {
+    await api("/auth/logout", { method: "POST" });
+  } catch (_) { /* reloaded anyway */ }
+  location.reload();
+});
+
 // Start
 
 (async () => {
   await loadMessages();
+  try {
+    authState = await api("/auth");
+  } catch (_) { /* an older server: no passkeys */ }
+  showAuthState();
+  const reg = location.hash.match(/^#register\/([\w-]+)$/);
+  if (reg) {
+    history.replaceState(null, "", location.pathname + location.search);
+    showRegister(reg[1]);
+    return;
+  }
+  if (authState.mode === "passkey" && !authState.signed_in) {
+    showSignIn(); // signing in reloads the page, with the hash of #device/<code>
+    return;
+  }
+  openDeviceHash();
   for (const e of document.querySelectorAll(".kind-icon[data-kind]")) e.append(kindSVG(e.dataset.kind));
   for (const b of document.querySelectorAll("#side-tabs button")) {
     b.addEventListener("click", () => setSide(b.dataset.side));

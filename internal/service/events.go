@@ -86,7 +86,7 @@ func (b *broker) close() {
 	}
 }
 
-func (s *Notes) Events(ctx context.Context, stream gennotes.EventsServerStream) error {
+func (s *Notes) Events(ctx context.Context, _ *gennotes.EventsPayload, stream gennotes.EventsServerStream) error {
 	ch, cancel := s.events.subscribe()
 	defer cancel()
 	// The response headers are written with the first event, so send one

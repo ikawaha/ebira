@@ -45,6 +45,13 @@ func EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "list", "*notes.ListPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		values := req.URL.Query()
 		if p.Notebook != nil {
 			values.Add("notebook", *p.Notebook)
@@ -70,6 +77,8 @@ func EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 // restored after having been read.
 // DecodeListResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -121,6 +130,34 @@ func DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 				return nil, goahttp.ErrValidationError("notes", "list", err)
 			}
 			return nil, NewListBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body ListUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "list", err)
+			}
+			err = ValidateListUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "list", err)
+			}
+			return nil, NewListUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body ListVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "list", err)
+			}
+			err = ValidateListVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "list", err)
+			}
+			return nil, NewListVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -164,6 +201,13 @@ func EncodeGetRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Re
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "get", "*notes.GetPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		values := req.URL.Query()
 		if p.Q != nil {
 			values.Add("q", *p.Q)
@@ -179,6 +223,8 @@ func EncodeGetRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Re
 // DecodeGetResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeGetResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -255,6 +301,34 @@ func DecodeGetResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 				return nil, goahttp.ErrValidationError("notes", "get", err)
 			}
 			return nil, NewGetBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body GetUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get", err)
+			}
+			err = ValidateGetUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get", err)
+			}
+			return nil, NewGetUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body GetVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get", err)
+			}
+			err = ValidateGetVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get", err)
+			}
+			return nil, NewGetVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -288,6 +362,13 @@ func EncodeCreateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "create", "*notes.CreatePayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewCreateRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "create", err)
@@ -302,6 +383,8 @@ func EncodeCreateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 // DecodeCreateResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "already_exists" (type *goa.ServiceError): http.StatusConflict
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeCreateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -378,6 +461,34 @@ func DecodeCreateResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 				return nil, goahttp.ErrValidationError("notes", "create", err)
 			}
 			return nil, NewCreateAlreadyExists(&body)
+		case http.StatusUnauthorized:
+			var (
+				body CreateUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create", err)
+			}
+			err = ValidateCreateUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create", err)
+			}
+			return nil, NewCreateUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body CreateVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create", err)
+			}
+			err = ValidateCreateVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create", err)
+			}
+			return nil, NewCreateVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -425,6 +536,13 @@ func EncodeUpdateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 			head := *p.IfMatch
 			req.Header.Set("If-Match", head)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewUpdateRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "update", err)
@@ -440,6 +558,8 @@ func EncodeUpdateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "precondition_failed" (type *goa.ServiceError): http.StatusPreconditionFailed
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeUpdateResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -530,6 +650,34 @@ func DecodeUpdateResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 				return nil, goahttp.ErrValidationError("notes", "update", err)
 			}
 			return nil, NewUpdatePreconditionFailed(&body)
+		case http.StatusUnauthorized:
+			var (
+				body UpdateUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update", err)
+			}
+			err = ValidateUpdateUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "update", err)
+			}
+			return nil, NewUpdateUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body UpdateVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update", err)
+			}
+			err = ValidateUpdateVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "update", err)
+			}
+			return nil, NewUpdateVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -577,6 +725,13 @@ func EncodeDeleteRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 			head := *p.IfMatch
 			req.Header.Set("If-Match", head)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		return nil
 	}
 }
@@ -588,6 +743,8 @@ func EncodeDeleteRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "precondition_failed" (type *goa.ServiceError): http.StatusPreconditionFailed
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeDeleteResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -654,6 +811,34 @@ func DecodeDeleteResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 				return nil, goahttp.ErrValidationError("notes", "delete", err)
 			}
 			return nil, NewDeletePreconditionFailed(&body)
+		case http.StatusUnauthorized:
+			var (
+				body DeleteUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete", err)
+			}
+			err = ValidateDeleteUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete", err)
+			}
+			return nil, NewDeleteUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body DeleteVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete", err)
+			}
+			err = ValidateDeleteVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete", err)
+			}
+			return nil, NewDeleteVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -687,6 +872,13 @@ func EncodeSearchRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "search", "*notes.SearchPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		values := req.URL.Query()
 		values.Add("q", p.Q)
 		if p.Notebook != nil {
@@ -704,6 +896,10 @@ func EncodeSearchRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 // DecodeSearchResponse returns a decoder for responses returned by the notes
 // search endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
+// DecodeSearchResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeSearchResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -740,6 +936,34 @@ func DecodeSearchResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			}
 			res := NewSearchResultOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body SearchUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "search", err)
+			}
+			err = ValidateSearchUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "search", err)
+			}
+			return nil, NewSearchUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body SearchVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "search", err)
+			}
+			err = ValidateSearchVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "search", err)
+			}
+			return nil, NewSearchVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -787,6 +1011,13 @@ func EncodeRestoreRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 			head := *p.IfMatch
 			req.Header.Set("If-Match", head)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		return nil
 	}
 }
@@ -798,6 +1029,8 @@ func EncodeRestoreRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "precondition_failed" (type *goa.ServiceError): http.StatusPreconditionFailed
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeRestoreResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -888,6 +1121,34 @@ func DecodeRestoreResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				return nil, goahttp.ErrValidationError("notes", "restore", err)
 			}
 			return nil, NewRestorePreconditionFailed(&body)
+		case http.StatusUnauthorized:
+			var (
+				body RestoreUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore", err)
+			}
+			err = ValidateRestoreUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore", err)
+			}
+			return nil, NewRestoreUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body RestoreVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore", err)
+			}
+			err = ValidateRestoreVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore", err)
+			}
+			return nil, NewRestoreVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -931,6 +1192,13 @@ func EncodeMoveRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "move", "*notes.MovePayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewMoveRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "move", err)
@@ -945,6 +1213,8 @@ func EncodeMoveRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 // DecodeMoveResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeMoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1021,6 +1291,34 @@ func DecodeMoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 				return nil, goahttp.ErrValidationError("notes", "move", err)
 			}
 			return nil, NewMoveBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body MoveUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move", err)
+			}
+			err = ValidateMoveUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move", err)
+			}
+			return nil, NewMoveUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body MoveVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move", err)
+			}
+			err = ValidateMoveVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move", err)
+			}
+			return nil, NewMoveVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1046,9 +1344,32 @@ func (c *Client) BuildNotebooksRequest(ctx context.Context, v any) (*http.Reques
 	return req, nil
 }
 
+// EncodeNotebooksRequest returns an encoder for requests sent to the notes
+// notebooks server.
+func EncodeNotebooksRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.NotebooksPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "notebooks", "*notes.NotebooksPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeNotebooksResponse returns a decoder for responses returned by the
 // notes notebooks endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
+// DecodeNotebooksResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeNotebooksResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -1091,6 +1412,34 @@ func DecodeNotebooksResponse(decoder func(*http.Response) goahttp.Decoder, resto
 			}
 			res := NewNotebooksNotebookOK(body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body NotebooksUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "notebooks", err)
+			}
+			err = ValidateNotebooksUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "notebooks", err)
+			}
+			return nil, NewNotebooksUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body NotebooksVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "notebooks", err)
+			}
+			err = ValidateNotebooksVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "notebooks", err)
+			}
+			return nil, NewNotebooksVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1124,6 +1473,13 @@ func EncodeTagsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "tags", "*notes.TagsPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		values := req.URL.Query()
 		if p.Notebook != nil {
 			values.Add("notebook", *p.Notebook)
@@ -1136,6 +1492,10 @@ func EncodeTagsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 // DecodeTagsResponse returns a decoder for responses returned by the notes
 // tags endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
+// DecodeTagsResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -1178,6 +1538,34 @@ func DecodeTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			}
 			res := NewTagsTagCountOK(body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body TagsUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "tags", err)
+			}
+			err = ValidateTagsUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "tags", err)
+			}
+			return nil, NewTagsUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body TagsVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "tags", err)
+			}
+			err = ValidateTagsVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "tags", err)
+			}
+			return nil, NewTagsVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1211,6 +1599,13 @@ func EncodeCreateNotebookRequest(encoder func(*http.Request) goahttp.Encoder) fu
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "create_notebook", "*notes.CreateNotebookPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewCreateNotebookRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "create_notebook", err)
@@ -1225,6 +1620,8 @@ func EncodeCreateNotebookRequest(encoder func(*http.Request) goahttp.Encoder) fu
 // DecodeCreateNotebookResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "already_exists" (type *goa.ServiceError): http.StatusConflict
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeCreateNotebookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1290,6 +1687,34 @@ func DecodeCreateNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("notes", "create_notebook", err)
 			}
 			return nil, NewCreateNotebookAlreadyExists(&body)
+		case http.StatusUnauthorized:
+			var (
+				body CreateNotebookUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_notebook", err)
+			}
+			err = ValidateCreateNotebookUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_notebook", err)
+			}
+			return nil, NewCreateNotebookUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body CreateNotebookVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_notebook", err)
+			}
+			err = ValidateCreateNotebookVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_notebook", err)
+			}
+			return nil, NewCreateNotebookVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1333,6 +1758,13 @@ func EncodeSaveNotebookRequest(encoder func(*http.Request) goahttp.Encoder) func
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "save_notebook", "*notes.SaveNotebookPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewSaveNotebookRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "save_notebook", err)
@@ -1347,6 +1779,8 @@ func EncodeSaveNotebookRequest(encoder func(*http.Request) goahttp.Encoder) func
 // DecodeSaveNotebookResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeSaveNotebookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1412,6 +1846,34 @@ func DecodeSaveNotebookResponse(decoder func(*http.Response) goahttp.Decoder, re
 				return nil, goahttp.ErrValidationError("notes", "save_notebook", err)
 			}
 			return nil, NewSaveNotebookBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body SaveNotebookUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_notebook", err)
+			}
+			err = ValidateSaveNotebookUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "save_notebook", err)
+			}
+			return nil, NewSaveNotebookUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body SaveNotebookVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_notebook", err)
+			}
+			err = ValidateSaveNotebookVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "save_notebook", err)
+			}
+			return nil, NewSaveNotebookVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1447,6 +1909,25 @@ func (c *Client) BuildDeleteNotebookRequest(ctx context.Context, v any) (*http.R
 	return req, nil
 }
 
+// EncodeDeleteNotebookRequest returns an encoder for requests sent to the
+// notes delete_notebook server.
+func EncodeDeleteNotebookRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.DeleteNotebookPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "delete_notebook", "*notes.DeleteNotebookPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeDeleteNotebookResponse returns a decoder for responses returned by the
 // notes delete_notebook endpoint. restoreBody controls whether the response
 // body should be restored after having been read.
@@ -1454,6 +1935,8 @@ func (c *Client) BuildDeleteNotebookRequest(ctx context.Context, v any) (*http.R
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "already_exists" (type *goa.ServiceError): http.StatusConflict
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeDeleteNotebookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1520,6 +2003,34 @@ func DecodeDeleteNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
 			}
 			return nil, NewDeleteNotebookAlreadyExists(&body)
+		case http.StatusUnauthorized:
+			var (
+				body DeleteNotebookUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_notebook", err)
+			}
+			err = ValidateDeleteNotebookUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
+			}
+			return nil, NewDeleteNotebookUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body DeleteNotebookVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_notebook", err)
+			}
+			err = ValidateDeleteNotebookVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
+			}
+			return nil, NewDeleteNotebookVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1545,9 +2056,32 @@ func (c *Client) BuildTrashedNotebooksRequest(ctx context.Context, v any) (*http
 	return req, nil
 }
 
+// EncodeTrashedNotebooksRequest returns an encoder for requests sent to the
+// notes trashed_notebooks server.
+func EncodeTrashedNotebooksRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.TrashedNotebooksPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "trashed_notebooks", "*notes.TrashedNotebooksPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeTrashedNotebooksResponse returns a decoder for responses returned by
 // the notes trashed_notebooks endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
+// DecodeTrashedNotebooksResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeTrashedNotebooksResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -1590,6 +2124,34 @@ func DecodeTrashedNotebooksResponse(decoder func(*http.Response) goahttp.Decoder
 			}
 			res := NewTrashedNotebooksTrashedNotebookOK(body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body TrashedNotebooksUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trashed_notebooks", err)
+			}
+			err = ValidateTrashedNotebooksUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "trashed_notebooks", err)
+			}
+			return nil, NewTrashedNotebooksUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body TrashedNotebooksVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trashed_notebooks", err)
+			}
+			err = ValidateTrashedNotebooksVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "trashed_notebooks", err)
+			}
+			return nil, NewTrashedNotebooksVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1625,6 +2187,25 @@ func (c *Client) BuildRestoreNotebookRequest(ctx context.Context, v any) (*http.
 	return req, nil
 }
 
+// EncodeRestoreNotebookRequest returns an encoder for requests sent to the
+// notes restore_notebook server.
+func EncodeRestoreNotebookRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.RestoreNotebookPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "restore_notebook", "*notes.RestoreNotebookPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeRestoreNotebookResponse returns a decoder for responses returned by
 // the notes restore_notebook endpoint. restoreBody controls whether the
 // response body should be restored after having been read.
@@ -1632,6 +2213,8 @@ func (c *Client) BuildRestoreNotebookRequest(ctx context.Context, v any) (*http.
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "already_exists" (type *goa.ServiceError): http.StatusConflict
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeRestoreNotebookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1711,6 +2294,34 @@ func DecodeRestoreNotebookResponse(decoder func(*http.Response) goahttp.Decoder,
 				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
 			}
 			return nil, NewRestoreNotebookAlreadyExists(&body)
+		case http.StatusUnauthorized:
+			var (
+				body RestoreNotebookUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_notebook", err)
+			}
+			err = ValidateRestoreNotebookUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
+			}
+			return nil, NewRestoreNotebookUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body RestoreNotebookVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_notebook", err)
+			}
+			err = ValidateRestoreNotebookVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
+			}
+			return nil, NewRestoreNotebookVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1747,12 +2358,33 @@ func (c *Client) BuildDeleteTrashedNotebookRequest(ctx context.Context, v any) (
 	return req, nil
 }
 
+// EncodeDeleteTrashedNotebookRequest returns an encoder for requests sent to
+// the notes delete_trashed_notebook server.
+func EncodeDeleteTrashedNotebookRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.DeleteTrashedNotebookPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "delete_trashed_notebook", "*notes.DeleteTrashedNotebookPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeDeleteTrashedNotebookResponse returns a decoder for responses returned
 // by the notes delete_trashed_notebook endpoint. restoreBody controls whether
 // the response body should be restored after having been read.
 // DecodeDeleteTrashedNotebookResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeDeleteTrashedNotebookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1805,6 +2437,34 @@ func DecodeDeleteTrashedNotebookResponse(decoder func(*http.Response) goahttp.De
 				return nil, goahttp.ErrValidationError("notes", "delete_trashed_notebook", err)
 			}
 			return nil, NewDeleteTrashedNotebookBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body DeleteTrashedNotebookUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_trashed_notebook", err)
+			}
+			err = ValidateDeleteTrashedNotebookUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_trashed_notebook", err)
+			}
+			return nil, NewDeleteTrashedNotebookUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body DeleteTrashedNotebookVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_trashed_notebook", err)
+			}
+			err = ValidateDeleteTrashedNotebookVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_trashed_notebook", err)
+			}
+			return nil, NewDeleteTrashedNotebookVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1830,9 +2490,32 @@ func (c *Client) BuildEmptyTrashRequest(ctx context.Context, v any) (*http.Reque
 	return req, nil
 }
 
+// EncodeEmptyTrashRequest returns an encoder for requests sent to the notes
+// empty_trash server.
+func EncodeEmptyTrashRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.EmptyTrashPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "empty_trash", "*notes.EmptyTrashPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeEmptyTrashResponse returns a decoder for responses returned by the
 // notes empty_trash endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
+// DecodeEmptyTrashResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeEmptyTrashResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -1856,6 +2539,34 @@ func DecodeEmptyTrashResponse(decoder func(*http.Response) goahttp.Decoder, rest
 		switch resp.StatusCode {
 		case http.StatusNoContent:
 			return nil, nil
+		case http.StatusUnauthorized:
+			var (
+				body EmptyTrashUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "empty_trash", err)
+			}
+			err = ValidateEmptyTrashUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "empty_trash", err)
+			}
+			return nil, NewEmptyTrashUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body EmptyTrashVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "empty_trash", err)
+			}
+			err = ValidateEmptyTrashVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "empty_trash", err)
+			}
+			return nil, NewEmptyTrashVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -1889,6 +2600,13 @@ func EncodeImportRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "import", "*notes.ImportPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewImportRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "import", err)
@@ -1902,6 +2620,8 @@ func EncodeImportRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 // restored after having been read.
 // DecodeImportResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeImportResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -1953,6 +2673,34 @@ func DecodeImportResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 				return nil, goahttp.ErrValidationError("notes", "import", err)
 			}
 			return nil, NewImportBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body ImportUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "import", err)
+			}
+			err = ValidateImportUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "import", err)
+			}
+			return nil, NewImportUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body ImportVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "import", err)
+			}
+			err = ValidateImportVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "import", err)
+			}
+			return nil, NewImportVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2000,6 +2748,13 @@ func EncodeAddFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 			return goahttp.ErrInvalidType("notes", "add_file", "*notes.AddFileRequestData", v)
 		}
 		p := data.Payload
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		values := req.URL.Query()
 		values.Add("name", p.Name)
 		req.URL.RawQuery = values.Encode()
@@ -2014,6 +2769,8 @@ func EncodeAddFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "too_large" (type *goa.ServiceError): http.StatusRequestEntityTooLarge
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeAddFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -2093,6 +2850,34 @@ func DecodeAddFileResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				return nil, goahttp.ErrValidationError("notes", "add_file", err)
 			}
 			return nil, NewAddFileTooLarge(&body)
+		case http.StatusUnauthorized:
+			var (
+				body AddFileUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			err = ValidateAddFileUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_file", err)
+			}
+			return nil, NewAddFileUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body AddFileVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_file", err)
+			}
+			err = ValidateAddFileVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_file", err)
+			}
+			return nil, NewAddFileVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2143,12 +2928,33 @@ func (c *Client) BuildGetFileRequest(ctx context.Context, v any) (*http.Request,
 	return req, nil
 }
 
+// EncodeGetFileRequest returns an encoder for requests sent to the notes
+// get_file server.
+func EncodeGetFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.GetFilePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "get_file", "*notes.GetFilePayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeGetFileResponse returns a decoder for responses returned by the notes
 // get_file endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
 // DecodeGetFileResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeGetFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (any, error) {
@@ -2208,6 +3014,34 @@ func DecodeGetFileResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				return nil, goahttp.ErrValidationError("notes", "get_file", err)
 			}
 			return nil, NewGetFileBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body GetFileUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get_file", err)
+			}
+			err = ValidateGetFileUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get_file", err)
+			}
+			return nil, NewGetFileUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body GetFileVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "get_file", err)
+			}
+			err = ValidateGetFileVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "get_file", err)
+			}
+			return nil, NewGetFileVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2245,12 +3079,33 @@ func (c *Client) BuildDeleteFileRequest(ctx context.Context, v any) (*http.Reque
 	return req, nil
 }
 
+// EncodeDeleteFileRequest returns an encoder for requests sent to the notes
+// delete_file server.
+func EncodeDeleteFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.DeleteFilePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "delete_file", "*notes.DeleteFilePayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeDeleteFileResponse returns a decoder for responses returned by the
 // notes delete_file endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
 // DecodeDeleteFileResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeDeleteFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -2303,6 +3158,34 @@ func DecodeDeleteFileResponse(decoder func(*http.Response) goahttp.Decoder, rest
 				return nil, goahttp.ErrValidationError("notes", "delete_file", err)
 			}
 			return nil, NewDeleteFileBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body DeleteFileUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_file", err)
+			}
+			err = ValidateDeleteFileUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_file", err)
+			}
+			return nil, NewDeleteFileUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body DeleteFileVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_file", err)
+			}
+			err = ValidateDeleteFileVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_file", err)
+			}
+			return nil, NewDeleteFileVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2338,12 +3221,33 @@ func (c *Client) BuildHistoryRequest(ctx context.Context, v any) (*http.Request,
 	return req, nil
 }
 
+// EncodeHistoryRequest returns an encoder for requests sent to the notes
+// history server.
+func EncodeHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.HistoryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "history", "*notes.HistoryPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeHistoryResponse returns a decoder for responses returned by the notes
 // history endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
 // DecodeHistoryResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -2415,6 +3319,34 @@ func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				return nil, goahttp.ErrValidationError("notes", "history", err)
 			}
 			return nil, NewHistoryBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body HistoryUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			err = ValidateHistoryUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history", err)
+			}
+			return nil, NewHistoryUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body HistoryVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history", err)
+			}
+			err = ValidateHistoryVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history", err)
+			}
+			return nil, NewHistoryVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2452,12 +3384,33 @@ func (c *Client) BuildHistoryVersionRequest(ctx context.Context, v any) (*http.R
 	return req, nil
 }
 
+// EncodeHistoryVersionRequest returns an encoder for requests sent to the
+// notes history_version server.
+func EncodeHistoryVersionRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.HistoryVersionPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "history_version", "*notes.HistoryVersionPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeHistoryVersionResponse returns a decoder for responses returned by the
 // notes history_version endpoint. restoreBody controls whether the response
 // body should be restored after having been read.
 // DecodeHistoryVersionResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
 func DecodeHistoryVersionResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -2523,6 +3476,34 @@ func DecodeHistoryVersionResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("notes", "history_version", err)
 			}
 			return nil, NewHistoryVersionBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body HistoryVersionUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			err = ValidateHistoryVersionUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history_version", err)
+			}
+			return nil, NewHistoryVersionUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body HistoryVersionVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
+			}
+			err = ValidateHistoryVersionVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "history_version", err)
+			}
+			return nil, NewHistoryVersionVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2548,9 +3529,32 @@ func (c *Client) BuildCheckFilesRequest(ctx context.Context, v any) (*http.Reque
 	return req, nil
 }
 
+// EncodeCheckFilesRequest returns an encoder for requests sent to the notes
+// check_files server.
+func EncodeCheckFilesRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.CheckFilesPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "check_files", "*notes.CheckFilesPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeCheckFilesResponse returns a decoder for responses returned by the
 // notes check_files endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
+// DecodeCheckFilesResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeCheckFilesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -2587,6 +3591,34 @@ func DecodeCheckFilesResponse(decoder func(*http.Response) goahttp.Decoder, rest
 			}
 			res := NewCheckFilesFileCheckOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body CheckFilesUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "check_files", err)
+			}
+			err = ValidateCheckFilesUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "check_files", err)
+			}
+			return nil, NewCheckFilesUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body CheckFilesVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "check_files", err)
+			}
+			err = ValidateCheckFilesVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "check_files", err)
+			}
+			return nil, NewCheckFilesVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2612,9 +3644,32 @@ func (c *Client) BuildEventsRequest(ctx context.Context, v any) (*http.Request, 
 	return req, nil
 }
 
+// EncodeEventsRequest returns an encoder for requests sent to the notes events
+// server.
+func EncodeEventsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.EventsPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "events", "*notes.EventsPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeEventsResponse returns a decoder for responses returned by the notes
 // events endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
+// DecodeEventsResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeEventsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -2651,6 +3706,34 @@ func DecodeEventsResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			}
 			res := NewEventsNoteEventOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body EventsUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "events", err)
+			}
+			err = ValidateEventsUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "events", err)
+			}
+			return nil, NewEventsUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body EventsVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "events", err)
+			}
+			err = ValidateEventsVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "events", err)
+			}
+			return nil, NewEventsVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2676,9 +3759,32 @@ func (c *Client) BuildGitStatusRequest(ctx context.Context, v any) (*http.Reques
 	return req, nil
 }
 
+// EncodeGitStatusRequest returns an encoder for requests sent to the notes
+// git_status server.
+func EncodeGitStatusRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.GitStatusPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "git_status", "*notes.GitStatusPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeGitStatusResponse returns a decoder for responses returned by the
 // notes git_status endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
+// DecodeGitStatusResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeGitStatusResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -2715,6 +3821,34 @@ func DecodeGitStatusResponse(decoder func(*http.Response) goahttp.Decoder, resto
 			}
 			res := NewGitStatusGitStatusOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body GitStatusUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_status", err)
+			}
+			err = ValidateGitStatusUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_status", err)
+			}
+			return nil, NewGitStatusUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body GitStatusVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_status", err)
+			}
+			err = ValidateGitStatusVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_status", err)
+			}
+			return nil, NewGitStatusVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2748,6 +3882,13 @@ func EncodeGitSyncRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		if !ok {
 			return goahttp.ErrInvalidType("notes", "git_sync", "*notes.GitSyncPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewGitSyncRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("notes", "git_sync", err)
@@ -2761,7 +3902,9 @@ func EncodeGitSyncRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 // restored after having been read.
 // DecodeGitSyncResponse may return the following errors:
 //   - "forbidden" (type *goa.ServiceError): http.StatusForbidden
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - error: internal error
 func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -2800,19 +3943,43 @@ func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			res := NewGitSyncResultOK(&body)
 			return res, nil
 		case http.StatusForbidden:
-			var (
-				body GitSyncForbiddenResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			en := resp.Header.Get("goa-error")
+			switch en {
+			case "forbidden":
+				var (
+					body GitSyncForbiddenResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+				}
+				err = ValidateGitSyncForbiddenResponseBody(&body)
+				if err != nil {
+					return nil, goahttp.ErrValidationError("notes", "git_sync", err)
+				}
+				return nil, NewGitSyncForbidden(&body)
+			case "verification_required":
+				var (
+					body GitSyncVerificationRequiredResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+				}
+				err = ValidateGitSyncVerificationRequiredResponseBody(&body)
+				if err != nil {
+					return nil, goahttp.ErrValidationError("notes", "git_sync", err)
+				}
+				return nil, NewGitSyncVerificationRequired(&body)
+			default:
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+				}
+				return nil, goahttp.ErrInvalidResponse("notes", "git_sync", resp.StatusCode, string(body))
 			}
-			err = ValidateGitSyncForbiddenResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "git_sync", err)
-			}
-			return nil, NewGitSyncForbidden(&body)
 		case http.StatusBadRequest:
 			var (
 				body GitSyncBadRequestResponseBody
@@ -2827,6 +3994,20 @@ func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				return nil, goahttp.ErrValidationError("notes", "git_sync", err)
 			}
 			return nil, NewGitSyncBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body GitSyncUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "git_sync", err)
+			}
+			err = ValidateGitSyncUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "git_sync", err)
+			}
+			return nil, NewGitSyncUnauthorized(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -2852,9 +4033,32 @@ func (c *Client) BuildSyncRequest(ctx context.Context, v any) (*http.Request, er
 	return req, nil
 }
 
+// EncodeSyncRequest returns an encoder for requests sent to the notes sync
+// server.
+func EncodeSyncRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.SyncPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "sync", "*notes.SyncPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeSyncResponse returns a decoder for responses returned by the notes
 // sync endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
+// DecodeSyncResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
 func DecodeSyncResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
@@ -2891,6 +4095,34 @@ func DecodeSyncResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 			}
 			res := NewSyncResultOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body SyncUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "sync", err)
+			}
+			err = ValidateSyncUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "sync", err)
+			}
+			return nil, NewSyncUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body SyncVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "sync", err)
+			}
+			err = ValidateSyncVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "sync", err)
+			}
+			return nil, NewSyncVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {

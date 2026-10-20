@@ -45,6 +45,10 @@
         <button type="button" role="menuitemradio" data-theme-choice="auto" aria-checked="false" data-i18n="themeAuto" data-i18n-title="themeAutoTitle"></button>
         <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false" data-i18n="themeLight"></button>
         <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="false" data-i18n="themeDark"></button>
+        <div class="menu-sep" role="separator"></div>
+        <div class="menu-label" id="auth-state"></div>
+        <button type="button" role="menuitem" id="passkeys-open" data-i18n="passkeysOpen" hidden></button>
+        <button type="button" role="menuitem" id="logout" data-i18n="logout" hidden></button>
       </div>
       <input type="file" id="import-input" multiple accept=".md,.markdown,text/markdown,image/png,image/jpeg,image/gif,image/webp" hidden>
     </div>
@@ -113,5 +117,7 @@
 <dialog id="history" class="files-check history" data-i18n-aria-label="history"></dialog>
 <dialog id="import-result" class="files-check" data-i18n-aria-label="importTitle"></dialog>
 <dialog id="git-sync" class="files-check" data-i18n-aria-label="gitSync"></dialog>
+<dialog id="auth" class="files-check auth" data-i18n-aria-label="authTitle"></dialog>
+<dialog id="passkeys" class="files-check auth" data-i18n-aria-label="passkeysTitle"></dialog>
 </body>
 </html>

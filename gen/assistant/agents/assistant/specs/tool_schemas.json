@@ -183,6 +183,10 @@
               "minLength": 1,
               "type": "string"
             },
+            "session": {
+              "description": "Session of people signed in with a passkey, set as a cookie by the server",
+              "type": "string"
+            },
             "tag": {
               "description": "Only notes with this tag",
               "type": "string"

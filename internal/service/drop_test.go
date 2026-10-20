@@ -32,7 +32,7 @@ func TestDropNotebooks(t *testing.T) {
 	}
 
 	// AI clients see the inbox in the list, with no count, but not its notes.
-	nbs, err := svc.Notebooks(ai)
+	nbs, err := svc.Notebooks(ai, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

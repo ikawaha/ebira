@@ -19,7 +19,7 @@ import (
 
 // BuildListPayload builds the payload for the notes list endpoint from CLI
 // flags.
-func BuildListPayload(notesListNotebook *string, notesListTag *string, notesListLimit string, notesListOffset string, notesListTrashedNotebook *string, notesListSort *string) (*notes.ListPayload, error) {
+func BuildListPayload(notesListNotebook *string, notesListTag *string, notesListLimit string, notesListOffset string, notesListTrashedNotebook *string, notesListSort *string, notesListSession *string) (*notes.ListPayload, error) {
 	var err error
 	var notebook *string
 	{
@@ -92,6 +92,12 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 			}
 		}
 	}
+	var session *string
+	{
+		if notesListSession != nil {
+			session = notesListSession
+		}
+	}
 	v := &notes.ListPayload{}
 	v.Notebook = notebook
 	v.Tag = tag
@@ -99,12 +105,13 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	v.Offset = offset
 	v.TrashedNotebook = trashedNotebook
 	v.Sort = sort
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildGetPayload builds the payload for the notes get endpoint from CLI flags.
-func BuildGetPayload(notesGetID *string, notesGetQ *string) (*notes.GetPayload, error) {
+func BuildGetPayload(notesGetID *string, notesGetQ *string, notesGetSession *string) (*notes.GetPayload, error) {
 	var err error
 	var id string
 	{
@@ -123,16 +130,23 @@ func BuildGetPayload(notesGetID *string, notesGetQ *string) (*notes.GetPayload, 
 			q = notesGetQ
 		}
 	}
+	var session *string
+	{
+		if notesGetSession != nil {
+			session = notesGetSession
+		}
+	}
 	v := &notes.GetPayload{}
 	v.ID = id
 	v.Q = q
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildCreatePayload builds the payload for the notes create endpoint from CLI
 // flags.
-func BuildCreatePayload(notesCreateBody *string) (*notes.CreatePayload, error) {
+func BuildCreatePayload(notesCreateBody *string, notesCreateSession *string) (*notes.CreatePayload, error) {
 	var err error
 	var body CreateRequestBody
 	{
@@ -156,6 +170,12 @@ func BuildCreatePayload(notesCreateBody *string) (*notes.CreatePayload, error) {
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesCreateSession != nil {
+			session = notesCreateSession
+		}
+	}
 	v := &notes.CreatePayload{
 		ID:       body.ID,
 		Notebook: body.Notebook,
@@ -168,13 +188,14 @@ func BuildCreatePayload(notesCreateBody *string) (*notes.CreatePayload, error) {
 			v.Tags[i] = val
 		}
 	}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildUpdatePayload builds the payload for the notes update endpoint from CLI
 // flags.
-func BuildUpdatePayload(notesUpdateBody *string, notesUpdateID *string, notesUpdateIfMatch *string) (*notes.UpdatePayload, error) {
+func BuildUpdatePayload(notesUpdateBody *string, notesUpdateID *string, notesUpdateIfMatch *string, notesUpdateSession *string) (*notes.UpdatePayload, error) {
 	var err error
 	var body UpdateRequestBody
 	{
@@ -214,6 +235,12 @@ func BuildUpdatePayload(notesUpdateBody *string, notesUpdateID *string, notesUpd
 			ifMatch = notesUpdateIfMatch
 		}
 	}
+	var session *string
+	{
+		if notesUpdateSession != nil {
+			session = notesUpdateSession
+		}
+	}
 	v := &notes.UpdatePayload{
 		Notebook: body.Notebook,
 		Title:    body.Title,
@@ -227,13 +254,14 @@ func BuildUpdatePayload(notesUpdateBody *string, notesUpdateID *string, notesUpd
 	}
 	v.ID = id
 	v.IfMatch = ifMatch
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildDeletePayload builds the payload for the notes delete endpoint from CLI
 // flags.
-func BuildDeletePayload(notesDeleteID *string, notesDeleteIfMatch *string) (*notes.DeletePayload, error) {
+func BuildDeletePayload(notesDeleteID *string, notesDeleteIfMatch *string, notesDeleteSession *string) (*notes.DeletePayload, error) {
 	var err error
 	var id string
 	{
@@ -252,16 +280,23 @@ func BuildDeletePayload(notesDeleteID *string, notesDeleteIfMatch *string) (*not
 			ifMatch = notesDeleteIfMatch
 		}
 	}
+	var session *string
+	{
+		if notesDeleteSession != nil {
+			session = notesDeleteSession
+		}
+	}
 	v := &notes.DeletePayload{}
 	v.ID = id
 	v.IfMatch = ifMatch
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildSearchPayload builds the payload for the notes search endpoint from CLI
 // flags.
-func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notesSearchTag *string, notesSearchLimit string) (*notes.SearchPayload, error) {
+func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notesSearchTag *string, notesSearchLimit string, notesSearchSession *string) (*notes.SearchPayload, error) {
 	var err error
 	var q string
 	{
@@ -310,18 +345,25 @@ func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notes
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesSearchSession != nil {
+			session = notesSearchSession
+		}
+	}
 	v := &notes.SearchPayload{}
 	v.Q = q
 	v.Notebook = notebook
 	v.Tag = tag
 	v.Limit = limit
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildRestorePayload builds the payload for the notes restore endpoint from
 // CLI flags.
-func BuildRestorePayload(notesRestoreID *string, notesRestoreIfMatch *string) (*notes.RestorePayload, error) {
+func BuildRestorePayload(notesRestoreID *string, notesRestoreIfMatch *string, notesRestoreSession *string) (*notes.RestorePayload, error) {
 	var err error
 	var id string
 	{
@@ -340,16 +382,23 @@ func BuildRestorePayload(notesRestoreID *string, notesRestoreIfMatch *string) (*
 			ifMatch = notesRestoreIfMatch
 		}
 	}
+	var session *string
+	{
+		if notesRestoreSession != nil {
+			session = notesRestoreSession
+		}
+	}
 	v := &notes.RestorePayload{}
 	v.ID = id
 	v.IfMatch = ifMatch
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildMovePayload builds the payload for the notes move endpoint from CLI
 // flags.
-func BuildMovePayload(notesMoveBody *string, notesMoveID *string) (*notes.MovePayload, error) {
+func BuildMovePayload(notesMoveBody *string, notesMoveID *string, notesMoveSession *string) (*notes.MovePayload, error) {
 	var err error
 	var body MoveRequestBody
 	{
@@ -378,17 +427,39 @@ func BuildMovePayload(notesMoveBody *string, notesMoveID *string) (*notes.MovePa
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesMoveSession != nil {
+			session = notesMoveSession
+		}
+	}
 	v := &notes.MovePayload{
 		After: body.After,
 	}
 	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildNotebooksPayload builds the payload for the notes notebooks endpoint
+// from CLI flags.
+func BuildNotebooksPayload(notesNotebooksSession *string) (*notes.NotebooksPayload, error) {
+	var session *string
+	{
+		if notesNotebooksSession != nil {
+			session = notesNotebooksSession
+		}
+	}
+	v := &notes.NotebooksPayload{}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildTagsPayload builds the payload for the notes tags endpoint from CLI
 // flags.
-func BuildTagsPayload(notesTagsNotebook *string) (*notes.TagsPayload, error) {
+func BuildTagsPayload(notesTagsNotebook *string, notesTagsSession *string) (*notes.TagsPayload, error) {
 	var err error
 	var notebook *string
 	{
@@ -400,15 +471,22 @@ func BuildTagsPayload(notesTagsNotebook *string) (*notes.TagsPayload, error) {
 			}
 		}
 	}
+	var session *string
+	{
+		if notesTagsSession != nil {
+			session = notesTagsSession
+		}
+	}
 	v := &notes.TagsPayload{}
 	v.Notebook = notebook
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildCreateNotebookPayload builds the payload for the notes create_notebook
 // endpoint from CLI flags.
-func BuildCreateNotebookPayload(notesCreateNotebookBody *string) (*notes.CreateNotebookPayload, error) {
+func BuildCreateNotebookPayload(notesCreateNotebookBody *string, notesCreateNotebookSession *string) (*notes.CreateNotebookPayload, error) {
 	var err error
 	var body CreateNotebookRequestBody
 	{
@@ -432,6 +510,12 @@ func BuildCreateNotebookPayload(notesCreateNotebookBody *string) (*notes.CreateN
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesCreateNotebookSession != nil {
+			session = notesCreateNotebookSession
+		}
+	}
 	v := &notes.CreateNotebookPayload{
 		Name:  body.Name,
 		Order: body.Order,
@@ -443,13 +527,14 @@ func BuildCreateNotebookPayload(notesCreateNotebookBody *string) (*notes.CreateN
 			v.Kind = "default"
 		}
 	}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildSaveNotebookPayload builds the payload for the notes save_notebook
 // endpoint from CLI flags.
-func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID *string) (*notes.SaveNotebookPayload, error) {
+func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID *string, notesSaveNotebookSession *string) (*notes.SaveNotebookPayload, error) {
 	var err error
 	var body SaveNotebookRequestBody
 	{
@@ -485,6 +570,12 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesSaveNotebookSession != nil {
+			session = notesSaveNotebookSession
+		}
+	}
 	v := &notes.SaveNotebookPayload{
 		Name:  body.Name,
 		Order: body.Order,
@@ -492,13 +583,14 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 		Sort:  body.Sort,
 	}
 	v.ID = id
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildDeleteNotebookPayload builds the payload for the notes delete_notebook
 // endpoint from CLI flags.
-func BuildDeleteNotebookPayload(notesDeleteNotebookID *string) (*notes.DeleteNotebookPayload, error) {
+func BuildDeleteNotebookPayload(notesDeleteNotebookID *string, notesDeleteNotebookSession *string) (*notes.DeleteNotebookPayload, error) {
 	var err error
 	var id string
 	{
@@ -511,15 +603,37 @@ func BuildDeleteNotebookPayload(notesDeleteNotebookID *string) (*notes.DeleteNot
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesDeleteNotebookSession != nil {
+			session = notesDeleteNotebookSession
+		}
+	}
 	v := &notes.DeleteNotebookPayload{}
 	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildTrashedNotebooksPayload builds the payload for the notes
+// trashed_notebooks endpoint from CLI flags.
+func BuildTrashedNotebooksPayload(notesTrashedNotebooksSession *string) (*notes.TrashedNotebooksPayload, error) {
+	var session *string
+	{
+		if notesTrashedNotebooksSession != nil {
+			session = notesTrashedNotebooksSession
+		}
+	}
+	v := &notes.TrashedNotebooksPayload{}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildRestoreNotebookPayload builds the payload for the notes
 // restore_notebook endpoint from CLI flags.
-func BuildRestoreNotebookPayload(notesRestoreNotebookID *string) (*notes.RestoreNotebookPayload, error) {
+func BuildRestoreNotebookPayload(notesRestoreNotebookID *string, notesRestoreNotebookSession *string) (*notes.RestoreNotebookPayload, error) {
 	var err error
 	var id string
 	{
@@ -532,15 +646,22 @@ func BuildRestoreNotebookPayload(notesRestoreNotebookID *string) (*notes.Restore
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesRestoreNotebookSession != nil {
+			session = notesRestoreNotebookSession
+		}
+	}
 	v := &notes.RestoreNotebookPayload{}
 	v.ID = id
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildDeleteTrashedNotebookPayload builds the payload for the notes
 // delete_trashed_notebook endpoint from CLI flags.
-func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string) (*notes.DeleteTrashedNotebookPayload, error) {
+func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string, notesDeleteTrashedNotebookSession *string) (*notes.DeleteTrashedNotebookPayload, error) {
 	var err error
 	var id string
 	{
@@ -553,15 +674,37 @@ func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string) (*n
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesDeleteTrashedNotebookSession != nil {
+			session = notesDeleteTrashedNotebookSession
+		}
+	}
 	v := &notes.DeleteTrashedNotebookPayload{}
 	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildEmptyTrashPayload builds the payload for the notes empty_trash endpoint
+// from CLI flags.
+func BuildEmptyTrashPayload(notesEmptyTrashSession *string) (*notes.EmptyTrashPayload, error) {
+	var session *string
+	{
+		if notesEmptyTrashSession != nil {
+			session = notesEmptyTrashSession
+		}
+	}
+	v := &notes.EmptyTrashPayload{}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildImportPayload builds the payload for the notes import endpoint from CLI
 // flags.
-func BuildImportPayload(notesImportBody *string) (*notes.ImportPayload, error) {
+func BuildImportPayload(notesImportBody *string, notesImportSession *string) (*notes.ImportPayload, error) {
 	var err error
 	var body ImportRequestBody
 	{
@@ -598,6 +741,12 @@ func BuildImportPayload(notesImportBody *string) (*notes.ImportPayload, error) {
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesImportSession != nil {
+			session = notesImportSession
+		}
+	}
 	v := &notes.ImportPayload{
 		Notebook:   body.Notebook,
 		Name:       body.Name,
@@ -615,13 +764,14 @@ func BuildImportPayload(notesImportBody *string) (*notes.ImportPayload, error) {
 			v.Files[i] = marshalImportFileRequestBodyToNotesImportFile(val)
 		}
 	}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildAddFilePayload builds the payload for the notes add_file endpoint from
 // CLI flags.
-func BuildAddFilePayload(notesAddFileID *string, notesAddFileName *string) (*notes.AddFilePayload, error) {
+func BuildAddFilePayload(notesAddFileID *string, notesAddFileName *string, notesAddFileSession *string) (*notes.AddFilePayload, error) {
 	var err error
 	var id string
 	{
@@ -650,16 +800,23 @@ func BuildAddFilePayload(notesAddFileID *string, notesAddFileName *string) (*not
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesAddFileSession != nil {
+			session = notesAddFileSession
+		}
+	}
 	v := &notes.AddFilePayload{}
 	v.ID = id
 	v.Name = name
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildGetFilePayload builds the payload for the notes get_file endpoint from
 // CLI flags.
-func BuildGetFilePayload(notesGetFileID *string, notesGetFileName *string) (*notes.GetFilePayload, error) {
+func BuildGetFilePayload(notesGetFileID *string, notesGetFileName *string, notesGetFileSession *string) (*notes.GetFilePayload, error) {
 	var err error
 	var id string
 	{
@@ -679,16 +836,23 @@ func BuildGetFilePayload(notesGetFileID *string, notesGetFileName *string) (*not
 		}
 		name = *notesGetFileName
 	}
+	var session *string
+	{
+		if notesGetFileSession != nil {
+			session = notesGetFileSession
+		}
+	}
 	v := &notes.GetFilePayload{}
 	v.ID = id
 	v.Name = name
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildDeleteFilePayload builds the payload for the notes delete_file endpoint
 // from CLI flags.
-func BuildDeleteFilePayload(notesDeleteFileID *string, notesDeleteFileName *string) (*notes.DeleteFilePayload, error) {
+func BuildDeleteFilePayload(notesDeleteFileID *string, notesDeleteFileName *string, notesDeleteFileSession *string) (*notes.DeleteFilePayload, error) {
 	var err error
 	var id string
 	{
@@ -708,16 +872,23 @@ func BuildDeleteFilePayload(notesDeleteFileID *string, notesDeleteFileName *stri
 		}
 		name = *notesDeleteFileName
 	}
+	var session *string
+	{
+		if notesDeleteFileSession != nil {
+			session = notesDeleteFileSession
+		}
+	}
 	v := &notes.DeleteFilePayload{}
 	v.ID = id
 	v.Name = name
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildHistoryPayload builds the payload for the notes history endpoint from
 // CLI flags.
-func BuildHistoryPayload(notesHistoryID *string) (*notes.HistoryPayload, error) {
+func BuildHistoryPayload(notesHistoryID *string, notesHistorySession *string) (*notes.HistoryPayload, error) {
 	var err error
 	var id string
 	{
@@ -730,15 +901,22 @@ func BuildHistoryPayload(notesHistoryID *string) (*notes.HistoryPayload, error) 
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesHistorySession != nil {
+			session = notesHistorySession
+		}
+	}
 	v := &notes.HistoryPayload{}
 	v.ID = id
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildHistoryVersionPayload builds the payload for the notes history_version
 // endpoint from CLI flags.
-func BuildHistoryVersionPayload(notesHistoryVersionID *string, notesHistoryVersionRev *string) (*notes.HistoryVersionPayload, error) {
+func BuildHistoryVersionPayload(notesHistoryVersionID *string, notesHistoryVersionRev *string, notesHistoryVersionSession *string) (*notes.HistoryVersionPayload, error) {
 	var err error
 	var id string
 	{
@@ -762,16 +940,68 @@ func BuildHistoryVersionPayload(notesHistoryVersionID *string, notesHistoryVersi
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if notesHistoryVersionSession != nil {
+			session = notesHistoryVersionSession
+		}
+	}
 	v := &notes.HistoryVersionPayload{}
 	v.ID = id
 	v.Rev = rev
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildCheckFilesPayload builds the payload for the notes check_files endpoint
+// from CLI flags.
+func BuildCheckFilesPayload(notesCheckFilesSession *string) (*notes.CheckFilesPayload, error) {
+	var session *string
+	{
+		if notesCheckFilesSession != nil {
+			session = notesCheckFilesSession
+		}
+	}
+	v := &notes.CheckFilesPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildEventsPayload builds the payload for the notes events endpoint from CLI
+// flags.
+func BuildEventsPayload(notesEventsSession *string) (*notes.EventsPayload, error) {
+	var session *string
+	{
+		if notesEventsSession != nil {
+			session = notesEventsSession
+		}
+	}
+	v := &notes.EventsPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildGitStatusPayload builds the payload for the notes git_status endpoint
+// from CLI flags.
+func BuildGitStatusPayload(notesGitStatusSession *string) (*notes.GitStatusPayload, error) {
+	var session *string
+	{
+		if notesGitStatusSession != nil {
+			session = notesGitStatusSession
+		}
+	}
+	v := &notes.GitStatusPayload{}
+	v.Session = session
 
 	return v, nil
 }
 
 // BuildGitSyncPayload builds the payload for the notes git_sync endpoint from
 // CLI flags.
-func BuildGitSyncPayload(notesGitSyncBody *string) (*notes.GitSyncPayload, error) {
+func BuildGitSyncPayload(notesGitSyncBody *string, notesGitSyncSession *string) (*notes.GitSyncPayload, error) {
 	var err error
 	var body GitSyncRequestBody
 	{
@@ -783,9 +1013,31 @@ func BuildGitSyncPayload(notesGitSyncBody *string) (*notes.GitSyncPayload, error
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }'")
 		}
 	}
+	var session *string
+	{
+		if notesGitSyncSession != nil {
+			session = notesGitSyncSession
+		}
+	}
 	v := &notes.GitSyncPayload{
 		Remote: body.Remote,
 	}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildSyncPayload builds the payload for the notes sync endpoint from CLI
+// flags.
+func BuildSyncPayload(notesSyncSession *string) (*notes.SyncPayload, error) {
+	var session *string
+	{
+		if notesSyncSession != nil {
+			session = notesSyncSession
+		}
+	}
+	v := &notes.SyncPayload{}
+	v.Session = session
 
 	return v, nil
 }

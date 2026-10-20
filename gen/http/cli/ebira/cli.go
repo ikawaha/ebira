@@ -14,6 +14,7 @@ import (
 	"os"
 
 	assistantc "github.com/ikawaha/ebira/gen/http/assistant/client"
+	authc "github.com/ikawaha/ebira/gen/http/auth/client"
 	notesc "github.com/ikawaha/ebira/gen/http/notes/client"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
@@ -26,13 +27,15 @@ func UsageCommands() []string {
 	return []string{
 		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
 		"assistant ask",
+		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
 }
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\"" + "\n" +
+	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
 		os.Args[0] + " " + "assistant ask --body '{\n      \"question\": \"8kf\"\n   }'" + "\n" +
+		os.Args[0] + " " + "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"" + "\n" +
 		""
 }
 
@@ -74,140 +77,246 @@ func ParseEndpoint(
 		notesListOffsetFlag          = notesListFlags.String("offset", "0", "")
 		notesListTrashedNotebookFlag = new(cliStringFlag)
 		notesListSortFlag            = new(cliStringFlag)
+		notesListSessionFlag         = new(cliStringFlag)
 
-		notesGetFlags  = flag.NewFlagSet("get", flag.ExitOnError)
-		notesGetIDFlag = new(cliStringFlag)
-		notesGetQFlag  = new(cliStringFlag)
+		notesGetFlags       = flag.NewFlagSet("get", flag.ExitOnError)
+		notesGetIDFlag      = new(cliStringFlag)
+		notesGetQFlag       = new(cliStringFlag)
+		notesGetSessionFlag = new(cliStringFlag)
 
-		notesCreateFlags    = flag.NewFlagSet("create", flag.ExitOnError)
-		notesCreateBodyFlag = new(cliStringFlag)
+		notesCreateFlags       = flag.NewFlagSet("create", flag.ExitOnError)
+		notesCreateBodyFlag    = new(cliStringFlag)
+		notesCreateSessionFlag = new(cliStringFlag)
 
 		notesUpdateFlags       = flag.NewFlagSet("update", flag.ExitOnError)
 		notesUpdateBodyFlag    = new(cliStringFlag)
 		notesUpdateIDFlag      = new(cliStringFlag)
 		notesUpdateIfMatchFlag = new(cliStringFlag)
+		notesUpdateSessionFlag = new(cliStringFlag)
 
 		notesDeleteFlags       = flag.NewFlagSet("delete", flag.ExitOnError)
 		notesDeleteIDFlag      = new(cliStringFlag)
 		notesDeleteIfMatchFlag = new(cliStringFlag)
+		notesDeleteSessionFlag = new(cliStringFlag)
 
 		notesSearchFlags        = flag.NewFlagSet("search", flag.ExitOnError)
 		notesSearchQFlag        = new(cliStringFlag)
 		notesSearchNotebookFlag = new(cliStringFlag)
 		notesSearchTagFlag      = new(cliStringFlag)
 		notesSearchLimitFlag    = notesSearchFlags.String("limit", "20", "")
+		notesSearchSessionFlag  = new(cliStringFlag)
 
 		notesRestoreFlags       = flag.NewFlagSet("restore", flag.ExitOnError)
 		notesRestoreIDFlag      = new(cliStringFlag)
 		notesRestoreIfMatchFlag = new(cliStringFlag)
+		notesRestoreSessionFlag = new(cliStringFlag)
 
-		notesMoveFlags    = flag.NewFlagSet("move", flag.ExitOnError)
-		notesMoveBodyFlag = new(cliStringFlag)
-		notesMoveIDFlag   = new(cliStringFlag)
+		notesMoveFlags       = flag.NewFlagSet("move", flag.ExitOnError)
+		notesMoveBodyFlag    = new(cliStringFlag)
+		notesMoveIDFlag      = new(cliStringFlag)
+		notesMoveSessionFlag = new(cliStringFlag)
 
-		notesNotebooksFlags = flag.NewFlagSet("notebooks", flag.ExitOnError)
+		notesNotebooksFlags       = flag.NewFlagSet("notebooks", flag.ExitOnError)
+		notesNotebooksSessionFlag = new(cliStringFlag)
 
 		notesTagsFlags        = flag.NewFlagSet("tags", flag.ExitOnError)
 		notesTagsNotebookFlag = new(cliStringFlag)
+		notesTagsSessionFlag  = new(cliStringFlag)
 
-		notesCreateNotebookFlags    = flag.NewFlagSet("create-notebook", flag.ExitOnError)
-		notesCreateNotebookBodyFlag = new(cliStringFlag)
+		notesCreateNotebookFlags       = flag.NewFlagSet("create-notebook", flag.ExitOnError)
+		notesCreateNotebookBodyFlag    = new(cliStringFlag)
+		notesCreateNotebookSessionFlag = new(cliStringFlag)
 
-		notesSaveNotebookFlags    = flag.NewFlagSet("save-notebook", flag.ExitOnError)
-		notesSaveNotebookBodyFlag = new(cliStringFlag)
-		notesSaveNotebookIDFlag   = new(cliStringFlag)
+		notesSaveNotebookFlags       = flag.NewFlagSet("save-notebook", flag.ExitOnError)
+		notesSaveNotebookBodyFlag    = new(cliStringFlag)
+		notesSaveNotebookIDFlag      = new(cliStringFlag)
+		notesSaveNotebookSessionFlag = new(cliStringFlag)
 
-		notesDeleteNotebookFlags  = flag.NewFlagSet("delete-notebook", flag.ExitOnError)
-		notesDeleteNotebookIDFlag = new(cliStringFlag)
+		notesDeleteNotebookFlags       = flag.NewFlagSet("delete-notebook", flag.ExitOnError)
+		notesDeleteNotebookIDFlag      = new(cliStringFlag)
+		notesDeleteNotebookSessionFlag = new(cliStringFlag)
 
-		notesTrashedNotebooksFlags = flag.NewFlagSet("trashed-notebooks", flag.ExitOnError)
+		notesTrashedNotebooksFlags       = flag.NewFlagSet("trashed-notebooks", flag.ExitOnError)
+		notesTrashedNotebooksSessionFlag = new(cliStringFlag)
 
-		notesRestoreNotebookFlags  = flag.NewFlagSet("restore-notebook", flag.ExitOnError)
-		notesRestoreNotebookIDFlag = new(cliStringFlag)
+		notesRestoreNotebookFlags       = flag.NewFlagSet("restore-notebook", flag.ExitOnError)
+		notesRestoreNotebookIDFlag      = new(cliStringFlag)
+		notesRestoreNotebookSessionFlag = new(cliStringFlag)
 
-		notesDeleteTrashedNotebookFlags  = flag.NewFlagSet("delete-trashed-notebook", flag.ExitOnError)
-		notesDeleteTrashedNotebookIDFlag = new(cliStringFlag)
+		notesDeleteTrashedNotebookFlags       = flag.NewFlagSet("delete-trashed-notebook", flag.ExitOnError)
+		notesDeleteTrashedNotebookIDFlag      = new(cliStringFlag)
+		notesDeleteTrashedNotebookSessionFlag = new(cliStringFlag)
 
-		notesEmptyTrashFlags = flag.NewFlagSet("empty-trash", flag.ExitOnError)
+		notesEmptyTrashFlags       = flag.NewFlagSet("empty-trash", flag.ExitOnError)
+		notesEmptyTrashSessionFlag = new(cliStringFlag)
 
-		notesImportFlags    = flag.NewFlagSet("import", flag.ExitOnError)
-		notesImportBodyFlag = new(cliStringFlag)
+		notesImportFlags       = flag.NewFlagSet("import", flag.ExitOnError)
+		notesImportBodyFlag    = new(cliStringFlag)
+		notesImportSessionFlag = new(cliStringFlag)
 
-		notesAddFileFlags      = flag.NewFlagSet("add-file", flag.ExitOnError)
-		notesAddFileIDFlag     = new(cliStringFlag)
-		notesAddFileNameFlag   = new(cliStringFlag)
-		notesAddFileStreamFlag = new(cliStringFlag)
+		notesAddFileFlags       = flag.NewFlagSet("add-file", flag.ExitOnError)
+		notesAddFileIDFlag      = new(cliStringFlag)
+		notesAddFileNameFlag    = new(cliStringFlag)
+		notesAddFileSessionFlag = new(cliStringFlag)
+		notesAddFileStreamFlag  = new(cliStringFlag)
 
-		notesGetFileFlags    = flag.NewFlagSet("get-file", flag.ExitOnError)
-		notesGetFileIDFlag   = new(cliStringFlag)
-		notesGetFileNameFlag = new(cliStringFlag)
+		notesGetFileFlags       = flag.NewFlagSet("get-file", flag.ExitOnError)
+		notesGetFileIDFlag      = new(cliStringFlag)
+		notesGetFileNameFlag    = new(cliStringFlag)
+		notesGetFileSessionFlag = new(cliStringFlag)
 
-		notesDeleteFileFlags    = flag.NewFlagSet("delete-file", flag.ExitOnError)
-		notesDeleteFileIDFlag   = new(cliStringFlag)
-		notesDeleteFileNameFlag = new(cliStringFlag)
+		notesDeleteFileFlags       = flag.NewFlagSet("delete-file", flag.ExitOnError)
+		notesDeleteFileIDFlag      = new(cliStringFlag)
+		notesDeleteFileNameFlag    = new(cliStringFlag)
+		notesDeleteFileSessionFlag = new(cliStringFlag)
 
-		notesHistoryFlags  = flag.NewFlagSet("history", flag.ExitOnError)
-		notesHistoryIDFlag = new(cliStringFlag)
+		notesHistoryFlags       = flag.NewFlagSet("history", flag.ExitOnError)
+		notesHistoryIDFlag      = new(cliStringFlag)
+		notesHistorySessionFlag = new(cliStringFlag)
 
-		notesHistoryVersionFlags   = flag.NewFlagSet("history-version", flag.ExitOnError)
-		notesHistoryVersionIDFlag  = new(cliStringFlag)
-		notesHistoryVersionRevFlag = new(cliStringFlag)
+		notesHistoryVersionFlags       = flag.NewFlagSet("history-version", flag.ExitOnError)
+		notesHistoryVersionIDFlag      = new(cliStringFlag)
+		notesHistoryVersionRevFlag     = new(cliStringFlag)
+		notesHistoryVersionSessionFlag = new(cliStringFlag)
 
-		notesCheckFilesFlags = flag.NewFlagSet("check-files", flag.ExitOnError)
+		notesCheckFilesFlags       = flag.NewFlagSet("check-files", flag.ExitOnError)
+		notesCheckFilesSessionFlag = new(cliStringFlag)
 
-		notesEventsFlags = flag.NewFlagSet("events", flag.ExitOnError)
+		notesEventsFlags       = flag.NewFlagSet("events", flag.ExitOnError)
+		notesEventsSessionFlag = new(cliStringFlag)
 
-		notesGitStatusFlags = flag.NewFlagSet("git-status", flag.ExitOnError)
+		notesGitStatusFlags       = flag.NewFlagSet("git-status", flag.ExitOnError)
+		notesGitStatusSessionFlag = new(cliStringFlag)
 
-		notesGitSyncFlags    = flag.NewFlagSet("git-sync", flag.ExitOnError)
-		notesGitSyncBodyFlag = new(cliStringFlag)
+		notesGitSyncFlags       = flag.NewFlagSet("git-sync", flag.ExitOnError)
+		notesGitSyncBodyFlag    = new(cliStringFlag)
+		notesGitSyncSessionFlag = new(cliStringFlag)
 
-		notesSyncFlags = flag.NewFlagSet("sync", flag.ExitOnError)
+		notesSyncFlags       = flag.NewFlagSet("sync", flag.ExitOnError)
+		notesSyncSessionFlag = new(cliStringFlag)
 
 		assistantFlags = flag.NewFlagSet("assistant", flag.ContinueOnError)
 
 		assistantAskFlags    = flag.NewFlagSet("ask", flag.ExitOnError)
 		assistantAskBodyFlag = new(cliStringFlag)
+
+		authFlags = flag.NewFlagSet("auth", flag.ContinueOnError)
+
+		authStatusFlags       = flag.NewFlagSet("status", flag.ExitOnError)
+		authStatusSessionFlag = new(cliStringFlag)
+
+		authRegisterBeginFlags       = flag.NewFlagSet("register-begin", flag.ExitOnError)
+		authRegisterBeginBodyFlag    = new(cliStringFlag)
+		authRegisterBeginSessionFlag = new(cliStringFlag)
+
+		authRegisterFinishFlags    = flag.NewFlagSet("register-finish", flag.ExitOnError)
+		authRegisterFinishBodyFlag = new(cliStringFlag)
+
+		authLoginBeginFlags = flag.NewFlagSet("login-begin", flag.ExitOnError)
+
+		authLoginFinishFlags    = flag.NewFlagSet("login-finish", flag.ExitOnError)
+		authLoginFinishBodyFlag = new(cliStringFlag)
+
+		authDeviceStartFlags = flag.NewFlagSet("device-start", flag.ExitOnError)
+
+		authDeviceTokenFlags    = flag.NewFlagSet("device-token", flag.ExitOnError)
+		authDeviceTokenBodyFlag = new(cliStringFlag)
+
+		authDeviceApproveFlags       = flag.NewFlagSet("device-approve", flag.ExitOnError)
+		authDeviceApproveBodyFlag    = new(cliStringFlag)
+		authDeviceApproveSessionFlag = new(cliStringFlag)
+
+		authPasskeysFlags       = flag.NewFlagSet("passkeys", flag.ExitOnError)
+		authPasskeysSessionFlag = new(cliStringFlag)
+
+		authDeletePasskeyFlags       = flag.NewFlagSet("delete-passkey", flag.ExitOnError)
+		authDeletePasskeyIDFlag      = new(cliStringFlag)
+		authDeletePasskeySessionFlag = new(cliStringFlag)
+
+		authRevokeSessionsFlags       = flag.NewFlagSet("revoke-sessions", flag.ExitOnError)
+		authRevokeSessionsSessionFlag = new(cliStringFlag)
+
+		authLogoutFlags = flag.NewFlagSet("logout", flag.ExitOnError)
 	)
 	notesListFlags.Var(notesListNotebookFlag, "notebook", "")
 	notesListFlags.Var(notesListTagFlag, "tag", "")
 	notesListFlags.Var(notesListTrashedNotebookFlag, "trashed-notebook", "")
 	notesListFlags.Var(notesListSortFlag, "sort", "")
+	notesListFlags.Var(notesListSessionFlag, "session", "")
 	notesGetFlags.Var(notesGetIDFlag, "id", "Note ID")
 	notesGetFlags.Var(notesGetQFlag, "q", "")
+	notesGetFlags.Var(notesGetSessionFlag, "session", "")
 	notesCreateFlags.Var(notesCreateBodyFlag, "body", "")
+	notesCreateFlags.Var(notesCreateSessionFlag, "session", "")
 	notesUpdateFlags.Var(notesUpdateBodyFlag, "body", "")
 	notesUpdateFlags.Var(notesUpdateIDFlag, "id", "Note ID")
 	notesUpdateFlags.Var(notesUpdateIfMatchFlag, "if-match", "")
+	notesUpdateFlags.Var(notesUpdateSessionFlag, "session", "")
 	notesDeleteFlags.Var(notesDeleteIDFlag, "id", "Note ID")
 	notesDeleteFlags.Var(notesDeleteIfMatchFlag, "if-match", "")
+	notesDeleteFlags.Var(notesDeleteSessionFlag, "session", "")
 	notesSearchFlags.Var(notesSearchQFlag, "q", "")
 	notesSearchFlags.Var(notesSearchNotebookFlag, "notebook", "")
 	notesSearchFlags.Var(notesSearchTagFlag, "tag", "")
+	notesSearchFlags.Var(notesSearchSessionFlag, "session", "")
 	notesRestoreFlags.Var(notesRestoreIDFlag, "id", "Note ID")
 	notesRestoreFlags.Var(notesRestoreIfMatchFlag, "if-match", "")
+	notesRestoreFlags.Var(notesRestoreSessionFlag, "session", "")
 	notesMoveFlags.Var(notesMoveBodyFlag, "body", "")
 	notesMoveFlags.Var(notesMoveIDFlag, "id", "Note ID")
+	notesMoveFlags.Var(notesMoveSessionFlag, "session", "")
+	notesNotebooksFlags.Var(notesNotebooksSessionFlag, "session", "")
 	notesTagsFlags.Var(notesTagsNotebookFlag, "notebook", "")
+	notesTagsFlags.Var(notesTagsSessionFlag, "session", "")
 	notesCreateNotebookFlags.Var(notesCreateNotebookBodyFlag, "body", "")
+	notesCreateNotebookFlags.Var(notesCreateNotebookSessionFlag, "session", "")
 	notesSaveNotebookFlags.Var(notesSaveNotebookBodyFlag, "body", "")
 	notesSaveNotebookFlags.Var(notesSaveNotebookIDFlag, "id", "Notebook ID")
+	notesSaveNotebookFlags.Var(notesSaveNotebookSessionFlag, "session", "")
 	notesDeleteNotebookFlags.Var(notesDeleteNotebookIDFlag, "id", "Notebook ID")
+	notesDeleteNotebookFlags.Var(notesDeleteNotebookSessionFlag, "session", "")
+	notesTrashedNotebooksFlags.Var(notesTrashedNotebooksSessionFlag, "session", "")
 	notesRestoreNotebookFlags.Var(notesRestoreNotebookIDFlag, "id", "Notebook ID")
+	notesRestoreNotebookFlags.Var(notesRestoreNotebookSessionFlag, "session", "")
 	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookIDFlag, "id", "Notebook ID")
+	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookSessionFlag, "session", "")
+	notesEmptyTrashFlags.Var(notesEmptyTrashSessionFlag, "session", "")
 	notesImportFlags.Var(notesImportBodyFlag, "body", "")
+	notesImportFlags.Var(notesImportSessionFlag, "session", "")
 	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID")
 	notesAddFileFlags.Var(notesAddFileNameFlag, "name", "")
+	notesAddFileFlags.Var(notesAddFileSessionFlag, "session", "")
 	notesAddFileFlags.Var(notesAddFileStreamFlag, "stream", "path to file containing the streamed request body")
 	notesGetFileFlags.Var(notesGetFileIDFlag, "id", "Note ID")
 	notesGetFileFlags.Var(notesGetFileNameFlag, "name", "File name")
+	notesGetFileFlags.Var(notesGetFileSessionFlag, "session", "")
 	notesDeleteFileFlags.Var(notesDeleteFileIDFlag, "id", "Note ID")
 	notesDeleteFileFlags.Var(notesDeleteFileNameFlag, "name", "File name")
+	notesDeleteFileFlags.Var(notesDeleteFileSessionFlag, "session", "")
 	notesHistoryFlags.Var(notesHistoryIDFlag, "id", "Note ID")
+	notesHistoryFlags.Var(notesHistorySessionFlag, "session", "")
 	notesHistoryVersionFlags.Var(notesHistoryVersionIDFlag, "id", "Note ID")
 	notesHistoryVersionFlags.Var(notesHistoryVersionRevFlag, "rev", "ID of the version")
+	notesHistoryVersionFlags.Var(notesHistoryVersionSessionFlag, "session", "")
+	notesCheckFilesFlags.Var(notesCheckFilesSessionFlag, "session", "")
+	notesEventsFlags.Var(notesEventsSessionFlag, "session", "")
+	notesGitStatusFlags.Var(notesGitStatusSessionFlag, "session", "")
 	notesGitSyncFlags.Var(notesGitSyncBodyFlag, "body", "")
+	notesGitSyncFlags.Var(notesGitSyncSessionFlag, "session", "")
+	notesSyncFlags.Var(notesSyncSessionFlag, "session", "")
 	assistantAskFlags.Var(assistantAskBodyFlag, "body", "")
+	authStatusFlags.Var(authStatusSessionFlag, "session", "")
+	authRegisterBeginFlags.Var(authRegisterBeginBodyFlag, "body", "")
+	authRegisterBeginFlags.Var(authRegisterBeginSessionFlag, "session", "")
+	authRegisterFinishFlags.Var(authRegisterFinishBodyFlag, "body", "")
+	authLoginFinishFlags.Var(authLoginFinishBodyFlag, "body", "")
+	authDeviceTokenFlags.Var(authDeviceTokenBodyFlag, "body", "")
+	authDeviceApproveFlags.Var(authDeviceApproveBodyFlag, "body", "")
+	authDeviceApproveFlags.Var(authDeviceApproveSessionFlag, "session", "")
+	authPasskeysFlags.Var(authPasskeysSessionFlag, "session", "")
+	authDeletePasskeyFlags.Var(authDeletePasskeyIDFlag, "id", "ID of the passkey")
+	authDeletePasskeyFlags.Var(authDeletePasskeySessionFlag, "session", "")
+	authRevokeSessionsFlags.Var(authRevokeSessionsSessionFlag, "session", "")
 
 	notesFlags.Usage = notesUsage
 	notesListFlags.Usage = notesListUsage
@@ -242,6 +351,20 @@ func ParseEndpoint(
 	assistantFlags.Usage = assistantUsage
 	assistantAskFlags.Usage = assistantAskUsage
 
+	authFlags.Usage = authUsage
+	authStatusFlags.Usage = authStatusUsage
+	authRegisterBeginFlags.Usage = authRegisterBeginUsage
+	authRegisterFinishFlags.Usage = authRegisterFinishUsage
+	authLoginBeginFlags.Usage = authLoginBeginUsage
+	authLoginFinishFlags.Usage = authLoginFinishUsage
+	authDeviceStartFlags.Usage = authDeviceStartUsage
+	authDeviceTokenFlags.Usage = authDeviceTokenUsage
+	authDeviceApproveFlags.Usage = authDeviceApproveUsage
+	authPasskeysFlags.Usage = authPasskeysUsage
+	authDeletePasskeyFlags.Usage = authDeletePasskeyUsage
+	authRevokeSessionsFlags.Usage = authRevokeSessionsUsage
+	authLogoutFlags.Usage = authLogoutUsage
+
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
 	}
@@ -261,6 +384,8 @@ func ParseEndpoint(
 			svcf = notesFlags
 		case "assistant":
 			svcf = assistantFlags
+		case "auth":
+			svcf = authFlags
 		default:
 			return nil, nil, fmt.Errorf("unknown service %q", svcn)
 		}
@@ -371,6 +496,46 @@ func ParseEndpoint(
 
 			}
 
+		case "auth":
+			switch epn {
+			case "status":
+				epf = authStatusFlags
+
+			case "register-begin":
+				epf = authRegisterBeginFlags
+
+			case "register-finish":
+				epf = authRegisterFinishFlags
+
+			case "login-begin":
+				epf = authLoginBeginFlags
+
+			case "login-finish":
+				epf = authLoginFinishFlags
+
+			case "device-start":
+				epf = authDeviceStartFlags
+
+			case "device-token":
+				epf = authDeviceTokenFlags
+
+			case "device-approve":
+				epf = authDeviceApproveFlags
+
+			case "passkeys":
+				epf = authPasskeysFlags
+
+			case "delete-passkey":
+				epf = authDeletePasskeyFlags
+
+			case "revoke-sessions":
+				epf = authRevokeSessionsFlags
+
+			case "logout":
+				epf = authLogoutFlags
+
+			}
+
 		}
 	}
 	if epf == nil {
@@ -396,58 +561,61 @@ func ParseEndpoint(
 			switch epn {
 			case "list":
 				endpoint = c.List()
-				data, err = notesc.BuildListPayload(notesListNotebookFlag.value, notesListTagFlag.value, *notesListLimitFlag, *notesListOffsetFlag, notesListTrashedNotebookFlag.value, notesListSortFlag.value)
+				data, err = notesc.BuildListPayload(notesListNotebookFlag.value, notesListTagFlag.value, *notesListLimitFlag, *notesListOffsetFlag, notesListTrashedNotebookFlag.value, notesListSortFlag.value, notesListSessionFlag.value)
 			case "get":
 				endpoint = c.Get()
-				data, err = notesc.BuildGetPayload(notesGetIDFlag.value, notesGetQFlag.value)
+				data, err = notesc.BuildGetPayload(notesGetIDFlag.value, notesGetQFlag.value, notesGetSessionFlag.value)
 			case "create":
 				endpoint = c.Create()
-				data, err = notesc.BuildCreatePayload(notesCreateBodyFlag.value)
+				data, err = notesc.BuildCreatePayload(notesCreateBodyFlag.value, notesCreateSessionFlag.value)
 			case "update":
 				endpoint = c.Update()
-				data, err = notesc.BuildUpdatePayload(notesUpdateBodyFlag.value, notesUpdateIDFlag.value, notesUpdateIfMatchFlag.value)
+				data, err = notesc.BuildUpdatePayload(notesUpdateBodyFlag.value, notesUpdateIDFlag.value, notesUpdateIfMatchFlag.value, notesUpdateSessionFlag.value)
 			case "delete":
 				endpoint = c.Delete()
-				data, err = notesc.BuildDeletePayload(notesDeleteIDFlag.value, notesDeleteIfMatchFlag.value)
+				data, err = notesc.BuildDeletePayload(notesDeleteIDFlag.value, notesDeleteIfMatchFlag.value, notesDeleteSessionFlag.value)
 			case "search":
 				endpoint = c.Search()
-				data, err = notesc.BuildSearchPayload(notesSearchQFlag.value, notesSearchNotebookFlag.value, notesSearchTagFlag.value, *notesSearchLimitFlag)
+				data, err = notesc.BuildSearchPayload(notesSearchQFlag.value, notesSearchNotebookFlag.value, notesSearchTagFlag.value, *notesSearchLimitFlag, notesSearchSessionFlag.value)
 			case "restore":
 				endpoint = c.Restore()
-				data, err = notesc.BuildRestorePayload(notesRestoreIDFlag.value, notesRestoreIfMatchFlag.value)
+				data, err = notesc.BuildRestorePayload(notesRestoreIDFlag.value, notesRestoreIfMatchFlag.value, notesRestoreSessionFlag.value)
 			case "move":
 				endpoint = c.Move()
-				data, err = notesc.BuildMovePayload(notesMoveBodyFlag.value, notesMoveIDFlag.value)
+				data, err = notesc.BuildMovePayload(notesMoveBodyFlag.value, notesMoveIDFlag.value, notesMoveSessionFlag.value)
 			case "notebooks":
 				endpoint = c.Notebooks()
+				data, err = notesc.BuildNotebooksPayload(notesNotebooksSessionFlag.value)
 			case "tags":
 				endpoint = c.Tags()
-				data, err = notesc.BuildTagsPayload(notesTagsNotebookFlag.value)
+				data, err = notesc.BuildTagsPayload(notesTagsNotebookFlag.value, notesTagsSessionFlag.value)
 			case "create-notebook":
 				endpoint = c.CreateNotebook()
-				data, err = notesc.BuildCreateNotebookPayload(notesCreateNotebookBodyFlag.value)
+				data, err = notesc.BuildCreateNotebookPayload(notesCreateNotebookBodyFlag.value, notesCreateNotebookSessionFlag.value)
 			case "save-notebook":
 				endpoint = c.SaveNotebook()
-				data, err = notesc.BuildSaveNotebookPayload(notesSaveNotebookBodyFlag.value, notesSaveNotebookIDFlag.value)
+				data, err = notesc.BuildSaveNotebookPayload(notesSaveNotebookBodyFlag.value, notesSaveNotebookIDFlag.value, notesSaveNotebookSessionFlag.value)
 			case "delete-notebook":
 				endpoint = c.DeleteNotebook()
-				data, err = notesc.BuildDeleteNotebookPayload(notesDeleteNotebookIDFlag.value)
+				data, err = notesc.BuildDeleteNotebookPayload(notesDeleteNotebookIDFlag.value, notesDeleteNotebookSessionFlag.value)
 			case "trashed-notebooks":
 				endpoint = c.TrashedNotebooks()
+				data, err = notesc.BuildTrashedNotebooksPayload(notesTrashedNotebooksSessionFlag.value)
 			case "restore-notebook":
 				endpoint = c.RestoreNotebook()
-				data, err = notesc.BuildRestoreNotebookPayload(notesRestoreNotebookIDFlag.value)
+				data, err = notesc.BuildRestoreNotebookPayload(notesRestoreNotebookIDFlag.value, notesRestoreNotebookSessionFlag.value)
 			case "delete-trashed-notebook":
 				endpoint = c.DeleteTrashedNotebook()
-				data, err = notesc.BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookIDFlag.value)
+				data, err = notesc.BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookIDFlag.value, notesDeleteTrashedNotebookSessionFlag.value)
 			case "empty-trash":
 				endpoint = c.EmptyTrash()
+				data, err = notesc.BuildEmptyTrashPayload(notesEmptyTrashSessionFlag.value)
 			case "import":
 				endpoint = c.Import()
-				data, err = notesc.BuildImportPayload(notesImportBodyFlag.value)
+				data, err = notesc.BuildImportPayload(notesImportBodyFlag.value, notesImportSessionFlag.value)
 			case "add-file":
 				endpoint = c.AddFile()
-				data, err = notesc.BuildAddFilePayload(notesAddFileIDFlag.value, notesAddFileNameFlag.value)
+				data, err = notesc.BuildAddFilePayload(notesAddFileIDFlag.value, notesAddFileNameFlag.value, notesAddFileSessionFlag.value)
 				if err == nil {
 					if notesAddFileStreamFlag.value == nil {
 						err = fmt.Errorf("missing required flag --stream")
@@ -457,27 +625,31 @@ func ParseEndpoint(
 				}
 			case "get-file":
 				endpoint = c.GetFile()
-				data, err = notesc.BuildGetFilePayload(notesGetFileIDFlag.value, notesGetFileNameFlag.value)
+				data, err = notesc.BuildGetFilePayload(notesGetFileIDFlag.value, notesGetFileNameFlag.value, notesGetFileSessionFlag.value)
 			case "delete-file":
 				endpoint = c.DeleteFile()
-				data, err = notesc.BuildDeleteFilePayload(notesDeleteFileIDFlag.value, notesDeleteFileNameFlag.value)
+				data, err = notesc.BuildDeleteFilePayload(notesDeleteFileIDFlag.value, notesDeleteFileNameFlag.value, notesDeleteFileSessionFlag.value)
 			case "history":
 				endpoint = c.History()
-				data, err = notesc.BuildHistoryPayload(notesHistoryIDFlag.value)
+				data, err = notesc.BuildHistoryPayload(notesHistoryIDFlag.value, notesHistorySessionFlag.value)
 			case "history-version":
 				endpoint = c.HistoryVersion()
-				data, err = notesc.BuildHistoryVersionPayload(notesHistoryVersionIDFlag.value, notesHistoryVersionRevFlag.value)
+				data, err = notesc.BuildHistoryVersionPayload(notesHistoryVersionIDFlag.value, notesHistoryVersionRevFlag.value, notesHistoryVersionSessionFlag.value)
 			case "check-files":
 				endpoint = c.CheckFiles()
+				data, err = notesc.BuildCheckFilesPayload(notesCheckFilesSessionFlag.value)
 			case "events":
 				endpoint = c.Events()
+				data, err = notesc.BuildEventsPayload(notesEventsSessionFlag.value)
 			case "git-status":
 				endpoint = c.GitStatus()
+				data, err = notesc.BuildGitStatusPayload(notesGitStatusSessionFlag.value)
 			case "git-sync":
 				endpoint = c.GitSync()
-				data, err = notesc.BuildGitSyncPayload(notesGitSyncBodyFlag.value)
+				data, err = notesc.BuildGitSyncPayload(notesGitSyncBodyFlag.value, notesGitSyncSessionFlag.value)
 			case "sync":
 				endpoint = c.Sync()
+				data, err = notesc.BuildSyncPayload(notesSyncSessionFlag.value)
 			}
 		case "assistant":
 			c := assistantc.NewClient(scheme, host, doer, enc, dec, restore)
@@ -485,6 +657,43 @@ func ParseEndpoint(
 			case "ask":
 				endpoint = c.Ask()
 				data, err = assistantc.BuildAskPayload(assistantAskBodyFlag.value)
+			}
+		case "auth":
+			c := authc.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "status":
+				endpoint = c.Status()
+				data, err = authc.BuildStatusPayload(authStatusSessionFlag.value)
+			case "register-begin":
+				endpoint = c.RegisterBegin()
+				data, err = authc.BuildRegisterBeginPayload(authRegisterBeginBodyFlag.value, authRegisterBeginSessionFlag.value)
+			case "register-finish":
+				endpoint = c.RegisterFinish()
+				data, err = authc.BuildRegisterFinishPayload(authRegisterFinishBodyFlag.value)
+			case "login-begin":
+				endpoint = c.LoginBegin()
+			case "login-finish":
+				endpoint = c.LoginFinish()
+				data, err = authc.BuildLoginFinishPayload(authLoginFinishBodyFlag.value)
+			case "device-start":
+				endpoint = c.DeviceStart()
+			case "device-token":
+				endpoint = c.DeviceToken()
+				data, err = authc.BuildDeviceTokenPayload(authDeviceTokenBodyFlag.value)
+			case "device-approve":
+				endpoint = c.DeviceApprove()
+				data, err = authc.BuildDeviceApprovePayload(authDeviceApproveBodyFlag.value, authDeviceApproveSessionFlag.value)
+			case "passkeys":
+				endpoint = c.Passkeys()
+				data, err = authc.BuildPasskeysPayload(authPasskeysSessionFlag.value)
+			case "delete-passkey":
+				endpoint = c.DeletePasskey()
+				data, err = authc.BuildDeletePasskeyPayload(authDeletePasskeyIDFlag.value, authDeletePasskeySessionFlag.value)
+			case "revoke-sessions":
+				endpoint = c.RevokeSessions()
+				data, err = authc.BuildRevokeSessionsPayload(authRevokeSessionsSessionFlag.value)
+			case "logout":
+				endpoint = c.Logout()
 			}
 		}
 	}
@@ -541,6 +750,7 @@ func notesListUsage() {
 	fmt.Fprint(os.Stderr, " -offset INT")
 	fmt.Fprint(os.Stderr, " -trashed-notebook STRING")
 	fmt.Fprint(os.Stderr, " -sort STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -554,10 +764,11 @@ func notesListUsage() {
 	fmt.Fprintln(os.Stderr, `    -offset INT: `)
 	fmt.Fprintln(os.Stderr, `    -trashed-notebook STRING: `)
 	fmt.Fprintln(os.Stderr, `    -sort STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"")
 }
 
 func notesGetUsage() {
@@ -565,6 +776,7 @@ func notesGetUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes get", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -q STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -574,16 +786,18 @@ func notesGetUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -q STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get --id \"be4c1193735ee1\" --q \"Magni consequatur iste quisquam qui.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get --id \"be4c1193735ee1\" --q \"Magni consequatur iste quisquam qui.\" --session \"Et non facere et.\"")
 }
 
 func notesCreateUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes create", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -592,10 +806,11 @@ func notesCreateUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create --body '{\n      \"body\": \"Quaerat nisi.\",\n      \"id\": \"be4c1193735ee1\",\n      \"notebook\": \"inbox\",\n      \"tags\": [\n         \"Possimus dolor aliquid.\",\n         \"Aut voluptatibus qui.\",\n         \"Sit rerum rerum nobis.\",\n         \"Rerum dolores sapiente iure ducimus.\"\n      ],\n      \"title\": \"r1\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create --body '{\n      \"body\": \"Quaerat nisi.\",\n      \"id\": \"be4c1193735ee1\",\n      \"notebook\": \"inbox\",\n      \"tags\": [\n         \"Possimus dolor aliquid.\",\n         \"Aut voluptatibus qui.\",\n         \"Sit rerum rerum nobis.\",\n         \"Rerum dolores sapiente iure ducimus.\"\n      ],\n      \"title\": \"r1\"\n   }' --session \"Qui laudantium.\"")
 }
 
 func notesUpdateUsage() {
@@ -604,6 +819,7 @@ func notesUpdateUsage() {
 	fmt.Fprint(os.Stderr, " -body JSON")
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -if-match STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -614,10 +830,11 @@ func notesUpdateUsage() {
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -if-match STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes update --body '{\n      \"body\": \"Odio natus rerum non nobis.\",\n      \"notebook\": \"inbox\",\n      \"tags\": [\n         \"Ab accusantium.\",\n         \"Omnis aliquid odit exercitationem magni voluptatem iure.\"\n      ],\n      \"title\": \"r3q\"\n   }' --id \"be4c1193735ee1\" --if-match \"Illum nostrum totam aperiam quaerat ut.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes update --body '{\n      \"body\": \"Odio natus rerum non nobis.\",\n      \"notebook\": \"inbox\",\n      \"tags\": [\n         \"Ab accusantium.\",\n         \"Omnis aliquid odit exercitationem magni voluptatem iure.\"\n      ],\n      \"title\": \"r3q\"\n   }' --id \"be4c1193735ee1\" --if-match \"Illum nostrum totam aperiam quaerat ut.\" --session \"Aut ipsam molestiae magni earum aliquid.\"")
 }
 
 func notesDeleteUsage() {
@@ -625,6 +842,7 @@ func notesDeleteUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes delete", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -if-match STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -634,10 +852,11 @@ func notesDeleteUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -if-match STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete --id \"be4c1193735ee1\" --if-match \"Veritatis ratione quo et qui.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete --id \"be4c1193735ee1\" --if-match \"Veritatis ratione quo et qui.\" --session \"Eos mollitia minima praesentium esse porro doloribus.\"")
 }
 
 func notesSearchUsage() {
@@ -647,6 +866,7 @@ func notesSearchUsage() {
 	fmt.Fprint(os.Stderr, " -notebook STRING")
 	fmt.Fprint(os.Stderr, " -tag STRING")
 	fmt.Fprint(os.Stderr, " -limit INT")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -658,10 +878,11 @@ func notesSearchUsage() {
 	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
 	fmt.Fprintln(os.Stderr, `    -tag STRING: `)
 	fmt.Fprintln(os.Stderr, `    -limit INT: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes search --q \"k\" --notebook \"inbox\" --tag \"Voluptatibus deserunt veniam deserunt incidunt nostrum officia.\" --limit 11")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes search --q \"k\" --notebook \"inbox\" --tag \"Voluptatibus deserunt veniam deserunt incidunt nostrum officia.\" --limit 11 --session \"Omnis doloribus molestias voluptate a.\"")
 }
 
 func notesRestoreUsage() {
@@ -669,6 +890,7 @@ func notesRestoreUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes restore", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -if-match STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -678,10 +900,11 @@ func notesRestoreUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -if-match STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore --id \"be4c1193735ee1\" --if-match \"Ea esse.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore --id \"be4c1193735ee1\" --if-match \"Ea esse.\" --session \"Totam ut blanditiis minus.\"")
 }
 
 func notesMoveUsage() {
@@ -689,6 +912,7 @@ func notesMoveUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes move", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
 	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -698,15 +922,17 @@ func notesMoveUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes move --body '{\n      \"after\": \"be4c1193735ee1\"\n   }' --id \"be4c1193735ee1\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes move --body '{\n      \"after\": \"be4c1193735ee1\"\n   }' --id \"be4c1193735ee1\" --session \"Aut nemo.\"")
 }
 
 func notesNotebooksUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes notebooks", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -714,16 +940,18 @@ func notesNotebooksUsage() {
 	fmt.Fprintln(os.Stderr, `List notebooks with their note counts: inbox first, then the others by order and name, trash last.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes notebooks")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes notebooks --session \"Numquam corporis praesentium et laboriosam.\"")
 }
 
 func notesTagsUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes tags", os.Args[0])
 	fmt.Fprint(os.Stderr, " -notebook STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -732,16 +960,18 @@ func notesTagsUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes tags --notebook \"inbox\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes tags --notebook \"inbox\" --session \"Iure tenetur possimus illo molestias quam.\"")
 }
 
 func notesCreateNotebookUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes create-notebook", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -750,10 +980,11 @@ func notesCreateNotebookUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create-notebook --body '{\n      \"kind\": \"private\",\n      \"name\": \"vo3\",\n      \"order\": 6679760426203438774\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create-notebook --body '{\n      \"kind\": \"private\",\n      \"name\": \"vo3\",\n      \"order\": 6679760426203438774\n   }' --session \"Saepe maiores et modi inventore.\"")
 }
 
 func notesSaveNotebookUsage() {
@@ -761,6 +992,7 @@ func notesSaveNotebookUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes save-notebook", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
 	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -770,16 +1002,18 @@ func notesSaveNotebookUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
 	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"kind\": \"collab\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"kind\": \"collab\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\" --session \"Saepe qui enim id qui ex quis.\"")
 }
 
 func notesDeleteNotebookUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes delete-notebook", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -788,15 +1022,17 @@ func notesDeleteNotebookUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-notebook --id \"inbox\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-notebook --id \"inbox\" --session \"Nihil doloremque veniam consequuntur fugit.\"")
 }
 
 func notesTrashedNotebooksUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes trashed-notebooks", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -804,16 +1040,18 @@ func notesTrashedNotebooksUsage() {
 	fmt.Fprintln(os.Stderr, `List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes trashed-notebooks")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes trashed-notebooks --session \"Omnis consequatur recusandae repudiandae.\"")
 }
 
 func notesRestoreNotebookUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes restore-notebook", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -822,16 +1060,18 @@ func notesRestoreNotebookUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore-notebook --id \"inbox\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore-notebook --id \"inbox\" --session \"Est aut qui error rem minus.\"")
 }
 
 func notesDeleteTrashedNotebookUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes delete-trashed-notebook", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -840,15 +1080,17 @@ func notesDeleteTrashedNotebookUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"inbox\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"inbox\" --session \"Facere sed iusto quam.\"")
 }
 
 func notesEmptyTrashUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes empty-trash", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -856,16 +1098,18 @@ func notesEmptyTrashUsage() {
 	fmt.Fprintln(os.Stderr, `Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes empty-trash")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes empty-trash --session \"Harum occaecati eaque.\"")
 }
 
 func notesImportUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes import", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -874,10 +1118,11 @@ func notesImportUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes import --body '{\n      \"content\": \"fsn\",\n      \"files\": [\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         }\n      ],\n      \"force\": true,\n      \"modified_at\": \"2026-10-16T09:30:00Z\",\n      \"name\": \"meeting.md\",\n      \"notebook\": \"inbox\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes import --body '{\n      \"content\": \"fsn\",\n      \"files\": [\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         }\n      ],\n      \"force\": true,\n      \"modified_at\": \"2026-10-16T09:30:00Z\",\n      \"name\": \"meeting.md\",\n      \"notebook\": \"inbox\"\n   }' --session \"Et labore.\"")
 }
 
 func notesAddFileUsage() {
@@ -885,6 +1130,7 @@ func notesAddFileUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes add-file", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -name STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprint(os.Stderr, " -stream STRING")
 	fmt.Fprintln(os.Stderr)
 
@@ -895,11 +1141,12 @@ func notesAddFileUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -name STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 	fmt.Fprintln(os.Stderr, `    -stream STRING: path to file containing the streamed request body`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes add-file --id \"be4c1193735ee1\" --name \"Screen Shot.png\" --stream \"goa.png\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes add-file --id \"be4c1193735ee1\" --name \"Screen Shot.png\" --session \"Facilis est praesentium impedit.\" --stream \"goa.png\"")
 }
 
 func notesGetFileUsage() {
@@ -907,6 +1154,7 @@ func notesGetFileUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes get-file", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -name STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -916,10 +1164,11 @@ func notesGetFileUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -name STRING: File name`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get-file --id \"be4c1193735ee1\" --name \"screenshot.png\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get-file --id \"be4c1193735ee1\" --name \"screenshot.png\" --session \"Omnis eligendi eum tenetur molestiae expedita vero.\"")
 }
 
 func notesDeleteFileUsage() {
@@ -927,6 +1176,7 @@ func notesDeleteFileUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes delete-file", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -name STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -936,16 +1186,18 @@ func notesDeleteFileUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -name STRING: File name`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-file --id \"be4c1193735ee1\" --name \"screenshot.png\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-file --id \"be4c1193735ee1\" --name \"screenshot.png\" --session \"Amet corporis eaque.\"")
 }
 
 func notesHistoryUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes history", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -954,10 +1206,11 @@ func notesHistoryUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes history --id \"be4c1193735ee1\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes history --id \"be4c1193735ee1\" --session \"Inventore et maxime voluptas.\"")
 }
 
 func notesHistoryVersionUsage() {
@@ -965,6 +1218,7 @@ func notesHistoryVersionUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes history-version", os.Args[0])
 	fmt.Fprint(os.Stderr, " -id STRING")
 	fmt.Fprint(os.Stderr, " -rev STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -974,15 +1228,17 @@ func notesHistoryVersionUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
 	fmt.Fprintln(os.Stderr, `    -rev STRING: ID of the version`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes history-version --id \"be4c1193735ee1\" --rev \"1792400000000000000\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes history-version --id \"be4c1193735ee1\" --rev \"1792400000000000000\" --session \"Voluptatem accusantium illum commodi sint.\"")
 }
 
 func notesCheckFilesUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes check-files", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -990,15 +1246,17 @@ func notesCheckFilesUsage() {
 	fmt.Fprintln(os.Stderr, `Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes check-files")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes check-files --session \"Architecto sed ratione.\"")
 }
 
 func notesEventsUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes events", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -1006,15 +1264,17 @@ func notesEventsUsage() {
 	fmt.Fprintln(os.Stderr, `Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes events")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes events --session \"Autem et.\"")
 }
 
 func notesGitStatusUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes git-status", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -1022,16 +1282,18 @@ func notesGitStatusUsage() {
 	fmt.Fprintln(os.Stderr, `Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-status")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-status --session \"Esse sequi incidunt temporibus.\"")
 }
 
 func notesGitSyncUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes git-sync", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -1040,15 +1302,17 @@ func notesGitSyncUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-sync --body '{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-sync --body '{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }' --session \"Voluptas est harum enim corrupti fugit.\"")
 }
 
 func notesSyncUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes sync", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -1056,10 +1320,11 @@ func notesSyncUsage() {
 	fmt.Fprintln(os.Stderr, `Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes sync")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes sync --session \"Voluptatem molestias quo quo.\"")
 }
 
 // assistantUsage displays the usage of the assistant command and its
@@ -1089,4 +1354,241 @@ func assistantAskUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "assistant ask --body '{\n      \"question\": \"8kf\"\n   }'")
+}
+
+// authUsage displays the usage of the auth command and its subcommands.
+func authUsage() {
+	fmt.Fprintln(os.Stderr, `Passkeys: registering them and signing in with them, in the web UI and, through the web UI, in clients without a browser such as the TUI (a device flow). Not for AI clients, and not on MCP.`)
+	fmt.Fprintf(os.Stderr, "Usage:\n    %s [globalflags] auth COMMAND [flags]\n\n", os.Args[0])
+	fmt.Fprintln(os.Stderr, "COMMAND:")
+	fmt.Fprintln(os.Stderr, `    status: Tell how the server authenticates people and whether the request is signed in.`)
+	fmt.Fprintln(os.Stderr, `    register-begin: Begin registering a passkey: with the one-time token of the URL that ebira auth passkey prints in the terminal, so that only people at the terminal can register the first passkey, or, to add another passkey, without a token from the web UI signed in and verified with a passkey.`)
+	fmt.Fprintln(os.Stderr, `    register-finish: Finish registering a passkey with the credential the browser created.`)
+	fmt.Fprintln(os.Stderr, `    login-begin: Begin signing in with a passkey.`)
+	fmt.Fprintln(os.Stderr, `    login-finish: Finish signing in with the passkey the browser used. The response sets the session cookie.`)
+	fmt.Fprintln(os.Stderr, `    device-start: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.`)
+	fmt.Fprintln(os.Stderr, `    device-token: Ask whether people approved the request of device_start. Once approved, the result has the session, which the client keeps in memory only and sends as the session cookie; the request is then gone.`)
+	fmt.Fprintln(os.Stderr, `    device-approve: Approve the request of device_start with its user code, from the web UI signed in with a passkey.`)
+	fmt.Fprintln(os.Stderr, `    passkeys: List the registered passkeys, for the web UI signed in with a passkey.`)
+	fmt.Fprintln(os.Stderr, `    delete-passkey: Delete a registered passkey, from the web UI signed in and verified with a passkey. The only passkey cannot be deleted; ebira auth reset removes every passkey.`)
+	fmt.Fprintln(os.Stderr, `    revoke-sessions: End every session, such as those of other browsers and of the TUI, from the web UI signed in and verified with a passkey. The response sets a new session for the request.`)
+	fmt.Fprintln(os.Stderr, `    logout: Sign out: the response clears the session cookie.`)
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Additional help:")
+	fmt.Fprintf(os.Stderr, "    %s auth COMMAND --help\n", os.Args[0])
+}
+func authStatusUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth status", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Tell how the server authenticates people and whether the request is signed in.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"")
+}
+
+func authRegisterBeginUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth register-begin", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Begin registering a passkey: with the one-time token of the URL that ebira auth passkey prints in the terminal, so that only people at the terminal can register the first passkey, or, to add another passkey, without a token from the web UI signed in and verified with a passkey.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth register-begin --body '{\n      \"token\": \"Et recusandae esse ad.\"\n   }' --session \"Dolorem molestiae officia porro voluptatem eius mollitia.\"")
+}
+
+func authRegisterFinishUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth register-finish", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Finish registering a passkey with the credential the browser created.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth register-finish --body '{\n      \"ceremony\": \"Tempore et unde assumenda pariatur facilis.\",\n      \"credential\": \"Quia quia tenetur assumenda consequatur eius.\"\n   }'")
+}
+
+func authLoginBeginUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth login-begin", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Begin signing in with a passkey.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth login-begin")
+}
+
+func authLoginFinishUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth login-finish", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Finish signing in with the passkey the browser used. The response sets the session cookie.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth login-finish --body '{\n      \"ceremony\": \"Assumenda dolorum commodi maxime magnam.\",\n      \"credential\": \"Aut doloribus nobis quia omnis.\"\n   }'")
+}
+
+func authDeviceStartUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth device-start", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-start")
+}
+
+func authDeviceTokenUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth device-token", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Ask whether people approved the request of device_start. Once approved, the result has the session, which the client keeps in memory only and sends as the session cookie; the request is then gone.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-token --body '{\n      \"device_code\": \"Perferendis maiores.\"\n   }'")
+}
+
+func authDeviceApproveUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth device-approve", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Approve the request of device_start with its user code, from the web UI signed in with a passkey.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-approve --body '{\n      \"user_code\": \"Fugit voluptate vel.\"\n   }' --session \"Reiciendis accusantium.\"")
+}
+
+func authPasskeysUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth passkeys", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `List the registered passkeys, for the web UI signed in with a passkey.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth passkeys --session \"Doloribus velit.\"")
+}
+
+func authDeletePasskeyUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth delete-passkey", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Delete a registered passkey, from the web UI signed in and verified with a passkey. The only passkey cannot be deleted; ebira auth reset removes every passkey.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: ID of the passkey`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth delete-passkey --id \"Aut commodi laboriosam quam iste atque.\" --session \"Mollitia dolor qui quia.\"")
+}
+
+func authRevokeSessionsUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth revoke-sessions", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `End every session, such as those of other browsers and of the TUI, from the web UI signed in and verified with a passkey. The response sets a new session for the request.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth revoke-sessions --session \"Ad repellendus dolor dolor laudantium.\"")
+}
+
+func authLogoutUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth logout", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Sign out: the response clears the session cookie.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth logout")
 }

@@ -49,6 +49,384 @@ paths:
                             timeout: false
             schemes:
                 - http
+    /auth:
+        get:
+            tags:
+                - auth
+            summary: status auth
+            description: Tell how the server authenticates people and whether the request is signed in.
+            operationId: auth#status
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/AuthStatusResponseBody'
+                        required:
+                            - mode
+                            - registered
+                            - signed_in
+            schemes:
+                - http
+    /auth/device:
+        post:
+            tags:
+                - auth
+            summary: device_start auth
+            description: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.
+            operationId: auth#device_start
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/AuthDeviceStartResponseBody'
+                        required:
+                            - device_code
+                            - user_code
+                            - verification_uri
+                            - expires_in
+                            - interval
+            schemes:
+                - http
+    /auth/device/approve:
+        post:
+            tags:
+                - auth
+            summary: device_approve auth
+            description: Approve the request of device_start with its user code, from the web UI signed in with a passkey.
+            operationId: auth#device_approve
+            parameters:
+                - name: device_approve_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/AuthDeviceApproveRequestBody'
+                    required:
+                        - user_code
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    schema:
+                        $ref: '#/definitions/AuthDeviceApproveUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The user code is unknown or expired'
+                    schema:
+                        $ref: '#/definitions/AuthDeviceApproveNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/device/token:
+        post:
+            tags:
+                - auth
+            summary: device_token auth
+            description: Ask whether people approved the request of device_start. Once approved, the result has the session, which the client keeps in memory only and sends as the session cookie; the request is then gone.
+            operationId: auth#device_token
+            parameters:
+                - name: device_token_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/AuthDeviceTokenRequestBody'
+                    required:
+                        - device_code
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/AuthDeviceTokenResponseBody'
+                        required:
+                            - status
+            schemes:
+                - http
+    /auth/logout:
+        post:
+            tags:
+                - auth
+            summary: logout auth
+            description: 'Sign out: the response clears the session cookie.'
+            operationId: auth#logout
+            responses:
+                "204":
+                    description: No Content response.
+            schemes:
+                - http
+    /auth/passkey/login/begin:
+        post:
+            tags:
+                - auth
+            summary: login_begin auth
+            description: Begin signing in with a passkey.
+            operationId: auth#login_begin
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Ceremony'
+                        required:
+                            - ceremony
+                            - options
+                "400":
+                    description: 'bad_request: No passkey is registered'
+                    schema:
+                        $ref: '#/definitions/AuthLoginBeginBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/passkey/login/finish:
+        post:
+            tags:
+                - auth
+            summary: login_finish auth
+            description: Finish signing in with the passkey the browser used. The response sets the session cookie.
+            operationId: auth#login_finish
+            parameters:
+                - name: login_finish_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/CeremonyFinish'
+                    required:
+                        - ceremony
+                        - credential
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The ceremony is unknown or expired, or the passkey is not registered or its signature is invalid'
+                    schema:
+                        $ref: '#/definitions/AuthLoginFinishUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/passkey/register/begin:
+        post:
+            tags:
+                - auth
+            summary: register_begin auth
+            description: 'Begin registering a passkey: with the one-time token of the URL that ebira auth passkey prints in the terminal, so that only people at the terminal can register the first passkey, or, to add another passkey, without a token from the web UI signed in and verified with a passkey.'
+            operationId: auth#register_begin
+            parameters:
+                - name: register_begin_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/AuthRegisterBeginRequestBody'
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Ceremony'
+                        required:
+                            - ceremony
+                            - options
+                "403":
+                    description: 'verification_required: Without a token: the session is missing, or not signed in with a passkey recently'
+                    schema:
+                        $ref: '#/definitions/AuthRegisterBeginVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/passkey/register/finish:
+        post:
+            tags:
+                - auth
+            summary: register_finish auth
+            description: Finish registering a passkey with the credential the browser created.
+            operationId: auth#register_finish
+            parameters:
+                - name: register_finish_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/CeremonyFinish'
+                    required:
+                        - ceremony
+                        - credential
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The ceremony is unknown or expired, or the credential is invalid'
+                    schema:
+                        $ref: '#/definitions/AuthRegisterFinishBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/passkeys:
+        get:
+            tags:
+                - auth
+            summary: passkeys auth
+            description: List the registered passkeys, for the web UI signed in with a passkey.
+            operationId: auth#passkeys
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/definitions/PasskeyInfo'
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    schema:
+                        $ref: '#/definitions/AuthPasskeysUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/passkeys/{id}:
+        delete:
+            tags:
+                - auth
+            summary: delete_passkey auth
+            description: Delete a registered passkey, from the web UI signed in and verified with a passkey. The only passkey cannot be deleted; ebira auth reset removes every passkey.
+            operationId: auth#delete_passkey
+            parameters:
+                - name: id
+                  in: path
+                  description: ID of the passkey
+                  required: true
+                  type: string
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The passkey is the only one'
+                    schema:
+                        $ref: '#/definitions/AuthDeletePasskeyBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    schema:
+                        $ref: '#/definitions/AuthDeletePasskeyUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: The session is not signed in with a passkey recently: sign in again'
+                    schema:
+                        $ref: '#/definitions/AuthDeletePasskeyVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The passkey is not registered'
+                    schema:
+                        $ref: '#/definitions/AuthDeletePasskeyNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+    /auth/sessions/revoke:
+        post:
+            tags:
+                - auth
+            summary: revoke_sessions auth
+            description: End every session, such as those of other browsers and of the TUI, from the web UI signed in and verified with a passkey. The response sets a new session for the request.
+            operationId: auth#revoke_sessions
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    schema:
+                        $ref: '#/definitions/AuthRevokeSessionsUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: The session is not signed in with a passkey recently: sign in again'
+                    schema:
+                        $ref: '#/definitions/AuthRevokeSessionsVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
     /events:
         get:
             tags:
@@ -63,8 +441,34 @@ paths:
                         $ref: '#/definitions/NoteEvent'
                         required:
                             - type
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesEventsUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesEventsVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /files/check:
         get:
             tags:
@@ -80,8 +484,34 @@ paths:
                         required:
                             - unused
                             - broken
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCheckFilesUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCheckFilesVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /git/status:
         get:
             tags:
@@ -96,8 +526,34 @@ paths:
                         $ref: '#/definitions/GitStatus'
                         required:
                             - repository
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGitStatusUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGitStatusVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /git/sync:
         post:
             tags:
@@ -134,20 +590,34 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
-                "403":
-                    description: 'forbidden: The caller is not a person'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     schema:
-                        $ref: '#/definitions/NotesGitSyncForbiddenResponseBody'
+                        $ref: '#/definitions/NotesGitSyncUnauthorizedResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
                             id: 123abc
                             message: parameter 'p' must be an integer
-                            name: forbidden
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGitSyncVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
                             temporary: false
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /import:
         post:
             tags:
@@ -184,8 +654,34 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesImportUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesImportVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notebooks:
         get:
             tags:
@@ -200,8 +696,34 @@ paths:
                         type: array
                         items:
                             $ref: '#/definitions/Notebook'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesNotebooksUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesNotebooksVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
         post:
             tags:
                 - notes
@@ -241,6 +763,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCreateNotebookUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCreateNotebookVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "409":
                     description: 'already_exists: A notebook with the name exists'
                     schema:
@@ -255,6 +801,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notebooks/{id}:
         put:
             tags:
@@ -299,6 +847,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSaveNotebookUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSaveNotebookVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The notebook does not exist'
                     schema:
@@ -313,6 +885,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
         delete:
             tags:
                 - notes
@@ -341,6 +915,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteNotebookUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteNotebookVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The notebook does not exist'
                     schema:
@@ -367,6 +965,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes:
         get:
             tags:
@@ -437,8 +1037,34 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesListUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesListVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
         post:
             tags:
                 - notes
@@ -482,6 +1108,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCreateUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCreateVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "409":
                     description: 'already_exists: A note with the ID exists (in any notebook, including the trash)'
                     schema:
@@ -496,6 +1146,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}:
         get:
             tags:
@@ -544,6 +1196,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGetUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGetVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist, or is hidden from the client'
                     schema:
@@ -558,6 +1234,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
         delete:
             tags:
                 - notes
@@ -591,6 +1269,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     schema:
@@ -617,6 +1319,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
         patch:
             tags:
                 - notes
@@ -669,6 +1373,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesUpdateUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesUpdateVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     schema:
@@ -695,6 +1423,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/files:
         post:
             tags:
@@ -736,6 +1466,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesAddFileUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesAddFileVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     schema:
@@ -762,6 +1516,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/files/{name}:
         get:
             tags:
@@ -804,6 +1560,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGetFileUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesGetFileVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note or the file does not exist, or the file is not of an accepted type'
                     schema:
@@ -818,6 +1598,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
         delete:
             tags:
                 - notes
@@ -851,6 +1633,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteFileUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteFileVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note or the file does not exist'
                     schema:
@@ -865,6 +1671,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/history:
         get:
             tags:
@@ -898,6 +1706,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesHistoryUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesHistoryVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     schema:
@@ -912,6 +1744,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/history/{rev}:
         get:
             tags:
@@ -956,6 +1790,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesHistoryVersionUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesHistoryVersionVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note or the version does not exist'
                     schema:
@@ -970,6 +1828,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/move:
         post:
             tags:
@@ -1018,6 +1878,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     schema:
@@ -1032,6 +1916,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/restore:
         post:
             tags:
@@ -1080,6 +1966,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesRestoreUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesRestoreVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The note does not exist'
                     schema:
@@ -1106,6 +2016,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /search:
         get:
             tags:
@@ -1148,8 +2060,34 @@ paths:
                             - mode
                             - total
                             - notes
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSearchUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSearchVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /sync:
         post:
             tags:
@@ -1167,8 +2105,34 @@ paths:
                             - updated
                             - removed
                             - errors
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSyncUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSyncVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /tags:
         get:
             tags:
@@ -1190,8 +2154,34 @@ paths:
                         type: array
                         items:
                             $ref: '#/definitions/TagCount'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesTagsUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesTagsVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /trash:
         delete:
             tags:
@@ -1202,8 +2192,34 @@ paths:
             responses:
                 "204":
                     description: No Content response.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesEmptyTrashUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesEmptyTrashVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /trash/notebooks:
         get:
             tags:
@@ -1218,8 +2234,34 @@ paths:
                         type: array
                         items:
                             $ref: '#/definitions/TrashedNotebook'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesTrashedNotebooksUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesTrashedNotebooksVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /trash/notebooks/{id}:
         delete:
             tags:
@@ -1249,6 +2291,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteTrashedNotebookUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteTrashedNotebookVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The notebook is not in the trash'
                     schema:
@@ -1263,6 +2329,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
     /trash/notebooks/{id}/restore:
         post:
             tags:
@@ -1302,6 +2370,30 @@ paths:
                             name: bad_request
                             temporary: false
                             timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesRestoreNotebookUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesRestoreNotebookVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
                 "404":
                     description: 'not_found: The notebook is not in the trash'
                     schema:
@@ -1328,6 +2420,8 @@ paths:
                             timeout: false
             schemes:
                 - http
+            security:
+                - session_cookie_ebira_session: []
 definitions:
     AssistantAskRequestBody:
         title: AssistantAskRequestBody
@@ -1398,6 +2492,728 @@ definitions:
             - temporary
             - timeout
             - fault
+    AuthDeletePasskeyBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeletePasskeyNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeletePasskeyUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeletePasskeyVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeviceApproveNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeviceApproveRequestBody:
+        title: AuthDeviceApproveRequestBody
+        type: object
+        properties:
+            user_code:
+                type: string
+                description: User code shown by the client
+                example: Fugit voluptate vel.
+        example:
+            user_code: Fugit voluptate vel.
+        required:
+            - user_code
+    AuthDeviceApproveUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeviceStartResponseBody:
+        title: AuthDeviceStartResponseBody
+        type: object
+        properties:
+            device_code:
+                type: string
+                description: Secret code the client asks device_token with; never shown to people
+                example: Id sunt praesentium sit et nesciunt debitis.
+            expires_in:
+                type: integer
+                description: Seconds until the request expires
+                example: 2410708439063718888
+                format: int64
+            interval:
+                type: integer
+                description: Seconds to wait between calls of device_token
+                example: 1594048462833705464
+                format: int64
+            user_code:
+                type: string
+                description: Code people compare with the one in the web UI before approving it
+                example: BCDF-GHJK
+            verification_uri:
+                type: string
+                description: URL of the page of the web UI that approves the user code
+                example: Omnis inventore et rem dolorem.
+        example:
+            device_code: Id sunt praesentium sit et nesciunt debitis.
+            expires_in: 2410708439063718888
+            interval: 1594048462833705464
+            user_code: BCDF-GHJK
+            verification_uri: Omnis inventore et rem dolorem.
+        required:
+            - device_code
+            - user_code
+            - verification_uri
+            - expires_in
+            - interval
+    AuthDeviceTokenRequestBody:
+        title: AuthDeviceTokenRequestBody
+        type: object
+        properties:
+            device_code:
+                type: string
+                description: Device code from device_start
+                example: Perferendis maiores.
+        example:
+            device_code: Perferendis maiores.
+        required:
+            - device_code
+    AuthDeviceTokenResponseBody:
+        title: AuthDeviceTokenResponseBody
+        type: object
+        properties:
+            session:
+                type: string
+                description: Session, when approved
+                example: Qui neque voluptas vitae.
+            status:
+                type: string
+                description: 'pending: not approved yet; approved: the result has the session; expired: the request expired or is unknown, so begin again'
+                example: expired
+                enum:
+                    - pending
+                    - approved
+                    - expired
+        example:
+            session: Qui neque voluptas vitae.
+            status: expired
+        required:
+            - status
+    AuthLoginBeginBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthLoginFinishUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthPasskeysUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthRegisterBeginForbiddenResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthRegisterBeginRequestBody:
+        title: AuthRegisterBeginRequestBody
+        type: object
+        properties:
+            token:
+                type: string
+                description: One-time registration token; omit it to add a passkey from a verified session
+                example: Et recusandae esse ad.
+        example:
+            token: Et recusandae esse ad.
+    AuthRegisterBeginVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthRegisterFinishBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthRevokeSessionsUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthRevokeSessionsVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthStatusResponseBody:
+        title: AuthStatusResponseBody
+        type: object
+        properties:
+            mode:
+                type: string
+                description: 'How the server authenticates people: none treats every REST request as from people; passkey requires signing in with a passkey'
+                example: passkey
+                enum:
+                    - none
+                    - passkey
+            registered:
+                type: boolean
+                description: Whether a passkey is registered
+                example: false
+            signed_in:
+                type: boolean
+                description: Whether the request has a valid session
+                example: true
+        example:
+            mode: passkey
+            registered: false
+            signed_in: true
+        required:
+            - mode
+            - registered
+            - signed_in
     BrokenFileRef:
         title: BrokenFileRef
         type: object
@@ -1423,6 +3239,40 @@ definitions:
             - note_id
             - title
             - path
+    Ceremony:
+        title: Ceremony
+        type: object
+        properties:
+            ceremony:
+                type: string
+                description: ID of the ceremony, passed back when finishing it
+                example: Dolorum pariatur necessitatibus occaecati magnam.
+            options:
+                description: 'Options of the ceremony for the browser, in the JSON form of the Web Authentication API: PublicKeyCredentialCreationOptionsJSON for a registration, PublicKeyCredentialRequestOptionsJSON for a sign-in'
+                example: Maxime atque dolor ex saepe a consequatur.
+        example:
+            ceremony: Dolorum pariatur necessitatibus occaecati magnam.
+            options: Maxime atque dolor ex saepe a consequatur.
+        required:
+            - ceremony
+            - options
+    CeremonyFinish:
+        title: CeremonyFinish
+        type: object
+        properties:
+            ceremony:
+                type: string
+                description: ID of the ceremony, from its first step
+                example: Tempore et unde assumenda pariatur facilis.
+            credential:
+                description: Credential the browser created or used, as PublicKeyCredential.toJSON returns it
+                example: Quia quia tenetur assumenda consequatur eius.
+        example:
+            ceremony: Tempore et unde assumenda pariatur facilis.
+            credential: Quia quia tenetur assumenda consequatur eius.
+        required:
+            - ceremony
+            - credential
     FileCheck:
         title: FileCheck
         type: object
@@ -2426,6 +4276,178 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesAddFileUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesAddFileVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCheckFilesUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCheckFilesVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesCreateAlreadyExistsResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -2629,6 +4651,92 @@ definitions:
             order: 6679760426203438774
         required:
             - name
+    NotesCreateNotebookUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCreateNotebookVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesCreateRequestBody:
         title: NotesCreateRequestBody
         type: object
@@ -2675,6 +4783,92 @@ definitions:
             title: r1
         required:
             - title
+    NotesCreateUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCreateVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesDeleteBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -2797,6 +4991,92 @@ definitions:
             name: bad_request
             temporary: false
             timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteFileUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteFileVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
         required:
             - name
             - id
@@ -2976,6 +5256,92 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesDeleteNotebookUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteNotebookVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesDeletePreconditionFailedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -3097,6 +5463,350 @@ definitions:
             message: parameter 'p' must be an integer
             name: bad_request
             temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteTrashedNotebookUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteTrashedNotebookVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesEmptyTrashUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesEmptyTrashVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesEventsUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesEventsVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
             timeout: true
         required:
             - name
@@ -3234,6 +5944,92 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesGetFileUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesGetFileVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesGetNotFoundResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -3269,6 +6065,178 @@ definitions:
             message: parameter 'p' must be an integer
             name: bad_request
             temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesGetUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesGetVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesGitStatusUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesGitStatusVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
             timeout: true
         required:
             - name
@@ -3373,6 +6341,92 @@ definitions:
                 example: git@github.com:you/notes.git
         example:
             remote: git@github.com:you/notes.git
+    NotesGitSyncUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesGitSyncVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesHistoryBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -3459,6 +6513,92 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesHistoryUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesHistoryVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesHistoryVersionBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -3537,6 +6677,92 @@ definitions:
             message: parameter 'p' must be an integer
             name: bad_request
             temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesHistoryVersionUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesHistoryVersionVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
             timeout: true
         required:
             - name
@@ -3651,6 +6877,92 @@ definitions:
         required:
             - name
             - content
+    NotesImportUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesImportVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesListBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -3687,6 +6999,92 @@ definitions:
             name: bad_request
             temporary: false
             timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesListUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesListVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
         required:
             - name
             - id
@@ -3791,6 +7189,178 @@ definitions:
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
         example:
             after: be4c1193735ee1
+    NotesMoveUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesNotebooksUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesNotebooksVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesRestoreBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -4006,6 +7576,92 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesRestoreNotebookUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesRestoreNotebookVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesRestorePreconditionFailedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -4042,6 +7698,92 @@ definitions:
             name: bad_request
             temporary: false
             timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesRestoreUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesRestoreVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
         required:
             - name
             - id
@@ -4171,6 +7913,436 @@ definitions:
             name: Commodi vel.
             order: 6133899287636492423
             sort: updated
+    NotesSaveNotebookUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSaveNotebookVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSearchUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSearchVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSyncUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSyncVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTagsUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTagsVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTrashedNotebooksUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTrashedNotebooksVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesUpdateBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -4334,6 +8506,116 @@ definitions:
                 - Ab accusantium.
                 - Omnis aliquid odit exercitationem magni voluptatem iure.
             title: r3q
+    NotesUpdateUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUpdateVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    PasskeyInfo:
+        title: PasskeyInfo
+        type: object
+        properties:
+            created_at:
+                type: string
+                description: When the passkey was registered; empty for those registered before ebira kept it
+                example: "2026-10-20T09:30:00Z"
+            id:
+                type: string
+                description: ID of the passkey
+                example: Occaecati corporis iusto et porro quia consequatur.
+            used_at:
+                type: string
+                description: When the passkey was last used to sign in
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+        example:
+            created_at: "2026-10-20T09:30:00Z"
+            id: Occaecati corporis iusto et porro quia consequatur.
+            used_at: "2026-10-16T09:30:00Z"
+        required:
+            - id
+            - created_at
     SearchResult:
         title: SearchResult
         type: object
@@ -4687,3 +8969,9 @@ definitions:
             - size
             - added_at
             - recent
+securityDefinitions:
+    session_cookie_ebira_session:
+        type: apiKey
+        description: 'Session of people signed in with a passkey, sent as the ebira_session cookie. While the server requires passkeys (auth: passkey), only a REST request with a valid session passes, as from people, and the others fail with unauthorized (AI clients use MCP, which does not take sessions); without passkeys (auth: none), every REST request is from people'
+        name: ebira_session
+        in: cookie

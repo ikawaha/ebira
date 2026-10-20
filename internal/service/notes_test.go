@@ -87,13 +87,13 @@ func (s *fakeStream) SendWithContext(_ context.Context, ev *gennotes.NoteEvent) 
 func (s *fakeStream) Close() error { return nil }
 
 func TestEvents(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(AsPerson(context.Background()))
 	defer cancel()
 	svc, dir := newTestService(t)
 
 	stream := &fakeStream{ch: make(chan *gennotes.NoteEvent, 16)}
 	done := make(chan error, 1)
-	go func() { done <- svc.Events(ctx, stream) }()
+	go func() { done <- svc.Events(ctx, nil, stream) }()
 
 	next := func() string {
 		t.Helper()
@@ -122,7 +122,7 @@ func TestEvents(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "inbox", "b.yaml"), []byte("title: B\nupdated_at: 2026-10-15T00:00:00Z\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Sync(ctx); err != nil {
+	if _, err := svc.Sync(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := svc.Delete(ctx, &gennotes.DeletePayload{ID: "a"}); err != nil {
@@ -225,7 +225,7 @@ func TestTrash(t *testing.T) {
 	}
 
 	// Notebooks: inbox first, trash last, empty notebooks included.
-	nbs, err := svc.Notebooks(ctx)
+	nbs, err := svc.Notebooks(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,16 +242,16 @@ func TestSaveNotebook(t *testing.T) {
 	ctx, cancel := context.WithCancel(AsPerson(context.Background()))
 	defer cancel()
 	svc, dir := newTestService(t)
-	if _, err := svc.Sync(ctx); err != nil { // records the initial notebook state
+	if _, err := svc.Sync(ctx, nil); err != nil { // records the initial notebook state
 		t.Fatal(err)
 	}
 	stream := &fakeStream{ch: make(chan *gennotes.NoteEvent, 16)}
-	go svc.Events(ctx, stream)
+	go svc.Events(ctx, nil, stream)
 	<-stream.ch // ready
 
 	names := func() []string {
 		t.Helper()
-		nbs, err := svc.Notebooks(ctx)
+		nbs, err := svc.Notebooks(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -304,7 +304,7 @@ func TestSaveNotebook(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "home", "_notebook.yaml"), []byte("name: 家\norder: -5\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Sync(ctx); err != nil {
+	if _, err := svc.Sync(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	expectEvent()
@@ -346,7 +346,7 @@ func TestGetHighlights(t *testing.T) {
 }
 
 func TestCreateNotebook(t *testing.T) {
-	ctx := context.Background()
+	ctx := AsPerson(context.Background())
 	svc, dir := newTestService(t)
 
 	nb, err := svc.CreateNotebook(ctx, &gennotes.CreateNotebookPayload{Name: " 開発メモ "})
@@ -405,7 +405,7 @@ func TestCreateNotebook(t *testing.T) {
 // TestNotebookNameFromID checks that a notebook without a display name in
 // _notebook.yaml shows the name restored from its Punycode ID.
 func TestNotebookNameFromID(t *testing.T) {
-	ctx := context.Background()
+	ctx := AsPerson(context.Background())
 	svc, dir := newTestService(t)
 	nb, err := svc.CreateNotebook(ctx, &gennotes.CreateNotebookPayload{Name: "開発メモ"})
 	if err != nil {
@@ -417,7 +417,7 @@ func TestNotebookNameFromID(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "plain"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	nbs, err := svc.Notebooks(ctx)
+	nbs, err := svc.Notebooks(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -572,7 +572,7 @@ func TestPrivateNotebooks(t *testing.T) {
 		return res
 	}
 	nbIDs := func(ctx context.Context) (res []string) {
-		nbs, err := svc.Notebooks(ctx)
+		nbs, err := svc.Notebooks(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -640,19 +640,43 @@ func TestPrivateNotebooks(t *testing.T) {
 		t.Errorf("CreateAiNote in a private notebook = %v, want forbidden", err)
 	}
 
-	// The REST endpoints are marked as from people; others are not.
-	rest := gennotes.NewEndpoints(svc)
-	rest.Use(Person)
-	res, err := rest.Notebooks(ai, nil)
-	if err != nil {
-		t.Fatal(err)
+	// The REST endpoints are from people without passkeys (auth: none). With
+	// passkeys, only a request with a valid session passes, as from people;
+	// one without a session or with an invalid one fails. The endpoints of
+	// Notes itself, which MCP uses, are from AI whatever the session.
+	sees := func(e *gennotes.Endpoints, session *string) (bool, error) {
+		res, err := e.Notebooks(ai, &gennotes.NotebooksPayload{Session: session})
+		if err != nil {
+			return false, err
+		}
+		for _, nb := range res.([]*gennotes.Notebook) {
+			if nb.ID == diary.ID {
+				return true, nil
+			}
+		}
+		return false, nil
 	}
-	found := false
-	for _, nb := range res.([]*gennotes.Notebook) {
-		found = found || nb.ID == diary.ID
-	}
-	if !found {
-		t.Error("the REST endpoints do not see the private notebook")
+	valid := func(s string) (bool, bool) { return s == "good", false }
+	for _, c := range []struct {
+		name    string
+		svc     gennotes.Service
+		session *string
+		want    bool
+		err     string
+	}{
+		{"none", REST{Notes: svc}, nil, true, ""},
+		{"none with a session", REST{Notes: svc}, ptr("bad"), true, ""},
+		{"passkey without a session", REST{Notes: svc, Session: valid}, nil, false, "unauthorized"},
+		{"passkey with a valid session", REST{Notes: svc, Session: valid}, ptr("good"), true, ""},
+		{"passkey with an invalid session", REST{Notes: svc, Session: valid}, ptr("bad"), false, "unauthorized"},
+		{"MCP with a session", svc, ptr("good"), false, ""},
+	} {
+		got, err := sees(gennotes.NewEndpoints(c.svc), c.session)
+		if errorName(err) != c.err || (c.err == "" && err != nil) {
+			t.Errorf("%s: error %v, want %q", c.name, err, c.err)
+		} else if got != c.want {
+			t.Errorf("%s: sees the private notebook: %v, want %v", c.name, got, c.want)
+		}
 	}
 }
 
@@ -684,7 +708,7 @@ func TestTrashNotebook(t *testing.T) {
 		return res
 	}
 	trashed := func() map[string]*gennotes.TrashedNotebook {
-		nbs, err := svc.TrashedNotebooks(person)
+		nbs, err := svc.TrashedNotebooks(person, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -717,7 +741,7 @@ func TestTrashNotebook(t *testing.T) {
 	if err != nil || n.Notebook != store.Trash || deref(n.TrashedNotebook) != diary.ID {
 		t.Fatalf("Get(a) = %+v, %v", n, err)
 	}
-	if nbs, _ := svc.TrashedNotebooks(ai); len(nbs) != 0 {
+	if nbs, _ := svc.TrashedNotebooks(ai, nil); len(nbs) != 0 {
 		t.Errorf("AI clients see the trashed notebooks: %v", nbs)
 	}
 
@@ -813,7 +837,7 @@ func TestMoveNoteOutOfTrashedNotebook(t *testing.T) {
 	if n.Notebook != "work" || n.TrashedNotebook != nil || n.TrashedFrom != nil {
 		t.Errorf("moved note = %+v", n)
 	}
-	trashed, err := svc.TrashedNotebooks(ctx)
+	trashed, err := svc.TrashedNotebooks(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -860,7 +884,7 @@ func TestEmptyTrash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := svc.EmptyTrash(person); err != nil {
+	if err := svc.EmptyTrash(person, nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, id := range []string{"single", "inside"} {
@@ -871,7 +895,7 @@ func TestEmptyTrash(t *testing.T) {
 	if _, err := svc.Get(person, &gennotes.GetPayload{ID: "kept"}); err != nil {
 		t.Errorf("a note outside the trash is gone: %v", err)
 	}
-	if nbs, err := svc.TrashedNotebooks(person); err != nil || len(nbs) != 0 {
+	if nbs, err := svc.TrashedNotebooks(person, nil); err != nil || len(nbs) != 0 {
 		t.Errorf("trashed notebooks = %v, %v; want none", nbs, err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, store.Trash, "single"+store.AssetsSuffix)); !os.IsNotExist(err) {
@@ -881,7 +905,172 @@ func TestEmptyTrash(t *testing.T) {
 		t.Errorf("a file ebira does not know is gone: %v", err)
 	}
 	// Nothing to delete is no error.
-	if err := svc.EmptyTrash(person); err != nil {
+	if err := svc.EmptyTrash(person, nil); err != nil {
 		t.Errorf("emptying an empty trash = %v", err)
+	}
+}
+
+// TestPeopleOnly checks that the methods only people may call refuse
+// requests from AI: they are not MCP tools, and the REST API refuses them
+// without a session while passkeys are required, but they check the mark
+// themselves too. A private notebook stays private.
+func TestPeopleOnly(t *testing.T) {
+	ai := context.Background()
+	person := AsPerson(ai)
+	svc, _ := newTestService(t)
+	diary, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "diary", Kind: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("secret"), Notebook: &diary.ID, Title: "secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("old"), Title: "old"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Delete(person, &gennotes.DeletePayload{ID: "old"}); err != nil {
+		t.Fatal(err)
+	}
+	other, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "other"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: other.ID}); err != nil {
+		t.Fatal(err)
+	}
+
+	calls := map[string]func(context.Context) error{
+		"create": func(ctx context.Context) error {
+			_, err := svc.Create(ctx, &gennotes.CreatePayload{Notebook: &diary.ID, Title: "x"})
+			return err
+		},
+		"update": func(ctx context.Context) error {
+			_, err := svc.Update(ctx, &gennotes.UpdatePayload{ID: n.ID, Body: ptr("changed")})
+			return err
+		},
+		"delete": func(ctx context.Context) error { return svc.Delete(ctx, &gennotes.DeletePayload{ID: n.ID}) },
+		"restore": func(ctx context.Context) error {
+			_, err := svc.Restore(ctx, &gennotes.RestorePayload{ID: "old"})
+			return err
+		},
+		"move": func(ctx context.Context) error {
+			_, err := svc.Move(ctx, &gennotes.MovePayload{ID: n.ID})
+			return err
+		},
+		"save_notebook": func(ctx context.Context) error {
+			_, err := svc.SaveNotebook(ctx, &gennotes.SaveNotebookPayload{ID: diary.ID, Kind: ptr("default")})
+			return err
+		},
+		"create_notebook": func(ctx context.Context) error {
+			_, err := svc.CreateNotebook(ctx, &gennotes.CreateNotebookPayload{Name: "x", Kind: "default"})
+			return err
+		},
+		"delete_notebook": func(ctx context.Context) error {
+			return svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: diary.ID})
+		},
+		"restore_notebook": func(ctx context.Context) error {
+			_, err := svc.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: other.ID})
+			return err
+		},
+		"delete_trashed_notebook": func(ctx context.Context) error {
+			return svc.DeleteTrashedNotebook(ctx, &gennotes.DeleteTrashedNotebookPayload{ID: other.ID})
+		},
+		"empty_trash": func(ctx context.Context) error { return svc.EmptyTrash(ctx, nil) },
+		"import": func(ctx context.Context) error {
+			_, err := svc.Import(ctx, &gennotes.ImportPayload{Notebook: &diary.ID, Name: "x.md", Content: "x"})
+			return err
+		},
+	}
+	for name, call := range calls {
+		if err := call(ai); errorName(err) != "unauthorized" {
+			t.Errorf("%s for AI = %v, want unauthorized", name, err)
+		}
+	}
+
+	// Through the REST API without a session while passkeys are required.
+	rest := gennotes.NewEndpoints(REST{Notes: svc, Session: func(string) (bool, bool) { return false, false }})
+	if _, err := rest.SaveNotebook(ai, &gennotes.SaveNotebookPayload{ID: diary.ID, Kind: ptr("default")}); errorName(err) != "unauthorized" {
+		t.Errorf("REST save_notebook without a session = %v, want unauthorized", err)
+	}
+
+	got, err := svc.Get(person, &gennotes.GetPayload{ID: n.ID})
+	if err != nil || got.Notebook != diary.ID || got.Body != "" {
+		t.Errorf("the private note changed: %+v, %v", got, err)
+	}
+	nbs, err := svc.Notebooks(person, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, nb := range nbs {
+		if nb.ID == diary.ID && nb.Kind != "private" {
+			t.Errorf("the private notebook became %s", nb.Kind)
+		}
+	}
+	if trashed, _ := svc.TrashedNotebooks(person, nil); len(trashed) != 1 {
+		t.Errorf("trashed notebooks = %v, want the one deleted", trashed)
+	}
+}
+
+// TestVerification checks that important operations ask for a session that
+// signed in with a passkey recently, while passkeys are required: making a
+// private notebook visible to AI, reading the history of a note and emptying
+// the trash. Other operations, and every operation without passkeys, pass.
+func TestVerification(t *testing.T) {
+	ai := context.Background()
+	person := AsPerson(ai)
+	svc, _ := newTestService(t)
+	diary, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "diary", Kind: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	work, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "work"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("a"), Notebook: &work.ID, Title: "a"}); err != nil {
+		t.Fatal(err)
+	}
+	endpoints := func(verified bool) *gennotes.Endpoints {
+		return gennotes.NewEndpoints(REST{Notes: svc, Session: func(string) (bool, bool) { return true, verified }})
+	}
+	s := ptr("session")
+	calls := map[string]func(*gennotes.Endpoints) error{
+		"save_notebook from private": func(e *gennotes.Endpoints) error {
+			_, err := e.SaveNotebook(ai, &gennotes.SaveNotebookPayload{Session: s, ID: diary.ID, Kind: ptr("default")})
+			return err
+		},
+		"history": func(e *gennotes.Endpoints) error {
+			_, err := e.History(ai, &gennotes.HistoryPayload{Session: s, ID: "a"})
+			return err
+		},
+		"history_version": func(e *gennotes.Endpoints) error {
+			_, err := e.HistoryVersion(ai, &gennotes.HistoryVersionPayload{Session: s, ID: "a", Rev: "1"})
+			return err
+		},
+		"empty_trash": func(e *gennotes.Endpoints) error {
+			_, err := e.EmptyTrash(ai, &gennotes.EmptyTrashPayload{Session: s})
+			return err
+		},
+	}
+	for name, call := range calls {
+		if err := call(endpoints(false)); errorName(err) != "verification_required" {
+			t.Errorf("%s without a verification = %v, want verification_required", name, err)
+		}
+		if err := call(endpoints(true)); errorName(err) == "verification_required" {
+			t.Errorf("%s with a verification = %v", name, err)
+		}
+	}
+	// Other operations do not ask for it.
+	if _, err := endpoints(false).SaveNotebook(ai, &gennotes.SaveNotebookPayload{Session: s, ID: work.ID, Kind: ptr("collab")}); err != nil {
+		t.Errorf("save_notebook of another kind: %v", err)
+	}
+	if _, err := endpoints(false).SaveNotebook(ai, &gennotes.SaveNotebookPayload{Session: s, ID: work.ID, Kind: ptr("private")}); err != nil {
+		t.Errorf("making a notebook private: %v", err)
+	}
+	// Without passkeys (auth: none), nothing asks for it.
+	none := gennotes.NewEndpoints(REST{Notes: svc})
+	if _, err := none.EmptyTrash(ai, &gennotes.EmptyTrashPayload{}); err != nil {
+		t.Errorf("empty_trash without passkeys: %v", err)
 	}
 }

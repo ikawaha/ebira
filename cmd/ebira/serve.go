@@ -17,12 +17,15 @@ import (
 	"time"
 
 	genassistant "github.com/ikawaha/ebira/gen/assistant"
+	genauth "github.com/ikawaha/ebira/gen/auth"
 	assistantsvr "github.com/ikawaha/ebira/gen/http/assistant/server"
+	authsvr "github.com/ikawaha/ebira/gen/http/auth/server"
 	notessvr "github.com/ikawaha/ebira/gen/http/notes/server"
 	mcpnotessvr "github.com/ikawaha/ebira/gen/jsonrpc/mcp_notes/server"
 	mcpnotes "github.com/ikawaha/ebira/gen/mcp_notes"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/agent"
+	"github.com/ikawaha/ebira/internal/auth"
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
 	"github.com/ikawaha/ebira/internal/history"
@@ -42,8 +45,8 @@ import (
 // serveOptions are the flags of ebira serve, which ebira server start passes
 // on to the server it starts.
 type serveOptions struct {
-	notesDir, addr, search, stopW, stopT, prov, model, lang, theme, gitSync *string
-	watch                                                                   *bool
+	notesDir, addr, search, stopW, stopT, prov, model, lang, theme, gitSync, auth *string
+	watch                                                                         *bool
 }
 
 // newServeFlags defines the flags of ebira serve on a new flag set.
@@ -60,9 +63,10 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
 		theme    = fs.String("theme", settings.Theme, "color theme of the web UI: auto (the system's light or dark mode), light or dark; a theme chosen in the web UI's settings menu wins (default: theme of the settings file, else auto)")
 		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
+		authF    = fs.String("auth", cmp.Or(settings.Auth, auth.ModeNone), "how the REST API authenticates people: none treats every request as from people; passkey serves only requests signed in with a passkey, as from people, and refuses the others; MCP stays open to AI clients (register a passkey with ebira auth passkey) (default: auth of the settings file, else none)")
 		gitSync  = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file)")
 	)
-	return fs, &serveOptions{notesDir: notesDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, theme: theme, gitSync: gitSync, watch: watchF}
+	return fs, &serveOptions{notesDir: notesDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, theme: theme, gitSync: gitSync, auth: authF, watch: watchF}
 }
 
 // setFlags returns the flags set on fs other than -notes, as -name=value.
@@ -101,6 +105,9 @@ func runServe(args []string) error {
 	}
 	if *o.theme != "" && !web.ValidTheme(*o.theme) {
 		return fmt.Errorf("unknown theme %q of -theme or theme in the settings file (%s)", *o.theme, strings.Join(web.Themes, ", "))
+	}
+	if !auth.ValidMode(*o.auth) {
+		return fmt.Errorf("unknown mode %q of -auth or auth in the settings file (%s)", *o.auth, strings.Join(auth.Modes, ", "))
 	}
 	if *o.lang != "" && !web.ValidLang(*o.lang) {
 		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *o.lang, strings.Join(web.Langs, ", "))
@@ -206,7 +213,7 @@ func runServe(args []string) error {
 		return err
 	}
 	svc.SetHistory(hist)
-	r, err := svc.Sync(ctx)
+	r, err := svc.Sync(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -220,7 +227,7 @@ func runServe(args []string) error {
 	if *watchF {
 		go func() {
 			err := watch.Run(ctx, st.Dir(), store.Ext, 300*time.Millisecond, func() {
-				r, err := svc.Sync(ctx)
+				r, err := svc.Sync(ctx, nil)
 				if err != nil {
 					slog.Error("sync failed", "error", err)
 					return
@@ -247,10 +254,29 @@ func runServe(args []string) error {
 		go syncGitEvery(ctx, svc, gitEvery)
 	}
 
-	// Only the REST API, which the UI uses, is marked as from people. MCP (and
-	// the assistant) are treated as AI, which cannot see private notebooks.
-	notesEndpoints := gennotes.NewEndpoints(svc)
-	notesEndpoints.Use(service.Person)
+	listenHost, port, err := net.SplitHostPort(*addr)
+	if err != nil {
+		return fmt.Errorf("-addr: %w", err)
+	}
+	// Passkeys belong to a domain name, so the web UI uses them on localhost
+	// whatever address the server listens on.
+	passkeys, err := auth.New(auth.Dir(stateDir), "http://localhost:"+port, "localhost")
+	if err != nil {
+		return err
+	}
+	if *o.auth == auth.ModePasskey && listenHost != "localhost" {
+		slog.Warn("passkeys work only on the web UI at localhost", "url", "http://localhost:"+port+web.Prefix)
+	}
+
+	// Only the REST API, which the UI uses, is marked as from people: every
+	// request without passkeys (auth: none), and requests signed in with a
+	// passkey with them. MCP (and the assistant) are treated as AI, which
+	// cannot see private notebooks; their endpoints ignore sessions.
+	rest := service.REST{Notes: svc}
+	if *o.auth == auth.ModePasskey {
+		rest.Session = passkeys.Check
+	}
+	notesEndpoints := gennotes.NewEndpoints(rest)
 	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil))
 
 	mux := goahttp.NewMuxer()
@@ -260,6 +286,7 @@ func runServe(args []string) error {
 	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(asst), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
+	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
@@ -269,10 +296,6 @@ func runServe(args []string) error {
 	root.Handle("GET "+web.AssetsPrefix, ui)
 	root.Handle(web.LegacyPrefix, http.RedirectHandler(web.Prefix, http.StatusMovedPermanently))
 	root.Handle("/", mux)
-	listenHost, _, err := net.SplitHostPort(*addr)
-	if err != nil {
-		return fmt.Errorf("-addr: %w", err)
-	}
 
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {
@@ -293,7 +316,7 @@ func runServe(args []string) error {
 		return err
 	}
 	defer daemon.RemoveState(stateDir)
-	slog.Info("listening", "addr", "http://"+*addr, "ui", "http://"+*addr+web.Prefix, "mcp", "http://"+*addr+"/mcp", "version", state.Version, "pid", state.PID)
+	slog.Info("listening", "addr", "http://"+*addr, "ui", "http://"+*addr+web.Prefix, "mcp", "http://"+*addr+"/mcp", "auth", *o.auth, "version", state.Version, "pid", state.PID)
 
 	select {
 	case err := <-errc:

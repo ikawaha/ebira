@@ -93,7 +93,7 @@ const recentFile = time.Hour
 
 // CheckFiles checks the files of notes against the note bodies, including
 // those in the trash. AI clients get empty lists.
-func (s *Notes) CheckFiles(ctx context.Context) (*gennotes.FileCheck, error) {
+func (s *Notes) CheckFiles(ctx context.Context, _ *gennotes.CheckFilesPayload) (*gennotes.FileCheck, error) {
 	res := &gennotes.FileCheck{Unused: []*gennotes.UnusedFile{}, Broken: []*gennotes.BrokenFileRef{}}
 	if !fromPerson(ctx) {
 		return res, nil

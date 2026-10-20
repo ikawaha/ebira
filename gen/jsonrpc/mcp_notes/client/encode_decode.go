@@ -275,6 +275,13 @@ func EncodeToolsCallRequest(encoder func(*http.Request) goahttp.Encoder) func(*h
 		if !ok {
 			return "", goahttp.ErrInvalidType("mcp_notes", "tools/call", "*mcpnotes.ToolsCallPayload", v)
 		}
+		if p.HTTPCredential0 != nil {
+			v := *p.HTTPCredential0
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		b := NewToolsCallRequestBody(p)
 		body := &jsonrpc.Request{
 			JSONRPC: "2.0",

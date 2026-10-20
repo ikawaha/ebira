@@ -66,6 +66,8 @@ type Config struct {
 	// mode), light or dark. The TUI, which cannot tell the background of the
 	// terminal, takes light as -light and the others as dark.
 	Theme string `yaml:"theme"`
+	// Auth is how the REST API authenticates people: none or passkey.
+	Auth string `yaml:"auth"`
 	// GitSync is the interval of syncing the notes with git, such as 10m.
 	GitSync string `yaml:"git_sync"`
 

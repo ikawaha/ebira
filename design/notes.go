@@ -274,6 +274,19 @@ var _ = Service("notes", func() {
 	MCP("ebira", "0.1.0")
 	JSONRPC(func() { POST("/mcp") })
 
+	// The REST API checks the session of people signed in with a passkey; the
+	// methods for AI clients only have NoSecurity. MCP calls go through
+	// another set of endpoints, whose check ignores the session, so they are
+	// from AI even with the cookie of a browser.
+	Security(SessionAuth)
+	Error("unauthorized", ErrorResult, "The session is invalid or expired: sign in with a passkey again")
+	Error("verification_required", ErrorResult, "An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again")
+	HTTP(func() {
+		Cookie("session:" + sessionCookie)
+		Response("unauthorized", StatusUnauthorized)
+		Response("verification_required", StatusForbidden)
+	})
+
 	// Each method declares the errors it returns, with their HTTP statuses, so
 	// that the API description and the MCP tools list only those. An error a
 	// method returns without declaring it becomes a 500.
@@ -281,6 +294,7 @@ var _ = Service("notes", func() {
 	Method("list", func() {
 		Description("List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page.")
 		Payload(func() {
+			sessionDSL()
 			notebookFilter()
 			Attribute("tag", String, "Only notes with this tag")
 			Attribute("limit", Int, "Maximum number of notes", func() {
@@ -317,6 +331,7 @@ var _ = Service("notes", func() {
 	Method("get", func() {
 		Description("Get a note. With q, the result also has the ranges of the title and body matched by the query, as search matches them.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			Attribute("q", String, "Search query to highlight")
 		})
@@ -338,6 +353,7 @@ var _ = Service("notes", func() {
 	Method("create", func() {
 		Description("Create a note. A random ID is assigned when id is omitted, and the note goes to the inbox when notebook is omitted. A new notebook is created on demand.")
 		Payload(func() {
+			sessionDSL()
 			Attribute("id", String, "Note ID", noteIDDSL)
 			Attribute("notebook", String, "Notebook to put the note in (default inbox; not trash)", notebookIDDSL)
 			RequiredAttribute("title", String, "Title", func() {
@@ -360,6 +376,7 @@ var _ = Service("notes", func() {
 	Method("update", func() {
 		Description("Update a note. Omitted attributes are left unchanged. Setting notebook moves the note; use delete to move it to the trash.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			Attribute("notebook", String, "Notebook to move the note to (not trash)", notebookIDDSL)
 			Attribute("title", String, "Title", func() {
@@ -386,6 +403,7 @@ var _ = Service("notes", func() {
 	Method("delete", func() {
 		Description("Move a note to the trash, or delete it permanently if it is already in the trash.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			Attribute("if_match", String, "Delete only if the note's current version matches. Omit to delete unconditionally")
 		})
@@ -405,6 +423,7 @@ var _ = Service("notes", func() {
 	Method("search", func() {
 		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND", func() {
 				MinLength(1)
 			})
@@ -432,6 +451,7 @@ var _ = Service("notes", func() {
 	Method("restore", func() {
 		Description("Move a note from the trash back to the notebook it was in.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			Attribute("if_match", String, "Restore only if the note's current version matches")
 		})
@@ -454,6 +474,7 @@ var _ = Service("notes", func() {
 	Method("move", func() {
 		Description("Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			Attribute("after", String, "ID of the note of the same notebook to put the note after; omit to put it first", noteIDDSL)
 		})
@@ -470,6 +491,7 @@ var _ = Service("notes", func() {
 
 	Method("notebooks", func() {
 		Description("List notebooks with their note counts: inbox first, then the others by order and name, trash last.")
+		Payload(sessionDSL)
 		Result(ArrayOf(Notebook))
 		HTTP(func() {
 			GET("/notebooks")
@@ -482,6 +504,7 @@ var _ = Service("notes", func() {
 	Method("tags", func() {
 		Description("List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).")
 		Payload(func() {
+			sessionDSL()
 			notebookFilter()
 		})
 		Result(ArrayOf(TagCount))
@@ -499,6 +522,7 @@ var _ = Service("notes", func() {
 	Method("create_notebook", func() {
 		Description("Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes (\"My Notes\" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("name", String, "Display name", func() {
 				MinLength(1)
 				MaxLength(100)
@@ -523,6 +547,7 @@ var _ = Service("notes", func() {
 	Method("save_notebook", func() {
 		Description("Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 			Attribute("name", String, "Display name; empty to reset it to the default")
 			Attribute("order", Int, "Sort key; lower comes first")
@@ -547,6 +572,7 @@ var _ = Service("notes", func() {
 	Method("delete_notebook", func() {
 		Description("Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 		})
 		Error("not_found", ErrorResult, "The notebook does not exist")
@@ -563,6 +589,7 @@ var _ = Service("notes", func() {
 
 	Method("trashed_notebooks", func() {
 		Description("List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.")
+		Payload(sessionDSL)
 		Result(ArrayOf(TrashedNotebook))
 		HTTP(func() {
 			GET("/trash/notebooks")
@@ -573,6 +600,7 @@ var _ = Service("notes", func() {
 	Method("restore_notebook", func() {
 		Description("Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 		})
 		Result(Notebook)
@@ -591,6 +619,7 @@ var _ = Service("notes", func() {
 	Method("delete_trashed_notebook", func() {
 		Description("Permanently delete a notebook in the trash with its notes.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 		})
 		Error("not_found", ErrorResult, "The notebook is not in the trash")
@@ -605,6 +634,7 @@ var _ = Service("notes", func() {
 
 	Method("empty_trash", func() {
 		Description("Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.")
+		Payload(sessionDSL)
 		HTTP(func() {
 			DELETE("/trash")
 			Response(StatusNoContent)
@@ -614,6 +644,7 @@ var _ = Service("notes", func() {
 	Method("import", func() {
 		Description("Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.")
 		Payload(func() {
+			sessionDSL()
 			Attribute("notebook", String, "Notebook to put the note in (default inbox; not trash)", notebookIDDSL)
 			importContent()
 			Attribute("modified_at", String, "Modification time of the file, for the times the front matter does not give", timeDSL)
@@ -634,6 +665,7 @@ var _ = Service("notes", func() {
 	// notebooks of the drop kind. They are exposed as MCP tools only; people
 	// edit notes with create, update and delete.
 	Method("create_ai_note", func() {
+		NoSecurity()
 		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note is marked as created by AI (created_by).")
 		Payload(func() {
 			Attribute("id", String, "Note ID; random if omitted. Must be omitted for a drop notebook", noteIDDSL)
@@ -652,6 +684,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("import_ai_note", func() {
+		NoSecurity()
 		Description("Import a Markdown file as a new note in a notebook of the collab or drop kind, as create_ai_note does, converting it as people's imports do: the front matter gives the title, tags and times, and its other keys are kept. Images cannot be imported; their links are left as they are. A file whose content was imported before into a notebook visible to AI clients is skipped. The note is marked as created by AI.")
 		Payload(func() {
 			RequiredAttribute("notebook", String, "ID of a notebook of the collab or drop kind", notebookIDDSL)
@@ -664,6 +697,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("update_ai_note", func() {
+		NoSecurity()
 		Description("Update a note in a notebook of the collab kind. Omitted attributes are left unchanged. The version from get_note is required, so that changes made by people meanwhile are not overwritten. Setting notebook moves the note to another notebook of the collab kind.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
@@ -684,6 +718,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("delete_ai_note", func() {
+		NoSecurity()
 		Description("Move a note in a notebook of the collab kind to the trash, where people can restore it. The version from get_note is required.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
@@ -697,6 +732,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("move_ai_note", func() {
+		NoSecurity()
 		Description("Put a note of a notebook of the collab kind right after another note of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
@@ -710,6 +746,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("create_ai_notebook", func() {
+		NoSecurity()
 		Description("Create a new notebook of the collab kind, where AI clients may write notes. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that. The ID of the notebook is derived from the name: a name with characters other than ASCII gives an ID that starts with xn-- (Punycode), which is expected.")
 		Payload(func() {
 			RequiredAttribute("name", String, "Display name, in any language; the ID is derived from it", func() {
@@ -724,6 +761,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("make_notebook_private", func() {
+		NoSecurity()
 		Description("Make a notebook private, so that AI clients can no longer see it or its notes. Only people can undo this.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
@@ -738,6 +776,7 @@ var _ = Service("notes", func() {
 	Method("add_file", func() {
 		Description("Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			RequiredAttribute("name", String, "File name, such as the name of the uploaded file", func() {
 				MinLength(1)
@@ -763,6 +802,7 @@ var _ = Service("notes", func() {
 	Method("get_file", func() {
 		Description("Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
 				Example("screenshot.png")
@@ -791,6 +831,7 @@ var _ = Service("notes", func() {
 	Method("delete_file", func() {
 		Description("Delete a file of a note. The body may still refer to it.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
 				Example("screenshot.png")
@@ -813,6 +854,7 @@ var _ = Service("notes", func() {
 	Method("history", func() {
 		Description("List the earlier versions of a note, newest first. A version is kept on this device whenever the title, tags or body is replaced, by a save or by a change of the file found by a sync; up to 50 per note, and those older than 30 days are dropped except the 5 newest. To put a version back, update the note with its content. For people only.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 		})
 		Result(ArrayOf(NoteVersionSummary))
@@ -829,6 +871,7 @@ var _ = Service("notes", func() {
 	Method("history_version", func() {
 		Description("Get an earlier version of a note from its history. For people only.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			RequiredAttribute("rev", String, "ID of the version", revDSL)
 		})
@@ -845,6 +888,7 @@ var _ = Service("notes", func() {
 
 	Method("check_files", func() {
 		Description("Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.")
+		Payload(sessionDSL)
 		Result(FileCheck)
 		HTTP(func() {
 			GET("/files/check")
@@ -853,6 +897,7 @@ var _ = Service("notes", func() {
 
 	Method("events", func() {
 		Description("Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.")
+		Payload(sessionDSL)
 		StreamingResult(NoteEvent)
 		HTTP(func() {
 			GET("/events")
@@ -864,6 +909,7 @@ var _ = Service("notes", func() {
 
 	Method("git_status", func() {
 		Description("Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.")
+		Payload(sessionDSL)
 		Result(GitStatus)
 		HTTP(func() {
 			GET("/git/status")
@@ -873,6 +919,7 @@ var _ = Service("notes", func() {
 	Method("git_sync", func() {
 		Description("Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.")
 		Payload(func() {
+			sessionDSL()
 			Attribute("remote", String, "URL of a remote repository to connect the notes to first, as the remote origin: the notes directory becomes a repository unless it is one, and the notes are pushed, setting the upstream branch; the notes already on the remote, such as from another machine, are merged first", func() {
 				Example("git@github.com:you/notes.git")
 			})
@@ -892,6 +939,7 @@ var _ = Service("notes", func() {
 
 	Method("sync", func() {
 		Description("Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.")
+		Payload(sessionDSL)
 		Result(SyncResult)
 		HTTP(func() {
 			POST("/sync")
