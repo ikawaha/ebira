@@ -561,6 +561,9 @@ func (m Model) renderFooter() string {
 	case promptPurgeNotebook:
 		row := m.selectedRow()
 		return m.th.style(m.th.err).Render(" " + m.tr.t("prompt.purgeNotebook", "name", strings.TrimPrefix(m.notebookName(row.id), "↳ "), "n", row.count))
+	case promptEmptyTrash:
+		notes, notebooks := m.trashContents()
+		return m.th.style(m.th.err).Render(" " + m.tr.t("prompt.emptyTrash", "n", notes, "m", notebooks))
 	case promptDiscard:
 		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.discard"))
 	case promptRetry:
@@ -594,6 +597,9 @@ func (m Model) renderFooter() string {
 		if m.toMove != nil {
 			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.moveHere"}, {"esc", "key.cancel"}}
 			break
+		}
+		if m.selectedRow().id == trashNotebook && !m.sideTags {
+			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"d", "key.emptyTrash"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		}
 		if _, ok := trashedID(m.selectedRow().id); ok && !m.sideTags {
 			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"u", "key.restore"}, {"d", "key.deletePermanently"}, {"T", "key.tags"}, {"q", "key.quit"}}

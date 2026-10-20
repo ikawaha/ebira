@@ -51,6 +51,7 @@ const (
 	promptUnprivate     // confirmation to show a private notebook to AI
 	promptTrashNotebook // confirmation to move the selected notebook into the trash
 	promptPurgeNotebook // confirmation to delete the selected notebook in the trash permanently
+	promptEmptyTrash    // confirmation to delete everything in the trash permanently
 	promptMovePrivate   // confirmation to move a note of a private notebook where AI can read it
 )
 
@@ -312,6 +313,21 @@ func trashedID(filter string) (string, bool) { return strings.CutPrefix(filter, 
 func (m *Model) inTrashedNotebook() bool {
 	_, ok := trashedID(m.notebook)
 	return ok
+}
+
+// trashContents returns the number of notes in the trash, those deleted on
+// their own and those of the notebooks in the trash, and the number of the
+// notebooks in the trash.
+func (m *Model) trashContents() (notes, notebooks int) {
+	for _, nb := range m.notebooks {
+		if nb.ID == trashNotebook {
+			notes += nb.Count
+		}
+	}
+	for _, nb := range m.trashed {
+		notes += nb.Count
+	}
+	return notes, len(m.trashed)
 }
 
 // notebookOp runs an operation on a notebook as a whole, showing the message
@@ -1213,6 +1229,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			})
 		}
 		return m, nil
+	case promptEmptyTrash:
+		m.prompt = promptNone
+		if key == "y" {
+			return m, m.notebookOp("status.trashEmptied", trashNotebook, func(ctx context.Context) error {
+				return m.api.EmptyTrash(ctx)
+			})
+		}
+		return m, nil
 	case promptMovePrivate:
 		m.prompt = promptNone
 		if key == "y" {
@@ -1330,7 +1354,13 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, m.reorderNotebook(-1)
 		case "d":
 			row := m.selectedRow()
-			if _, ok := trashedID(row.id); ok {
+			if row.id == trashNotebook {
+				if notes, notebooks := m.trashContents(); notes+notebooks == 0 {
+					m.setStatus(statusInfo, "status.trashAlreadyEmpty")
+				} else {
+					m.prompt = promptEmptyTrash
+				}
+			} else if _, ok := trashedID(row.id); ok {
 				m.prompt = promptPurgeNotebook
 			} else if nb := m.selectedNotebook(); nb != nil && !nb.Reserved {
 				m.prompt = promptTrashNotebook
