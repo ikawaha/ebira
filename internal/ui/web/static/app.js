@@ -437,7 +437,43 @@ function renderBody(el, body, ranges) {
 
 // Formatting
 
+// kindIcon is the emoji of a notebook kind, for the options of a select, which
+// hold text only; the other places draw it with kindSVG.
 const kindIcon = (kind) => ({ collab: "👥", drop: "📥", private: "🔒" })[kind] || "";
+
+// KIND_SVG holds the line drawings of the notebook kinds for the notebook
+// column, its menu and the dialog of a new notebook, in a 24 by 24 box: two
+// people for collab, a tray with an arrow into it for drop and a lock for
+// private. They take the color of the text, so they read alike in the light
+// and the dark theme.
+const KIND_SVG = {
+  collab: ["circle:9,8,3.2", "M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6", "circle:16.5,8.5,2.6", "M16.5 14c2.6.3 4.5 2.6 4.5 5.5"],
+  drop: ["M12 3v8", "M8.5 7.5 12 11l3.5-3.5", "M4 14h4.5l1.5 2.5h4l1.5-2.5H20", "M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"],
+  private: ["rect:5,11,14,10,2", "M8 11V7.5a4 4 0 0 1 8 0V11"],
+  // Not a kind: the trash, which has none, shows a can in the notebook column.
+  trash: ["M4 7h16", "M9.5 7V4.5h5V7", "M6.5 7l1 13h9l1-13", "M10 11v5.5", "M14 11v5.5"],
+};
+
+// kindSVG returns the drawing of a notebook kind, or null for the default kind.
+function kindSVG(kind) {
+  const shapes = KIND_SVG[kind];
+  if (!shapes) return null;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) {
+    svg.setAttribute(k, v);
+  }
+  for (const s of shapes) {
+    const [type, args] = s.includes(":") ? s.split(":") : ["path", s];
+    const e = document.createElementNS(ns, type);
+    const n = args.split(",");
+    if (type === "path") e.setAttribute("d", args);
+    if (type === "circle") [["cx", n[0]], ["cy", n[1]], ["r", n[2]]].forEach(([a, x]) => e.setAttribute(a, x));
+    if (type === "rect") [["x", n[0]], ["y", n[1]], ["width", n[2]], ["height", n[3]], ["rx", n[4]]].forEach(([a, x]) => e.setAttribute(a, x));
+    svg.append(e);
+  }
+  return svg;
+}
 
 // aiMark returns the mark of a note created by an AI client, which goes at the
 // end of a row rather than right after the title: sparkles, as apps mark what
@@ -524,17 +560,23 @@ function renderNotebooks() {
   const ul = $("notebooks");
   ul.replaceChildren();
   const total = state.notebooks.filter((n) => n.id !== "trash").reduce((a, n) => a + n.count, 0);
-  const all = el("li", !state.tag && !state.notebook ? "active" : "", el("span", "name", t("all")), el("span", "count", String(total)));
+  const all = el("li", !state.tag && !state.notebook ? "active" : "", el("span", "icon"), el("span", "name", t("all")), el("span", "count", String(total)));
   all.addEventListener("click", () => selectNotebook(null));
   ul.append(all);
   if (state.side === "tags") {
     renderTags(ul);
     return;
   }
-  const item = (id, name, icon, count, cls, trashed = null) => {
-    const li = el("li", cls || "", el("span", "name", name));
-    if (icon) li.append(el("span", "icon", icon));
-    li.append(el("span", "count", String(count)));
+  const item = (id, name, kind, count, cls, trashed = null) => {
+    // The icon has a column of its own before the name, kept even without an
+    // icon, so that the names line up.
+    const li = el("li", cls || "");
+    if (trashed) li.append(el("span", "nest", "↳"));
+    const icon = el("span", "icon");
+    const svg = kindSVG(id === "trash" && !trashed ? "trash" : kind);
+    if (svg) icon.append(svg);
+    if (svg && KINDS.includes(kind) && id !== "trash") icon.title = kind;
+    li.append(icon, el("span", "name", name), el("span", "count", String(count)));
     if (!state.tag && state.notebook === id && state.trashedNotebook === trashed) li.classList.add("active");
     li.addEventListener("click", () => selectNotebook(id, trashed));
     li.addEventListener("contextmenu", (e) => {
@@ -556,12 +598,12 @@ function renderNotebooks() {
     return li;
   };
   for (const nb of state.notebooks) {
-    const li = item(nb.id, nb.name, kindIcon(nb.kind), nb.count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
+    const li = item(nb.id, nb.name, nb.kind, nb.count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
     ul.append(li);
     if (nb.id !== "trash") continue;
     for (const tn of state.trashed) {
-      ul.append(item("trash", "↳ " + tn.name, kindIcon(tn.kind), tn.count, "trashed", tn.id));
+      ul.append(item("trash", tn.name, tn.kind, tn.count, "trashed", tn.id));
     }
   }
 }
@@ -707,10 +749,12 @@ function openNotebookMenu(li, id, trashed, e) {
       m.append(el("div", "menu-label", t("notebookKind")));
       for (const k of KINDS) {
         if (id === "inbox" && k === "collab") continue;
-        const b = button(`${k} ${kindIcon(k)}`.trim(), () => {
+        const b = button(k, () => {
           closeNotebookMenu();
           if (k !== nb.kind) setNotebookKind(nb, k);
         });
+        const svg = kindSVG(k);
+        if (svg) b.append(el("span", "kind-icon", svg));
         b.title = t(KIND_LABEL[k]);
         b.setAttribute("role", "menuitemradio");
         b.setAttribute("aria-checked", String(k === nb.kind));
@@ -2587,6 +2631,7 @@ function connect() {
 
 (async () => {
   await loadMessages();
+  for (const e of document.querySelectorAll(".kind-icon[data-kind]")) e.append(kindSVG(e.dataset.kind));
   for (const b of document.querySelectorAll("#side-tabs button")) {
     b.addEventListener("click", () => setSide(b.dataset.side));
   }

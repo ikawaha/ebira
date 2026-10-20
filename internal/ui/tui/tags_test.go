@@ -64,7 +64,7 @@ func TestTagRows(t *testing.T) {
 	if top := m.notebookTop(2); top != 1 {
 		t.Errorf("top of 2 rows = %d, want 1", top)
 	}
-	if v := m.renderNotebooks(30, 4); !strings.Contains(v, "# go") {
+	if v := m.renderNotebooks(30, 4); !strings.Contains(v, "#  go") {
 		t.Errorf("the selected tag is out of view:\n%s", v)
 	}
 

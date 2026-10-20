@@ -164,7 +164,13 @@ mark.current { background: var(--mark-current); }
 .notebooks li.active { background: var(--bg-active); }
 .notebooks li.sep { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
 .notebooks .name { overflow: hidden; text-overflow: ellipsis; }
-.notebooks .icon { flex: none; }
+.notebooks .icon { flex: none; width: 1.4em; text-align: center; }
+/* The arrow of a notebook in the trash takes the column of the icons, so its
+   own icon and name sit one column to the right, below the trash. */
+.notebooks .icon svg { display: block; width: 15px; height: 15px; margin: 0 auto; color: var(--fg-muted); }
+.notebooks li.active .icon svg { color: var(--fg); }
+.kind-icon svg { display: inline-block; width: 14px; height: 14px; margin-left: 4px; vertical-align: -2px; color: var(--fg-muted); }
+.notebooks .nest { flex: none; width: 1.4em; text-align: center; }
 .notebooks .count { margin-left: auto; padding-left: 8px; color: var(--fg-muted); font-size: 12px; }
 .side-tabs { display: flex; gap: 4px; margin: 0 8px 8px; padding: 2px; border-radius: 6px; background: var(--bg-hover); }
 .side-tabs button { flex: 1; border: none; border-radius: 4px; padding: 3px 0; background: none; color: var(--fg-muted); font: inherit; font-size: 12px; cursor: pointer; }
@@ -176,7 +182,7 @@ mark.current { background: var(--mark-current); }
 .notebooks li:hover .nb-more, .notebooks li.active .nb-more, .notebooks li.menu-open .nb-more, .notebooks .nb-more:focus-visible { visibility: visible; }
 .notebooks .nb-more:hover { background: var(--bg-hover); color: var(--fg); }
 .notebooks li.menu-open { background: var(--bg-hover); }
-.notebooks li.trashed { padding-left: 28px; color: var(--fg-muted); }
+.notebooks li.trashed { color: var(--fg-muted); }
 .notebooks li.trashed.active { color: var(--fg); }
 .notebooks .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: 3px; background: var(--bg); color: var(--fg); }
 .menu.notebook-menu { position: fixed; bottom: auto; }

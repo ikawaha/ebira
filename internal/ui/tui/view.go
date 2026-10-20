@@ -402,12 +402,22 @@ func (m Model) renderNotebooks(w, h int) string {
 	var lines []string
 	rows := m.notebookRows()
 	for _, r := range rows[min(m.notebookTop(h-2), len(rows)):] {
-		// The icon goes before the count, so that a long name is cut instead.
-		label := " " + m.notebookName(r.id)
-		count := fmt.Sprintf(" %d ", r.count) // the space keeps a long name apart
-		if icon := kindIcon(r.kind); icon != "" {
-			count = " " + icon + count
+		// The icon has a column of its own before the name, kept even without
+		// an icon, so that the names line up. The arrow of a notebook in the
+		// trash goes before it, one column to the right of the trash.
+		icon, name := kindIcon(r.kind), m.notebookName(r.id)
+		if t, ok := tagOf(r.id); ok {
+			icon, name = tagPrefix, t
 		}
+		if r.id == trashNotebook {
+			icon = trashIcon
+		}
+		nest := ""
+		if _, ok := trashedID(r.id); ok {
+			nest, name = "↳ ", strings.TrimPrefix(name, "↳ ")
+		}
+		label := " " + nest + pad(icon, iconWidth) + " " + name
+		count := fmt.Sprintf(" %d ", r.count) // the space keeps a long name apart
 		line := pad(label, innerW-1-ansi.StringWidth(count)) + count
 		if r.id == m.notebook {
 			mark := m.th.style(m.th.accent).Background(m.th.selBg).Render("▌")
@@ -442,6 +452,17 @@ func kindIcon(kind string) string {
 	}
 	return ""
 }
+
+// trashIcon is the icon of the trash, which has no kind: the litter in its
+// bin, an emoji drawn as one by default and so two cells wide in every
+// terminal, as the icons of the kinds. The wastebasket is drawn as text by
+// default, and terminals disagree on its width even with the variation
+// selector for the emoji presentation.
+const trashIcon = "\U0001F6AE"
+
+// iconWidth is the width of the column of the icons in the notebook column:
+// the icons of the kinds are wide characters.
+const iconWidth = 2
 
 // aiMark is the mark of a note created by an AI client, shown at the end of
 // its line in the list and of the preview's meta line: a four pointed star,
