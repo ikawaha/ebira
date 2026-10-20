@@ -282,6 +282,13 @@ func runServe(args []string) error {
 	srv.RegisterOnShutdown(svc.Close) // end event streams so that Shutdown does not wait for them
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
+	// Listening does not show that requests reach this server: another
+	// program on the same port, such as on all addresses, may answer them,
+	// and the TUI, the web UI and MCP clients would never reach this one.
+	if err := daemon.CheckSelf(ctx, *addr, state.PID, selfCheckWait); err != nil {
+		srv.Close()
+		return fmt.Errorf("%w; choose another address with -addr or addr in the settings file", err)
+	}
 	if err := daemon.WriteState(stateDir, state); err != nil {
 		return err
 	}
@@ -380,6 +387,10 @@ func stopListLog(list []string) string {
 // minGitSync is the shortest interval of syncing with git, not to load the
 // remote.
 const minGitSync = time.Minute
+
+// selfCheckWait is how long serve waits for its own answer on its address
+// before it gives up (see daemon.CheckSelf).
+const selfCheckWait = 5 * time.Second
 
 // gitSyncInterval parses -git-sync: 0 for none.
 func gitSyncInterval(s string) (time.Duration, error) {

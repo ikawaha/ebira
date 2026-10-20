@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -124,6 +125,50 @@ func Health(ctx context.Context, addr string) (State, error) {
 		return s, fmt.Errorf("GET /health: %s", res.Status)
 	}
 	return s, json.NewDecoder(res.Body).Decode(&s)
+}
+
+// ErrNotSelf reports that a server listens on its address, but another
+// program answers requests sent there.
+var ErrNotSelf = errors.New("another program answers on the address")
+
+// CheckSelf asks GET /health at addr, the address a server listens on, until
+// the server of pid answers, for up to wait. Listening does not show that
+// requests reach the server: on some systems, another program listening on
+// the same port, such as on all addresses, can take them. CheckSelf then
+// returns ErrNotSelf with what answered.
+func CheckSelf(ctx context.Context, addr string, pid int, wait time.Duration) error {
+	addr = dialAddr(addr)
+	deadline := time.Now().Add(wait)
+	for {
+		s, err := Health(ctx, addr)
+		if err == nil && s.PID == pid {
+			return nil
+		}
+		if err == nil {
+			err = fmt.Errorf("pid %d answers", s.PID)
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("%w %s (%v)", ErrNotSelf, addr, err)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
+
+// dialAddr returns addr to connect to: a server listening on all addresses,
+// such as :13579 or 0.0.0.0:13579, is asked at localhost.
+func dialAddr(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	if ip := net.ParseIP(host); host == "" || ip != nil && ip.IsUnspecified() {
+		return net.JoinHostPort("localhost", port)
+	}
+	return addr
 }
 
 // HealthHandler serves s as JSON, for GET /health.

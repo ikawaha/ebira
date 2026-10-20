@@ -5,6 +5,7 @@ package daemon
 import (
 	"context"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
@@ -60,5 +61,37 @@ func TestStateAndHealth(t *testing.T) {
 	}
 	if !Alive(os.Getpid()) || Alive(-1) {
 		t.Error("Alive")
+	}
+}
+
+func TestCheckSelf(t *testing.T) {
+	ctx := context.Background()
+	self := httptest.NewServer(HealthHandler(State{PID: 100}))
+	defer self.Close()
+	if err := CheckSelf(ctx, strings.TrimPrefix(self.URL, "http://"), 100, time.Second); err != nil {
+		t.Errorf("own answer: %v", err)
+	}
+	if err := CheckSelf(ctx, strings.TrimPrefix(self.URL, "http://"), 200, 300*time.Millisecond); !errors.Is(err, ErrNotSelf) || !strings.Contains(err.Error(), "pid 100 answers") {
+		t.Errorf("another server's answer: %v, want ErrNotSelf naming pid 100", err)
+	}
+	other := httptest.NewServer(http.NotFoundHandler())
+	defer other.Close()
+	if err := CheckSelf(ctx, strings.TrimPrefix(other.URL, "http://"), 100, 300*time.Millisecond); !errors.Is(err, ErrNotSelf) || !strings.Contains(err.Error(), "404") {
+		t.Errorf("another program's answer: %v, want ErrNotSelf with 404", err)
+	}
+}
+
+func TestDialAddr(t *testing.T) {
+	for addr, want := range map[string]string{
+		"localhost:13579": "localhost:13579",
+		"127.0.0.1:13579": "127.0.0.1:13579",
+		":13579":          "localhost:13579",
+		"0.0.0.0:13579":   "localhost:13579",
+		"[::]:13579":      "localhost:13579",
+		"ebira.local:80":  "ebira.local:80",
+	} {
+		if got := dialAddr(addr); got != want {
+			t.Errorf("dialAddr(%q) = %q, want %q", addr, got, want)
+		}
 	}
 }
