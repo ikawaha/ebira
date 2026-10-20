@@ -603,6 +603,14 @@ var _ = Service("notes", func() {
 		})
 	})
 
+	Method("empty_trash", func() {
+		Description("Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.")
+		HTTP(func() {
+			DELETE("/trash")
+			Response(StatusNoContent)
+		})
+	})
+
 	Method("import", func() {
 		Description("Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.")
 		Payload(func() {

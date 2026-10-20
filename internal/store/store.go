@@ -779,6 +779,37 @@ func (s *Store) DeleteTrashedNotebook(nb string) error {
 	return os.RemoveAll(dir)
 }
 
+// EmptyTrash permanently deletes the notes in the trash with their files, and
+// the notebooks in the trash with their notes. The settings of the trash
+// itself and files ebira does not know are left alone.
+func (s *Store) EmptyTrash() error {
+	dir := filepath.Join(s.dir, Trash)
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		name := e.Name()
+		id, note := strings.CutSuffix(name, Ext)
+		assets, files := strings.CutSuffix(name, AssetsSuffix)
+		switch {
+		case e.IsDir() && ValidNotebook(name), e.IsDir() && files && ValidID(assets):
+			err = os.RemoveAll(filepath.Join(dir, name))
+		case !e.IsDir() && note && ValidID(id):
+			err = os.Remove(filepath.Join(dir, name))
+		default:
+			continue
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // TrashedNotebookMeta reads the settings of notebook nb in the trash.
 func (s *Store) TrashedNotebookMeta(nb string) (NotebookMeta, error) {
 	if !ValidNotebook(nb) {

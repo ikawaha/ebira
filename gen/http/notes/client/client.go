@@ -77,6 +77,10 @@ type Client struct {
 	// delete_trashed_notebook endpoint.
 	DeleteTrashedNotebookDoer goahttp.Doer
 
+	// EmptyTrash Doer is the HTTP client used to make requests to the empty_trash
+	// endpoint.
+	EmptyTrashDoer goahttp.Doer
+
 	// Import Doer is the HTTP client used to make requests to the import endpoint.
 	ImportDoer goahttp.Doer
 
@@ -154,6 +158,7 @@ func NewClient(
 		TrashedNotebooksDoer:      doer,
 		RestoreNotebookDoer:       doer,
 		DeleteTrashedNotebookDoer: doer,
+		EmptyTrashDoer:            doer,
 		ImportDoer:                doer,
 		AddFileDoer:               doer,
 		GetFileDoer:               doer,
@@ -527,6 +532,25 @@ func (c *Client) DeleteTrashedNotebook() goa.Endpoint {
 		resp, err := c.DeleteTrashedNotebookDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "delete_trashed_notebook", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// EmptyTrash returns an endpoint that makes HTTP requests to the notes service
+// empty_trash server.
+func (c *Client) EmptyTrash() goa.Endpoint {
+	var (
+		decodeResponse = DecodeEmptyTrashResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildEmptyTrashRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.EmptyTrashDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "empty_trash", err)
 		}
 		return decodeResponse(resp)
 	}

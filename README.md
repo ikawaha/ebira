@@ -50,7 +50,7 @@ flowchart LR
 
 The same notes, from the browser or from the terminal; both talk to the same local server, and each shows the other's changes as they happen.
 
-**Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; create, rename, retype and trash notebooks from their menus, and drag notes onto a notebook to move them; edit Markdown with list continuation and code coloring, paste images, and see math and diagrams rendered.
+**Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; create, rename, retype and trash notebooks from their menus or by dragging them onto the trash, empty the trash from its menu, and drag notes onto a notebook to move them; edit Markdown with list continuation and code coloring, paste images, and see math and diagrams rendered.
 
 <p align="center">
   <img src="assets/screenshots/web-editor.png" width="800" alt="Editing a note in the web UI: the title, notebook and tags above, and the Markdown body with a Go code block colored">

@@ -1264,6 +1264,15 @@ func EncodeDeleteTrashedNotebookError(encoder func(context.Context, http.Respons
 	}
 }
 
+// EncodeEmptyTrashResponse returns an encoder for responses returned by the
+// notes empty_trash endpoint.
+func EncodeEmptyTrashResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+}
+
 // EncodeImportResponse returns an encoder for responses returned by the notes
 // import endpoint.
 func EncodeImportResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {

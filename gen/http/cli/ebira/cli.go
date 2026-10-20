@@ -24,7 +24,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
+		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
 		"assistant ask",
 	}
 }
@@ -128,6 +128,8 @@ func ParseEndpoint(
 		notesDeleteTrashedNotebookFlags  = flag.NewFlagSet("delete-trashed-notebook", flag.ExitOnError)
 		notesDeleteTrashedNotebookIDFlag = new(cliStringFlag)
 
+		notesEmptyTrashFlags = flag.NewFlagSet("empty-trash", flag.ExitOnError)
+
 		notesImportFlags    = flag.NewFlagSet("import", flag.ExitOnError)
 		notesImportBodyFlag = new(cliStringFlag)
 
@@ -224,6 +226,7 @@ func ParseEndpoint(
 	notesTrashedNotebooksFlags.Usage = notesTrashedNotebooksUsage
 	notesRestoreNotebookFlags.Usage = notesRestoreNotebookUsage
 	notesDeleteTrashedNotebookFlags.Usage = notesDeleteTrashedNotebookUsage
+	notesEmptyTrashFlags.Usage = notesEmptyTrashUsage
 	notesImportFlags.Usage = notesImportUsage
 	notesAddFileFlags.Usage = notesAddFileUsage
 	notesGetFileFlags.Usage = notesGetFileUsage
@@ -322,6 +325,9 @@ func ParseEndpoint(
 
 			case "delete-trashed-notebook":
 				epf = notesDeleteTrashedNotebookFlags
+
+			case "empty-trash":
+				epf = notesEmptyTrashFlags
 
 			case "import":
 				epf = notesImportFlags
@@ -434,6 +440,8 @@ func ParseEndpoint(
 			case "delete-trashed-notebook":
 				endpoint = c.DeleteTrashedNotebook()
 				data, err = notesc.BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookIDFlag.value)
+			case "empty-trash":
+				endpoint = c.EmptyTrash()
 			case "import":
 				endpoint = c.Import()
 				data, err = notesc.BuildImportPayload(notesImportBodyFlag.value)
@@ -508,6 +516,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
 	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.`)
 	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes.`)
+	fmt.Fprintln(os.Stderr, `    empty-trash: Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
 	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.`)
 	fmt.Fprintln(os.Stderr, `    add-file: Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.`)
 	fmt.Fprintln(os.Stderr, `    get-file: Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.`)
@@ -835,6 +844,22 @@ func notesDeleteTrashedNotebookUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"inbox\"")
+}
+
+func notesEmptyTrashUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes empty-trash", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes empty-trash")
 }
 
 func notesImportUsage() {

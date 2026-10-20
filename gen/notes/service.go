@@ -78,6 +78,9 @@ type Service interface {
 	RestoreNotebook(context.Context, *RestoreNotebookPayload) (res *Notebook, err error)
 	// Permanently delete a notebook in the trash with its notes.
 	DeleteTrashedNotebook(context.Context, *DeleteTrashedNotebookPayload) (err error)
+	// Permanently delete everything in the trash: the notes deleted on their own
+	// and the notebooks deleted as a whole, with their notes and files.
+	EmptyTrash(context.Context) (err error)
 	// Import a Markdown file as a new note with a random ID. A file whose content
 	// was imported before, even if the note is in the trash, is skipped unless
 	// force is set. Images the file refers to by relative paths can be sent with
@@ -184,7 +187,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [34]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "sync"}
+var MethodNames = [35]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {

@@ -32,6 +32,7 @@ type Endpoints struct {
 	TrashedNotebooks      goa.Endpoint
 	RestoreNotebook       goa.Endpoint
 	DeleteTrashedNotebook goa.Endpoint
+	EmptyTrash            goa.Endpoint
 	Import                goa.Endpoint
 	CreateAiNote          goa.Endpoint
 	ImportAiNote          goa.Endpoint
@@ -96,6 +97,7 @@ func NewEndpoints(s Service) *Endpoints {
 		TrashedNotebooks:      NewTrashedNotebooksEndpoint(s),
 		RestoreNotebook:       NewRestoreNotebookEndpoint(s),
 		DeleteTrashedNotebook: NewDeleteTrashedNotebookEndpoint(s),
+		EmptyTrash:            NewEmptyTrashEndpoint(s),
 		Import:                NewImportEndpoint(s),
 		CreateAiNote:          NewCreateAiNoteEndpoint(s),
 		ImportAiNote:          NewImportAiNoteEndpoint(s),
@@ -135,6 +137,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.TrashedNotebooks = m(e.TrashedNotebooks)
 	e.RestoreNotebook = m(e.RestoreNotebook)
 	e.DeleteTrashedNotebook = m(e.DeleteTrashedNotebook)
+	e.EmptyTrash = m(e.EmptyTrash)
 	e.Import = m(e.Import)
 	e.CreateAiNote = m(e.CreateAiNote)
 	e.ImportAiNote = m(e.ImportAiNote)
@@ -294,6 +297,14 @@ func NewDeleteTrashedNotebookEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeleteTrashedNotebookPayload)
 		return nil, s.DeleteTrashedNotebook(ctx, p)
+	}
+}
+
+// NewEmptyTrashEndpoint returns an endpoint function that calls the method
+// "empty_trash" of service "notes".
+func NewEmptyTrashEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return nil, s.EmptyTrash(ctx)
 	}
 }
 

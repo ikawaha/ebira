@@ -564,6 +564,19 @@ func (s *Notes) DeleteTrashedNotebook(ctx context.Context, p *gennotes.DeleteTra
 	return err
 }
 
+// EmptyTrash permanently deletes everything in the trash. The sync after it
+// drops the notes from the index, tells the clients and forgets their
+// history, as for notes deleted elsewhere.
+func (s *Notes) EmptyTrash(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.store.EmptyTrash(); err != nil {
+		return err
+	}
+	_, err := s.sync(ctx)
+	return err
+}
+
 // ensureNotebookFromTrash makes sure notebook nb exists for a note restored
 // from nb in the trash: it is recreated with the settings kept in the trash,
 // and an existing notebook must have the same kind, so that a note never

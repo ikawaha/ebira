@@ -1192,6 +1192,18 @@ paths:
                             $ref: '#/definitions/TagCount'
             schemes:
                 - http
+    /trash:
+        delete:
+            tags:
+                - notes
+            summary: empty_trash notes
+            description: 'Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.'
+            operationId: notes#empty_trash
+            responses:
+                "204":
+                    description: No Content response.
+            schemes:
+                - http
     /trash/notebooks:
         get:
             tags:

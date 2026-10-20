@@ -828,3 +828,60 @@ func TestMoveNoteOutOfTrashedNotebook(t *testing.T) {
 		t.Errorf("work has %d notes, want 2", list.Total)
 	}
 }
+
+func TestEmptyTrash(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	old, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "old"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []*gennotes.CreatePayload{
+		{ID: ptr("kept"), Title: "kept"},
+		{ID: ptr("single"), Title: "single"},
+		{ID: ptr("inside"), Notebook: &old.ID, Title: "inside"},
+	} {
+		if _, err := svc.Create(person, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := svc.AddFile(person, &gennotes.AddFilePayload{ID: "single", Name: "a.png"}, body(pngHead)); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Delete(person, &gennotes.DeletePayload{ID: "single"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: old.ID}); err != nil {
+		t.Fatal(err)
+	}
+	// A file ebira does not know stays.
+	other := filepath.Join(dir, store.Trash, "README.txt")
+	if err := os.WriteFile(other, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.EmptyTrash(person); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"single", "inside"} {
+		if _, err := svc.Get(person, &gennotes.GetPayload{ID: id}); errorName(err) != "not_found" {
+			t.Errorf("Get(%s) after emptying the trash = %v, want not_found", id, err)
+		}
+	}
+	if _, err := svc.Get(person, &gennotes.GetPayload{ID: "kept"}); err != nil {
+		t.Errorf("a note outside the trash is gone: %v", err)
+	}
+	if nbs, err := svc.TrashedNotebooks(person); err != nil || len(nbs) != 0 {
+		t.Errorf("trashed notebooks = %v, %v; want none", nbs, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, store.Trash, "single"+store.AssetsSuffix)); !os.IsNotExist(err) {
+		t.Errorf("the files of a deleted note are left: %v", err)
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Errorf("a file ebira does not know is gone: %v", err)
+	}
+	// Nothing to delete is no error.
+	if err := svc.EmptyTrash(person); err != nil {
+		t.Errorf("emptying an empty trash = %v", err)
+	}
+}

@@ -32,6 +32,7 @@ type Client struct {
 	TrashedNotebooksEndpoint      goa.Endpoint
 	RestoreNotebookEndpoint       goa.Endpoint
 	DeleteTrashedNotebookEndpoint goa.Endpoint
+	EmptyTrashEndpoint            goa.Endpoint
 	ImportEndpoint                goa.Endpoint
 	CreateAiNoteEndpoint          goa.Endpoint
 	ImportAiNoteEndpoint          goa.Endpoint
@@ -53,7 +54,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -71,6 +72,7 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		TrashedNotebooksEndpoint:      trashedNotebooks,
 		RestoreNotebookEndpoint:       restoreNotebook,
 		DeleteTrashedNotebookEndpoint: deleteTrashedNotebook,
+		EmptyTrashEndpoint:            emptyTrash,
 		ImportEndpoint:                import_,
 		CreateAiNoteEndpoint:          createAiNote,
 		ImportAiNoteEndpoint:          importAiNote,
@@ -291,6 +293,12 @@ func (c *Client) RestoreNotebook(ctx context.Context, p *RestoreNotebookPayload)
 //   - error: internal error
 func (c *Client) DeleteTrashedNotebook(ctx context.Context, p *DeleteTrashedNotebookPayload) (err error) {
 	_, err = c.DeleteTrashedNotebookEndpoint(ctx, p)
+	return
+}
+
+// EmptyTrash calls the "empty_trash" endpoint of the "notes" service.
+func (c *Client) EmptyTrash(ctx context.Context) (err error) {
+	_, err = c.EmptyTrashEndpoint(ctx, nil)
 	return
 }
 

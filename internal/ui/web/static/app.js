@@ -600,6 +600,7 @@ function renderNotebooks() {
   for (const nb of state.notebooks) {
     const li = item(nb.id, nb.name, nb.kind, nb.count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
+    if (nb.id === "trash") acceptNotebookTrash(li);
     ul.append(li);
     if (nb.id !== "trash") continue;
     for (const tn of state.trashed) {
@@ -669,6 +670,25 @@ function enableNotebookDrag(li, id) {
     const moved = nbDragID;
     const { before } = notebookDrop(li, e);
     moveNotebook(moved, before);
+  });
+}
+
+// acceptNotebookTrash lets a notebook dragged in the column be dropped on the
+// trash row li, which moves it to the trash after asking, as its menu does.
+function acceptNotebookTrash(li) {
+  li.addEventListener("dragover", (e) => {
+    if (!nbDragID) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    li.classList.add("drop-into");
+  });
+  li.addEventListener("dragleave", () => li.classList.remove("drop-into"));
+  li.addEventListener("drop", (e) => {
+    if (!nbDragID) return;
+    e.preventDefault();
+    li.classList.remove("drop-into");
+    const nb = state.notebooks.find((n) => n.id === nbDragID);
+    if (nb) trashNotebook(nb);
   });
 }
 
@@ -764,6 +784,10 @@ function openNotebookMenu(li, id, trashed, e) {
     if (!nb.reserved) {
       sep();
       item(t("notebookToTrash"), () => trashNotebook(nb), "danger");
+    }
+    if (id === "trash" && (nb.count || state.trashed.length)) {
+      sep();
+      item(t("emptyTrash"), emptyTrash, "danger");
     }
   }
   closeNotebookMenu();
@@ -898,6 +922,23 @@ async function trashNotebook(nb) {
   });
   await loadNotebooks().catch(() => {});
   if (state.notebook === nb.id) selectNotebook("trash", nb.id);
+}
+
+// emptyTrash permanently deletes everything in the trash, the notes deleted
+// on their own and the notebooks with their notes, after asking, as it cannot
+// be undone.
+async function emptyTrash() {
+  const single = state.notebooks.find((n) => n.id === "trash")?.count ?? 0;
+  const notes = single + state.trashed.reduce((a, n) => a + n.count, 0);
+  if (!confirm(t("confirmEmptyTrash", { n: notes, m: state.trashed.length }))) return;
+  try {
+    await api("/trash", { method: "DELETE" });
+  } catch (e) {
+    notebookFailed(e);
+    return;
+  }
+  await loadNotebooks().catch(() => {});
+  if (state.notebook === "trash") await loadNotes();
 }
 
 async function restoreNotebook(id) {

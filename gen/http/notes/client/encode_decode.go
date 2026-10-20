@@ -1815,6 +1815,57 @@ func DecodeDeleteTrashedNotebookResponse(decoder func(*http.Response) goahttp.De
 	}
 }
 
+// BuildEmptyTrashRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "empty_trash" endpoint
+func (c *Client) BuildEmptyTrashRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: EmptyTrashNotesPath()}
+	req, err := http.NewRequest("DELETE", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "empty_trash", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeEmptyTrashResponse returns a decoder for responses returned by the
+// notes empty_trash endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+func DecodeEmptyTrashResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "empty_trash", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "empty_trash", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "empty_trash", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "empty_trash", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildImportRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "import" endpoint
 func (c *Client) BuildImportRequest(ctx context.Context, v any) (*http.Request, error) {

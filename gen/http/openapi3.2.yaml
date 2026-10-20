@@ -1855,6 +1855,16 @@ paths:
                                   name: Reiciendis eum et maiores.
                                 - count: 6903405577005272120
                                   name: Reiciendis eum et maiores.
+    /trash:
+        delete:
+            tags:
+                - notes
+            summary: empty_trash notes
+            description: 'Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.'
+            operationId: notes#empty_trash
+            responses:
+                "204":
+                    description: No Content response.
     /trash/notebooks:
         get:
             tags:
