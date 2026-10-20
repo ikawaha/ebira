@@ -199,8 +199,8 @@ func base(env, def string) (string, error) {
 	return filepath.Join(home, def), nil
 }
 
-// Save adds the set values of c, notes_dir, lang and git_sync, to the settings
-// file, creating the file when it does not exist. A notes directory under the home
+// Save adds the set values of c, notes_dir, addr, lang and git_sync, to the
+// settings file, creating the file when it does not exist. A notes directory under the home
 // directory is written with ~. The keys are appended, so the rest of the
 // file, with its comments, is kept; the file must not have them yet.
 func Save(c Config) (string, error) {
@@ -209,7 +209,7 @@ func Save(c Config) (string, error) {
 		return "", err
 	}
 	var add []byte
-	for _, kv := range [][2]string{{"notes_dir", homeRel(c.NotesDir)}, {"lang", c.Lang}, {"git_sync", c.GitSync}} {
+	for _, kv := range [][2]string{{"notes_dir", homeRel(c.NotesDir)}, {"addr", c.Addr}, {"lang", c.Lang}, {"git_sync", c.GitSync}} {
 		if kv[1] == "" {
 			continue
 		}

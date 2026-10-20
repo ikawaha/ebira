@@ -4,7 +4,7 @@ info:
     description: API for Markdown notes stored as YAML files and searched through a SQLite index.
     version: 0.1.0
 servers:
-    - url: http://localhost:8080
+    - url: http://localhost:13579
       name: ebira
 paths:
     /ask:

@@ -3,7 +3,7 @@ info:
     title: ebira API
     description: API for Markdown notes stored as YAML files and searched through a SQLite index.
     version: 0.1.0
-host: localhost:8080
+host: localhost:13579
 consumes:
     - application/json
     - application/xml

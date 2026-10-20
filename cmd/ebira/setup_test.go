@@ -97,13 +97,13 @@ func TestSetup(t *testing.T) {
 		t.Errorf("_ebira.yaml: %q, %v", b, err)
 	}
 	b, err = os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml"))
-	if err != nil || string(b) != "notes_dir: ~/notes\nlang: ja\n" {
+	if err != nil || string(b) != "notes_dir: ~/notes\naddr: "+fallbackAddr+"\nlang: ja\n" {
 		t.Errorf("config.yaml: %q, %v", b, err)
 	}
 	if c, err := config.Load(); err != nil || c.NotesDir != dir {
 		t.Errorf("Load: %+v, %v", c, err)
 	}
-	if settings.NotesDir != dir || settings.Lang != "ja" || setupFlags != nil {
+	if settings.NotesDir != dir || settings.Addr != fallbackAddr || settings.Lang != "ja" || setupFlags != nil {
 		t.Errorf("settings: %+v, flags %v", settings, setupFlags)
 	}
 }

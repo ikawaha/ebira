@@ -20,7 +20,7 @@ func runSync(args []string) error {
 	var (
 		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server syncs, started in the background if needed")
 		addr     = fs.String("addr", defaultAddr(), "address of a server started for the sync")
-		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
+		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:13579")
 		remote   = fs.String("remote", "", "URL of a remote repository to connect the notes to first, as the remote origin: the notes directory becomes a repository unless it is one, and the notes are pushed, merging those already there")
 	)
 	fs.Usage = func() {

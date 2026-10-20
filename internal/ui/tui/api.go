@@ -26,7 +26,7 @@ type Clients struct {
 }
 
 // NewClient returns the API clients for the server at rawURL, such as
-// http://localhost:8080.
+// http://localhost:13579.
 func NewClient(rawURL string) (*Clients, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {

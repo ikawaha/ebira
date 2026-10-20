@@ -173,14 +173,14 @@ func TestPrepare(t *testing.T) {
 
 func TestSave(t *testing.T) {
 	home := setHome(t)
-	p, err := Save(Config{NotesDir: filepath.Join(home, "notes dir"), Lang: "ja"})
+	p, err := Save(Config{NotesDir: filepath.Join(home, "notes dir"), Addr: "localhost:13579", Lang: "ja"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(p); string(b) != "notes_dir: ~/notes dir\nlang: ja\n" {
+	if b, _ := os.ReadFile(p); string(b) != "notes_dir: ~/notes dir\naddr: localhost:13579\nlang: ja\n" {
 		t.Errorf("new file: %q", b)
 	}
-	if c, err := Load(); err != nil || c.NotesDir != filepath.Join(home, "notes dir") || c.Lang != "ja" {
+	if c, err := Load(); err != nil || c.NotesDir != filepath.Join(home, "notes dir") || c.Addr != "localhost:13579" || c.Lang != "ja" {
 		t.Errorf("new file: %+v, %v", c, err)
 	}
 

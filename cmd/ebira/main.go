@@ -35,9 +35,14 @@ var settings config.Config
 // file, else notes in the current directory.
 func defaultNotesDir() string { return cmp.Or(settings.NotesDir, "notes") }
 
+// fallbackAddr is the address to listen on without addr in the settings file.
+// It is a port few other programs use; setup writes it to the settings file,
+// so that a change of it leaves the URLs of MCP clients working.
+const fallbackAddr = "localhost:13579"
+
 // defaultAddr returns the default of -addr: addr of the settings file, else
-// localhost:8080.
-func defaultAddr() string { return cmp.Or(settings.Addr, "localhost:8080") }
+// fallbackAddr.
+func defaultAddr() string { return cmp.Or(settings.Addr, fallbackAddr) }
 
 const usage = `usage:
   ebira [flags]                 open the TUI, starting the server in the background if needed

@@ -163,6 +163,13 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	}
 	fmt.Fprintln(out)
 	what := "the directory as notes_dir"
+	// The address goes to the settings file too, so that the URLs given to
+	// MCP clients keep working when the default changes.
+	addr := ""
+	if settings.Addr == "" {
+		addr = fallbackAddr
+		what += ", the address " + addr + " as addr"
+	}
 	if lang != "" {
 		what += ", the language as lang"
 	}
@@ -204,10 +211,11 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		return "", err
 	}
 	if save {
-		if _, err := config.Save(config.Config{NotesDir: dir, Lang: lang, GitSync: gitSync}); err != nil {
+		if _, err := config.Save(config.Config{NotesDir: dir, Addr: addr, Lang: lang, GitSync: gitSync}); err != nil {
 			return "", err
 		}
 		settings.NotesDir = dir
+		settings.Addr = cmp.Or(addr, settings.Addr)
 		settings.Lang = cmp.Or(lang, settings.Lang)
 		settings.GitSync = cmp.Or(gitSync, settings.GitSync)
 	} else {

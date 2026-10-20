@@ -30,7 +30,7 @@ func runImport(args []string) error {
 	var (
 		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server is used, started in the background if needed")
 		addr     = fs.String("addr", defaultAddr(), "address of a server started for the import")
-		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:8080")
+		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:13579")
 		notebook = fs.String("notebook", "", "notebook ID to import into (default inbox)")
 		force    = fs.Bool("force", false, "import files whose content was imported before")
 		dryRun   = fs.Bool("dry-run", false, "only show what would be imported, without a server")

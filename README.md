@@ -91,7 +91,7 @@ ebira runs on macOS and Linux.
 
 ## Quick Start
 
-1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI and the TUI, and saves the answers to `~/.config/ebira/config.yaml`. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/notes`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
+1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI and the TUI, and saves the answers to `~/.config/ebira/config.yaml`, with the address of the server (`localhost:13579`), so that the URL you give to MCP clients stays the same. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/notes`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
 
    ```console
    $ ebira web
@@ -102,7 +102,7 @@ ebira runs on macOS and Linux.
    ...
    ```
 
-   `ebira web` starts the server in the background and opens the web UI at <http://localhost:8080/>. `ebira` opens the TUI instead. The server keeps running when you close them.
+   `ebira web` starts the server in the background and opens the web UI at <http://localhost:13579/>. `ebira` opens the TUI instead. The server keeps running when you close them.
 
 2. **Write notes**, in the web UI (`c` for a new note) or as files:
 
@@ -133,7 +133,7 @@ ebira runs on macOS and Linux.
 5. **Let your AI in**, as far as you like (see [MCP server](#mcp-server) for other clients). With Claude Code:
 
    ```bash
-   claude mcp add --transport http ebira http://localhost:8080/mcp
+   claude mcp add --transport http ebira http://localhost:13579/mcp
    ```
 
 ## Commands
@@ -153,7 +153,7 @@ Flags of `serve` (also taken by `server start` and `server restart`):
 | Flag | Default | Description |
 | --- | --- | --- |
 | `-notes` | `notes_dir` of the settings file, else `./notes` | The notes directory |
-| `-addr` | `localhost:8080` | Address to listen on |
+| `-addr` | `addr` of the settings file, else `localhost:13579` | Address to listen on |
 | `-search` | `search` of `_ebira.yaml` in the notes directory, else `bigram` | `like`, `bigram`, `trigram`, `en` or `ja` |
 | `-watch` | `true` | Watch the notes and update the index |
 | `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` (the TUI takes `ebira -lang` or `lang` of the settings file, else `$LANG`) |
@@ -233,12 +233,12 @@ ebira serves your notes to AI clients, such as Claude Code, Cursor and Claude De
 
 ### Connecting
 
-The MCP server is part of the ebira server, at `http://localhost:8080/mcp` (Streamable HTTP; the address follows `-addr`). Keep the server running: `ebira web` and `ebira` start it in the background, and so does `ebira server start`.
+The MCP server is part of the ebira server, at `http://localhost:13579/mcp` (Streamable HTTP; the address follows `-addr`). Keep the server running: `ebira web` and `ebira` start it in the background, and so does `ebira server start`.
 
 Claude Code:
 
 ```bash
-claude mcp add --transport http ebira http://localhost:8080/mcp
+claude mcp add --transport http ebira http://localhost:13579/mcp
 ```
 
 Cursor (`~/.cursor/mcp.json`) and other clients that take a URL:
@@ -246,7 +246,7 @@ Cursor (`~/.cursor/mcp.json`) and other clients that take a URL:
 ```json
 {
   "mcpServers": {
-    "ebira": { "url": "http://localhost:8080/mcp" }
+    "ebira": { "url": "http://localhost:13579/mcp" }
   }
 }
 ```
@@ -256,7 +256,7 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 ```json
 {
   "mcpServers": {
-    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:8080/mcp"] }
+    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:13579/mcp"] }
   }
 }
 ```
@@ -321,7 +321,7 @@ op run --env-file=.env -- ebira server restart
 
 ```yaml
 notes_dir: ~/notes
-addr: localhost:8080
+addr: localhost:13579
 lang: en
 ```
 

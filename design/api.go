@@ -15,6 +15,6 @@ var _ = API("ebira", func() {
 	Version("0.1.0")
 	Server("ebira", func() {
 		Services("notes", "assistant")
-		Host("localhost", func() { URI("http://localhost:8080") })
+		Host("localhost", func() { URI("http://localhost:13579") })
 	})
 })

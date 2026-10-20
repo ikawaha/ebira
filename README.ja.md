@@ -91,7 +91,7 @@ macOS と Linux で動きます。
 
 ## はじめかた
 
-1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI と TUI の言語を聞かれ、答えは `~/.config/ebira/config.yaml` に保存されます。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
+1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI と TUI の言語を聞かれ、答えは、サーバーのアドレス（`localhost:13579`）と一緒に `~/.config/ebira/config.yaml` に保存されます（MCP のクライアントに登録する URL が変わらないように）。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
 
    ```console
    $ ebira web
@@ -102,7 +102,7 @@ macOS と Linux で動きます。
    ...
    ```
 
-   `ebira web` はサーバーを裏で起動し、<http://localhost:8080/> の Web UI をブラウザで開きます。`ebira` なら TUI が開きます。どちらを閉じても、サーバーは動き続けます。
+   `ebira web` はサーバーを裏で起動し、<http://localhost:13579/> の Web UI をブラウザで開きます。`ebira` なら TUI が開きます。どちらを閉じても、サーバーは動き続けます。
 
 2. **ノートを書きます。** Web UI で（`c` で新しいノート）、またはファイルとして:
 
@@ -133,7 +133,7 @@ macOS と Linux で動きます。
 5. **AI につなぎます。** 許したい範囲で（ほかのクライアントは [MCP サーバー](#mcp-サーバー) を参照）。Claude Code なら:
 
    ```bash
-   claude mcp add --transport http ebira http://localhost:8080/mcp
+   claude mcp add --transport http ebira http://localhost:13579/mcp
    ```
 
 ## コマンド
@@ -153,7 +153,7 @@ macOS と Linux で動きます。
 | フラグ | 既定値 | 説明 |
 | --- | --- | --- |
 | `-notes` | 設定ファイルの `notes_dir`、無ければ `./notes` | ノートのディレクトリ |
-| `-addr` | `localhost:8080` | 待ち受けるアドレス |
+| `-addr` | 設定ファイルの `addr`、無ければ `localhost:13579` | 待ち受けるアドレス |
 | `-search` | ノートのディレクトリの `_ebira.yaml` の `search`、無ければ `bigram` | `like`、`bigram`、`trigram`、`en`、`ja` |
 | `-watch` | `true` | ノートを監視して索引を更新する |
 | `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja`（TUI の言語は `ebira -lang` か設定ファイルの `lang`、無ければ `$LANG`） |
@@ -233,12 +233,12 @@ ebira は、Claude Code・Cursor・Claude Desktop などの AI クライアン�
 
 ### つなぎ方
 
-MCP サーバーは ebira のサーバーの一部で、`http://localhost:8080/mcp` にあります（Streamable HTTP。アドレスは `-addr` に従います）。サーバーを動かしておいてください。`ebira web` と `ebira` は裏でサーバーを起動し、`ebira server start` でも起動できます。
+MCP サーバーは ebira のサーバーの一部で、`http://localhost:13579/mcp` にあります（Streamable HTTP。アドレスは `-addr` に従います）。サーバーを動かしておいてください。`ebira web` と `ebira` は裏でサーバーを起動し、`ebira server start` でも起動できます。
 
 Claude Code:
 
 ```bash
-claude mcp add --transport http ebira http://localhost:8080/mcp
+claude mcp add --transport http ebira http://localhost:13579/mcp
 ```
 
 Cursor（`~/.cursor/mcp.json`）など、URL を指定できるクライアント:
@@ -246,7 +246,7 @@ Cursor（`~/.cursor/mcp.json`）など、URL を指定できるクライアン�
 ```json
 {
   "mcpServers": {
-    "ebira": { "url": "http://localhost:8080/mcp" }
+    "ebira": { "url": "http://localhost:13579/mcp" }
   }
 }
 ```
@@ -256,7 +256,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 ```json
 {
   "mcpServers": {
-    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:8080/mcp"] }
+    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:13579/mcp"] }
   }
 }
 ```
@@ -321,7 +321,7 @@ op run --env-file=.env -- ebira server restart
 
 ```yaml
 notes_dir: ~/notes
-addr: localhost:8080
+addr: localhost:13579
 lang: ja
 ```
 
