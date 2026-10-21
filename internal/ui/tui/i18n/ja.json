@@ -46,6 +46,10 @@
   "status.moveTargetInvalid": "移す先には、すべて・タグ・ゴミ箱ではなく、ノートブックを選んでください",
   "status.moveCancelled": "移すのをやめました",
   "status.noteMoved": "ノートを移しました",
+  "status.chooseNotebookParent": "ノートブック「{name}」を移します。入れる先のノートブック（トップに上げるなら「すべて」）を選んで enter（esc でやめる）",
+  "status.notebookParentInvalid": "入れる先には、inbox・ゴミ箱・サブノートブック以外のノートブックを選んでください。サブノートブックをトップに上げるなら「すべて」です",
+  "status.notebookHasSubs": "サブノートブックのあるノートブックは、ほかのノートブックの中へ入れられません",
+  "status.notebookMoved": "ノートブックを移しました",
 
   "sort.order": "手動",
   "sort.created": "作成日時",
@@ -132,6 +136,7 @@
   "key.kind": "種別",
   "key.match": "一致",
   "key.move": "移動",
+  "key.moveNotebook": "移動",
   "key.new": "新規",
   "key.newNote": "新しいノート",
   "key.notebook": "ノートブック",
@@ -169,7 +174,7 @@
   "draft.noTitle": "タイトルが要ります",
   "draft.idChange": "既にあるノートの id は変えられません",
   "draft.badID": "id「{id}」は使えません: a-z、0-9、-、_ の 1〜64 文字で、英字か数字で始めてください",
-  "draft.badNotebook": "notebook「{notebook}」は使えません: a-z、0-9、-、_ の 1〜64 文字で、英字か数字で始めてください",
+  "draft.badNotebook": "notebook「{notebook}」は使えません: a-z、0-9、-、_ の 1〜64 文字で、英字か数字で始めてください（サブのノートブックは <ノートブック>/<名前>）",
   "draft.useDelete": "ゴミ箱へ移すには削除（d）を使ってください",
   "draft.inTrash": "ゴミ箱の中にはノートを作れません"
 }

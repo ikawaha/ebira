@@ -225,6 +225,8 @@ func runServe(args []string) error {
 	// once a day, for a server left running.
 	go sweepHistoryEvery(ctx, svc, 24*time.Hour)
 	if *watchF {
+		// The notes are as deep as trash/<notebook>/<sub>/<id>.yaml.
+		const watchDepth = 3
 		go func() {
 			err := watch.Run(ctx, st.Dir(), store.Ext, 300*time.Millisecond, func() {
 				r, err := svc.Sync(ctx, nil)
@@ -238,7 +240,7 @@ func runServe(args []string) error {
 				for _, e := range r.Errors {
 					slog.Warn("skip note", "error", e)
 				}
-			}, func(err error) { slog.Warn("watch error", "error", err) }, store.Trash)
+			}, func(err error) { slog.Warn("watch error", "error", err) }, watchDepth)
 			if err != nil {
 				slog.Error("watch stopped", "error", err)
 			}

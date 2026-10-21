@@ -509,10 +509,15 @@ func TestIsNotePath(t *testing.T) {
 		"_ebira.yaml":          false,
 		"a.yaml":               false,
 		"dev/a.assets/x.yaml":  false,
-		"dev/sub/a.yaml":       false,
+		"dev/sub/a.yaml":       true, // a sub notebook
 		"Dev/a.yaml":           false,
 		"dev/a.yml":            false,
-		"trash/dev/sub/a.yaml": false,
+		"trash/dev/sub/a.yaml": true,
+		"trash/dev~sub/a.yaml": true, // a sub notebook deleted on its own
+		"dev/sub/x/a.yaml":     false,
+		"inbox/sub/a.yaml":     false,
+		"dev~sub/a.yaml":       false,
+		"trash/dev~/a.yaml":    false,
 	} {
 		if got := IsNotePath(p); got != want {
 			t.Errorf("IsNotePath(%q) = %v", p, got)

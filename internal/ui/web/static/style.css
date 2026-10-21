@@ -14,6 +14,7 @@
   --ok: #2e9d52;
   --ng: #c94a3a;
   --banner-bg: #fff4d6;
+  --sub-bg: #f4f1e8;
   color-scheme: light;
 }
 
@@ -34,6 +35,7 @@
   --mark-current: #b5651d;
   --code-bg: #2a2b2f;
   --banner-bg: #3d3420;
+  --sub-bg: #2b2923;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -51,6 +53,7 @@
     --mark-current: #b5651d;
     --code-bg: #2a2b2f;
     --banner-bg: #3d3420;
+    --sub-bg: #2b2923;
   }
 }
 
@@ -226,10 +229,32 @@ body.resizing { cursor: col-resize; user-select: none; }
 .list li { padding: 8px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .list li:hover { background: var(--bg-hover); }
 .list li.active { background: var(--bg-active); }
+/* The notes chosen together, with a bar of the accent color. */
+.list li.chosen { background: var(--bg-active); box-shadow: inset 3px 0 0 var(--accent); }
+.chosen-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.chosen-list li { display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.chosen-list li span:first-child { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chosen-list .where { color: var(--fg-muted); font-size: 12px; white-space: nowrap; }
 .list .title-row { display: flex; align-items: center; gap: 8px; }
 .list .title { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-mark { flex: none; margin-left: auto; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
 .list .meta { color: var(--fg-muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+/* The sub notebooks of the notebook shown start the note list, in a color of
+   their own; from a sub notebook, a row goes back up. */
+.list li.sub-notebook { display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--sub-bg); white-space: nowrap; }
+.list li.sub-notebook:hover { background: var(--bg-hover); }
+.list li.sub-notebook.up { color: var(--fg-muted); }
+.list li.sub-notebook .icon { flex: none; width: 1.4em; }
+.list li.sub-notebook .icon svg { display: block; width: 16px; height: 16px; margin: 0 auto; color: var(--fg-muted); }
+.list li.sub-notebook .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.list li.sub-notebook.up .name { font-weight: normal; }
+.list li.sub-notebook .count { color: var(--fg-muted); font-size: 12px; }
+.list li.sub-notebook .nb-more { flex: none; visibility: hidden; border: none; background: none; color: var(--fg-muted); padding: 0 4px; line-height: 1.2; font-size: 14px; }
+.list li.sub-notebook:hover .nb-more, .list li.sub-notebook.menu-open .nb-more, .list li.sub-notebook .nb-more:focus-visible { visibility: visible; }
+.list li.sub-notebook.menu-open { background: var(--bg-hover); }
+.list li.sub-notebook.drop-into { box-shadow: inset 0 0 0 2px var(--accent); }
+.list li.sub-notebook .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: 3px; background: var(--bg); color: var(--fg); }
+.notebook-new .inherited { color: var(--fg-muted); font-size: 13px; }
 .list li.more-row { cursor: default; text-align: center; }
 .list li.more-row:hover { background: none; }
 .list .snippet { color: var(--fg-muted); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
@@ -388,6 +413,7 @@ dialog.notebook-new { width: min(420px, calc(100vw - 32px)); padding: 12px 16px;
 .notebook-new .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--fg-muted); }
 .notebook-new .field input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .notebook-new .kinds { margin: 12px 0 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; gap: 4px; }
+.notebook-new .kinds[hidden] { display: none; }
 .notebook-new .kinds legend { font-size: 12px; color: var(--fg-muted); padding: 0 4px; }
 .notebook-new .kinds label { display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
 .notebook-new .kinds label > span > span { color: var(--fg-muted); font-size: 12px; }

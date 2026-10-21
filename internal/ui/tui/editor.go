@@ -37,9 +37,14 @@ type frontMatter struct {
 	Tags     []string `yaml:"tags,flow"`
 }
 
-// idPattern mirrors the note ID and notebook pattern of the API design (design/design.go),
-// so that the UI can explain a bad ID instead of showing a validation error.
-var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+// idPattern and notebookPattern mirror the patterns of note and notebook IDs
+// in the API design (design/dsl.go), so that the UI can explain a bad ID
+// instead of showing a validation error. A notebook ID is <parent>/<sub> for
+// a sub notebook.
+var (
+	idPattern       = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+	notebookPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$`)
+)
 
 // Reserved notebooks of the API.
 const (
@@ -167,7 +172,7 @@ func (d *draft) apply(fm frontMatter, body string) error {
 		return errMsg("draft.idChange")
 	case fm.ID != "" && !idPattern.MatchString(fm.ID):
 		return errMsg("draft.badID", "id", fm.ID)
-	case fm.Notebook != "" && !idPattern.MatchString(fm.Notebook):
+	case fm.Notebook != "" && !notebookPattern.MatchString(fm.Notebook):
 		return errMsg("draft.badNotebook", "notebook", fm.Notebook)
 	case fm.Notebook == trashNotebook && d.notebook != trashNotebook:
 		return errMsg("draft.useDelete")

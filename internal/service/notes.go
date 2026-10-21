@@ -262,8 +262,8 @@ func (s *Notes) Restore(ctx context.Context, p *gennotes.RestorePayload) (*genno
 		// A note of a notebook in the trash goes back into that notebook,
 		// which is recreated with its settings (above all its kind, so that a
 		// private note stays hidden from AI) if it does not exist.
-		to = n.TrashedNotebook
-		if err := s.ensureNotebookFromTrash(to); err != nil {
+		to = store.RestoredNotebook(n.TrashedNotebook)
+		if err := s.ensureNotebookFromTrash(n.TrashedNotebook); err != nil {
 			return nil, err
 		}
 	}
@@ -275,6 +275,84 @@ func (s *Notes) Restore(ctx context.Context, p *gennotes.RestorePayload) (*genno
 		return nil, err
 	}
 	return toNote(n), nil
+}
+
+// MoveNotes moves notes to a notebook at once. The notes are read first, so
+// that none moves when one cannot be read.
+func (s *Notes) MoveNotes(ctx context.Context, p *gennotes.MoveNotesPayload) error {
+	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
+	if p.Notebook == store.Trash {
+		return gennotes.MakeBadRequest(errors.New("use trash_notes to move notes to the trash"))
+	}
+	if !store.ValidNotebook(p.Notebook) {
+		return gennotes.MakeBadRequest(store.ErrInvalidNotebook)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	notes, err := s.loadNotes(p.Ids)
+	if err != nil {
+		return err
+	}
+	for _, n := range notes {
+		if n.Notebook == p.Notebook {
+			continue
+		}
+		edited := false
+		if n.Notebook == store.Trash {
+			n.TrashedFrom = "" // moving out of the trash restores the note
+			edited = true
+		}
+		if err := s.write(ctx, n, edited, p.Notebook); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TrashNotes moves notes to the trash at once. The notes are read first, so
+// that none moves when one cannot be read or is in the trash already.
+func (s *Notes) TrashNotes(ctx context.Context, p *gennotes.TrashNotesPayload) error {
+	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	notes, err := s.loadNotes(p.Ids)
+	if err != nil {
+		return err
+	}
+	for _, n := range notes {
+		if n.Notebook == store.Trash {
+			return gennotes.MakeBadRequest(fmt.Errorf("note %s is in the trash already", n.ID))
+		}
+	}
+	for _, n := range notes {
+		n.TrashedFrom = n.Notebook
+		if err := s.write(ctx, n, true, store.Trash); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// loadNotes reads the notes, each once. The caller holds s.mu.
+func (s *Notes) loadNotes(ids []string) ([]*store.Note, error) {
+	var notes []*store.Note
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		n, err := s.store.Load(id)
+		if err != nil {
+			return nil, mapErr(err)
+		}
+		notes = append(notes, n)
+	}
+	return notes, nil
 }
 
 // sortStep is the gap between the keys of the manual order that Move leaves
@@ -464,7 +542,9 @@ func (s *Notes) saveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayloa
 		m.Sort = *p.Sort
 	}
 	if p.Kind != nil {
-		switch {
+		switch _, sub := store.SplitNotebook(p.ID); {
+		case sub != "":
+			return nil, gennotes.MakeBadRequest(errors.New("a sub notebook takes the kind of its notebook; change the kind of that notebook instead"))
 		case reserved && *p.Kind == store.KindCollab:
 			return nil, gennotes.MakeBadRequest(errors.New("inbox and trash cannot be of the collab kind"))
 		case p.ID == store.Trash && (*p.Kind == store.KindPrivate || *p.Kind == store.KindDrop):
@@ -510,6 +590,15 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 	if err != nil {
 		return nil, err
 	}
+	parent := deref(p.Parent)
+	if parent != "" {
+		if !store.ValidNotebook(parent+"/x") || !slices.ContainsFunc(nbs, func(nb *gennotes.Notebook) bool { return nb.ID == parent }) {
+			if store.ValidNotebook(parent + "/x") {
+				return nil, gennotes.MakeNotFound(fmt.Errorf("notebook %s not found", parent))
+			}
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("notebook %s cannot hold sub notebooks: only notebooks other than the inbox and the trash can, one level deep", parent))
+		}
+	}
 	// A notebook hidden from the request does not block its name, so that AI
 	// clients do not learn the names of private notebooks. Drop notebooks are
 	// listed for them, so their names do.
@@ -517,18 +606,26 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 	if err != nil {
 		return nil, err
 	}
+	// Names and IDs are told apart among the notebooks of the same parent.
 	taken := map[string]bool{store.Inbox: true, store.Trash: true}
 	order := 0
 	for _, nb := range nbs {
+		taken[nb.ID] = true
+		if deref(nb.Parent) != parent {
+			continue
+		}
 		if strings.EqualFold(norm.NFC.String(nb.Name), name) && (!slices.Contains(hidden, nb.ID) || nb.Kind == store.KindDrop) {
 			return nil, gennotes.MakeAlreadyExists(fmt.Errorf("notebook %q already exists (%s)", nb.Name, nb.ID))
 		}
-		taken[nb.ID] = true
 		if !nb.Reserved {
 			order = max(order, nb.Order)
 		}
 	}
-	id := store.UniqueNotebookID(store.NotebookID(name), func(id string) bool { return taken[id] })
+	prefix := ""
+	if parent != "" {
+		prefix = parent + "/"
+	}
+	id := prefix + store.UniqueNotebookID(store.NotebookID(name), func(id string) bool { return taken[prefix+id] })
 	m := store.NotebookMeta{Name: name, Order: order + 10, Kind: storeKind(p.Kind)} // after the others by default
 	if p.Order != nil {
 		m.Order = *p.Order
@@ -540,6 +637,96 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 		return nil, err
 	}
 	s.notifyNotebooks(nbs)
+	for _, nb := range nbs {
+		if nb.ID == id {
+			return nb, nil
+		}
+	}
+	return nil, gennotes.MakeNotFound(errors.New("notebook not found"))
+}
+
+// MoveNotebook moves a notebook into another notebook, as a sub notebook, or
+// a sub notebook to the top or into another notebook. It goes after the
+// notebooks already there. As a sub notebook takes the kind of its parent,
+// moving a private notebook into one of another kind makes it visible to AI,
+// which is an important operation, as with SaveNotebook.
+func (s *Notes) MoveNotebook(ctx context.Context, p *gennotes.MoveNotebookPayload) (*gennotes.Notebook, error) {
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	nbs, err := s.notebooks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	find := func(id string) *gennotes.Notebook {
+		for _, nb := range nbs {
+			if nb.ID == id {
+				return nb
+			}
+		}
+		return nil
+	}
+	cur := find(p.ID)
+	if cur == nil {
+		return nil, gennotes.MakeNotFound(fmt.Errorf("notebook %s not found", p.ID))
+	}
+	if cur.Reserved {
+		return nil, gennotes.MakeBadRequest(store.ErrReserved)
+	}
+	parent, kind := deref(p.Parent), cur.Kind
+	if parent != "" {
+		pn := find(parent)
+		if pn == nil {
+			return nil, gennotes.MakeNotFound(fmt.Errorf("notebook %s not found", parent))
+		}
+		if pn.Reserved || pn.Parent != nil || pn.ID == cur.ID {
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("notebook %s cannot hold sub notebooks: only notebooks other than the inbox and the trash can, one level deep", parent))
+		}
+		kind = pn.Kind
+	}
+	to := store.MovedNotebook(cur.ID, parent)
+	if to == cur.ID {
+		return cur, nil
+	}
+	// Names are told apart among the notebooks of the same parent.
+	order := 0
+	for _, nb := range nbs {
+		if deref(nb.Parent) != parent || nb.ID == cur.ID {
+			continue
+		}
+		if strings.EqualFold(norm.NFC.String(nb.Name), norm.NFC.String(cur.Name)) {
+			return nil, gennotes.MakeAlreadyExists(fmt.Errorf("notebook %q already exists (%s)", nb.Name, nb.ID))
+		}
+		if !nb.Reserved {
+			order = max(order, nb.Order)
+		}
+	}
+	if cur.Kind == store.KindPrivate && kind != store.KindPrivate {
+		if err := requireVerified(ctx); err != nil {
+			return nil, err
+		}
+	}
+	id, err := s.store.MoveNotebook(cur.ID, parent)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	m, err := s.store.NotebookMeta(id)
+	if err != nil {
+		return nil, err
+	}
+	m.Order = order + 10
+	if err := s.store.SaveNotebookMeta(id, m); err != nil {
+		return nil, err
+	}
+	if _, err := s.sync(ctx); err != nil {
+		return nil, err
+	}
+	nbs, err = s.notebooks(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for _, nb := range nbs {
 		if nb.ID == id {
 			return nb, nil
@@ -582,7 +769,11 @@ func (s *Notes) TrashedNotebooks(ctx context.Context, _ *gennotes.TrashedNoteboo
 		if err != nil {
 			m = store.NotebookMeta{}
 		}
-		res = append(res, &gennotes.TrashedNotebook{ID: id, Name: cmp.Or(m.Name, store.NotebookName(id)), Kind: apiKind(m.Kind), Count: counts[id]})
+		nb := &gennotes.TrashedNotebook{ID: id, Name: cmp.Or(m.Name, store.NotebookName(id)), Kind: apiKind(m.Kind), Count: counts[id]}
+		if parent, sub := store.SplitNotebook(id); sub != "" {
+			nb.Parent = &parent
+		}
+		res = append(res, nb)
 	}
 	return res, nil
 }
@@ -594,7 +785,8 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := s.store.RestoreNotebook(p.ID); err != nil {
+	id, err := s.store.RestoreNotebook(p.ID)
+	if err != nil {
 		return nil, mapErr(err)
 	}
 	if _, err := s.sync(ctx); err != nil {
@@ -605,7 +797,7 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 		return nil, err
 	}
 	for _, nb := range nbs {
-		if nb.ID == p.ID {
+		if nb.ID == id {
 			return nb, nil
 		}
 	}
@@ -646,12 +838,14 @@ func (s *Notes) EmptyTrash(ctx context.Context, _ *gennotes.EmptyTrashPayload) e
 	return err
 }
 
-// ensureNotebookFromTrash makes sure notebook nb exists for a note restored
-// from nb in the trash: it is recreated with the settings kept in the trash,
-// and an existing notebook must have the same kind, so that a note never
-// becomes visible to AI clients by being restored. The caller holds s.mu.
-func (s *Notes) ensureNotebookFromTrash(nb string) error {
-	trashed, err := s.store.TrashedNotebookMeta(nb)
+// ensureNotebookFromTrash makes sure the notebook that notebook id in the
+// trash goes back to exists, for a note restored from id: it is recreated
+// with the settings kept in the trash, and an existing notebook must have the
+// same kind, so that a note never becomes visible to AI clients by being
+// restored. A sub notebook is recreated only in its parent, whose kind it
+// takes. The caller holds s.mu.
+func (s *Notes) ensureNotebookFromTrash(id string) error {
+	trashed, err := s.store.TrashedNotebookMeta(id)
 	if err != nil {
 		return mapErr(err)
 	}
@@ -659,7 +853,20 @@ func (s *Notes) ensureNotebookFromTrash(nb string) error {
 	if err != nil {
 		return err
 	}
+	nb := store.RestoredNotebook(id)
 	if !slices.Contains(all, nb) {
+		if parent, sub := store.SplitNotebook(nb); sub != "" {
+			if !slices.Contains(all, parent) {
+				return mapErr(fmt.Errorf("%w: %s", store.ErrNoParent, parent))
+			}
+			pm, err := s.store.NotebookMeta(parent)
+			if err != nil {
+				return err
+			}
+			if pm.Kind != trashed.Kind {
+				return gennotes.MakeBadRequest(fmt.Errorf("notebook %s has the kind %s, but the note comes from a sub notebook of the kind %s; change the kind back before restoring the note", parent, apiKind(pm.Kind), apiKind(trashed.Kind)))
+			}
+		}
 		return mapErr(s.store.SaveNotebookMeta(nb, trashed))
 	}
 	cur, err := s.store.NotebookMeta(nb)
@@ -714,6 +921,9 @@ func (s *Notes) MakeNotebookPrivate(ctx context.Context, p *gennotes.MakeNoteboo
 	}
 	if p.ID == store.Trash {
 		return gennotes.MakeBadRequest(errors.New("the trash keeps the default kind; it is hidden from AI clients anyway"))
+	}
+	if parent, sub := store.SplitNotebook(p.ID); sub != "" {
+		return gennotes.MakeBadRequest(fmt.Errorf("a sub notebook takes the kind of its notebook; make %s private instead", parent))
 	}
 	kind := store.KindPrivate
 	_, err = s.saveNotebook(ctx, &gennotes.SaveNotebookPayload{ID: p.ID, Kind: &kind})
@@ -809,7 +1019,8 @@ func (s *Notes) MoveAiNote(ctx context.Context, p *gennotes.MoveAiNotePayload) (
 }
 
 // notebooks lists the notebooks: inbox first, then the others by order, name
-// and ID, and trash last.
+// and ID, each followed by its sub notebooks in the same order, and trash
+// last.
 func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 	ids, err := s.store.Notebooks()
 	if err != nil {
@@ -821,12 +1032,21 @@ func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 	}
 	var inbox, trash *gennotes.Notebook
 	var others []*gennotes.Notebook
+	subs := map[string][]*gennotes.Notebook{}
 	for _, id := range ids {
 		m, err := s.store.NotebookMeta(id)
 		if err != nil {
 			m = store.NotebookMeta{Kind: store.DefaultKind(id)} // a broken settings file falls back to the defaults
 		}
 		nb := &gennotes.Notebook{ID: id, Name: m.Name, Order: m.Order, Count: counts[id], Kind: apiKind(m.Kind), Sort: cmp.Or(m.Sort, store.SortOrder)}
+		if parent, sub := store.SplitNotebook(id); sub != "" {
+			nb.Parent = &parent
+			if nb.Name == "" {
+				nb.Name = store.NotebookName(id)
+			}
+			subs[parent] = append(subs[parent], nb)
+			continue
+		}
 		switch id {
 		case store.Inbox:
 			nb.Reserved, nb.Order, inbox = true, 0, nb
@@ -845,14 +1065,19 @@ func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 			others = append(others, nb)
 		}
 	}
-	slices.SortFunc(others, func(a, b *gennotes.Notebook) int {
+	byOrder := func(a, b *gennotes.Notebook) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name), strings.Compare(a.ID, b.ID))
-	})
+	}
+	slices.SortFunc(others, byOrder)
 	res := make([]*gennotes.Notebook, 0, len(ids))
 	if inbox != nil {
 		res = append(res, inbox)
 	}
-	res = append(res, others...)
+	for _, nb := range others {
+		res = append(res, nb)
+		slices.SortFunc(subs[nb.ID], byOrder)
+		res = append(res, subs[nb.ID]...)
+	}
 	if trash != nil {
 		res = append(res, trash)
 	}
@@ -974,7 +1199,7 @@ func mapErr(err error) error {
 		return gennotes.MakeAlreadyExists(err)
 	case errors.Is(err, store.ErrNotebookExists):
 		return gennotes.MakeAlreadyExists(err)
-	case errors.Is(err, store.ErrInvalidNotebook), errors.Is(err, store.ErrDuplicate), errors.Is(err, store.ErrReserved), errors.Is(err, store.ErrConflict):
+	case errors.Is(err, store.ErrInvalidNotebook), errors.Is(err, store.ErrDuplicate), errors.Is(err, store.ErrReserved), errors.Is(err, store.ErrConflict), errors.Is(err, store.ErrNoParent), errors.Is(err, store.ErrHasSubs):
 		return gennotes.MakeBadRequest(err)
 	}
 	return err

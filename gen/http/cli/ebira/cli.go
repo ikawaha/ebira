@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|notebooks|tags|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -33,7 +33,7 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
+	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
 		os.Args[0] + " " + "assistant status" + "\n" +
 		os.Args[0] + " " + "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"" + "\n" +
 		""
@@ -99,6 +99,14 @@ func ParseEndpoint(
 		notesDeleteIfMatchFlag = new(cliStringFlag)
 		notesDeleteSessionFlag = new(cliStringFlag)
 
+		notesMoveNotesFlags       = flag.NewFlagSet("move-notes", flag.ExitOnError)
+		notesMoveNotesBodyFlag    = new(cliStringFlag)
+		notesMoveNotesSessionFlag = new(cliStringFlag)
+
+		notesTrashNotesFlags       = flag.NewFlagSet("trash-notes", flag.ExitOnError)
+		notesTrashNotesBodyFlag    = new(cliStringFlag)
+		notesTrashNotesSessionFlag = new(cliStringFlag)
+
 		notesSearchFlags        = flag.NewFlagSet("search", flag.ExitOnError)
 		notesSearchQFlag        = new(cliStringFlag)
 		notesSearchNotebookFlag = new(cliStringFlag)
@@ -131,6 +139,11 @@ func ParseEndpoint(
 		notesSaveNotebookBodyFlag    = new(cliStringFlag)
 		notesSaveNotebookIDFlag      = new(cliStringFlag)
 		notesSaveNotebookSessionFlag = new(cliStringFlag)
+
+		notesMoveNotebookFlags       = flag.NewFlagSet("move-notebook", flag.ExitOnError)
+		notesMoveNotebookBodyFlag    = new(cliStringFlag)
+		notesMoveNotebookIDFlag      = new(cliStringFlag)
+		notesMoveNotebookSessionFlag = new(cliStringFlag)
 
 		notesDeleteNotebookFlags       = flag.NewFlagSet("delete-notebook", flag.ExitOnError)
 		notesDeleteNotebookIDFlag      = new(cliStringFlag)
@@ -257,6 +270,10 @@ func ParseEndpoint(
 	notesDeleteFlags.Var(notesDeleteIDFlag, "id", "Note ID")
 	notesDeleteFlags.Var(notesDeleteIfMatchFlag, "if-match", "")
 	notesDeleteFlags.Var(notesDeleteSessionFlag, "session", "")
+	notesMoveNotesFlags.Var(notesMoveNotesBodyFlag, "body", "")
+	notesMoveNotesFlags.Var(notesMoveNotesSessionFlag, "session", "")
+	notesTrashNotesFlags.Var(notesTrashNotesBodyFlag, "body", "")
+	notesTrashNotesFlags.Var(notesTrashNotesSessionFlag, "session", "")
 	notesSearchFlags.Var(notesSearchQFlag, "q", "")
 	notesSearchFlags.Var(notesSearchNotebookFlag, "notebook", "")
 	notesSearchFlags.Var(notesSearchTagFlag, "tag", "")
@@ -275,12 +292,15 @@ func ParseEndpoint(
 	notesSaveNotebookFlags.Var(notesSaveNotebookBodyFlag, "body", "")
 	notesSaveNotebookFlags.Var(notesSaveNotebookIDFlag, "id", "Notebook ID")
 	notesSaveNotebookFlags.Var(notesSaveNotebookSessionFlag, "session", "")
+	notesMoveNotebookFlags.Var(notesMoveNotebookBodyFlag, "body", "")
+	notesMoveNotebookFlags.Var(notesMoveNotebookIDFlag, "id", "Notebook ID")
+	notesMoveNotebookFlags.Var(notesMoveNotebookSessionFlag, "session", "")
 	notesDeleteNotebookFlags.Var(notesDeleteNotebookIDFlag, "id", "Notebook ID")
 	notesDeleteNotebookFlags.Var(notesDeleteNotebookSessionFlag, "session", "")
 	notesTrashedNotebooksFlags.Var(notesTrashedNotebooksSessionFlag, "session", "")
-	notesRestoreNotebookFlags.Var(notesRestoreNotebookIDFlag, "id", "Notebook ID")
+	notesRestoreNotebookFlags.Var(notesRestoreNotebookIDFlag, "id", "ID in the trash")
 	notesRestoreNotebookFlags.Var(notesRestoreNotebookSessionFlag, "session", "")
-	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookIDFlag, "id", "Notebook ID")
+	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookIDFlag, "id", "ID in the trash")
 	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookSessionFlag, "session", "")
 	notesEmptyTrashFlags.Var(notesEmptyTrashSessionFlag, "session", "")
 	notesImportFlags.Var(notesImportBodyFlag, "body", "")
@@ -326,6 +346,8 @@ func ParseEndpoint(
 	notesCreateFlags.Usage = notesCreateUsage
 	notesUpdateFlags.Usage = notesUpdateUsage
 	notesDeleteFlags.Usage = notesDeleteUsage
+	notesMoveNotesFlags.Usage = notesMoveNotesUsage
+	notesTrashNotesFlags.Usage = notesTrashNotesUsage
 	notesSearchFlags.Usage = notesSearchUsage
 	notesRestoreFlags.Usage = notesRestoreUsage
 	notesMoveFlags.Usage = notesMoveUsage
@@ -333,6 +355,7 @@ func ParseEndpoint(
 	notesTagsFlags.Usage = notesTagsUsage
 	notesCreateNotebookFlags.Usage = notesCreateNotebookUsage
 	notesSaveNotebookFlags.Usage = notesSaveNotebookUsage
+	notesMoveNotebookFlags.Usage = notesMoveNotebookUsage
 	notesDeleteNotebookFlags.Usage = notesDeleteNotebookUsage
 	notesTrashedNotebooksFlags.Usage = notesTrashedNotebooksUsage
 	notesRestoreNotebookFlags.Usage = notesRestoreNotebookUsage
@@ -421,6 +444,12 @@ func ParseEndpoint(
 			case "delete":
 				epf = notesDeleteFlags
 
+			case "move-notes":
+				epf = notesMoveNotesFlags
+
+			case "trash-notes":
+				epf = notesTrashNotesFlags
+
 			case "search":
 				epf = notesSearchFlags
 
@@ -441,6 +470,9 @@ func ParseEndpoint(
 
 			case "save-notebook":
 				epf = notesSaveNotebookFlags
+
+			case "move-notebook":
+				epf = notesMoveNotebookFlags
 
 			case "delete-notebook":
 				epf = notesDeleteNotebookFlags
@@ -580,6 +612,12 @@ func ParseEndpoint(
 			case "delete":
 				endpoint = c.Delete()
 				data, err = notesc.BuildDeletePayload(notesDeleteIDFlag.value, notesDeleteIfMatchFlag.value, notesDeleteSessionFlag.value)
+			case "move-notes":
+				endpoint = c.MoveNotes()
+				data, err = notesc.BuildMoveNotesPayload(notesMoveNotesBodyFlag.value, notesMoveNotesSessionFlag.value)
+			case "trash-notes":
+				endpoint = c.TrashNotes()
+				data, err = notesc.BuildTrashNotesPayload(notesTrashNotesBodyFlag.value, notesTrashNotesSessionFlag.value)
 			case "search":
 				endpoint = c.Search()
 				data, err = notesc.BuildSearchPayload(notesSearchQFlag.value, notesSearchNotebookFlag.value, notesSearchTagFlag.value, *notesSearchLimitFlag, notesSearchSessionFlag.value)
@@ -601,6 +639,9 @@ func ParseEndpoint(
 			case "save-notebook":
 				endpoint = c.SaveNotebook()
 				data, err = notesc.BuildSaveNotebookPayload(notesSaveNotebookBodyFlag.value, notesSaveNotebookIDFlag.value, notesSaveNotebookSessionFlag.value)
+			case "move-notebook":
+				endpoint = c.MoveNotebook()
+				data, err = notesc.BuildMoveNotebookPayload(notesMoveNotebookBodyFlag.value, notesMoveNotebookIDFlag.value, notesMoveNotebookSessionFlag.value)
 			case "delete-notebook":
 				endpoint = c.DeleteNotebook()
 				data, err = notesc.BuildDeleteNotebookPayload(notesDeleteNotebookIDFlag.value, notesDeleteNotebookSessionFlag.value)
@@ -722,6 +763,8 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    create: Create a note. A random ID is assigned when id is omitted, and the note goes to the inbox when notebook is omitted. A new notebook is created on demand.`)
 	fmt.Fprintln(os.Stderr, `    update: Update a note. Omitted attributes are left unchanged. Setting notebook moves the note; use delete to move it to the trash.`)
 	fmt.Fprintln(os.Stderr, `    delete: Move a note to the trash, or delete it permanently if it is already in the trash.`)
+	fmt.Fprintln(os.Stderr, `    move-notes: Move notes to a notebook at once, such as several chosen in a list. Notes in the trash come out of it. The notes are checked first: when one does not exist, none is moved.`)
+	fmt.Fprintln(os.Stderr, `    trash-notes: Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.`)
 	fmt.Fprintln(os.Stderr, `    search: Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.`)
 	fmt.Fprintln(os.Stderr, `    restore: Move a note from the trash back to the notebook it was in.`)
 	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
@@ -729,10 +772,11 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
 	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
-	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
+	fmt.Fprintln(os.Stderr, `    move-notebook: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
+	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
-	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.`)
-	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes.`)
+	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.`)
+	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes and sub notebooks.`)
 	fmt.Fprintln(os.Stderr, `    empty-trash: Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
 	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.`)
 	fmt.Fprintln(os.Stderr, `    add-file: Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.`)
@@ -776,7 +820,7 @@ func notesListUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"")
 }
 
 func notesGetUsage() {
@@ -865,6 +909,46 @@ func notesDeleteUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete --id \"be4c1193735ee1\" --if-match \"Veritatis ratione quo et qui.\" --session \"Eos mollitia minima praesentium esse porro doloribus.\"")
+}
+
+func notesMoveNotesUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes move-notes", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Move notes to a notebook at once, such as several chosen in a list. Notes in the trash come out of it. The notes are checked first: when one does not exist, none is moved.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes move-notes --body '{\n      \"ids\": [\n         \"be4c1193735ee1\"\n      ],\n      \"notebook\": \"inbox\"\n   }' --session \"Adipisci ipsum aut est adipisci eveniet praesentium.\"")
+}
+
+func notesTrashNotesUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes trash-notes", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes trash-notes --body '{\n      \"ids\": [\n         \"be4c1193735ee1\"\n      ]\n   }' --session \"Suscipit neque aut sed.\"")
 }
 
 func notesSearchUsage() {
@@ -992,7 +1076,7 @@ func notesCreateNotebookUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create-notebook --body '{\n      \"kind\": \"private\",\n      \"name\": \"vo3\",\n      \"order\": 6679760426203438774\n   }' --session \"Saepe maiores et modi inventore.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create-notebook --body '{\n      \"kind\": \"private\",\n      \"name\": \"vo3\",\n      \"order\": 6679760426203438774,\n      \"parent\": \"inbox\"\n   }' --session \"Saepe maiores et modi inventore.\"")
 }
 
 func notesSaveNotebookUsage() {
@@ -1017,6 +1101,28 @@ func notesSaveNotebookUsage() {
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"kind\": \"collab\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\" --session \"Saepe qui enim id qui ex quis.\"")
 }
 
+func notesMoveNotebookUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes move-notebook", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes move-notebook --body '{\n      \"parent\": \"inbox\"\n   }' --id \"inbox\" --session \"Consequatur nulla.\"")
+}
+
 func notesDeleteNotebookUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes delete-notebook", os.Args[0])
@@ -1026,7 +1132,7 @@ func notesDeleteNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
+	fmt.Fprintln(os.Stderr, `Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
@@ -1064,15 +1170,15 @@ func notesRestoreNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.`)
+	fmt.Fprintln(os.Stderr, `Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: ID in the trash`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore-notebook --id \"inbox\" --session \"Est aut qui error rem minus.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore-notebook --id \"dev~design\" --session \"Est aut qui error rem minus.\"")
 }
 
 func notesDeleteTrashedNotebookUsage() {
@@ -1084,15 +1190,15 @@ func notesDeleteTrashedNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Permanently delete a notebook in the trash with its notes.`)
+	fmt.Fprintln(os.Stderr, `Permanently delete a notebook in the trash with its notes and sub notebooks.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: ID in the trash`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"inbox\" --session \"Facere sed iusto quam.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-trashed-notebook --id \"dev~design\" --session \"Facere sed iusto quam.\"")
 }
 
 func notesEmptyTrashUsage() {

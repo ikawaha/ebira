@@ -42,6 +42,22 @@ type UpdateRequestBody struct {
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 }
 
+// MoveNotesRequestBody is the type of the "notes" service "move_notes"
+// endpoint HTTP request body.
+type MoveNotesRequestBody struct {
+	// IDs of the notes
+	Ids []string `form:"ids,omitempty" json:"ids,omitempty" xml:"ids,omitempty"`
+	// Notebook to move the notes to; not trash (use trash_notes)
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+}
+
+// TrashNotesRequestBody is the type of the "notes" service "trash_notes"
+// endpoint HTTP request body.
+type TrashNotesRequestBody struct {
+	// IDs of the notes
+	Ids []string `form:"ids,omitempty" json:"ids,omitempty" xml:"ids,omitempty"`
+}
+
 // MoveRequestBody is the type of the "notes" service "move" endpoint HTTP
 // request body.
 type MoveRequestBody struct {
@@ -62,8 +78,12 @@ type CreateNotebookRequestBody struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop
+	// is default, except the inbox, which is drop. Ignored for a sub notebook,
+	// which takes the kind of its parent
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// Notebook to create the notebook in, as a sub notebook, one level deep: not a
+	// sub notebook, the inbox or the trash
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 }
 
 // SaveNotebookRequestBody is the type of the "notes" service "save_notebook"
@@ -78,14 +98,23 @@ type SaveNotebookRequestBody struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop. Inbox cannot be collab, and the
-	// trash keeps the default kind (it is hidden from AI clients anyway)
+	// is default, except the inbox, which is drop. Inbox cannot be collab, the
+	// trash keeps the default kind (it is hidden from AI clients anyway), and a
+	// sub notebook takes the kind of its parent
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// Default order of the note list. Order of the note list: order is the manual
 	// order (notes not moved with move come by creation time, newest first),
 	// created and updated are newest first, and title is by code point, ignoring
 	// case and width
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
+}
+
+// MoveNotebookRequestBody is the type of the "notes" service "move_notebook"
+// endpoint HTTP request body.
+type MoveNotebookRequestBody struct {
+	// Notebook to move the notebook into: not a sub notebook, the inbox or the
+	// trash. Omit to move a sub notebook to the top
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 }
 
 // ImportRequestBody is the type of the "notes" service "import" endpoint HTTP
@@ -314,13 +343,16 @@ type TagsResponseBody []*TagCountResponse
 // CreateNotebookResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body.
 type CreateNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name string `form:"name" json:"name" xml:"name"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -345,13 +377,50 @@ type CreateNotebookResponseBody struct {
 // SaveNotebookResponseBody is the type of the "notes" service "save_notebook"
 // endpoint HTTP response body.
 type SaveNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
+	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
+	Name string `form:"name" json:"name" xml:"name"`
+	// Sort key among the notebooks other than inbox and trash; lower comes first
+	Order int `form:"order" json:"order" xml:"order"`
+	// Number of notes
+	Count int `form:"count" json:"count" xml:"count"`
+	// Whether this is a system notebook (inbox or trash)
+	Reserved bool `form:"reserved" json:"reserved" xml:"reserved"`
+	// Kind of the notebook. AI clients may only read notes in default notebooks,
+	// may also create, update and delete notes in collab notebooks, which people
+	// share with AI, may only add notes to drop notebooks, whose notes they cannot
+	// see, and cannot see private notebooks at all. In the notebook list, AI
+	// clients see drop notebooks with a count of 0. A notebook without a kind set
+	// is default, except the inbox, which is drop
+	Kind string `form:"kind" json:"kind" xml:"kind"`
+	// Order of the note list: order is the manual order (notes not moved with move
+	// come by creation time, newest first), created and updated are newest first,
+	// and title is by code point, ignoring case and width
+	Sort string `form:"sort" json:"sort" xml:"sort"`
+}
+
+// MoveNotebookResponseBody is the type of the "notes" service "move_notebook"
+// endpoint HTTP response body.
+type MoveNotebookResponseBody struct {
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
+	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name string `form:"name" json:"name" xml:"name"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -380,13 +449,16 @@ type TrashedNotebooksResponseBody []*TrashedNotebookResponse
 // RestoreNotebookResponseBody is the type of the "notes" service
 // "restore_notebook" endpoint HTTP response body.
 type RestoreNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name string `form:"name" json:"name" xml:"name"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -893,6 +965,152 @@ type DeleteVerificationRequiredResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// MoveNotesNotFoundResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "not_found" error.
+type MoveNotesNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotesBadRequestResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "bad_request" error.
+type MoveNotesBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotesUnauthorizedResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "unauthorized" error.
+type MoveNotesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotesVerificationRequiredResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "verification_required"
+// error.
+type MoveNotesVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TrashNotesNotFoundResponseBody is the type of the "notes" service
+// "trash_notes" endpoint HTTP response body for the "not_found" error.
+type TrashNotesNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TrashNotesBadRequestResponseBody is the type of the "notes" service
+// "trash_notes" endpoint HTTP response body for the "bad_request" error.
+type TrashNotesBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TrashNotesUnauthorizedResponseBody is the type of the "notes" service
+// "trash_notes" endpoint HTTP response body for the "unauthorized" error.
+type TrashNotesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// TrashNotesVerificationRequiredResponseBody is the type of the "notes"
+// service "trash_notes" endpoint HTTP response body for the
+// "verification_required" error.
+type TrashNotesVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // SearchUnauthorizedResponseBody is the type of the "notes" service "search"
 // endpoint HTTP response body for the "unauthorized" error.
 type SearchUnauthorizedResponseBody struct {
@@ -1182,6 +1400,24 @@ type CreateNotebookBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// CreateNotebookNotFoundResponseBody is the type of the "notes" service
+// "create_notebook" endpoint HTTP response body for the "not_found" error.
+type CreateNotebookNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // CreateNotebookAlreadyExistsResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body for the "already_exists" error.
 type CreateNotebookAlreadyExistsResponseBody struct {
@@ -1295,6 +1531,97 @@ type SaveNotebookUnauthorizedResponseBody struct {
 // service "save_notebook" endpoint HTTP response body for the
 // "verification_required" error.
 type SaveNotebookVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotebookNotFoundResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "not_found" error.
+type MoveNotebookNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotebookBadRequestResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "bad_request" error.
+type MoveNotebookBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotebookAlreadyExistsResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "already_exists" error.
+type MoveNotebookAlreadyExistsResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotebookUnauthorizedResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "unauthorized" error.
+type MoveNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MoveNotebookVerificationRequiredResponseBody is the type of the "notes"
+// service "move_notebook" endpoint HTTP response body for the
+// "verification_required" error.
+type MoveNotebookVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -2337,13 +2664,16 @@ type TextRangeResponseBody struct {
 
 // NotebookResponse is used to define fields on response body types.
 type NotebookResponse struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name string `form:"name" json:"name" xml:"name"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -2375,8 +2705,12 @@ type TagCountResponse struct {
 
 // TrashedNotebookResponse is used to define fields on response body types.
 type TrashedNotebookResponse struct {
-	// Notebook ID
+	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
+	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
+	// which goes back into its parent
 	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook deleted with its parent: the ID of the parent in the trash
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name
 	Name string `form:"name" json:"name" xml:"name"`
 	// Kind of the notebook, kept for when it is restored
@@ -2784,6 +3118,7 @@ func NewTagsResponseBody(res []*notes.TagCount) []*TagCountResponse {
 func NewCreateNotebookResponseBody(res *notes.Notebook) *CreateNotebookResponseBody {
 	body := &CreateNotebookResponseBody{
 		ID:       res.ID,
+		Parent:   res.Parent,
 		Name:     res.Name,
 		Order:    res.Order,
 		Count:    res.Count,
@@ -2799,6 +3134,23 @@ func NewCreateNotebookResponseBody(res *notes.Notebook) *CreateNotebookResponseB
 func NewSaveNotebookResponseBody(res *notes.Notebook) *SaveNotebookResponseBody {
 	body := &SaveNotebookResponseBody{
 		ID:       res.ID,
+		Parent:   res.Parent,
+		Name:     res.Name,
+		Order:    res.Order,
+		Count:    res.Count,
+		Reserved: res.Reserved,
+		Kind:     res.Kind,
+		Sort:     res.Sort,
+	}
+	return body
+}
+
+// NewMoveNotebookResponseBody builds the HTTP response body from the result of
+// the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookResponseBody(res *notes.Notebook) *MoveNotebookResponseBody {
+	body := &MoveNotebookResponseBody{
+		ID:       res.ID,
+		Parent:   res.Parent,
 		Name:     res.Name,
 		Order:    res.Order,
 		Count:    res.Count,
@@ -2828,6 +3180,7 @@ func NewTrashedNotebooksResponseBody(res []*notes.TrashedNotebook) []*TrashedNot
 func NewRestoreNotebookResponseBody(res *notes.Notebook) *RestoreNotebookResponseBody {
 	body := &RestoreNotebookResponseBody{
 		ID:       res.ID,
+		Parent:   res.Parent,
 		Name:     res.Name,
 		Order:    res.Order,
 		Count:    res.Count,
@@ -3300,6 +3653,118 @@ func NewDeleteVerificationRequiredResponseBody(res *goa.ServiceError) *DeleteVer
 	return body
 }
 
+// NewMoveNotesNotFoundResponseBody builds the HTTP response body from the
+// result of the "move_notes" endpoint of the "notes" service.
+func NewMoveNotesNotFoundResponseBody(res *goa.ServiceError) *MoveNotesNotFoundResponseBody {
+	body := &MoveNotesNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotesBadRequestResponseBody builds the HTTP response body from the
+// result of the "move_notes" endpoint of the "notes" service.
+func NewMoveNotesBadRequestResponseBody(res *goa.ServiceError) *MoveNotesBadRequestResponseBody {
+	body := &MoveNotesBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotesUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "move_notes" endpoint of the "notes" service.
+func NewMoveNotesUnauthorizedResponseBody(res *goa.ServiceError) *MoveNotesUnauthorizedResponseBody {
+	body := &MoveNotesUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotesVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "move_notes" endpoint of the "notes" service.
+func NewMoveNotesVerificationRequiredResponseBody(res *goa.ServiceError) *MoveNotesVerificationRequiredResponseBody {
+	body := &MoveNotesVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTrashNotesNotFoundResponseBody builds the HTTP response body from the
+// result of the "trash_notes" endpoint of the "notes" service.
+func NewTrashNotesNotFoundResponseBody(res *goa.ServiceError) *TrashNotesNotFoundResponseBody {
+	body := &TrashNotesNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTrashNotesBadRequestResponseBody builds the HTTP response body from the
+// result of the "trash_notes" endpoint of the "notes" service.
+func NewTrashNotesBadRequestResponseBody(res *goa.ServiceError) *TrashNotesBadRequestResponseBody {
+	body := &TrashNotesBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTrashNotesUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "trash_notes" endpoint of the "notes" service.
+func NewTrashNotesUnauthorizedResponseBody(res *goa.ServiceError) *TrashNotesUnauthorizedResponseBody {
+	body := &TrashNotesUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewTrashNotesVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "trash_notes" endpoint of the "notes" service.
+func NewTrashNotesVerificationRequiredResponseBody(res *goa.ServiceError) *TrashNotesVerificationRequiredResponseBody {
+	body := &TrashNotesVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewSearchUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "search" endpoint of the "notes" service.
 func NewSearchUnauthorizedResponseBody(res *goa.ServiceError) *SearchUnauthorizedResponseBody {
@@ -3524,6 +3989,20 @@ func NewCreateNotebookBadRequestResponseBody(res *goa.ServiceError) *CreateNoteb
 	return body
 }
 
+// NewCreateNotebookNotFoundResponseBody builds the HTTP response body from the
+// result of the "create_notebook" endpoint of the "notes" service.
+func NewCreateNotebookNotFoundResponseBody(res *goa.ServiceError) *CreateNotebookNotFoundResponseBody {
+	body := &CreateNotebookNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewCreateNotebookAlreadyExistsResponseBody builds the HTTP response body
 // from the result of the "create_notebook" endpoint of the "notes" service.
 func NewCreateNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *CreateNotebookAlreadyExistsResponseBody {
@@ -3613,6 +4092,76 @@ func NewSaveNotebookUnauthorizedResponseBody(res *goa.ServiceError) *SaveNoteboo
 // body from the result of the "save_notebook" endpoint of the "notes" service.
 func NewSaveNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *SaveNotebookVerificationRequiredResponseBody {
 	body := &SaveNotebookVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotebookNotFoundResponseBody builds the HTTP response body from the
+// result of the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookNotFoundResponseBody(res *goa.ServiceError) *MoveNotebookNotFoundResponseBody {
+	body := &MoveNotebookNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotebookBadRequestResponseBody builds the HTTP response body from the
+// result of the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookBadRequestResponseBody(res *goa.ServiceError) *MoveNotebookBadRequestResponseBody {
+	body := &MoveNotebookBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotebookAlreadyExistsResponseBody builds the HTTP response body from
+// the result of the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *MoveNotebookAlreadyExistsResponseBody {
+	body := &MoveNotebookAlreadyExistsResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotebookUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookUnauthorizedResponseBody(res *goa.ServiceError) *MoveNotebookUnauthorizedResponseBody {
+	body := &MoveNotebookUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMoveNotebookVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookVerificationRequiredResponseBody(res *goa.ServiceError) *MoveNotebookVerificationRequiredResponseBody {
+	body := &MoveNotebookVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -4460,6 +5009,32 @@ func NewDeletePayload(id string, ifMatch *string, session *string) *notes.Delete
 	return v
 }
 
+// NewMoveNotesPayload builds a notes service move_notes endpoint payload.
+func NewMoveNotesPayload(body *MoveNotesRequestBody, session *string) *notes.MoveNotesPayload {
+	v := &notes.MoveNotesPayload{
+		Notebook: *body.Notebook,
+	}
+	v.Ids = make([]string, len(body.Ids))
+	for i, val := range body.Ids {
+		v.Ids[i] = val
+	}
+	v.Session = session
+
+	return v
+}
+
+// NewTrashNotesPayload builds a notes service trash_notes endpoint payload.
+func NewTrashNotesPayload(body *TrashNotesRequestBody, session *string) *notes.TrashNotesPayload {
+	v := &notes.TrashNotesPayload{}
+	v.Ids = make([]string, len(body.Ids))
+	for i, val := range body.Ids {
+		v.Ids[i] = val
+	}
+	v.Session = session
+
+	return v
+}
+
 // NewSearchPayload builds a notes service search endpoint payload.
 func NewSearchPayload(q string, notebook *string, tag *string, limit int, session *string) *notes.SearchPayload {
 	v := &notes.SearchPayload{}
@@ -4514,8 +5089,9 @@ func NewTagsPayload(notebook *string, session *string) *notes.TagsPayload {
 // payload.
 func NewCreateNotebookPayload(body *CreateNotebookRequestBody, session *string) *notes.CreateNotebookPayload {
 	v := &notes.CreateNotebookPayload{
-		Name:  *body.Name,
-		Order: body.Order,
+		Name:   *body.Name,
+		Order:  body.Order,
+		Parent: body.Parent,
 	}
 	if body.Kind != nil {
 		v.Kind = *body.Kind
@@ -4535,6 +5111,17 @@ func NewSaveNotebookPayload(body *SaveNotebookRequestBody, id string, session *s
 		Order: body.Order,
 		Kind:  body.Kind,
 		Sort:  body.Sort,
+	}
+	v.ID = id
+	v.Session = session
+
+	return v
+}
+
+// NewMoveNotebookPayload builds a notes service move_notebook endpoint payload.
+func NewMoveNotebookPayload(body *MoveNotebookRequestBody, id string, session *string) *notes.MoveNotebookPayload {
+	v := &notes.MoveNotebookPayload{
+		Parent: body.Parent,
 	}
 	v.ID = id
 	v.Session = session
@@ -4714,7 +5301,7 @@ func ValidateCreateRequestBody(body *CreateRequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Title != nil {
 		if utf8.RuneCountInString(*body.Title) < 1 {
@@ -4727,12 +5314,54 @@ func ValidateCreateRequestBody(body *CreateRequestBody) (err error) {
 // ValidateUpdateRequestBody runs the validations defined on UpdateRequestBody
 func ValidateUpdateRequestBody(body *UpdateRequestBody) (err error) {
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Title != nil {
 		if utf8.RuneCountInString(*body.Title) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 1, true))
 		}
+	}
+	return
+}
+
+// ValidateMoveNotesRequestBody runs the validations defined on
+// MoveNotesRequestBody
+func ValidateMoveNotesRequestBody(body *MoveNotesRequestBody) (err error) {
+	if body.Ids == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ids", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if len(body.Ids) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 1, true))
+	}
+	if len(body.Ids) > 500 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 500, false))
+	}
+	for _, e := range body.Ids {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.ids[*]", e, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	return
+}
+
+// ValidateTrashNotesRequestBody runs the validations defined on
+// TrashNotesRequestBody
+func ValidateTrashNotesRequestBody(body *TrashNotesRequestBody) (err error) {
+	if body.Ids == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ids", "body"))
+	}
+	if len(body.Ids) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 1, true))
+	}
+	if len(body.Ids) > 500 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 500, false))
+	}
+	for _, e := range body.Ids {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.ids[*]", e, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }
@@ -4764,6 +5393,9 @@ func ValidateCreateNotebookRequestBody(body *CreateNotebookRequestBody) (err err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
 	return
 }
 
@@ -4783,6 +5415,15 @@ func ValidateSaveNotebookRequestBody(body *SaveNotebookRequestBody) (err error) 
 	return
 }
 
+// ValidateMoveNotebookRequestBody runs the validations defined on
+// MoveNotebookRequestBody
+func ValidateMoveNotebookRequestBody(body *MoveNotebookRequestBody) (err error) {
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	return
+}
+
 // ValidateImportRequestBody runs the validations defined on ImportRequestBody
 func ValidateImportRequestBody(body *ImportRequestBody) (err error) {
 	if body.Name == nil {
@@ -4792,7 +5433,7 @@ func ValidateImportRequestBody(body *ImportRequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Name != nil {
 		if utf8.RuneCountInString(*body.Name) < 1 {

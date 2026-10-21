@@ -26,6 +26,8 @@ type Server struct {
 	Create                http.Handler
 	Update                http.Handler
 	Delete                http.Handler
+	MoveNotes             http.Handler
+	TrashNotes            http.Handler
 	Search                http.Handler
 	Restore               http.Handler
 	Move                  http.Handler
@@ -33,6 +35,7 @@ type Server struct {
 	Tags                  http.Handler
 	CreateNotebook        http.Handler
 	SaveNotebook          http.Handler
+	MoveNotebook          http.Handler
 	DeleteNotebook        http.Handler
 	TrashedNotebooks      http.Handler
 	RestoreNotebook       http.Handler
@@ -83,17 +86,20 @@ func New(
 			{"Create", "POST", "/notes"},
 			{"Update", "PATCH", "/notes/{id}"},
 			{"Delete", "DELETE", "/notes/{id}"},
+			{"MoveNotes", "PATCH", "/notes"},
+			{"TrashNotes", "POST", "/trash/notes"},
 			{"Search", "GET", "/search"},
 			{"Restore", "POST", "/notes/{id}/restore"},
 			{"Move", "POST", "/notes/{id}/move"},
 			{"Notebooks", "GET", "/notebooks"},
 			{"Tags", "GET", "/tags"},
 			{"CreateNotebook", "POST", "/notebooks"},
-			{"SaveNotebook", "PUT", "/notebooks/{id}"},
-			{"DeleteNotebook", "DELETE", "/notebooks/{id}"},
+			{"SaveNotebook", "PUT", "/notebooks/{*id}"},
+			{"MoveNotebook", "POST", "/notebooks/move/{*id}"},
+			{"DeleteNotebook", "DELETE", "/notebooks/{*id}"},
 			{"TrashedNotebooks", "GET", "/trash/notebooks"},
-			{"RestoreNotebook", "POST", "/trash/notebooks/{id}/restore"},
-			{"DeleteTrashedNotebook", "DELETE", "/trash/notebooks/{id}"},
+			{"RestoreNotebook", "POST", "/trash/notebooks/restore/{*id}"},
+			{"DeleteTrashedNotebook", "DELETE", "/trash/notebooks/{*id}"},
 			{"EmptyTrash", "DELETE", "/trash"},
 			{"Import", "POST", "/import"},
 			{"AddFile", "POST", "/notes/{id}/files"},
@@ -112,6 +118,8 @@ func New(
 		Create:                NewCreateHandler(e.Create, mux, decoder, encoder, errhandler, formatter),
 		Update:                NewUpdateHandler(e.Update, mux, decoder, encoder, errhandler, formatter),
 		Delete:                NewDeleteHandler(e.Delete, mux, decoder, encoder, errhandler, formatter),
+		MoveNotes:             NewMoveNotesHandler(e.MoveNotes, mux, decoder, encoder, errhandler, formatter),
+		TrashNotes:            NewTrashNotesHandler(e.TrashNotes, mux, decoder, encoder, errhandler, formatter),
 		Search:                NewSearchHandler(e.Search, mux, decoder, encoder, errhandler, formatter),
 		Restore:               NewRestoreHandler(e.Restore, mux, decoder, encoder, errhandler, formatter),
 		Move:                  NewMoveHandler(e.Move, mux, decoder, encoder, errhandler, formatter),
@@ -119,6 +127,7 @@ func New(
 		Tags:                  NewTagsHandler(e.Tags, mux, decoder, encoder, errhandler, formatter),
 		CreateNotebook:        NewCreateNotebookHandler(e.CreateNotebook, mux, decoder, encoder, errhandler, formatter),
 		SaveNotebook:          NewSaveNotebookHandler(e.SaveNotebook, mux, decoder, encoder, errhandler, formatter),
+		MoveNotebook:          NewMoveNotebookHandler(e.MoveNotebook, mux, decoder, encoder, errhandler, formatter),
 		DeleteNotebook:        NewDeleteNotebookHandler(e.DeleteNotebook, mux, decoder, encoder, errhandler, formatter),
 		TrashedNotebooks:      NewTrashedNotebooksHandler(e.TrashedNotebooks, mux, decoder, encoder, errhandler, formatter),
 		RestoreNotebook:       NewRestoreNotebookHandler(e.RestoreNotebook, mux, decoder, encoder, errhandler, formatter),
@@ -148,6 +157,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Create = m(s.Create)
 	s.Update = m(s.Update)
 	s.Delete = m(s.Delete)
+	s.MoveNotes = m(s.MoveNotes)
+	s.TrashNotes = m(s.TrashNotes)
 	s.Search = m(s.Search)
 	s.Restore = m(s.Restore)
 	s.Move = m(s.Move)
@@ -155,6 +166,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Tags = m(s.Tags)
 	s.CreateNotebook = m(s.CreateNotebook)
 	s.SaveNotebook = m(s.SaveNotebook)
+	s.MoveNotebook = m(s.MoveNotebook)
 	s.DeleteNotebook = m(s.DeleteNotebook)
 	s.TrashedNotebooks = m(s.TrashedNotebooks)
 	s.RestoreNotebook = m(s.RestoreNotebook)
@@ -183,6 +195,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountCreateHandler(mux, h.Create)
 	MountUpdateHandler(mux, h.Update)
 	MountDeleteHandler(mux, h.Delete)
+	MountMoveNotesHandler(mux, h.MoveNotes)
+	MountTrashNotesHandler(mux, h.TrashNotes)
 	MountSearchHandler(mux, h.Search)
 	MountRestoreHandler(mux, h.Restore)
 	MountMoveHandler(mux, h.Move)
@@ -190,6 +204,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountTagsHandler(mux, h.Tags)
 	MountCreateNotebookHandler(mux, h.CreateNotebook)
 	MountSaveNotebookHandler(mux, h.SaveNotebook)
+	MountMoveNotebookHandler(mux, h.MoveNotebook)
 	MountDeleteNotebookHandler(mux, h.DeleteNotebook)
 	MountTrashedNotebooksHandler(mux, h.TrashedNotebooks)
 	MountRestoreNotebookHandler(mux, h.RestoreNotebook)
@@ -455,6 +470,112 @@ func NewDeleteHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "delete")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountMoveNotesHandler configures the mux to serve the "notes" service
+// "move_notes" endpoint.
+func MountMoveNotesHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PATCH", "/notes", f)
+}
+
+// NewMoveNotesHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "move_notes" endpoint.
+func NewMoveNotesHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeMoveNotesRequest(mux, decoder)
+		encodeResponse = EncodeMoveNotesResponse(encoder)
+		encodeError    = EncodeMoveNotesError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "move_notes")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountTrashNotesHandler configures the mux to serve the "notes" service
+// "trash_notes" endpoint.
+func MountTrashNotesHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/trash/notes", f)
+}
+
+// NewTrashNotesHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "trash_notes" endpoint.
+func NewTrashNotesHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeTrashNotesRequest(mux, decoder)
+		encodeResponse = EncodeTrashNotesResponse(encoder)
+		encodeError    = EncodeTrashNotesError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "trash_notes")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {
@@ -805,7 +926,7 @@ func MountSaveNotebookHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("PUT", "/notebooks/{id}", f)
+	mux.Handle("PUT", "/notebooks/{*id}", f)
 }
 
 // NewSaveNotebookHandler creates a HTTP handler which loads the HTTP request
@@ -849,6 +970,59 @@ func NewSaveNotebookHandler(
 	})
 }
 
+// MountMoveNotebookHandler configures the mux to serve the "notes" service
+// "move_notebook" endpoint.
+func MountMoveNotebookHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/notebooks/move/{*id}", f)
+}
+
+// NewMoveNotebookHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "move_notebook" endpoint.
+func NewMoveNotebookHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeMoveNotebookRequest(mux, decoder)
+		encodeResponse = EncodeMoveNotebookResponse(encoder)
+		encodeError    = EncodeMoveNotebookError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "move_notebook")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
 // MountDeleteNotebookHandler configures the mux to serve the "notes" service
 // "delete_notebook" endpoint.
 func MountDeleteNotebookHandler(mux goahttp.Muxer, h http.Handler) {
@@ -858,7 +1032,7 @@ func MountDeleteNotebookHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("DELETE", "/notebooks/{id}", f)
+	mux.Handle("DELETE", "/notebooks/{*id}", f)
 }
 
 // NewDeleteNotebookHandler creates a HTTP handler which loads the HTTP request
@@ -964,7 +1138,7 @@ func MountRestoreNotebookHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("POST", "/trash/notebooks/{id}/restore", f)
+	mux.Handle("POST", "/trash/notebooks/restore/{*id}", f)
 }
 
 // NewRestoreNotebookHandler creates a HTTP handler which loads the HTTP
@@ -1017,7 +1191,7 @@ func MountDeleteTrashedNotebookHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("DELETE", "/trash/notebooks/{id}", f)
+	mux.Handle("DELETE", "/trash/notebooks/{*id}", f)
 }
 
 // NewDeleteTrashedNotebookHandler creates a HTTP handler which loads the HTTP

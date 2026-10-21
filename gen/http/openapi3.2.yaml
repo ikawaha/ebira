@@ -882,7 +882,7 @@ paths:
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
                                     trashed_from: inbox
-                                    trashed_notebook: inbox
+                                    trashed_notebook: dev~design
                                     updated_at: "2026-10-16T09:30:00Z"
                                     version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
                                 status: skipped
@@ -952,6 +952,7 @@ paths:
                                       kind: private
                                       name: Aut sed quidem commodi dolore cumque.
                                       order: 5084316890005250992
+                                      parent: inbox
                                       reserved: false
                                       sort: created
                                     - count: 5834870454193764574
@@ -959,6 +960,7 @@ paths:
                                       kind: private
                                       name: Aut sed quidem commodi dolore cumque.
                                       order: 5084316890005250992
+                                      parent: inbox
                                       reserved: false
                                       sort: created
                                     - count: 5834870454193764574
@@ -966,6 +968,7 @@ paths:
                                       kind: private
                                       name: Aut sed quidem commodi dolore cumque.
                                       order: 5084316890005250992
+                                      parent: inbox
                                       reserved: false
                                       sort: created
                             example:
@@ -974,6 +977,7 @@ paths:
                                   kind: private
                                   name: Aut sed quidem commodi dolore cumque.
                                   order: 5084316890005250992
+                                  parent: inbox
                                   reserved: false
                                   sort: created
                                 - count: 5834870454193764574
@@ -981,6 +985,7 @@ paths:
                                   kind: private
                                   name: Aut sed quidem commodi dolore cumque.
                                   order: 5084316890005250992
+                                  parent: inbox
                                   reserved: false
                                   sort: created
                                 - count: 5834870454193764574
@@ -988,6 +993,7 @@ paths:
                                   kind: private
                                   name: Aut sed quidem commodi dolore cumque.
                                   order: 5084316890005250992
+                                  parent: inbox
                                   reserved: false
                                   sort: created
                 "401":
@@ -1035,6 +1041,7 @@ paths:
                             kind: private
                             name: vo3
                             order: 6679760426203438774
+                            parent: inbox
             responses:
                 "201":
                     description: Created response.
@@ -1048,10 +1055,11 @@ paths:
                                 kind: private
                                 name: Facilis tenetur mollitia eligendi iusto ipsam.
                                 order: 853687201135527360
+                                parent: inbox
                                 reserved: false
                                 sort: order
                 "400":
-                    description: 'bad_request: The name is empty'
+                    description: 'bad_request: The name is empty, or the parent cannot hold sub notebooks'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -1089,8 +1097,21 @@ paths:
                                 name: verification_required
                                 temporary: false
                                 timeout: false
+                "404":
+                    description: 'not_found: The parent does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
                 "409":
-                    description: 'already_exists: A notebook with the name exists'
+                    description: 'already_exists: A notebook with the name exists (in the parent, for a sub notebook)'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -1109,7 +1130,7 @@ paths:
             tags:
                 - notes
             summary: delete_notebook notes
-            description: Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.
+            description: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.
             operationId: notes#delete_notebook
             parameters:
                 - name: id
@@ -1120,7 +1141,7 @@ paths:
                     type: string
                     description: Notebook ID
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
             responses:
                 "204":
@@ -1207,7 +1228,7 @@ paths:
                     type: string
                     description: Notebook ID
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
             requestBody:
                 description: Request body for save_notebook.
@@ -1234,10 +1255,11 @@ paths:
                                 kind: default
                                 name: Est est omnis at sit.
                                 order: 2140168914686218780
+                                parent: inbox
                                 reserved: false
                                 sort: updated
                 "400":
-                    description: 'bad_request: The change is not allowed for the notebook, such as an order for inbox or trash'
+                    description: 'bad_request: The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -1290,6 +1312,116 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /notebooks/move/{id}:
+        post:
+            tags:
+                - notes
+            summary: move_notebook notes
+            description: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.
+            operationId: notes#move_notebook
+            parameters:
+                - name: id
+                  in: path
+                  description: Notebook ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Notebook ID
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+                  example: inbox
+            requestBody:
+                description: Request body for move_notebook.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/MoveNotebookRequestBody'
+                        example:
+                            parent: inbox
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Notebook'
+                            example:
+                                count: 8651000099068586206
+                                id: inbox
+                                kind: default
+                                name: Beatae tenetur pariatur quos in molestiae.
+                                order: 1341267414672515602
+                                parent: inbox
+                                reserved: true
+                                sort: created
+                "400":
+                    description: 'bad_request: The move is not allowed, such as for the inbox, into a sub notebook, or of a notebook with sub notebooks'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The notebook or the parent does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "409":
+                    description: 'already_exists: A notebook with the same ID or name exists where it goes'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: already_exists
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes:
         get:
             tags:
@@ -1306,7 +1438,7 @@ paths:
                     type: string
                     description: Only notes in this notebook. Omit for all notebooks except the trash
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
                 - name: tag
                   in: query
@@ -1349,9 +1481,9 @@ paths:
                   schema:
                     type: string
                     description: With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
-                  example: inbox
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                  example: dev~design
                 - name: sort
                   in: query
                   description: 'Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)'
@@ -1398,7 +1530,7 @@ paths:
                                           start: 5812498383206549952
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
-                                      trashed_notebook: inbox
+                                      trashed_notebook: dev~design
                                       updated_at: "2026-10-16T09:30:00Z"
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
@@ -1423,7 +1555,7 @@ paths:
                                           start: 5812498383206549952
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
-                                      trashed_notebook: inbox
+                                      trashed_notebook: dev~design
                                       updated_at: "2026-10-16T09:30:00Z"
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
@@ -1448,7 +1580,7 @@ paths:
                                           start: 5812498383206549952
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
-                                      trashed_notebook: inbox
+                                      trashed_notebook: dev~design
                                       updated_at: "2026-10-16T09:30:00Z"
                                 total: 7955538707107640227
                 "400":
@@ -1488,6 +1620,80 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        patch:
+            tags:
+                - notes
+            summary: move_notes notes
+            description: 'Move notes to a notebook at once, such as several chosen in a list. Notes in the trash come out of it. The notes are checked first: when one does not exist, none is moved.'
+            operationId: notes#move_notes
+            requestBody:
+                description: Request body for move_notes.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/MoveNotesRequestBody'
+                        example:
+                            ids:
+                                - be4c1193735ee1
+                            notebook: inbox
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The notebook is the trash, or a note cannot be moved, such as when its ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: A note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
                                 temporary: false
                                 timeout: false
             security:
@@ -1553,7 +1759,7 @@ paths:
                                     - end: 9063689078350173992
                                       start: 5812498383206549952
                                 trashed_from: inbox
-                                trashed_notebook: inbox
+                                trashed_notebook: dev~design
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The notebook is the trash or invalid'
@@ -1775,7 +1981,7 @@ paths:
                                     - end: 9063689078350173992
                                       start: 5812498383206549952
                                 trashed_from: inbox
-                                trashed_notebook: inbox
+                                trashed_notebook: dev~design
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The ID is used in more than one notebook'
@@ -1910,7 +2116,7 @@ paths:
                                     - end: 9063689078350173992
                                       start: 5812498383206549952
                                 trashed_from: inbox
-                                trashed_notebook: inbox
+                                trashed_notebook: dev~design
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The notebook to move the note to is the trash or invalid'
@@ -2550,7 +2756,7 @@ paths:
                                     - end: 9063689078350173992
                                       start: 5812498383206549952
                                 trashed_from: inbox
-                                trashed_notebook: inbox
+                                trashed_notebook: dev~design
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The note is in the trash, or after is not another note of its notebook'
@@ -2672,7 +2878,7 @@ paths:
                                     - end: 9063689078350173992
                                       start: 5812498383206549952
                                 trashed_from: inbox
-                                trashed_notebook: inbox
+                                trashed_notebook: dev~design
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The note is not in the trash, or its notebook exists with another kind'
@@ -2768,7 +2974,7 @@ paths:
                     type: string
                     description: Only notes in this notebook. Omit for all notebooks except the trash
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
                 - name: tag
                   in: query
@@ -2825,7 +3031,7 @@ paths:
                                           start: 5812498383206549952
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
-                                      trashed_notebook: inbox
+                                      trashed_notebook: dev~design
                                       updated_at: "2026-10-16T09:30:00Z"
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
@@ -2850,7 +3056,7 @@ paths:
                                           start: 5812498383206549952
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
-                                      trashed_notebook: inbox
+                                      trashed_notebook: dev~design
                                       updated_at: "2026-10-16T09:30:00Z"
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
@@ -2875,7 +3081,7 @@ paths:
                                           start: 5812498383206549952
                                         - end: 9063689078350173992
                                           start: 5812498383206549952
-                                      trashed_notebook: inbox
+                                      trashed_notebook: dev~design
                                       updated_at: "2026-10-16T09:30:00Z"
                                 total: 5184544928014764202
                 "401":
@@ -2972,7 +3178,7 @@ paths:
                     type: string
                     description: Only notes in this notebook. Omit for all notebooks except the trash
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
             responses:
                 "200":
@@ -3081,30 +3287,36 @@ paths:
                                     $ref: '#/components/schemas/TrashedNotebook'
                                 example:
                                     - count: 7061346631093655665
-                                      id: inbox
+                                      id: dev~design
                                       kind: private
                                       name: Est aut velit ut ut.
+                                      parent: inbox
                                     - count: 7061346631093655665
-                                      id: inbox
+                                      id: dev~design
                                       kind: private
                                       name: Est aut velit ut ut.
+                                      parent: inbox
                                     - count: 7061346631093655665
-                                      id: inbox
+                                      id: dev~design
                                       kind: private
                                       name: Est aut velit ut ut.
+                                      parent: inbox
                             example:
                                 - count: 7061346631093655665
-                                  id: inbox
+                                  id: dev~design
                                   kind: private
                                   name: Est aut velit ut ut.
+                                  parent: inbox
                                 - count: 7061346631093655665
-                                  id: inbox
+                                  id: dev~design
                                   kind: private
                                   name: Est aut velit ut ut.
+                                  parent: inbox
                                 - count: 7061346631093655665
-                                  id: inbox
+                                  id: dev~design
                                   kind: private
                                   name: Est aut velit ut ut.
+                                  parent: inbox
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     content:
@@ -3138,19 +3350,19 @@ paths:
             tags:
                 - notes
             summary: delete_trashed_notebook notes
-            description: Permanently delete a notebook in the trash with its notes.
+            description: Permanently delete a notebook in the trash with its notes and sub notebooks.
             operationId: notes#delete_trashed_notebook
             parameters:
                 - name: id
                   in: path
-                  description: Notebook ID
+                  description: ID in the trash
                   required: true
                   schema:
                     type: string
-                    description: Notebook ID
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
-                  example: inbox
+                    description: ID in the trash
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                  example: dev~design
             responses:
                 "204":
                     description: No Content response.
@@ -3208,24 +3420,24 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
-    /trash/notebooks/{id}/restore:
+    /trash/notebooks/restore/{id}:
         post:
             tags:
                 - notes
             summary: restore_notebook notes
-            description: Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.
+            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.
             operationId: notes#restore_notebook
             parameters:
                 - name: id
                   in: path
-                  description: Notebook ID
+                  description: ID in the trash
                   required: true
                   schema:
                     type: string
-                    description: Notebook ID
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
-                  example: inbox
+                    description: ID in the trash
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                  example: dev~design
             responses:
                 "200":
                     description: OK response.
@@ -3239,10 +3451,11 @@ paths:
                                 kind: default
                                 name: Omnis exercitationem.
                                 order: 4934471302444942324
+                                parent: inbox
                                 reserved: false
                                 sort: created
                 "400":
-                    description: 'bad_request: The notebook ID is invalid'
+                    description: 'bad_request: The notebook ID is invalid, or the parent of the sub notebook is not there'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -3304,6 +3517,80 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: already_exists
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /trash/notes:
+        post:
+            tags:
+                - notes
+            summary: trash_notes notes
+            description: 'Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.'
+            operationId: notes#trash_notes
+            requestBody:
+                description: Request body for trash_notes.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TrashNotesRequestBody'
+                        example:
+                            ids:
+                                - be4c1193735ee1
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: A note is in the trash already, or cannot be moved, such as when its ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: A note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
                                 temporary: false
                                 timeout: false
             security:
@@ -3397,7 +3684,7 @@ components:
             properties:
                 kind:
                     type: string
-                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop
+                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Ignored for a sub notebook, which takes the kind of its parent
                     default: default
                     example: private
                     enum:
@@ -3416,11 +3703,17 @@ components:
                     description: Sort key; lower comes first. Omit to put the notebook after the others
                     example: 6679760426203438774
                     format: int64
+                parent:
+                    type: string
+                    description: 'Notebook to create the notebook in, as a sub notebook, one level deep: not a sub notebook, the inbox or the trash'
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             description: Request body for create_notebook.
             example:
                 kind: private
                 name: vo3
                 order: 6679760426203438774
+                parent: inbox
             required:
                 - name
         CreateRequestBody:
@@ -3439,7 +3732,7 @@ components:
                     type: string
                     description: Notebook to put the note in (default inbox; not trash)
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 tags:
                     type: array
                     items:
@@ -3855,7 +4148,7 @@ components:
                     type: string
                     description: Notebook to put the note in (default inbox; not trash)
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             description: Request body for import.
             example:
                 content: fsn
@@ -3931,7 +4224,7 @@ components:
                         - end: 9063689078350173992
                           start: 5812498383206549952
                     trashed_from: inbox
-                    trashed_notebook: inbox
+                    trashed_notebook: dev~design
                     updated_at: "2026-10-16T09:30:00Z"
                     version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
                 status: skipped
@@ -3941,6 +4234,44 @@ components:
             required:
                 - status
                 - warnings
+        MoveNotebookRequestBody:
+            type: object
+            properties:
+                parent:
+                    type: string
+                    description: 'Notebook to move the notebook into: not a sub notebook, the inbox or the trash. Omit to move a sub notebook to the top'
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            description: Request body for move_notebook.
+            example:
+                parent: inbox
+        MoveNotesRequestBody:
+            type: object
+            properties:
+                ids:
+                    type: array
+                    items:
+                        type: string
+                        example: be4c1193735ee1
+                        pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    description: IDs of the notes
+                    example:
+                        - be4c1193735ee1
+                    minItems: 1
+                    maxItems: 500
+                notebook:
+                    type: string
+                    description: Notebook to move the notes to; not trash (use trash_notes)
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            description: Request body for move_notes.
+            example:
+                ids:
+                    - be4c1193735ee1
+                notebook: inbox
+            required:
+                - ids
+                - notebook
         MoveRequestBody:
             type: object
             properties:
@@ -3993,7 +4324,7 @@ components:
                     type: string
                     description: Notebook (directory) the note is in
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 tags:
                     type: array
                     items:
@@ -4025,12 +4356,12 @@ components:
                     type: string
                     description: Notebook the note was in before it was moved to the trash
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 trashed_notebook:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -4065,7 +4396,7 @@ components:
                     - end: 9063689078350173992
                       start: 5812498383206549952
                 trashed_from: inbox
-                trashed_notebook: inbox
+                trashed_notebook: dev~design
                 updated_at: "2026-10-16T09:30:00Z"
             required:
                 - id
@@ -4114,7 +4445,7 @@ components:
                     type: string
                     description: Notebook (directory) the note is in
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 tags:
                     type: array
                     items:
@@ -4146,12 +4477,12 @@ components:
                     type: string
                     description: Notebook the note was in before it was moved to the trash
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 trashed_notebook:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -4188,7 +4519,7 @@ components:
                     - end: 9063689078350173992
                       start: 5812498383206549952
                 trashed_from: inbox
-                trashed_notebook: inbox
+                trashed_notebook: dev~design
                 updated_at: "2026-10-16T09:30:00Z"
                 version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
             required:
@@ -4272,7 +4603,7 @@ components:
                               start: 5812498383206549952
                             - end: 9063689078350173992
                               start: 5812498383206549952
-                          trashed_notebook: inbox
+                          trashed_notebook: dev~design
                           updated_at: "2026-10-16T09:30:00Z"
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
@@ -4297,7 +4628,7 @@ components:
                               start: 5812498383206549952
                             - end: 9063689078350173992
                               start: 5812498383206549952
-                          trashed_notebook: inbox
+                          trashed_notebook: dev~design
                           updated_at: "2026-10-16T09:30:00Z"
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
@@ -4322,7 +4653,7 @@ components:
                               start: 5812498383206549952
                             - end: 9063689078350173992
                               start: 5812498383206549952
-                          trashed_notebook: inbox
+                          trashed_notebook: dev~design
                           updated_at: "2026-10-16T09:30:00Z"
                 total:
                     type: integer
@@ -4354,7 +4685,7 @@ components:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -4379,7 +4710,7 @@ components:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -4404,7 +4735,7 @@ components:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                 total: 7955538707107640227
             required:
@@ -4433,7 +4764,7 @@ components:
                     type: string
                     description: Notebook (directory) the note is in
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 snippet:
                     type: string
                     description: Excerpt around the matched terms (search only)
@@ -4478,8 +4809,8 @@ components:
                 trashed_notebook:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -4509,7 +4840,7 @@ components:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                trashed_notebook: inbox
+                trashed_notebook: dev~design
                 updated_at: "2026-10-16T09:30:00Z"
             required:
                 - id
@@ -4611,9 +4942,9 @@ components:
                     format: int64
                 id:
                     type: string
-                    description: 'Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead'
+                    description: 'Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead'
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 kind:
                     type: string
                     description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop
@@ -4632,6 +4963,11 @@ components:
                     description: Sort key among the notebooks other than inbox and trash; lower comes first
                     example: 5084316890005250992
                     format: int64
+                parent:
+                    type: string
+                    description: 'For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent'
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 reserved:
                     type: boolean
                     description: Whether this is a system notebook (inbox or trash)
@@ -4651,6 +4987,7 @@ components:
                 kind: private
                 name: Aut sed quidem commodi dolore cumque.
                 order: 5084316890005250992
+                parent: inbox
                 reserved: false
                 sort: created
             required:
@@ -4699,7 +5036,7 @@ components:
             properties:
                 kind:
                     type: string
-                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Inbox cannot be collab, and the trash keeps the default kind (it is hidden from AI clients anyway)
+                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Inbox cannot be collab, the trash keeps the default kind (it is hidden from AI clients anyway), and a sub notebook takes the kind of its parent
                     example: collab
                     enum:
                         - default
@@ -4772,7 +5109,7 @@ components:
                               start: 5812498383206549952
                             - end: 9063689078350173992
                               start: 5812498383206549952
-                          trashed_notebook: inbox
+                          trashed_notebook: dev~design
                           updated_at: "2026-10-16T09:30:00Z"
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
@@ -4797,7 +5134,7 @@ components:
                               start: 5812498383206549952
                             - end: 9063689078350173992
                               start: 5812498383206549952
-                          trashed_notebook: inbox
+                          trashed_notebook: dev~design
                           updated_at: "2026-10-16T09:30:00Z"
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
@@ -4822,7 +5159,7 @@ components:
                               start: 5812498383206549952
                             - end: 9063689078350173992
                               start: 5812498383206549952
-                          trashed_notebook: inbox
+                          trashed_notebook: dev~design
                           updated_at: "2026-10-16T09:30:00Z"
                 total:
                     type: integer
@@ -4855,7 +5192,7 @@ components:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -4880,7 +5217,7 @@ components:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -4905,7 +5242,7 @@ components:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                 total: 5184544928014764202
             required:
@@ -5033,6 +5370,26 @@ components:
             required:
                 - start
                 - end
+        TrashNotesRequestBody:
+            type: object
+            properties:
+                ids:
+                    type: array
+                    items:
+                        type: string
+                        example: be4c1193735ee1
+                        pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    description: IDs of the notes
+                    example:
+                        - be4c1193735ee1
+                    minItems: 1
+                    maxItems: 500
+            description: Request body for trash_notes.
+            example:
+                ids:
+                    - be4c1193735ee1
+            required:
+                - ids
         TrashedNotebook:
             type: object
             properties:
@@ -5043,9 +5400,9 @@ components:
                     format: int64
                 id:
                     type: string
-                    description: Notebook ID
-                    example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    description: 'ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent'
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
                 kind:
                     type: string
                     description: Kind of the notebook, kept for when it is restored
@@ -5059,11 +5416,17 @@ components:
                     type: string
                     description: Display name
                     example: Est aut velit ut ut.
+                parent:
+                    type: string
+                    description: 'For a sub notebook deleted with its parent: the ID of the parent in the trash'
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             example:
                 count: 7061346631093655665
-                id: inbox
+                id: dev~design
                 kind: private
                 name: Est aut velit ut ut.
+                parent: inbox
             required:
                 - id
                 - name
@@ -5130,7 +5493,7 @@ components:
                     type: string
                     description: Notebook to move the note to (not trash)
                     example: inbox
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 tags:
                     type: array
                     items:

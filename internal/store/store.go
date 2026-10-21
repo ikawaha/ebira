@@ -136,6 +136,43 @@ func (s *Store) places() ([]string, error) {
 	return nbs, nil
 }
 
+// Sub notebooks: a notebook may hold notebooks of its own, one level deep,
+// as directories in it: <parent>/<sub>, which is also the ID of the sub
+// notebook. A sub notebook takes the kind of its parent. The inbox and the
+// trash have none (the directories in the trash are notebooks in the trash).
+//
+// In the trash, a notebook deleted as a whole keeps its sub notebooks, as
+// Trash/<parent>/<sub>, whose ID in the trash is <parent>/<sub>. A sub
+// notebook deleted on its own is Trash/<parent>~<sub>, with that ID: "~"
+// cannot be in an ID, so it is told from a notebook in the trash.
+
+// subSep separates the parent and the sub notebook in the ID of a sub
+// notebook deleted on its own.
+const subSep = "~"
+
+// SplitNotebook returns the parent of notebook nb and the name of nb in it,
+// or nb itself and "" for a notebook that is not a sub notebook.
+func SplitNotebook(nb string) (parent, sub string) {
+	if p, s, ok := strings.Cut(nb, "/"); ok {
+		return p, s
+	}
+	return nb, ""
+}
+
+// trashedSub returns the parent and the name of a sub notebook deleted on
+// its own, from its ID in the trash.
+func trashedSub(id string) (parent, sub string, ok bool) {
+	parent, sub, ok = strings.Cut(id, subSep)
+	return parent, sub, ok && nameRe.MatchString(parent) && nameRe.MatchString(sub)
+}
+
+// validTrashed reports whether id can be the ID of a notebook in the trash:
+// a notebook ID, or the ID of a sub notebook deleted on its own.
+func validTrashed(id string) bool {
+	_, _, ok := trashedSub(id)
+	return ok || ValidNotebook(id)
+}
+
 // Store manages the notes directory.
 type Store struct {
 	dir string
@@ -155,8 +192,16 @@ func New(dir string) (*Store, error) {
 // ValidID reports whether id can be used as a note ID.
 func ValidID(id string) bool { return nameRe.MatchString(id) }
 
-// ValidNotebook reports whether name can be used as a notebook name.
-func ValidNotebook(name string) bool { return nameRe.MatchString(name) }
+// ValidNotebook reports whether name can be used as a notebook ID: a name,
+// or <parent>/<sub> for a sub notebook of a notebook other than the inbox and
+// the trash.
+func ValidNotebook(name string) bool {
+	parent, sub := SplitNotebook(name)
+	if sub == "" {
+		return nameRe.MatchString(name)
+	}
+	return nameRe.MatchString(parent) && nameRe.MatchString(sub) && parent != Inbox && parent != Trash
+}
 
 // NewID returns a random note ID.
 func NewID() string {
@@ -231,7 +276,7 @@ func (s *Store) Load(id string) (*Note, error) {
 // Sync with the files from Scan. It does not check other places for a
 // duplicate.
 func (s *Store) LoadFile(f File) (*Note, error) {
-	if !ValidNotebook(f.Notebook) || (f.TrashedNotebook != "" && (f.Notebook != Trash || !ValidNotebook(f.TrashedNotebook))) {
+	if !ValidNotebook(f.Notebook) || (f.TrashedNotebook != "" && (f.Notebook != Trash || !validTrashed(f.TrashedNotebook))) {
 		return nil, ErrInvalidNotebook
 	}
 	if !ValidID(f.ID) {
@@ -277,8 +322,9 @@ var (
 )
 
 // IsNotePath reports whether p, a path relative to the notes directory with
-// slashes, is the place of a note file: <notebook>/<id>.yaml, or
-// trash/<notebook>/<id>.yaml for a notebook in the trash.
+// slashes, is the place of a note file: <notebook>/<id>.yaml, with a sub
+// notebook as <parent>/<sub>, or trash/<notebook>/<id>.yaml for a notebook in
+// the trash.
 func IsNotePath(p string) bool {
 	_, _, ok := splitNotePath(p)
 	return ok
@@ -292,7 +338,7 @@ func splitNotePath(p string) (place, id string, ok bool) {
 		return "", "", false
 	}
 	nb, trashed := splitPlace(place)
-	if !ValidNotebook(nb) || (trashed != "" && !ValidNotebook(trashed)) {
+	if !ValidNotebook(nb) || (trashed != "" && !validTrashed(trashed)) {
 		return "", "", false
 	}
 	return place, id, true
@@ -379,7 +425,7 @@ func (s *Store) Create(n *Note) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(s.dir, n.Notebook), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(s.dir, filepath.FromSlash(n.Notebook)), 0o755); err != nil {
 		return err
 	}
 	f, err := os.OpenFile(s.path(n.Notebook, n.ID), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
@@ -440,7 +486,7 @@ func (s *Store) Move(id, to string) error {
 	if nb == to {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Join(s.dir, to), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(s.dir, filepath.FromSlash(to)), 0o755); err != nil {
 		return err
 	}
 	// The files of the note move with it.
@@ -562,12 +608,17 @@ func DefaultKind(nb string) string {
 }
 
 // NotebookMeta reads the settings of the notebook. A missing file gives the
-// defaults.
+// defaults. A sub notebook has the kind of its parent.
 func (s *Store) NotebookMeta(nb string) (NotebookMeta, error) {
 	if !ValidNotebook(nb) {
 		return NotebookMeta{}, ErrInvalidNotebook
 	}
-	return s.readNotebookMeta(filepath.Join(s.dir, nb, NotebookFile), nb)
+	m, err := s.readNotebookMeta(filepath.Join(s.dir, filepath.FromSlash(nb), NotebookFile), nb)
+	if parent, sub := SplitNotebook(nb); sub != "" && err == nil {
+		pm, perr := s.NotebookMeta(parent)
+		m.Kind, err = pm.Kind, perr
+	}
+	return m, err
 }
 
 // readNotebookMeta reads the settings file p of notebook nb.
@@ -599,12 +650,14 @@ func (s *Store) readNotebookMeta(p, nb string) (NotebookMeta, error) {
 }
 
 // SaveNotebookMeta writes the settings of the notebook, creating the notebook
-// if needed. Comments and unknown keys in an existing file are kept.
+// if needed. Comments and unknown keys in an existing file are kept. The kind
+// of a sub notebook is not written, as it takes the kind of its parent.
 func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 	if !ValidNotebook(nb) {
 		return ErrInvalidNotebook
 	}
-	dir := filepath.Join(s.dir, nb)
+	_, sub := SplitNotebook(nb)
+	dir := filepath.Join(s.dir, filepath.FromSlash(nb))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -634,7 +687,7 @@ func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 		unset(root, "order")
 	}
 	switch {
-	case m.Kind == DefaultKind(nb):
+	case sub != "", m.Kind == DefaultKind(nb):
 		unset(root, "kind")
 	case m.Kind == "":
 		set(root, "kind", str(kindDefault, 0))
@@ -662,17 +715,38 @@ func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 	return writeFileAtomic(p, []byte(sb.String()))
 }
 
-// Notebooks returns the names of the notebooks: the directories under the
-// notes directory with valid names, sorted, including inbox and trash.
+// Notebooks returns the IDs of the notebooks: the directories under the
+// notes directory with valid names, including inbox and trash, each followed
+// by its sub notebooks.
 func (s *Store) Notebooks() ([]string, error) {
-	entries, err := os.ReadDir(s.dir)
+	return s.notebooksIn(s.dir, func(name string) bool { return nameRe.MatchString(name) })
+}
+
+// notebooksIn lists the directories in dir whose names pass valid, each
+// followed by the sub notebooks in it, as <name>/<sub>.
+func (s *Store) notebooksIn(dir string, valid func(string) bool) ([]string, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 	var nbs []string
 	for _, e := range entries {
-		if e.IsDir() && ValidNotebook(e.Name()) {
-			nbs = append(nbs, e.Name())
+		name := e.Name()
+		if !e.IsDir() || !valid(name) {
+			continue
+		}
+		nbs = append(nbs, name)
+		if !ValidNotebook(name + "/x") {
+			continue // no sub notebooks, such as in the inbox
+		}
+		subs, err := os.ReadDir(filepath.Join(dir, name))
+		if err != nil {
+			return nil, err
+		}
+		for _, sub := range subs {
+			if sub.IsDir() && nameRe.MatchString(sub.Name()) {
+				nbs = append(nbs, name+"/"+sub.Name())
+			}
 		}
 	}
 	return nbs, nil
@@ -712,27 +786,39 @@ func (s *Store) Scan() ([]File, error) {
 }
 
 // TrashedNotebooks returns the IDs of the notebooks in the trash: the
-// directories under the trash with valid names, sorted.
+// directories under the trash with valid names, each followed by its sub
+// notebooks, and the sub notebooks deleted on their own (see Notebooks).
 func (s *Store) TrashedNotebooks() ([]string, error) {
-	entries, err := os.ReadDir(filepath.Join(s.dir, Trash))
+	nbs, err := s.notebooksIn(filepath.Join(s.dir, Trash), validTrashed)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	var nbs []string
-	for _, e := range entries {
-		if e.IsDir() && ValidNotebook(e.Name()) {
-			nbs = append(nbs, e.Name())
-		}
-	}
-	return nbs, nil
+	return nbs, err
 }
 
-// TrashNotebook moves notebook nb with its notes and settings into the trash,
-// as Trash/<nb>. It fails with ErrNotebookExists when the trash already holds
-// a notebook with the same ID.
+// ErrNoParent is returned for a sub notebook put back from the trash while
+// its parent is not there: the kind of the sub notebook is that of its
+// parent, which is not known then.
+var ErrNoParent = errors.New("the notebook of the sub notebook does not exist; restore it first")
+
+// trashedDir returns the directory of notebook id in the trash.
+func (s *Store) trashedDir(id string) string {
+	return filepath.Join(s.dir, Trash, filepath.FromSlash(id))
+}
+
+// RestoredNotebook returns the notebook that notebook id in the trash goes
+// back to: <parent>/<sub> for a sub notebook deleted on its own, else id.
+func RestoredNotebook(id string) string {
+	if parent, sub, ok := trashedSub(id); ok {
+		return parent + "/" + sub
+	}
+	return id
+}
+
+// TrashNotebook moves notebook nb with its notes, settings and sub notebooks
+// into the trash, as Trash/<nb>; a sub notebook goes as Trash/<parent>~<sub>.
+// It fails with ErrNotebookExists when the trash already holds a notebook
+// with the same ID.
 func (s *Store) TrashNotebook(nb string) error {
 	if !ValidNotebook(nb) {
 		return ErrInvalidNotebook
@@ -740,7 +826,11 @@ func (s *Store) TrashNotebook(nb string) error {
 	if nb == Inbox || nb == Trash {
 		return ErrReserved
 	}
-	from, to := filepath.Join(s.dir, nb), filepath.Join(s.dir, Trash, nb)
+	id := nb
+	if parent, sub := SplitNotebook(nb); sub != "" {
+		id = parent + subSep + sub
+	}
+	from, to := filepath.Join(s.dir, filepath.FromSlash(nb)), s.trashedDir(id)
 	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
 		return ErrNotFound
 	}
@@ -750,29 +840,108 @@ func (s *Store) TrashNotebook(nb string) error {
 	return os.Rename(from, to)
 }
 
-// RestoreNotebook moves notebook nb out of the trash. It fails with
-// ErrNotebookExists when a notebook with the same ID exists.
-func (s *Store) RestoreNotebook(nb string) error {
-	if !ValidNotebook(nb) {
-		return ErrInvalidNotebook
+// ErrHasSubs is returned for a notebook with sub notebooks moved into
+// another notebook: sub notebooks are one level deep.
+var ErrHasSubs = errors.New("the notebook has sub notebooks, which cannot go one level deeper")
+
+// MovedNotebook returns the ID that notebook nb gets when moved into parent,
+// or to the top with an empty parent: the name of nb in its parent goes with
+// it.
+func MovedNotebook(nb, parent string) string {
+	if p, sub := SplitNotebook(nb); sub != "" {
+		nb = sub
+	} else {
+		nb = p
 	}
-	from, to := filepath.Join(s.dir, Trash, nb), filepath.Join(s.dir, nb)
+	if parent == "" {
+		return nb
+	}
+	return parent + "/" + nb
+}
+
+// MoveNotebook moves notebook nb with its notes and settings into parent, as
+// a sub notebook, or to the top with an empty parent, and returns its new ID.
+// The settings keep its name, order and sort; a sub notebook loses its own
+// kind, as it takes the kind of its parent, and one moved to the top gets the
+// kind it had in its parent, so that its notes stay as visible to AI as they
+// were. It fails with ErrHasSubs for a notebook with sub notebooks moved
+// into another, and with ErrNotebookExists when the new ID is taken.
+func (s *Store) MoveNotebook(nb, parent string) (string, error) {
+	if !ValidNotebook(nb) || (parent != "" && !ValidNotebook(parent+"/x")) {
+		return "", ErrInvalidNotebook
+	}
+	if nb == Inbox || nb == Trash {
+		return "", ErrReserved
+	}
+	to := MovedNotebook(nb, parent)
+	if to == nb {
+		return nb, nil
+	}
+	from := filepath.Join(s.dir, filepath.FromSlash(nb))
+	if fi, err := os.Stat(from); err != nil || !fi.IsDir() {
+		return "", ErrNotFound
+	}
+	if parent != "" {
+		if parent == nb {
+			return "", ErrInvalidNotebook
+		}
+		if fi, err := os.Stat(filepath.Join(s.dir, parent)); err != nil || !fi.IsDir() {
+			return "", fmt.Errorf("%w: %s", ErrNotFound, parent)
+		}
+		if _, sub := SplitNotebook(nb); sub == "" {
+			subs, err := s.notebooksIn(s.dir, func(name string) bool { return name == nb })
+			if err != nil {
+				return "", err
+			}
+			if len(subs) > 1 {
+				return "", ErrHasSubs
+			}
+		}
+	}
+	if _, err := os.Stat(filepath.Join(s.dir, filepath.FromSlash(to))); err == nil {
+		return "", fmt.Errorf("%w: %s", ErrNotebookExists, to)
+	}
+	m, err := s.NotebookMeta(nb) // with the kind it has now
+	if err != nil {
+		return "", err
+	}
+	if err := os.Rename(from, filepath.Join(s.dir, filepath.FromSlash(to))); err != nil {
+		return "", err
+	}
+	return to, s.SaveNotebookMeta(to, m)
+}
+
+// RestoreNotebook moves notebook id out of the trash, and returns the ID of
+// the notebook it became: a sub notebook goes back into its parent, which
+// must exist (ErrNoParent). It fails with ErrNotebookExists when a notebook
+// with the same ID exists.
+func (s *Store) RestoreNotebook(id string) (string, error) {
+	if !validTrashed(id) {
+		return "", ErrInvalidNotebook
+	}
+	nb := RestoredNotebook(id)
+	from, to := s.trashedDir(id), filepath.Join(s.dir, filepath.FromSlash(nb))
 	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
-		return ErrNotFound
+		return "", ErrNotFound
+	}
+	if parent, sub := SplitNotebook(nb); sub != "" {
+		if fi, err := os.Stat(filepath.Join(s.dir, parent)); err != nil || !fi.IsDir() {
+			return "", fmt.Errorf("%w: %s", ErrNoParent, parent)
+		}
 	}
 	if _, err := os.Stat(to); err == nil {
-		return fmt.Errorf("%w: %s", ErrNotebookExists, nb)
+		return "", fmt.Errorf("%w: %s", ErrNotebookExists, nb)
 	}
-	return os.Rename(from, to)
+	return nb, os.Rename(from, to)
 }
 
 // DeleteTrashedNotebook permanently deletes notebook nb in the trash with its
 // notes.
 func (s *Store) DeleteTrashedNotebook(nb string) error {
-	if !ValidNotebook(nb) {
+	if !validTrashed(nb) {
 		return ErrInvalidNotebook
 	}
-	dir := filepath.Join(s.dir, Trash, nb)
+	dir := s.trashedDir(nb)
 	if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
 		return ErrNotFound
 	}
@@ -796,7 +965,7 @@ func (s *Store) EmptyTrash() error {
 		id, note := strings.CutSuffix(name, Ext)
 		assets, files := strings.CutSuffix(name, AssetsSuffix)
 		switch {
-		case e.IsDir() && ValidNotebook(name), e.IsDir() && files && ValidID(assets):
+		case e.IsDir() && validTrashed(name), e.IsDir() && files && ValidID(assets):
 			err = os.RemoveAll(filepath.Join(dir, name))
 		case !e.IsDir() && note && ValidID(id):
 			err = os.Remove(filepath.Join(dir, name))
@@ -810,12 +979,29 @@ func (s *Store) EmptyTrash() error {
 	return nil
 }
 
-// TrashedNotebookMeta reads the settings of notebook nb in the trash.
+// TrashedNotebookMeta reads the settings of notebook nb in the trash. A sub
+// notebook has the kind of its parent: the parent in the trash for one
+// deleted with it, else the parent out of the trash, the default if none.
 func (s *Store) TrashedNotebookMeta(nb string) (NotebookMeta, error) {
-	if !ValidNotebook(nb) {
+	if !validTrashed(nb) {
 		return NotebookMeta{}, ErrInvalidNotebook
 	}
-	return s.readNotebookMeta(filepath.Join(s.dir, Trash, nb, NotebookFile), nb)
+	m, err := s.readNotebookMeta(filepath.Join(s.trashedDir(nb), NotebookFile), RestoredNotebook(nb))
+	if err != nil {
+		return m, err
+	}
+	if parent, sub := SplitNotebook(nb); sub != "" {
+		pm, err := s.TrashedNotebookMeta(parent)
+		m.Kind = pm.Kind
+		return m, err
+	}
+	if parent, _, ok := trashedSub(nb); ok {
+		m.Kind = ""
+		if pm, err := s.NotebookMeta(parent); err == nil {
+			m.Kind = pm.Kind
+		}
+	}
+	return m, nil
 }
 
 // MigrateFlat moves note files directly under the notes directory, the layout

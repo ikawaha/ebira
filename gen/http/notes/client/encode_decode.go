@@ -849,6 +849,278 @@ func DecodeDeleteResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 	}
 }
 
+// BuildMoveNotesRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "move_notes" endpoint
+func (c *Client) BuildMoveNotesRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveNotesNotesPath()}
+	req, err := http.NewRequest("PATCH", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "move_notes", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeMoveNotesRequest returns an encoder for requests sent to the notes
+// move_notes server.
+func EncodeMoveNotesRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.MoveNotesPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "move_notes", "*notes.MoveNotesPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewMoveNotesRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "move_notes", err)
+		}
+		return nil
+	}
+}
+
+// DecodeMoveNotesResponse returns a decoder for responses returned by the
+// notes move_notes endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeMoveNotesResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeMoveNotesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notes", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "move_notes", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		case http.StatusNotFound:
+			var (
+				body MoveNotesNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notes", err)
+			}
+			err = ValidateMoveNotesNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notes", err)
+			}
+			return nil, NewMoveNotesNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body MoveNotesBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notes", err)
+			}
+			err = ValidateMoveNotesBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notes", err)
+			}
+			return nil, NewMoveNotesBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body MoveNotesUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notes", err)
+			}
+			err = ValidateMoveNotesUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notes", err)
+			}
+			return nil, NewMoveNotesUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body MoveNotesVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notes", err)
+			}
+			err = ValidateMoveNotesVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notes", err)
+			}
+			return nil, NewMoveNotesVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notes", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "move_notes", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildTrashNotesRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "trash_notes" endpoint
+func (c *Client) BuildTrashNotesRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: TrashNotesNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "trash_notes", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeTrashNotesRequest returns an encoder for requests sent to the notes
+// trash_notes server.
+func EncodeTrashNotesRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.TrashNotesPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "trash_notes", "*notes.TrashNotesPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewTrashNotesRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "trash_notes", err)
+		}
+		return nil
+	}
+}
+
+// DecodeTrashNotesResponse returns a decoder for responses returned by the
+// notes trash_notes endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeTrashNotesResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeTrashNotesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trash_notes", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "trash_notes", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		case http.StatusNotFound:
+			var (
+				body TrashNotesNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trash_notes", err)
+			}
+			err = ValidateTrashNotesNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "trash_notes", err)
+			}
+			return nil, NewTrashNotesNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body TrashNotesBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trash_notes", err)
+			}
+			err = ValidateTrashNotesBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "trash_notes", err)
+			}
+			return nil, NewTrashNotesBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body TrashNotesUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trash_notes", err)
+			}
+			err = ValidateTrashNotesUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "trash_notes", err)
+			}
+			return nil, NewTrashNotesUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body TrashNotesVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trash_notes", err)
+			}
+			err = ValidateTrashNotesVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "trash_notes", err)
+			}
+			return nil, NewTrashNotesVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "trash_notes", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "trash_notes", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildSearchRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "search" endpoint
 func (c *Client) BuildSearchRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -1619,6 +1891,7 @@ func EncodeCreateNotebookRequest(encoder func(*http.Request) goahttp.Encoder) fu
 // body should be restored after having been read.
 // DecodeCreateNotebookResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "already_exists" (type *goa.ServiceError): http.StatusConflict
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
@@ -1673,6 +1946,20 @@ func DecodeCreateNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("notes", "create_notebook", err)
 			}
 			return nil, NewCreateNotebookBadRequest(&body)
+		case http.StatusNotFound:
+			var (
+				body CreateNotebookNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_notebook", err)
+			}
+			err = ValidateCreateNotebookNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_notebook", err)
+			}
+			return nil, NewCreateNotebookNotFound(&body)
 		case http.StatusConflict:
 			var (
 				body CreateNotebookAlreadyExistsResponseBody
@@ -1880,6 +2167,180 @@ func DecodeSaveNotebookResponse(decoder func(*http.Response) goahttp.Decoder, re
 				return nil, goahttp.ErrDecodingError("notes", "save_notebook", err)
 			}
 			return nil, goahttp.ErrInvalidResponse("notes", "save_notebook", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildMoveNotebookRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "move_notebook" endpoint
+func (c *Client) BuildMoveNotebookRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.MoveNotebookPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "move_notebook", "*notes.MoveNotebookPayload", v)
+		}
+		id = p.ID
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveNotebookNotesPath(id)}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "move_notebook", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeMoveNotebookRequest returns an encoder for requests sent to the notes
+// move_notebook server.
+func EncodeMoveNotebookRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.MoveNotebookPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "move_notebook", "*notes.MoveNotebookPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewMoveNotebookRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "move_notebook", err)
+		}
+		return nil
+	}
+}
+
+// DecodeMoveNotebookResponse returns a decoder for responses returned by the
+// notes move_notebook endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeMoveNotebookResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "already_exists" (type *goa.ServiceError): http.StatusConflict
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeMoveNotebookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "move_notebook", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body MoveNotebookResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			err = ValidateMoveNotebookResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notebook", err)
+			}
+			res := NewMoveNotebookNotebookOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body MoveNotebookNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			err = ValidateMoveNotebookNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notebook", err)
+			}
+			return nil, NewMoveNotebookNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body MoveNotebookBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			err = ValidateMoveNotebookBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notebook", err)
+			}
+			return nil, NewMoveNotebookBadRequest(&body)
+		case http.StatusConflict:
+			var (
+				body MoveNotebookAlreadyExistsResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			err = ValidateMoveNotebookAlreadyExistsResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notebook", err)
+			}
+			return nil, NewMoveNotebookAlreadyExists(&body)
+		case http.StatusUnauthorized:
+			var (
+				body MoveNotebookUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			err = ValidateMoveNotebookUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notebook", err)
+			}
+			return nil, NewMoveNotebookUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body MoveNotebookVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			err = ValidateMoveNotebookVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_notebook", err)
+			}
+			return nil, NewMoveNotebookVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_notebook", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "move_notebook", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -4190,6 +4651,7 @@ func unmarshalTextRangeResponseBodyToNotesTextRange(v *TextRangeResponseBody) *n
 func unmarshalNotebookResponseToNotesNotebook(v *NotebookResponse) *notes.Notebook {
 	res := &notes.Notebook{
 		ID:       *v.ID,
+		Parent:   v.Parent,
 		Name:     *v.Name,
 		Order:    *v.Order,
 		Count:    *v.Count,
@@ -4216,10 +4678,11 @@ func unmarshalTagCountResponseToNotesTagCount(v *TagCountResponse) *notes.TagCou
 // type *notes.TrashedNotebook from a value of type *TrashedNotebookResponse.
 func unmarshalTrashedNotebookResponseToNotesTrashedNotebook(v *TrashedNotebookResponse) *notes.TrashedNotebook {
 	res := &notes.TrashedNotebook{
-		ID:    *v.ID,
-		Name:  *v.Name,
-		Kind:  *v.Kind,
-		Count: *v.Count,
+		ID:     *v.ID,
+		Parent: v.Parent,
+		Name:   *v.Name,
+		Kind:   *v.Kind,
+		Count:  *v.Count,
 	}
 
 	return res

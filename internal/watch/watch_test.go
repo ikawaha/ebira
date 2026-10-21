@@ -19,7 +19,7 @@ func TestRun(t *testing.T) {
 	calls := make(chan struct{}, 10)
 	done := make(chan error, 1)
 	go func() {
-		done <- Run(ctx, dir, ".yaml", 100*time.Millisecond, func() { calls <- struct{}{} }, func(err error) { t.Error(err) })
+		done <- Run(ctx, dir, ".yaml", 100*time.Millisecond, func() { calls <- struct{}{} }, func(err error) { t.Error(err) }, 1)
 	}()
 	time.Sleep(100 * time.Millisecond) // wait for the watcher to start
 
@@ -75,11 +75,11 @@ func TestRun(t *testing.T) {
 	}
 }
 
-// TestRunNested checks the subdirectories of a nested directory, such as the
-// notebooks in the trash.
+// TestRunNested checks the directories deeper down, such as the notebooks in
+// the trash and the sub notebooks.
 func TestRunNested(t *testing.T) {
 	dir := t.TempDir()
-	for _, d := range []string{"work", "trash", "trash/old"} {
+	for _, d := range []string{"work", "work/sub", "trash", "trash/old", "trash/old/sub"} {
 		if err := os.Mkdir(filepath.Join(dir, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -87,7 +87,7 @@ func TestRunNested(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	calls := make(chan struct{}, 10)
-	go Run(ctx, dir, ".yaml", 100*time.Millisecond, func() { calls <- struct{}{} }, func(err error) { t.Error(err) }, "trash")
+	go Run(ctx, dir, ".yaml", 100*time.Millisecond, func() { calls <- struct{}{} }, func(err error) { t.Error(err) }, 3)
 	time.Sleep(100 * time.Millisecond)
 
 	called := func(msg string) {
@@ -107,6 +107,17 @@ func TestRunNested(t *testing.T) {
 
 	write("trash/old/a.yaml")
 	called("a note in a notebook in the trash")
+	write("work/sub/s.yaml")
+	called("a note in a sub notebook")
+	write("trash/old/sub/s.yaml")
+	called("a note in a sub notebook in the trash")
+	if err := os.Mkdir(filepath.Join(dir, "work", "new"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	called("a new sub notebook")
+	time.Sleep(50 * time.Millisecond)
+	write("work/new/n.yaml")
+	called("a note in the new sub notebook")
 	write("trash/b.yaml")
 	called("a note deleted on its own")
 
@@ -118,6 +129,8 @@ func TestRunNested(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	write("trash/work/c.yaml")
 	called("a note in the moved notebook")
+	write("trash/work/sub/d.yaml")
+	called("a note in a sub notebook of the moved notebook")
 
 	// The files of a note in the trash are not a notebook: neither the
 	// directory nor its files are reported.

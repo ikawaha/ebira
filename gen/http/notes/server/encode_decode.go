@@ -54,7 +54,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			notebook = &notebookRaw
 		}
 		if notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		tagRaw := qp.Get("tag")
 		if tagRaw != "" {
@@ -96,7 +96,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			trashedNotebook = &trashedNotebookRaw
 		}
 		if trashedNotebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *trashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *trashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		sortRaw := qp.Get("sort")
 		if sortRaw != "" {
@@ -698,6 +698,246 @@ func EncodeDeleteError(encoder func(context.Context, http.ResponseWriter) goahtt
 	}
 }
 
+// EncodeMoveNotesResponse returns an encoder for responses returned by the
+// notes move_notes endpoint.
+func EncodeMoveNotesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+}
+
+// DecodeMoveNotesRequest returns a decoder for requests sent to the notes
+// move_notes endpoint.
+func DecodeMoveNotesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.MoveNotesPayload, error) {
+	return func(r *http.Request) (*notes.MoveNotesPayload, error) {
+		var payload *notes.MoveNotesPayload
+		var (
+			body MoveNotesRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMoveNotesRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewMoveNotesPayload(&body, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeMoveNotesError returns an encoder for errors returned by the
+// move_notes notes endpoint.
+func EncodeMoveNotesError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotesNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotesBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotesUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotesVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeTrashNotesResponse returns an encoder for responses returned by the
+// notes trash_notes endpoint.
+func EncodeTrashNotesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+}
+
+// DecodeTrashNotesRequest returns a decoder for requests sent to the notes
+// trash_notes endpoint.
+func DecodeTrashNotesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.TrashNotesPayload, error) {
+	return func(r *http.Request) (*notes.TrashNotesPayload, error) {
+		var payload *notes.TrashNotesPayload
+		var (
+			body TrashNotesRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateTrashNotesRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewTrashNotesPayload(&body, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeTrashNotesError returns an encoder for errors returned by the
+// trash_notes notes endpoint.
+func EncodeTrashNotesError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTrashNotesNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTrashNotesBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTrashNotesUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewTrashNotesVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeSearchResponse returns an encoder for responses returned by the notes
 // search endpoint.
 func EncodeSearchResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -737,7 +977,7 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 			notebook = &notebookRaw
 		}
 		if notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		tagRaw := qp.Get("tag")
 		if tagRaw != "" {
@@ -1188,7 +1428,7 @@ func DecodeTagsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			notebook = &notebookRaw
 		}
 		if notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
@@ -1327,6 +1567,19 @@ func EncodeCreateNotebookError(encoder func(context.Context, http.ResponseWriter
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
 			return enc.Encode(body)
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewCreateNotebookNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
 		case "already_exists":
 			var res *goa.ServiceError
 			errors.As(v, &res)
@@ -1417,7 +1670,7 @@ func DecodeSaveNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request) go
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -1503,6 +1756,150 @@ func EncodeSaveNotebookError(encoder func(context.Context, http.ResponseWriter) 
 	}
 }
 
+// EncodeMoveNotebookResponse returns an encoder for responses returned by the
+// notes move_notebook endpoint.
+func EncodeMoveNotebookResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.Notebook)
+		enc := encoder(ctx, w)
+		body := NewMoveNotebookResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeMoveNotebookRequest returns a decoder for requests sent to the notes
+// move_notebook endpoint.
+func DecodeMoveNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.MoveNotebookPayload, error) {
+	return func(r *http.Request) (*notes.MoveNotebookPayload, error) {
+		var payload *notes.MoveNotebookPayload
+		var (
+			body MoveNotebookRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMoveNotebookRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			id      string
+			session *string
+			c       *http.Cookie
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMoveNotebookPayload(&body, id, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeMoveNotebookError returns an encoder for errors returned by the
+// move_notebook notes endpoint.
+func EncodeMoveNotebookError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotebookNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotebookBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "already_exists":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotebookAlreadyExistsResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusConflict)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotebookUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMoveNotebookVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeDeleteNotebookResponse returns an encoder for responses returned by
 // the notes delete_notebook endpoint.
 func EncodeDeleteNotebookResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -1526,7 +1923,7 @@ func DecodeDeleteNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -1728,7 +2125,7 @@ func DecodeRestoreNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -1850,7 +2247,7 @@ func DecodeDeleteTrashedNotebookRequest(mux goahttp.Muxer, decoder func(*http.Re
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -3200,6 +3597,7 @@ func marshalNotesTextRangeToTextRangeResponseBody(v *notes.TextRange) *TextRange
 func marshalNotesNotebookToNotebookResponse(v *notes.Notebook) *NotebookResponse {
 	res := &NotebookResponse{
 		ID:       v.ID,
+		Parent:   v.Parent,
 		Name:     v.Name,
 		Order:    v.Order,
 		Count:    v.Count,
@@ -3226,10 +3624,11 @@ func marshalNotesTagCountToTagCountResponse(v *notes.TagCount) *TagCountResponse
 // *TrashedNotebookResponse from a value of type *notes.TrashedNotebook.
 func marshalNotesTrashedNotebookToTrashedNotebookResponse(v *notes.TrashedNotebook) *TrashedNotebookResponse {
 	res := &TrashedNotebookResponse{
-		ID:    v.ID,
-		Name:  v.Name,
-		Kind:  v.Kind,
-		Count: v.Count,
+		ID:     v.ID,
+		Parent: v.Parent,
+		Name:   v.Name,
+		Kind:   v.Kind,
+		Count:  v.Count,
 	}
 
 	return res

@@ -417,8 +417,16 @@ func (m Model) renderNotebooks(w, h int) string {
 			icon = trashIcon
 		}
 		nest := ""
-		if _, ok := trashedID(r.id); ok {
+		if tid, ok := trashedID(r.id); ok {
 			nest, name = "↳ ", strings.TrimPrefix(name, "↳ ")
+			if nb := m.trashedNotebook(tid); nb != nil && nb.Parent != nil {
+				// A sub notebook deleted with its parent, under it; it takes
+				// the kind of its parent.
+				nest, icon, name = "  ↳ ", "", nb.Name
+			}
+		} else if nb := m.notebookOf(r.id); nb != nil && nb.Parent != nil {
+			// A sub notebook, under its parent, whose kind it takes.
+			nest, icon, name = "↳ ", "", nb.Name
 		}
 		label := " " + nest + pad(icon, iconWidth) + " " + name
 		count := fmt.Sprintf(" %d ", r.count) // the space keeps a long name apart
@@ -485,19 +493,41 @@ func (m Model) notebookName(id string) string {
 		return "# " + t
 	}
 	if tid, ok := trashedID(id); ok {
-		for _, nb := range m.trashed {
-			if nb.ID == tid {
-				return "↳ " + nb.Name
+		if nb := m.trashedNotebook(tid); nb != nil {
+			if nb.Parent != nil {
+				return m.notebookName(trashedPrefix+*nb.Parent) + " / " + nb.Name
 			}
+			return "↳ " + nb.Name
 		}
 		return "↳ " + tid
 	}
-	for _, nb := range m.notebooks {
-		if nb.ID == id {
-			return nb.Name
+	if nb := m.notebookOf(id); nb != nil {
+		if nb.Parent != nil {
+			return m.notebookName(*nb.Parent) + " / " + nb.Name
 		}
+		return nb.Name
 	}
 	return id
+}
+
+// notebookOf returns notebook id, or nil.
+func (m Model) notebookOf(id string) *gennotes.Notebook {
+	for _, nb := range m.notebooks {
+		if nb.ID == id {
+			return nb
+		}
+	}
+	return nil
+}
+
+// trashedNotebook returns notebook id in the trash, or nil.
+func (m Model) trashedNotebook(id string) *gennotes.TrashedNotebook {
+	for _, nb := range m.trashed {
+		if nb.ID == id {
+			return nb
+		}
+	}
+	return nil
 }
 
 // notebookLabel is the display name of a notebook filter followed by the icon
@@ -515,7 +545,7 @@ func (m Model) notebookLabel(id string) string {
 	for _, nb := range m.notebooks {
 		if nb.ID == id {
 			if icon := kindIcon(nb.Kind); icon != "" {
-				return nb.Name + " " + icon
+				return m.notebookName(id) + " " + icon
 			}
 		}
 	}
@@ -555,7 +585,7 @@ func (m Model) renderFooter() string {
 		}
 		return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.kind", "name", name)) +
 			m.keys([][2]string{{"d", "kind.default"}, {"c", "kind.collab"}, {"w", "kind.drop"}, {"p", "kind.private"}, {"esc", "key.cancel"}})
-	case promptUnprivate:
+	case promptUnprivate, promptMoveNotebook:
 		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.unprivate"))
 	case promptMovePrivate:
 		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.movePrivate"))
@@ -604,8 +634,8 @@ func (m Model) renderFooter() string {
 		}
 		hints = append(hints, [2]string{"q", "key.quit"})
 	case focusNotebooks:
-		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
-		if m.toMove != nil {
+		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"m", "key.moveNotebook"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
+		if m.toMove != nil || m.nbToMove != nil {
 			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.moveHere"}, {"esc", "key.cancel"}}
 			break
 		}

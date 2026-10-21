@@ -198,6 +198,7 @@ Run any command with `-h` for all its flags.
 Only the notes are in the notes directory: the index and the server's state, with the earlier versions of the notes, stay on each machine, in `~/.cache/ebira` and `~/.local/state/ebira`. The earlier versions are in `history/` there; old ones are dropped by themselves (see above), and you may delete the folder to drop them all, which leaves the notes as they are.
 
 - A **notebook** is a folder. `inbox` and `trash` always exist; deleting a note moves it to the trash first.
+- A **sub notebook** is a folder in a notebook, one level deep, such as `development/design/`. It takes the kind of its notebook. The web UI shows the sub notebooks at the top of the note list of their notebook; create one from the menu of the notebook, or move a notebook into another from its menu or by dropping it on the middle of the other one.
 - A **note** has `title`, `tags`, `created_at`, `updated_at` and a Markdown `body`. ebira adds `order` when you reorder notes by hand and `created_by: ai` when an AI wrote the note.
 - **Images** go in `<id>.assets/` next to the note, and the body refers to them as `![alt](<id>.assets/name.png)`.
 

@@ -66,6 +66,8 @@ func TestDraftLoad(t *testing.T) {
 		{name: "existing with id removed", id: "x", content: "---\ntitle: T2\n---\n", wantID: ""},
 		{name: "existing with id changed", id: "x", content: "---\nid: y\ntitle: T2\n---\n", wantErr: true},
 		{name: "invalid notebook", content: "---\nnotebook: Bad Name\ntitle: T\n---\n", wantErr: true},
+		{name: "sub notebook", content: "---\nnotebook: dev/design\ntitle: T\n---\n"},
+		{name: "too deep", content: "---\nnotebook: dev/design/x\ntitle: T\n---\n", wantErr: true},
 		{name: "move to trash", id: "x", content: "---\nnotebook: trash\ntitle: T\n---\n", wantErr: true},
 	}
 	for _, tt := range tests {

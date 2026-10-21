@@ -36,6 +36,14 @@ type Client struct {
 	// Delete Doer is the HTTP client used to make requests to the delete endpoint.
 	DeleteDoer goahttp.Doer
 
+	// MoveNotes Doer is the HTTP client used to make requests to the move_notes
+	// endpoint.
+	MoveNotesDoer goahttp.Doer
+
+	// TrashNotes Doer is the HTTP client used to make requests to the trash_notes
+	// endpoint.
+	TrashNotesDoer goahttp.Doer
+
 	// Search Doer is the HTTP client used to make requests to the search endpoint.
 	SearchDoer goahttp.Doer
 
@@ -60,6 +68,10 @@ type Client struct {
 	// SaveNotebook Doer is the HTTP client used to make requests to the
 	// save_notebook endpoint.
 	SaveNotebookDoer goahttp.Doer
+
+	// MoveNotebook Doer is the HTTP client used to make requests to the
+	// move_notebook endpoint.
+	MoveNotebookDoer goahttp.Doer
 
 	// DeleteNotebook Doer is the HTTP client used to make requests to the
 	// delete_notebook endpoint.
@@ -147,6 +159,8 @@ func NewClient(
 		CreateDoer:                doer,
 		UpdateDoer:                doer,
 		DeleteDoer:                doer,
+		MoveNotesDoer:             doer,
+		TrashNotesDoer:            doer,
 		SearchDoer:                doer,
 		RestoreDoer:               doer,
 		MoveDoer:                  doer,
@@ -154,6 +168,7 @@ func NewClient(
 		TagsDoer:                  doer,
 		CreateNotebookDoer:        doer,
 		SaveNotebookDoer:          doer,
+		MoveNotebookDoer:          doer,
 		DeleteNotebookDoer:        doer,
 		TrashedNotebooksDoer:      doer,
 		RestoreNotebookDoer:       doer,
@@ -293,6 +308,54 @@ func (c *Client) Delete() goa.Endpoint {
 		resp, err := c.DeleteDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "delete", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// MoveNotes returns an endpoint that makes HTTP requests to the notes service
+// move_notes server.
+func (c *Client) MoveNotes() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMoveNotesRequest(c.encoder)
+		decodeResponse = DecodeMoveNotesResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildMoveNotesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.MoveNotesDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "move_notes", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// TrashNotes returns an endpoint that makes HTTP requests to the notes service
+// trash_notes server.
+func (c *Client) TrashNotes() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeTrashNotesRequest(c.encoder)
+		decodeResponse = DecodeTrashNotesResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildTrashNotesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.TrashNotesDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "trash_notes", err)
 		}
 		return decodeResponse(resp)
 	}
@@ -461,6 +524,30 @@ func (c *Client) SaveNotebook() goa.Endpoint {
 		resp, err := c.SaveNotebookDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "save_notebook", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// MoveNotebook returns an endpoint that makes HTTP requests to the notes
+// service move_notebook server.
+func (c *Client) MoveNotebook() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMoveNotebookRequest(c.encoder)
+		decodeResponse = DecodeMoveNotebookResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildMoveNotebookRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.MoveNotebookDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "move_notebook", err)
 		}
 		return decodeResponse(resp)
 	}

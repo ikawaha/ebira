@@ -25,7 +25,7 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	{
 		if notesListNotebook != nil {
 			notebook = notesListNotebook
-			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesListNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesListNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 			if err != nil {
 				return nil, err
 			}
@@ -74,7 +74,7 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	{
 		if notesListTrashedNotebook != nil {
 			trashedNotebook = notesListTrashedNotebook
-			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *notesListTrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *notesListTrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 			if err != nil {
 				return nil, err
 			}
@@ -161,7 +161,7 @@ func BuildCreatePayload(notesCreateBody *string, notesCreateSession *string) (*n
 			err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 		}
 		if body.Notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		if utf8.RuneCountInString(body.Title) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", body.Title, utf8.RuneCountInString(body.Title), 1, true))
@@ -207,7 +207,7 @@ func BuildUpdatePayload(notesUpdateBody *string, notesUpdateID *string, notesUpd
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"body\": \"Odio natus rerum non nobis.\",\n      \"notebook\": \"inbox\",\n      \"tags\": [\n         \"Ab accusantium.\",\n         \"Omnis aliquid odit exercitationem magni voluptatem iure.\"\n      ],\n      \"title\": \"r3q\"\n   }'")
 		}
 		if body.Notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		if body.Title != nil {
 			if utf8.RuneCountInString(*body.Title) < 1 {
@@ -294,6 +294,107 @@ func BuildDeletePayload(notesDeleteID *string, notesDeleteIfMatch *string, notes
 	return v, nil
 }
 
+// BuildMoveNotesPayload builds the payload for the notes move_notes endpoint
+// from CLI flags.
+func BuildMoveNotesPayload(notesMoveNotesBody *string, notesMoveNotesSession *string) (*notes.MoveNotesPayload, error) {
+	var err error
+	var body MoveNotesRequestBody
+	{
+		if notesMoveNotesBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesMoveNotesBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"ids\": [\n         \"be4c1193735ee1\"\n      ],\n      \"notebook\": \"inbox\"\n   }'")
+		}
+		if body.Ids == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("ids", "body"))
+		}
+		if len(body.Ids) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 1, true))
+		}
+		if len(body.Ids) > 500 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 500, false))
+		}
+		for _, e := range body.Ids {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.ids[*]", e, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesMoveNotesSession != nil {
+			session = notesMoveNotesSession
+		}
+	}
+	v := &notes.MoveNotesPayload{
+		Notebook: body.Notebook,
+	}
+	if body.Ids != nil {
+		v.Ids = make([]string, len(body.Ids))
+		for i, val := range body.Ids {
+			v.Ids[i] = val
+		}
+	} else {
+		v.Ids = []string{}
+	}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildTrashNotesPayload builds the payload for the notes trash_notes endpoint
+// from CLI flags.
+func BuildTrashNotesPayload(notesTrashNotesBody *string, notesTrashNotesSession *string) (*notes.TrashNotesPayload, error) {
+	var err error
+	var body TrashNotesRequestBody
+	{
+		if notesTrashNotesBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesTrashNotesBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"ids\": [\n         \"be4c1193735ee1\"\n      ]\n   }'")
+		}
+		if body.Ids == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("ids", "body"))
+		}
+		if len(body.Ids) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 1, true))
+		}
+		if len(body.Ids) > 500 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 500, false))
+		}
+		for _, e := range body.Ids {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.ids[*]", e, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesTrashNotesSession != nil {
+			session = notesTrashNotesSession
+		}
+	}
+	v := &notes.TrashNotesPayload{}
+	if body.Ids != nil {
+		v.Ids = make([]string, len(body.Ids))
+		for i, val := range body.Ids {
+			v.Ids[i] = val
+		}
+	} else {
+		v.Ids = []string{}
+	}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildSearchPayload builds the payload for the notes search endpoint from CLI
 // flags.
 func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notesSearchTag *string, notesSearchLimit string, notesSearchSession *string) (*notes.SearchPayload, error) {
@@ -315,7 +416,7 @@ func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notes
 	{
 		if notesSearchNotebook != nil {
 			notebook = notesSearchNotebook
-			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesSearchNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesSearchNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 			if err != nil {
 				return nil, err
 			}
@@ -465,7 +566,7 @@ func BuildTagsPayload(notesTagsNotebook *string, notesTagsSession *string) (*not
 	{
 		if notesTagsNotebook != nil {
 			notebook = notesTagsNotebook
-			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesTagsNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesTagsNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 			if err != nil {
 				return nil, err
 			}
@@ -495,7 +596,7 @@ func BuildCreateNotebookPayload(notesCreateNotebookBody *string, notesCreateNote
 		}
 		err = json.Unmarshal([]byte(*notesCreateNotebookBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"kind\": \"private\",\n      \"name\": \"vo3\",\n      \"order\": 6679760426203438774\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"kind\": \"private\",\n      \"name\": \"vo3\",\n      \"order\": 6679760426203438774,\n      \"parent\": \"inbox\"\n   }'")
 		}
 		if utf8.RuneCountInString(body.Name) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 1, true))
@@ -505,6 +606,9 @@ func BuildCreateNotebookPayload(notesCreateNotebookBody *string, notesCreateNote
 		}
 		if !(body.Kind == "default" || body.Kind == "collab" || body.Kind == "drop" || body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+		if body.Parent != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		if err != nil {
 			return nil, err
@@ -517,9 +621,10 @@ func BuildCreateNotebookPayload(notesCreateNotebookBody *string, notesCreateNote
 		}
 	}
 	v := &notes.CreateNotebookPayload{
-		Name:  body.Name,
-		Order: body.Order,
-		Kind:  body.Kind,
+		Name:   body.Name,
+		Order:  body.Order,
+		Kind:   body.Kind,
+		Parent: body.Parent,
 	}
 	{
 		var zero string
@@ -565,7 +670,7 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesSaveNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -588,6 +693,52 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 	return v, nil
 }
 
+// BuildMoveNotebookPayload builds the payload for the notes move_notebook
+// endpoint from CLI flags.
+func BuildMoveNotebookPayload(notesMoveNotebookBody *string, notesMoveNotebookID *string, notesMoveNotebookSession *string) (*notes.MoveNotebookPayload, error) {
+	var err error
+	var body MoveNotebookRequestBody
+	{
+		if notesMoveNotebookBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesMoveNotebookBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"parent\": \"inbox\"\n   }'")
+		}
+		if body.Parent != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var id string
+	{
+		if notesMoveNotebookID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesMoveNotebookID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesMoveNotebookSession != nil {
+			session = notesMoveNotebookSession
+		}
+	}
+	v := &notes.MoveNotebookPayload{
+		Parent: body.Parent,
+	}
+	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildDeleteNotebookPayload builds the payload for the notes delete_notebook
 // endpoint from CLI flags.
 func BuildDeleteNotebookPayload(notesDeleteNotebookID *string, notesDeleteNotebookSession *string) (*notes.DeleteNotebookPayload, error) {
@@ -598,7 +749,7 @@ func BuildDeleteNotebookPayload(notesDeleteNotebookID *string, notesDeleteNotebo
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesDeleteNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -641,7 +792,7 @@ func BuildRestoreNotebookPayload(notesRestoreNotebookID *string, notesRestoreNot
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesRestoreNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -669,7 +820,7 @@ func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string, not
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesDeleteTrashedNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -716,7 +867,7 @@ func BuildImportPayload(notesImportBody *string, notesImportSession *string) (*n
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"content\": \"fsn\",\n      \"files\": [\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         }\n      ],\n      \"force\": true,\n      \"modified_at\": \"2026-10-16T09:30:00Z\",\n      \"name\": \"meeting.md\",\n      \"notebook\": \"inbox\"\n   }'")
 		}
 		if body.Notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		if utf8.RuneCountInString(body.Name) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 1, true))

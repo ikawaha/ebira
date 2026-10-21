@@ -34,6 +34,16 @@ func DeleteNotesPath(id string) string {
 	return fmt.Sprintf("/notes/%v", id)
 }
 
+// MoveNotesNotesPath returns the URL path to the notes service move_notes HTTP endpoint.
+func MoveNotesNotesPath() string {
+	return "/notes"
+}
+
+// TrashNotesNotesPath returns the URL path to the notes service trash_notes HTTP endpoint.
+func TrashNotesNotesPath() string {
+	return "/trash/notes"
+}
+
 // SearchNotesPath returns the URL path to the notes service search HTTP endpoint.
 func SearchNotesPath() string {
 	return "/search"
@@ -69,6 +79,11 @@ func SaveNotebookNotesPath(id string) string {
 	return fmt.Sprintf("/notebooks/%v", id)
 }
 
+// MoveNotebookNotesPath returns the URL path to the notes service move_notebook HTTP endpoint.
+func MoveNotebookNotesPath(id string) string {
+	return fmt.Sprintf("/notebooks/move/%v", id)
+}
+
 // DeleteNotebookNotesPath returns the URL path to the notes service delete_notebook HTTP endpoint.
 func DeleteNotebookNotesPath(id string) string {
 	return fmt.Sprintf("/notebooks/%v", id)
@@ -81,7 +96,7 @@ func TrashedNotebooksNotesPath() string {
 
 // RestoreNotebookNotesPath returns the URL path to the notes service restore_notebook HTTP endpoint.
 func RestoreNotebookNotesPath(id string) string {
-	return fmt.Sprintf("/trash/notebooks/%v/restore", id)
+	return fmt.Sprintf("/trash/notebooks/restore/%v", id)
 }
 
 // DeleteTrashedNotebookNotesPath returns the URL path to the notes service delete_trashed_notebook HTTP endpoint.

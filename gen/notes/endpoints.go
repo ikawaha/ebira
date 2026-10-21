@@ -22,6 +22,8 @@ type Endpoints struct {
 	Create                goa.Endpoint
 	Update                goa.Endpoint
 	Delete                goa.Endpoint
+	MoveNotes             goa.Endpoint
+	TrashNotes            goa.Endpoint
 	Search                goa.Endpoint
 	Restore               goa.Endpoint
 	Move                  goa.Endpoint
@@ -29,6 +31,7 @@ type Endpoints struct {
 	Tags                  goa.Endpoint
 	CreateNotebook        goa.Endpoint
 	SaveNotebook          goa.Endpoint
+	MoveNotebook          goa.Endpoint
 	DeleteNotebook        goa.Endpoint
 	TrashedNotebooks      goa.Endpoint
 	RestoreNotebook       goa.Endpoint
@@ -91,6 +94,8 @@ func NewEndpoints(s Service) *Endpoints {
 		Create:                NewCreateEndpoint(s, a.APIKeyAuth),
 		Update:                NewUpdateEndpoint(s, a.APIKeyAuth),
 		Delete:                NewDeleteEndpoint(s, a.APIKeyAuth),
+		MoveNotes:             NewMoveNotesEndpoint(s, a.APIKeyAuth),
+		TrashNotes:            NewTrashNotesEndpoint(s, a.APIKeyAuth),
 		Search:                NewSearchEndpoint(s, a.APIKeyAuth),
 		Restore:               NewRestoreEndpoint(s, a.APIKeyAuth),
 		Move:                  NewMoveEndpoint(s, a.APIKeyAuth),
@@ -98,6 +103,7 @@ func NewEndpoints(s Service) *Endpoints {
 		Tags:                  NewTagsEndpoint(s, a.APIKeyAuth),
 		CreateNotebook:        NewCreateNotebookEndpoint(s, a.APIKeyAuth),
 		SaveNotebook:          NewSaveNotebookEndpoint(s, a.APIKeyAuth),
+		MoveNotebook:          NewMoveNotebookEndpoint(s, a.APIKeyAuth),
 		DeleteNotebook:        NewDeleteNotebookEndpoint(s, a.APIKeyAuth),
 		TrashedNotebooks:      NewTrashedNotebooksEndpoint(s, a.APIKeyAuth),
 		RestoreNotebook:       NewRestoreNotebookEndpoint(s, a.APIKeyAuth),
@@ -131,6 +137,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Create = m(e.Create)
 	e.Update = m(e.Update)
 	e.Delete = m(e.Delete)
+	e.MoveNotes = m(e.MoveNotes)
+	e.TrashNotes = m(e.TrashNotes)
 	e.Search = m(e.Search)
 	e.Restore = m(e.Restore)
 	e.Move = m(e.Move)
@@ -138,6 +146,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Tags = m(e.Tags)
 	e.CreateNotebook = m(e.CreateNotebook)
 	e.SaveNotebook = m(e.SaveNotebook)
+	e.MoveNotebook = m(e.MoveNotebook)
 	e.DeleteNotebook = m(e.DeleteNotebook)
 	e.TrashedNotebooks = m(e.TrashedNotebooks)
 	e.RestoreNotebook = m(e.RestoreNotebook)
@@ -275,6 +284,52 @@ func NewDeleteEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endp
 			return nil, err
 		}
 		return nil, s.Delete(ctx, p)
+	}
+}
+
+// NewMoveNotesEndpoint returns an endpoint function that calls the method
+// "move_notes" of service "notes".
+func NewMoveNotesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*MoveNotesPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.MoveNotes(ctx, p)
+	}
+}
+
+// NewTrashNotesEndpoint returns an endpoint function that calls the method
+// "trash_notes" of service "notes".
+func NewTrashNotesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*TrashNotesPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.TrashNotes(ctx, p)
 	}
 }
 
@@ -436,6 +491,29 @@ func NewSaveNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) go
 			return nil, err
 		}
 		return s.SaveNotebook(ctx, p)
+	}
+}
+
+// NewMoveNotebookEndpoint returns an endpoint function that calls the method
+// "move_notebook" of service "notes".
+func NewMoveNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*MoveNotebookPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.MoveNotebook(ctx, p)
 	}
 }
 

@@ -54,6 +54,7 @@ const (
 	promptPurgeNotebook // confirmation to delete the selected notebook in the trash permanently
 	promptEmptyTrash    // confirmation to delete everything in the trash permanently
 	promptMovePrivate   // confirmation to move a note of a private notebook where AI can read it
+	promptMoveNotebook  // confirmation to move a private notebook where AI can read it
 )
 
 const searchDebounce = 150 * time.Millisecond
@@ -105,6 +106,11 @@ type Model struct {
 	// notebook pane (m), and moveTo the notebook waiting for promptMovePrivate.
 	toMove *gennotes.Note
 	moveTo string
+	// nbToMove is a notebook being moved into another notebook, chosen in the
+	// notebook pane (m), or to the top ("All"); nbParent is the notebook
+	// waiting for promptMoveNotebook, "" for the top.
+	nbToMove *gennotes.Notebook
+	nbParent string
 
 	note     *gennotes.Note
 	noteQ    string  // query the note was loaded with, whose matches it highlights
@@ -284,6 +290,68 @@ func (m *Model) chooseMoveTarget() tea.Cmd {
 	return m.moveNoteTo(row.id)
 }
 
+// startMoveNotebook starts moving the selected notebook into another
+// notebook, or to the top: the cursor then chooses where.
+func (m *Model) startMoveNotebook() {
+	nb := m.selectedNotebook()
+	switch {
+	case nb == nil || nb.Reserved:
+		m.setStatus(statusWarn, "status.notebookParentInvalid")
+	case nb.Parent == nil && slices.ContainsFunc(m.notebooks, func(x *gennotes.Notebook) bool { return parentOf(x) == nb.ID }):
+		m.setStatus(statusWarn, "status.notebookHasSubs")
+	default:
+		m.nbToMove = nb
+		m.setStatus(statusInfo, "status.chooseNotebookParent", "name", nb.Name)
+	}
+}
+
+// chooseNotebookParent moves the notebook being moved into the notebook under
+// the cursor, or to the top on "All", after asking when it would show a
+// private notebook to AI.
+func (m *Model) chooseNotebookParent() tea.Cmd {
+	nb, row := m.nbToMove, m.selectedRow()
+	parent, kind := row.id, nb.Kind
+	if parent != "" {
+		p := m.notebookOf(parent)
+		if p == nil || p.Reserved || p.Parent != nil || p.ID == nb.ID || p.ID == parentOf(nb) {
+			m.setStatus(statusWarn, "status.notebookParentInvalid")
+			return nil
+		}
+		kind = p.Kind
+	} else if nb.Parent == nil {
+		m.setStatus(statusWarn, "status.notebookParentInvalid") // at the top already
+		return nil
+	}
+	if nb.Kind == "private" && kind != "private" {
+		m.prompt, m.nbParent = promptMoveNotebook, parent
+		return nil
+	}
+	return m.moveNotebookTo(parent)
+}
+
+// moveNotebookTo moves the notebook being moved into parent, or to the top,
+// and shows it.
+func (m *Model) moveNotebookTo(parent string) tea.Cmd {
+	nb := m.nbToMove
+	m.nbToMove = nil
+	name := nb.ID
+	if p := parentOf(nb); p != "" {
+		name = strings.TrimPrefix(nb.ID, p+"/")
+	}
+	to := name
+	if parent != "" {
+		to = parent + "/" + name
+	}
+	payload := &gennotes.MoveNotebookPayload{ID: nb.ID}
+	if parent != "" {
+		payload.Parent = &parent
+	}
+	return m.notebookOp("status.notebookMoved", to, func(ctx context.Context) error {
+		_, err := m.api.MoveNotebook(ctx, payload)
+		return err
+	})
+}
+
 // moveNoteTo moves the note being moved to notebook nb and shows nb.
 func (m *Model) moveNoteTo(nb string) tea.Cmd {
 	n := m.toMove
@@ -323,6 +391,28 @@ func (m *Model) noteKind(n *gennotes.Note) string {
 const trashedPrefix = "trash/"
 
 func trashedID(filter string) (string, bool) { return strings.CutPrefix(filter, trashedPrefix) }
+
+// inTrash returns the ID that notebook nb has in the trash once deleted on
+// its own: a sub notebook, <parent>/<sub>, becomes <parent>~<sub>, told from
+// the sub notebooks deleted with their parent.
+func inTrash(nb *gennotes.Notebook) string {
+	if nb.Parent == nil {
+		return nb.ID
+	}
+	return *nb.Parent + "~" + strings.TrimPrefix(nb.ID, *nb.Parent+"/")
+}
+
+// parentOf returns the parent of notebook nb, "" for one that is not a sub
+// notebook.
+func parentOf(nb *gennotes.Notebook) string {
+	if nb.Parent == nil {
+		return ""
+	}
+	return *nb.Parent
+}
+
+// restoredAs returns the notebook that notebook id in the trash goes back to.
+func restoredAs(id string) string { return strings.Replace(id, "~", "/", 1) }
 
 // inTrashedNotebook reports whether the list shows the notes of a notebook in
 // the trash.
@@ -575,7 +665,8 @@ func (m *Model) selectedNotebook() *gennotes.Notebook {
 }
 
 // reorderNotebook moves the selected notebook up (-1) or down (+1) among the
-// notebooks other than inbox and trash, renumbering their orders.
+// notebooks other than inbox and trash, or among the sub notebooks of its
+// parent, renumbering their orders.
 func (m *Model) reorderNotebook(delta int) tea.Cmd {
 	cur := m.selectedNotebook()
 	if cur == nil || cur.Reserved {
@@ -583,7 +674,7 @@ func (m *Model) reorderNotebook(delta int) tea.Cmd {
 	}
 	var others []*gennotes.Notebook
 	for _, nb := range m.notebooks {
-		if !nb.Reserved {
+		if !nb.Reserved && parentOf(nb) == parentOf(cur) {
 			others = append(others, nb)
 		}
 	}
@@ -1288,7 +1379,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if kind == promptTrashNotebook {
 			if nb := m.selectedNotebook(); nb != nil {
 				id := nb.ID
-				return m, m.notebookOp("status.notebookTrashed", trashedPrefix+id, func(ctx context.Context) error {
+				return m, m.notebookOp("status.notebookTrashed", trashedPrefix+inTrash(nb), func(ctx context.Context) error {
 					return m.api.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: id})
 				})
 			}
@@ -1314,6 +1405,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, m.moveNoteTo(m.moveTo)
 		}
 		return m, nil // still choosing where to move the note
+	case promptMoveNotebook:
+		m.prompt = promptNone
+		if key == "y" {
+			return m, m.moveNotebookTo(m.nbParent)
+		}
+		return m, nil // still choosing where to move the notebook
 	case promptUnprivate:
 		m.prompt = promptNone
 		if nb := m.selectedNotebook(); key == "y" && nb != nil {
@@ -1395,8 +1492,27 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+	if m.focus == focusNotebooks && m.nbToMove != nil {
+		// Choosing the notebook to move a notebook into.
+		switch key {
+		case "esc":
+			m.nbToMove = nil
+			m.setStatus(statusInfo, "status.moveCancelled")
+			return m, nil
+		case "enter":
+			return m, m.chooseNotebookParent()
+		case "j", "k", "down", "up", "g", "G", "home", "end", "pgup", "pgdown":
+		default:
+			return m, nil
+		}
+	}
 	if m.focus == focusNotebooks {
 		switch key {
+		case "m":
+			if !m.sideTags {
+				m.startMoveNotebook()
+			}
+			return m, nil
 		case "e":
 			if nb := m.selectedNotebook(); nb != nil {
 				m.prompt = promptRename
@@ -1441,7 +1557,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "u":
 			if id, ok := trashedID(m.selectedRow().id); ok {
-				return m, m.notebookOp("status.notebookRestored", id, func(ctx context.Context) error {
+				return m, m.notebookOp("status.notebookRestored", restoredAs(id), func(ctx context.Context) error {
 					_, err := m.api.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: id})
 					return err
 				})

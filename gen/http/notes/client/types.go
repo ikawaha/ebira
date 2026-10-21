@@ -42,6 +42,22 @@ type UpdateRequestBody struct {
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 }
 
+// MoveNotesRequestBody is the type of the "notes" service "move_notes"
+// endpoint HTTP request body.
+type MoveNotesRequestBody struct {
+	// IDs of the notes
+	Ids []string `form:"ids" json:"ids" xml:"ids"`
+	// Notebook to move the notes to; not trash (use trash_notes)
+	Notebook string `form:"notebook" json:"notebook" xml:"notebook"`
+}
+
+// TrashNotesRequestBody is the type of the "notes" service "trash_notes"
+// endpoint HTTP request body.
+type TrashNotesRequestBody struct {
+	// IDs of the notes
+	Ids []string `form:"ids" json:"ids" xml:"ids"`
+}
+
 // MoveRequestBody is the type of the "notes" service "move" endpoint HTTP
 // request body.
 type MoveRequestBody struct {
@@ -62,8 +78,12 @@ type CreateNotebookRequestBody struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop
+	// is default, except the inbox, which is drop. Ignored for a sub notebook,
+	// which takes the kind of its parent
 	Kind string `form:"kind" json:"kind" xml:"kind"`
+	// Notebook to create the notebook in, as a sub notebook, one level deep: not a
+	// sub notebook, the inbox or the trash
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 }
 
 // SaveNotebookRequestBody is the type of the "notes" service "save_notebook"
@@ -78,14 +98,23 @@ type SaveNotebookRequestBody struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop. Inbox cannot be collab, and the
-	// trash keeps the default kind (it is hidden from AI clients anyway)
+	// is default, except the inbox, which is drop. Inbox cannot be collab, the
+	// trash keeps the default kind (it is hidden from AI clients anyway), and a
+	// sub notebook takes the kind of its parent
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// Default order of the note list. Order of the note list: order is the manual
 	// order (notes not moved with move come by creation time, newest first),
 	// created and updated are newest first, and title is by code point, ignoring
 	// case and width
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
+}
+
+// MoveNotebookRequestBody is the type of the "notes" service "move_notebook"
+// endpoint HTTP request body.
+type MoveNotebookRequestBody struct {
+	// Notebook to move the notebook into: not a sub notebook, the inbox or the
+	// trash. Omit to move a sub notebook to the top
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 }
 
 // ImportRequestBody is the type of the "notes" service "import" endpoint HTTP
@@ -306,13 +335,16 @@ type MoveResponseBody struct {
 // CreateNotebookResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body.
 type CreateNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -337,13 +369,50 @@ type CreateNotebookResponseBody struct {
 // SaveNotebookResponseBody is the type of the "notes" service "save_notebook"
 // endpoint HTTP response body.
 type SaveNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
+	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Sort key among the notebooks other than inbox and trash; lower comes first
+	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
+	// Number of notes
+	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Whether this is a system notebook (inbox or trash)
+	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
+	// Kind of the notebook. AI clients may only read notes in default notebooks,
+	// may also create, update and delete notes in collab notebooks, which people
+	// share with AI, may only add notes to drop notebooks, whose notes they cannot
+	// see, and cannot see private notebooks at all. In the notebook list, AI
+	// clients see drop notebooks with a count of 0. A notebook without a kind set
+	// is default, except the inbox, which is drop
+	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// Order of the note list: order is the manual order (notes not moved with move
+	// come by creation time, newest first), created and updated are newest first,
+	// and title is by code point, ignoring case and width
+	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
+}
+
+// MoveNotebookResponseBody is the type of the "notes" service "move_notebook"
+// endpoint HTTP response body.
+type MoveNotebookResponseBody struct {
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -368,13 +437,16 @@ type SaveNotebookResponseBody struct {
 // RestoreNotebookResponseBody is the type of the "notes" service
 // "restore_notebook" endpoint HTTP response body.
 type RestoreNotebookResponseBody struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -877,6 +949,152 @@ type DeleteVerificationRequiredResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// MoveNotesNotFoundResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "not_found" error.
+type MoveNotesNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotesBadRequestResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "bad_request" error.
+type MoveNotesBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotesUnauthorizedResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "unauthorized" error.
+type MoveNotesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotesVerificationRequiredResponseBody is the type of the "notes" service
+// "move_notes" endpoint HTTP response body for the "verification_required"
+// error.
+type MoveNotesVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// TrashNotesNotFoundResponseBody is the type of the "notes" service
+// "trash_notes" endpoint HTTP response body for the "not_found" error.
+type TrashNotesNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// TrashNotesBadRequestResponseBody is the type of the "notes" service
+// "trash_notes" endpoint HTTP response body for the "bad_request" error.
+type TrashNotesBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// TrashNotesUnauthorizedResponseBody is the type of the "notes" service
+// "trash_notes" endpoint HTTP response body for the "unauthorized" error.
+type TrashNotesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// TrashNotesVerificationRequiredResponseBody is the type of the "notes"
+// service "trash_notes" endpoint HTTP response body for the
+// "verification_required" error.
+type TrashNotesVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // SearchUnauthorizedResponseBody is the type of the "notes" service "search"
 // endpoint HTTP response body for the "unauthorized" error.
 type SearchUnauthorizedResponseBody struct {
@@ -1166,6 +1384,24 @@ type CreateNotebookBadRequestResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// CreateNotebookNotFoundResponseBody is the type of the "notes" service
+// "create_notebook" endpoint HTTP response body for the "not_found" error.
+type CreateNotebookNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // CreateNotebookAlreadyExistsResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body for the "already_exists" error.
 type CreateNotebookAlreadyExistsResponseBody struct {
@@ -1279,6 +1515,97 @@ type SaveNotebookUnauthorizedResponseBody struct {
 // service "save_notebook" endpoint HTTP response body for the
 // "verification_required" error.
 type SaveNotebookVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotebookNotFoundResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "not_found" error.
+type MoveNotebookNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotebookBadRequestResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "bad_request" error.
+type MoveNotebookBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotebookAlreadyExistsResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "already_exists" error.
+type MoveNotebookAlreadyExistsResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotebookUnauthorizedResponseBody is the type of the "notes" service
+// "move_notebook" endpoint HTTP response body for the "unauthorized" error.
+type MoveNotebookUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveNotebookVerificationRequiredResponseBody is the type of the "notes"
+// service "move_notebook" endpoint HTTP response body for the
+// "verification_required" error.
+type MoveNotebookVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -2321,13 +2648,16 @@ type TextRangeResponseBody struct {
 
 // NotebookResponse is used to define fields on response body types.
 type NotebookResponse struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -2359,8 +2689,12 @@ type TagCountResponse struct {
 
 // TrashedNotebookResponse is used to define fields on response body types.
 type TrashedNotebookResponse struct {
-	// Notebook ID
+	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
+	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
+	// which goes back into its parent
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook deleted with its parent: the ID of the parent in the trash
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Kind of the notebook, kept for when it is restored
@@ -2502,6 +2836,38 @@ func NewUpdateRequestBody(p *notes.UpdatePayload) *UpdateRequestBody {
 	return body
 }
 
+// NewMoveNotesRequestBody builds the HTTP request body from the payload of the
+// "move_notes" endpoint of the "notes" service.
+func NewMoveNotesRequestBody(p *notes.MoveNotesPayload) *MoveNotesRequestBody {
+	body := &MoveNotesRequestBody{
+		Notebook: p.Notebook,
+	}
+	if p.Ids != nil {
+		body.Ids = make([]string, len(p.Ids))
+		for i, val := range p.Ids {
+			body.Ids[i] = val
+		}
+	} else {
+		body.Ids = []string{}
+	}
+	return body
+}
+
+// NewTrashNotesRequestBody builds the HTTP request body from the payload of
+// the "trash_notes" endpoint of the "notes" service.
+func NewTrashNotesRequestBody(p *notes.TrashNotesPayload) *TrashNotesRequestBody {
+	body := &TrashNotesRequestBody{}
+	if p.Ids != nil {
+		body.Ids = make([]string, len(p.Ids))
+		for i, val := range p.Ids {
+			body.Ids[i] = val
+		}
+	} else {
+		body.Ids = []string{}
+	}
+	return body
+}
+
 // NewMoveRequestBody builds the HTTP request body from the payload of the
 // "move" endpoint of the "notes" service.
 func NewMoveRequestBody(p *notes.MovePayload) *MoveRequestBody {
@@ -2515,9 +2881,10 @@ func NewMoveRequestBody(p *notes.MovePayload) *MoveRequestBody {
 // of the "create_notebook" endpoint of the "notes" service.
 func NewCreateNotebookRequestBody(p *notes.CreateNotebookPayload) *CreateNotebookRequestBody {
 	body := &CreateNotebookRequestBody{
-		Name:  p.Name,
-		Order: p.Order,
-		Kind:  p.Kind,
+		Name:   p.Name,
+		Order:  p.Order,
+		Kind:   p.Kind,
+		Parent: p.Parent,
 	}
 	{
 		var zero string
@@ -2536,6 +2903,15 @@ func NewSaveNotebookRequestBody(p *notes.SaveNotebookPayload) *SaveNotebookReque
 		Order: p.Order,
 		Kind:  p.Kind,
 		Sort:  p.Sort,
+	}
+	return body
+}
+
+// NewMoveNotebookRequestBody builds the HTTP request body from the payload of
+// the "move_notebook" endpoint of the "notes" service.
+func NewMoveNotebookRequestBody(p *notes.MoveNotebookPayload) *MoveNotebookRequestBody {
+	body := &MoveNotebookRequestBody{
+		Parent: p.Parent,
 	}
 	return body
 }
@@ -3024,6 +3400,126 @@ func NewDeleteVerificationRequired(body *DeleteVerificationRequiredResponseBody)
 	return v
 }
 
+// NewMoveNotesNotFound builds a notes service move_notes endpoint not_found
+// error.
+func NewMoveNotesNotFound(body *MoveNotesNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotesBadRequest builds a notes service move_notes endpoint
+// bad_request error.
+func NewMoveNotesBadRequest(body *MoveNotesBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotesUnauthorized builds a notes service move_notes endpoint
+// unauthorized error.
+func NewMoveNotesUnauthorized(body *MoveNotesUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotesVerificationRequired builds a notes service move_notes endpoint
+// verification_required error.
+func NewMoveNotesVerificationRequired(body *MoveNotesVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewTrashNotesNotFound builds a notes service trash_notes endpoint not_found
+// error.
+func NewTrashNotesNotFound(body *TrashNotesNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewTrashNotesBadRequest builds a notes service trash_notes endpoint
+// bad_request error.
+func NewTrashNotesBadRequest(body *TrashNotesBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewTrashNotesUnauthorized builds a notes service trash_notes endpoint
+// unauthorized error.
+func NewTrashNotesUnauthorized(body *TrashNotesUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewTrashNotesVerificationRequired builds a notes service trash_notes
+// endpoint verification_required error.
+func NewTrashNotesVerificationRequired(body *TrashNotesVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewSearchResultOK builds a "notes" service "search" endpoint result from a
 // HTTP "OK" response.
 func NewSearchResultOK(body *SearchResponseBody) *notes.SearchResult {
@@ -3384,6 +3880,7 @@ func NewTagsVerificationRequired(body *TagsVerificationRequiredResponseBody) *go
 func NewCreateNotebookNotebookCreated(body *CreateNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
 		ID:       *body.ID,
+		Parent:   body.Parent,
 		Name:     *body.Name,
 		Order:    *body.Order,
 		Count:    *body.Count,
@@ -3398,6 +3895,21 @@ func NewCreateNotebookNotebookCreated(body *CreateNotebookResponseBody) *notes.N
 // NewCreateNotebookBadRequest builds a notes service create_notebook endpoint
 // bad_request error.
 func NewCreateNotebookBadRequest(body *CreateNotebookBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewCreateNotebookNotFound builds a notes service create_notebook endpoint
+// not_found error.
+func NewCreateNotebookNotFound(body *CreateNotebookNotFoundResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -3460,6 +3972,7 @@ func NewCreateNotebookVerificationRequired(body *CreateNotebookVerificationRequi
 func NewSaveNotebookNotebookOK(body *SaveNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
 		ID:       *body.ID,
+		Parent:   body.Parent,
 		Name:     *body.Name,
 		Order:    *body.Order,
 		Count:    *body.Count,
@@ -3519,6 +4032,98 @@ func NewSaveNotebookUnauthorized(body *SaveNotebookUnauthorizedResponseBody) *go
 // NewSaveNotebookVerificationRequired builds a notes service save_notebook
 // endpoint verification_required error.
 func NewSaveNotebookVerificationRequired(body *SaveNotebookVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotebookNotebookOK builds a "notes" service "move_notebook" endpoint
+// result from a HTTP "OK" response.
+func NewMoveNotebookNotebookOK(body *MoveNotebookResponseBody) *notes.Notebook {
+	v := &notes.Notebook{
+		ID:       *body.ID,
+		Parent:   body.Parent,
+		Name:     *body.Name,
+		Order:    *body.Order,
+		Count:    *body.Count,
+		Reserved: *body.Reserved,
+		Kind:     *body.Kind,
+		Sort:     *body.Sort,
+	}
+
+	return v
+}
+
+// NewMoveNotebookNotFound builds a notes service move_notebook endpoint
+// not_found error.
+func NewMoveNotebookNotFound(body *MoveNotebookNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotebookBadRequest builds a notes service move_notebook endpoint
+// bad_request error.
+func NewMoveNotebookBadRequest(body *MoveNotebookBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotebookAlreadyExists builds a notes service move_notebook endpoint
+// already_exists error.
+func NewMoveNotebookAlreadyExists(body *MoveNotebookAlreadyExistsResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotebookUnauthorized builds a notes service move_notebook endpoint
+// unauthorized error.
+func NewMoveNotebookUnauthorized(body *MoveNotebookUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveNotebookVerificationRequired builds a notes service move_notebook
+// endpoint verification_required error.
+func NewMoveNotebookVerificationRequired(body *MoveNotebookVerificationRequiredResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -3656,6 +4261,7 @@ func NewTrashedNotebooksVerificationRequired(body *TrashedNotebooksVerificationR
 func NewRestoreNotebookNotebookOK(body *RestoreNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
 		ID:       *body.ID,
+		Parent:   body.Parent,
 		Name:     *body.Name,
 		Order:    *body.Order,
 		Count:    *body.Count,
@@ -4569,7 +5175,7 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -4578,7 +5184,7 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -4586,7 +5192,7 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -4632,7 +5238,7 @@ func ValidateCreateResponseBody(body *CreateResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -4641,7 +5247,7 @@ func ValidateCreateResponseBody(body *CreateResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -4649,7 +5255,7 @@ func ValidateCreateResponseBody(body *CreateResponseBody) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -4695,7 +5301,7 @@ func ValidateUpdateResponseBody(body *UpdateResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -4704,7 +5310,7 @@ func ValidateUpdateResponseBody(body *UpdateResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -4712,7 +5318,7 @@ func ValidateUpdateResponseBody(body *UpdateResponseBody) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -4785,7 +5391,7 @@ func ValidateRestoreResponseBody(body *RestoreResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -4794,7 +5400,7 @@ func ValidateRestoreResponseBody(body *RestoreResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -4802,7 +5408,7 @@ func ValidateRestoreResponseBody(body *RestoreResponseBody) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -4848,7 +5454,7 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -4857,7 +5463,7 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -4865,7 +5471,7 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -4909,7 +5515,10 @@ func ValidateCreateNotebookResponseBody(body *CreateNotebookResponseBody) (err e
 		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -4949,7 +5558,53 @@ func ValidateSaveNotebookResponseBody(body *SaveNotebookResponseBody) (err error
 		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Kind != nil {
+		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.Sort != nil {
+		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
+		}
+	}
+	return
+}
+
+// ValidateMoveNotebookResponseBody runs the validations defined on
+// MoveNotebookResponseBody
+func ValidateMoveNotebookResponseBody(body *MoveNotebookResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Order == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("order", "body"))
+	}
+	if body.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
+	}
+	if body.Reserved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
+	}
+	if body.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if body.Sort == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -4989,7 +5644,10 @@ func ValidateRestoreNotebookResponseBody(body *RestoreNotebookResponseBody) (err
 		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -5673,6 +6331,198 @@ func ValidateDeleteVerificationRequiredResponseBody(body *DeleteVerificationRequ
 	return
 }
 
+// ValidateMoveNotesNotFoundResponseBody runs the validations defined on
+// MoveNotesNotFoundResponseBody
+func ValidateMoveNotesNotFoundResponseBody(body *MoveNotesNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotesBadRequestResponseBody runs the validations defined on
+// MoveNotesBadRequestResponseBody
+func ValidateMoveNotesBadRequestResponseBody(body *MoveNotesBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotesUnauthorizedResponseBody runs the validations defined on
+// MoveNotesUnauthorizedResponseBody
+func ValidateMoveNotesUnauthorizedResponseBody(body *MoveNotesUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotesVerificationRequiredResponseBody runs the validations
+// defined on MoveNotesVerificationRequiredResponseBody
+func ValidateMoveNotesVerificationRequiredResponseBody(body *MoveNotesVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateTrashNotesNotFoundResponseBody runs the validations defined on
+// TrashNotesNotFoundResponseBody
+func ValidateTrashNotesNotFoundResponseBody(body *TrashNotesNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateTrashNotesBadRequestResponseBody runs the validations defined on
+// TrashNotesBadRequestResponseBody
+func ValidateTrashNotesBadRequestResponseBody(body *TrashNotesBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateTrashNotesUnauthorizedResponseBody runs the validations defined on
+// TrashNotesUnauthorizedResponseBody
+func ValidateTrashNotesUnauthorizedResponseBody(body *TrashNotesUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateTrashNotesVerificationRequiredResponseBody runs the validations
+// defined on TrashNotesVerificationRequiredResponseBody
+func ValidateTrashNotesVerificationRequiredResponseBody(body *TrashNotesVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateSearchUnauthorizedResponseBody runs the validations defined on
 // SearchUnauthorizedResponseBody
 func ValidateSearchUnauthorizedResponseBody(body *SearchUnauthorizedResponseBody) (err error) {
@@ -6057,6 +6907,30 @@ func ValidateCreateNotebookBadRequestResponseBody(body *CreateNotebookBadRequest
 	return
 }
 
+// ValidateCreateNotebookNotFoundResponseBody runs the validations defined on
+// CreateNotebookNotFoundResponseBody
+func ValidateCreateNotebookNotFoundResponseBody(body *CreateNotebookNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateCreateNotebookAlreadyExistsResponseBody runs the validations defined
 // on CreateNotebookAlreadyExistsResponseBody
 func ValidateCreateNotebookAlreadyExistsResponseBody(body *CreateNotebookAlreadyExistsResponseBody) (err error) {
@@ -6204,6 +7078,126 @@ func ValidateSaveNotebookUnauthorizedResponseBody(body *SaveNotebookUnauthorized
 // ValidateSaveNotebookVerificationRequiredResponseBody runs the validations
 // defined on SaveNotebookVerificationRequiredResponseBody
 func ValidateSaveNotebookVerificationRequiredResponseBody(body *SaveNotebookVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotebookNotFoundResponseBody runs the validations defined on
+// MoveNotebookNotFoundResponseBody
+func ValidateMoveNotebookNotFoundResponseBody(body *MoveNotebookNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotebookBadRequestResponseBody runs the validations defined on
+// MoveNotebookBadRequestResponseBody
+func ValidateMoveNotebookBadRequestResponseBody(body *MoveNotebookBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotebookAlreadyExistsResponseBody runs the validations defined
+// on MoveNotebookAlreadyExistsResponseBody
+func ValidateMoveNotebookAlreadyExistsResponseBody(body *MoveNotebookAlreadyExistsResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotebookUnauthorizedResponseBody runs the validations defined on
+// MoveNotebookUnauthorizedResponseBody
+func ValidateMoveNotebookUnauthorizedResponseBody(body *MoveNotebookUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveNotebookVerificationRequiredResponseBody runs the validations
+// defined on MoveNotebookVerificationRequiredResponseBody
+func ValidateMoveNotebookVerificationRequiredResponseBody(body *MoveNotebookVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -7545,7 +8539,7 @@ func ValidateNoteSummaryResponseBody(body *NoteSummaryResponseBody) (err error) 
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -7554,7 +8548,7 @@ func ValidateNoteSummaryResponseBody(body *NoteSummaryResponseBody) (err error) 
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -7603,7 +8597,7 @@ func validateNoteSummaryResponseBody(body *NoteSummaryResponseBody, path string)
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -7612,7 +8606,7 @@ func validateNoteSummaryResponseBody(body *NoteSummaryResponseBody, path string)
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -7683,7 +8677,10 @@ func ValidateNotebookResponse(body *NotebookResponse) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -7723,7 +8720,10 @@ func validateNotebookResponse(body *NotebookResponse, path string) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("sort", path))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -7777,7 +8777,10 @@ func ValidateTrashedNotebookResponse(body *TrashedNotebookResponse) (err error) 
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -7803,7 +8806,10 @@ func validateTrashedNotebookResponse(body *TrashedNotebookResponse, path string)
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", path))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -7843,7 +8849,7 @@ func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -7852,7 +8858,7 @@ func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -7860,7 +8866,7 @@ func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -7910,7 +8916,7 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -7919,7 +8925,7 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -7927,7 +8933,7 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 		}
 	}
 	if body.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {

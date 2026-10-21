@@ -969,6 +969,16 @@ func TestPeopleOnly(t *testing.T) {
 		"delete_notebook": func(ctx context.Context) error {
 			return svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: diary.ID})
 		},
+		"move_notes": func(ctx context.Context) error {
+			return svc.MoveNotes(ctx, &gennotes.MoveNotesPayload{Ids: []string{n.ID}, Notebook: store.Inbox})
+		},
+		"trash_notes": func(ctx context.Context) error {
+			return svc.TrashNotes(ctx, &gennotes.TrashNotesPayload{Ids: []string{n.ID}})
+		},
+		"move_notebook": func(ctx context.Context) error {
+			_, err := svc.MoveNotebook(ctx, &gennotes.MoveNotebookPayload{ID: diary.ID, Parent: ptr("inbox")})
+			return err
+		},
 		"restore_notebook": func(ctx context.Context) error {
 			_, err := svc.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: other.ID})
 			return err
@@ -1031,6 +1041,10 @@ func TestVerification(t *testing.T) {
 	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("a"), Notebook: &work.ID, Title: "a"}); err != nil {
 		t.Fatal(err)
 	}
+	vault, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "vault", Kind: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	endpoints := func(verified bool) *gennotes.Endpoints {
 		return gennotes.NewEndpoints(REST{Notes: svc, Session: func(string) (bool, bool) { return true, verified }})
 	}
@@ -1050,6 +1064,10 @@ func TestVerification(t *testing.T) {
 		},
 		"empty_trash": func(e *gennotes.Endpoints) error {
 			_, err := e.EmptyTrash(ai, &gennotes.EmptyTrashPayload{Session: s})
+			return err
+		},
+		"move_notebook out of private": func(e *gennotes.Endpoints) error {
+			_, err := e.MoveNotebook(ai, &gennotes.MoveNotebookPayload{Session: s, ID: vault.ID, Parent: &work.ID})
 			return err
 		},
 	}

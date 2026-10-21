@@ -68,7 +68,11 @@ func NotebookID(name string) string {
 // the name followed by the number in parentheses, such as "name (2)". The name is
 // lower-cased and has "-" in place of spaces and punctuation, as NotebookID
 // made them. Any other ID, including one cut for its length, is returned as is.
+// A sub notebook is named after its own part of the ID.
 func NotebookName(id string) string {
+	if i := strings.LastIndexAny(id, "/"+subSep); i >= 0 {
+		id = id[i+1:]
+	}
 	if name, ok := decodeNotebookID(id); ok {
 		return name
 	}

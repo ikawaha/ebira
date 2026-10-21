@@ -643,7 +643,12 @@ var createAiNotebookResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+		Description: "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("parent")},
+		JSONType:    "string",
+		Description: "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
@@ -977,7 +982,12 @@ var listNotebooksResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+		Description: "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("parent")},
+		JSONType:    "string",
+		Description: "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("name")},
@@ -2885,6 +2895,7 @@ func MarshalCreateAiNotebookResult(v *CreateAiNotebookResult) ([]byte, error) {
 	var out *toolhttp.CreateAiNotebookResultTransport
 	out = &toolhttp.CreateAiNotebookResultTransport{
 		ID:       &in.ID,
+		Parent:   in.Parent,
 		Name:     &in.Name,
 		Order:    &in.Order,
 		Count:    &in.Count,
@@ -2917,6 +2928,7 @@ func UnmarshalCreateAiNotebookResult(data []byte) (*CreateAiNotebookResult, erro
 	var out *CreateAiNotebookResult
 	out = &CreateAiNotebookResult{
 		ID:       *in.ID,
+		Parent:   in.Parent,
 		Name:     *in.Name,
 		Order:    *in.Order,
 		Count:    *in.Count,
@@ -5005,7 +5017,7 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+				typed[key], "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 			); err != nil {
 				return err
 			}
@@ -5030,6 +5042,13 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 			); err != nil {
 				return err
 			}
+		case "parent":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
+			); err != nil {
+				return err
+			}
 		case "reserved":
 			if err := validateBooleanJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -5051,6 +5070,7 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 				"kind",
 				"name",
 				"order",
+				"parent",
 				"reserved",
 				"sort",
 			})
@@ -5797,6 +5817,7 @@ func encodeNoteToNoteTransport(v *Note) *toolhttp.NoteTransport {
 func decodeNotebookTransportToNotebook(v *toolhttp.NotebookTransport) *Notebook {
 	res := &Notebook{
 		ID:       *v.ID,
+		Parent:   v.Parent,
 		Name:     *v.Name,
 		Order:    *v.Order,
 		Count:    *v.Count,
@@ -5810,6 +5831,7 @@ func decodeNotebookTransportToNotebook(v *toolhttp.NotebookTransport) *Notebook 
 func encodeNotebookToNotebookTransport(v *Notebook) *toolhttp.NotebookTransport {
 	res := &toolhttp.NotebookTransport{
 		ID:       &v.ID,
+		Parent:   v.Parent,
 		Name:     &v.Name,
 		Order:    &v.Order,
 		Count:    &v.Count,

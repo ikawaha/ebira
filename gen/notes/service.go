@@ -39,6 +39,14 @@ type Service interface {
 	// Move a note to the trash, or delete it permanently if it is already in the
 	// trash.
 	Delete(context.Context, *DeletePayload) (err error)
+	// Move notes to a notebook at once, such as several chosen in a list. Notes in
+	// the trash come out of it. The notes are checked first: when one does not
+	// exist, none is moved.
+	MoveNotes(context.Context, *MoveNotesPayload) (err error)
+	// Move notes to the trash at once, such as several chosen in a list. The notes
+	// are checked first: when one does not exist or is in the trash already, none
+	// is moved.
+	TrashNotes(context.Context, *TrashNotesPayload) (err error)
 	// Search notes. The search mode (like, bigram, trigram, en, English words with
 	// their stems, or ja, Japanese morphological analysis) is set by the server
 	// configuration.
@@ -67,17 +75,27 @@ type Service interface {
 	// notebook if it does not exist. The order of inbox and trash cannot be
 	// changed.
 	SaveNotebook(context.Context, *SaveNotebookPayload) (res *Notebook, err error)
-	// Move a notebook with its notes and settings into the trash. Inbox and trash
-	// cannot be deleted. Fails with already_exists if the trash holds a notebook
-	// with the same ID.
+	// Move a notebook into another notebook, as a sub notebook, or a sub notebook
+	// out to the top or into another notebook. Its ID becomes <parent>/<name> or
+	// <name>; its notes keep their IDs. A sub notebook takes the kind of its
+	// parent; one moved to the top keeps the kind it had. A notebook with sub
+	// notebooks cannot become one, as they are one level deep. Making a private
+	// notebook visible to AI this way is an important operation, as with
+	// save_notebook.
+	MoveNotebook(context.Context, *MoveNotebookPayload) (res *Notebook, err error)
+	// Move a notebook with its notes, settings and sub notebooks into the trash. A
+	// sub notebook deleted on its own is kept in the trash as <parent>~<sub>.
+	// Inbox and trash cannot be deleted. Fails with already_exists if the trash
+	// holds a notebook with the same ID.
 	DeleteNotebook(context.Context, *DeleteNotebookPayload) (err error)
 	// List the notebooks in the trash. List their notes with list, notebook=trash
 	// and trashed_notebook.
 	TrashedNotebooks(context.Context, *TrashedNotebooksPayload) (res []*TrashedNotebook, err error)
-	// Move a notebook out of the trash with its notes and settings. Fails with
+	// Move a notebook out of the trash with its notes and settings. A sub notebook
+	// goes back into its parent, which must not be in the trash. Fails with
 	// already_exists if a notebook with the same ID exists.
 	RestoreNotebook(context.Context, *RestoreNotebookPayload) (res *Notebook, err error)
-	// Permanently delete a notebook in the trash with its notes.
+	// Permanently delete a notebook in the trash with its notes and sub notebooks.
 	DeleteTrashedNotebook(context.Context, *DeleteTrashedNotebookPayload) (err error)
 	// Permanently delete everything in the trash: the notes deleted on their own
 	// and the notebooks deleted as a whole, with their notes and files.
@@ -194,7 +212,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [35]string{"list", "get", "create", "update", "delete", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "sync"}
+var MethodNames = [38]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -276,8 +294,12 @@ type CreateNotebookPayload struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop
+	// is default, except the inbox, which is drop. Ignored for a sub notebook,
+	// which takes the kind of its parent
 	Kind string
+	// Notebook to create the notebook in, as a sub notebook, one level deep: not a
+	// sub notebook, the inbox or the trash
+	Parent *string
 }
 
 // CreatePayload is the payload type of the notes service create method.
@@ -341,7 +363,7 @@ type DeletePayload struct {
 type DeleteTrashedNotebookPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Notebook ID
+	// ID in the trash
 	ID string
 }
 
@@ -565,6 +587,28 @@ type MoveAiNotePayload struct {
 	After *string
 }
 
+// MoveNotebookPayload is the payload type of the notes service move_notebook
+// method.
+type MoveNotebookPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Notebook ID
+	ID string
+	// Notebook to move the notebook into: not a sub notebook, the inbox or the
+	// trash. Omit to move a sub notebook to the top
+	Parent *string
+}
+
+// MoveNotesPayload is the payload type of the notes service move_notes method.
+type MoveNotesPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// IDs of the notes
+	Ids []string
+	// Notebook to move the notes to; not trash (use trash_notes)
+	Notebook string
+}
+
 // MovePayload is the payload type of the notes service move method.
 type MovePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
@@ -697,13 +741,16 @@ type NoteVersionSummary struct {
 
 // Notebook is the result type of the notes service create_notebook method.
 type Notebook struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID string
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name string
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -736,7 +783,7 @@ type NotebooksPayload struct {
 type RestoreNotebookPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Notebook ID
+	// ID in the trash
 	ID string
 }
 
@@ -766,8 +813,9 @@ type SaveNotebookPayload struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop. Inbox cannot be collab, and the
-	// trash keeps the default kind (it is hidden from AI clients anyway)
+	// is default, except the inbox, which is drop. Inbox cannot be collab, the
+	// trash keeps the default kind (it is hidden from AI clients anyway), and a
+	// sub notebook takes the kind of its parent
 	Kind *string
 	// Default order of the note list. Order of the note list: order is the manual
 	// order (notes not moved with move come by creation time, newest first),
@@ -841,9 +889,22 @@ type TextRange struct {
 	End int
 }
 
+// TrashNotesPayload is the payload type of the notes service trash_notes
+// method.
+type TrashNotesPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// IDs of the notes
+	Ids []string
+}
+
 type TrashedNotebook struct {
-	// Notebook ID
+	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
+	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
+	// which goes back into its parent
 	ID string
+	// For a sub notebook deleted with its parent: the ID of the parent in the trash
+	Parent *string
 	// Display name
 	Name string
 	// Kind of the notebook, kept for when it is restored
@@ -1392,7 +1453,7 @@ func validatejsonNoteSummaryTransport(value *jsonNoteSummaryTransport) (err erro
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if value.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *value.CreatedAt, goa.FormatDateTime))
@@ -1401,7 +1462,7 @@ func validatejsonNoteSummaryTransport(value *jsonNoteSummaryTransport) (err erro
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -1492,7 +1553,7 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if value.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *value.CreatedAt, goa.FormatDateTime))
@@ -1501,7 +1562,7 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -1509,7 +1570,7 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 		}
 	}
 	if value.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	for _, e := range value.TitleHighlights {
 		if e != nil {
@@ -1622,13 +1683,16 @@ func validatejsonNoteVersionTransport(value *jsonNoteVersionTransport) (err erro
 
 // jsonNotebookTransport stores JSON fields until they have been validated.
 type jsonNotebookTransport struct {
-	// Notebook ID, which is also its directory name. It is derived from the
-	// display name when the notebook is created: an ASCII name is lower-cased with
-	// dashes, and a name with other characters, such as Japanese, is
-	// Punycode-encoded into an ID that starts with xn--, as in internationalized
-	// domain names. Pass the ID as is wherever a notebook is asked for, and show
-	// people the name instead
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
 	ID *string `json:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+	// a sub notebook are not among those of its parent
+	Parent *string `json:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `json:"name"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -1677,7 +1741,10 @@ func validatejsonNotebookTransport(value *jsonNotebookTransport) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
 	}
 	if value.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.Kind != nil {
 		if !(*value.Kind == "default" || *value.Kind == "collab" || *value.Kind == "drop" || *value.Kind == "private") {
@@ -1809,8 +1876,12 @@ func validatejsonTextRangeTransport(value *jsonTextRangeTransport) (err error) {
 
 // jsonTrashedNotebookTransport stores JSON fields until they have been validated.
 type jsonTrashedNotebookTransport struct {
-	// Notebook ID
+	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
+	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
+	// which goes back into its parent
 	ID *string `json:"id"`
+	// For a sub notebook deleted with its parent: the ID of the parent in the trash
+	Parent *string `json:"parent,omitempty"`
 	// Display name
 	Name *string `json:"name"`
 	// Kind of the notebook, kept for when it is restored
@@ -1837,7 +1908,10 @@ func validatejsonTrashedNotebookTransport(value *jsonTrashedNotebookTransport) (
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
 	if value.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.Kind != nil {
 		if !(*value.Kind == "default" || *value.Kind == "collab" || *value.Kind == "drop" || *value.Kind == "private") {
@@ -2144,11 +2218,11 @@ func validateNoteOriginal(value *Note) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
 	}
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2156,7 +2230,7 @@ func validateNoteOriginal(value *Note) (err error) {
 		}
 	}
 	if value.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return err
 }
@@ -2167,11 +2241,11 @@ func validateNoteOriginal2(value *Note) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
 	}
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2179,7 +2253,7 @@ func validateNoteOriginal2(value *Note) (err error) {
 		}
 	}
 	if value.TrashedFrom != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return err
 }
@@ -2216,11 +2290,11 @@ func validateNoteSummaryOriginal(value *NoteSummary) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
 	}
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2236,11 +2310,11 @@ func validateNoteSummaryOriginal2(value *NoteSummary) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
 	}
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2271,7 +2345,10 @@ func validateNoteVersionSummaryOriginal(value *NoteVersionSummary) (err error) {
 
 // validateNotebookOriginal checks the original typed value before JSON conversion.
 func validateNotebookOriginal(value *Notebook) (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	if value.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
 	if !(value.Kind == "default" || value.Kind == "collab" || value.Kind == "drop" || value.Kind == "private") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"default", "collab", "drop", "private"}))
 	}
@@ -2305,11 +2382,11 @@ func validateNoteSummaryOriginal3(value *NoteSummary) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("tags", "value"))
 	}
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2329,7 +2406,10 @@ func validateSyncResultOriginal(value *SyncResult) (err error) {
 
 // validateTrashedNotebookOriginal checks the original typed value before JSON conversion.
 func validateTrashedNotebookOriginal(value *TrashedNotebook) (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+	if value.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
 	if !(value.Kind == "default" || value.Kind == "collab" || value.Kind == "drop" || value.Kind == "private") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"default", "collab", "drop", "private"}))
 	}
@@ -3393,6 +3473,7 @@ func EncodeNotebook(in *Notebook) ([]byte, error) {
 	{
 		body = &jsonNotebookTransport{
 			ID:       &in.ID,
+			Parent:   in.Parent,
 			Name:     &in.Name,
 			Reserved: &in.Reserved,
 			Kind:     &in.Kind,
@@ -3440,6 +3521,7 @@ func DecodeNotebook(data []byte) (out *Notebook, err error) {
 	{
 		out = &Notebook{
 			ID:       *body.ID,
+			Parent:   body.Parent,
 			Name:     *body.Name,
 			Order:    int(*body.Order),
 			Count:    int(*body.Count),
@@ -3719,9 +3801,10 @@ func EncodeTrashedNotebook(in *TrashedNotebook) ([]byte, error) {
 	var body *jsonTrashedNotebookTransport
 	{
 		body = &jsonTrashedNotebookTransport{
-			ID:   &in.ID,
-			Name: &in.Name,
-			Kind: &in.Kind,
+			ID:     &in.ID,
+			Parent: in.Parent,
+			Name:   &in.Name,
+			Kind:   &in.Kind,
 		}
 		count := trashedNotebookIntTransport(in.Count)
 		body.Count = &count
@@ -3762,10 +3845,11 @@ func DecodeTrashedNotebook(data []byte) (out *TrashedNotebook, err error) {
 	}
 	{
 		out = &TrashedNotebook{
-			ID:    *body.ID,
-			Name:  *body.Name,
-			Kind:  *body.Kind,
-			Count: int(*body.Count),
+			ID:     *body.ID,
+			Parent: body.Parent,
+			Name:   *body.Name,
+			Kind:   *body.Kind,
+			Count:  int(*body.Count),
 		}
 	}
 	return out, nil
@@ -7887,7 +7971,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 		case "id":
 			if err := validateNotebookJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+				typed[key], "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 			); err != nil {
 				return err
 			}
@@ -7912,15 +7996,22 @@ func validateNotebookJSONValue(path string, value any, description string) error
 			); err != nil {
 				return err
 			}
-		case "reserved":
+		case "parent":
 			if err := validateNotebookJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
+			); err != nil {
+				return err
+			}
+		case "reserved":
+			if err := validateNotebookJSONValue8(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether this is a system notebook (inbox or trash)",
 			); err != nil {
 				return err
 			}
 		case "sort":
-			if err := validateNotebookJSONValue8(
+			if err := validateNotebookJSONValue9(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width",
 			); err != nil {
@@ -7933,6 +8024,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 				"kind",
 				"name",
 				"order",
+				"parent",
 				"reserved",
 				"sort",
 			})
@@ -8028,6 +8120,22 @@ func validateNotebookJSONValue7(path string, value any, description string) erro
 		field = "$payload"
 	}
 	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateNotebookJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNotebookJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
 		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
 	}
 	_, ok := value.(bool)
@@ -8037,8 +8145,8 @@ func validateNotebookJSONValue7(path string, value any, description string) erro
 	return nil
 }
 
-// validateNotebookJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateNotebookJSONValue8(path string, value any, description string) error {
+// validateNotebookJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNotebookJSONValue9(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -8908,7 +9016,7 @@ func validateTrashedNotebookJSONValue(path string, value any, description string
 		case "id":
 			if err := validateTrashedNotebookJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Notebook ID",
+				typed[key], "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent",
 			); err != nil {
 				return err
 			}
@@ -8926,12 +9034,20 @@ func validateTrashedNotebookJSONValue(path string, value any, description string
 			); err != nil {
 				return err
 			}
+		case "parent":
+			if err := validateTrashedNotebookJSONValue6(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "For a sub notebook deleted with its parent: the ID of the parent in the trash",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"count",
 				"id",
 				"kind",
 				"name",
+				"parent",
 			})
 		}
 	}
@@ -8988,6 +9104,22 @@ func validateTrashedNotebookJSONValue4(path string, value any, description strin
 
 // validateTrashedNotebookJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateTrashedNotebookJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateTrashedNotebookJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateTrashedNotebookJSONValue6(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -10276,6 +10408,11 @@ func checkNotebookNotebookValue(in *Notebook, field string, active map[any]bool)
 		if !utf8.ValidString(string(in.ID)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
 		}
+		if in.Parent != nil {
+			if !utf8.ValidString(string(*in.Parent)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "parent", false))
+			}
+		}
 		if !utf8.ValidString(string(in.Name)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
 		}
@@ -10523,6 +10660,11 @@ func checkTrashedNotebookTrashedNotebookValue(in *TrashedNotebook, field string,
 	if in != nil {
 		if !utf8.ValidString(string(in.ID)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
+		}
+		if in.Parent != nil {
+			if !utf8.ValidString(string(*in.Parent)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "parent", false))
+			}
 		}
 		if !utf8.ValidString(string(in.Name)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))

@@ -62,7 +62,7 @@ func NewClient(rawURL string) (*Clients, error) {
 		web = u.Scheme + "://localhost:" + p + "/"
 	}
 	return &Clients{
-		Notes: gennotes.NewClient(c.List(), c.Get(), c.Create(), c.Update(), c.Delete(), c.Search(), c.Restore(), c.Move(), c.Notebooks(), c.Tags(), c.CreateNotebook(), c.SaveNotebook(), c.DeleteNotebook(), c.TrashedNotebooks(), c.RestoreNotebook(), c.DeleteTrashedNotebook(), c.EmptyTrash(), c.Import(),
+		Notes: gennotes.NewClient(c.List(), c.Get(), c.Create(), c.Update(), c.Delete(), c.MoveNotes(), c.TrashNotes(), c.Search(), c.Restore(), c.Move(), c.Notebooks(), c.Tags(), c.CreateNotebook(), c.SaveNotebook(), c.MoveNotebook(), c.DeleteNotebook(), c.TrashedNotebooks(), c.RestoreNotebook(), c.DeleteTrashedNotebook(), c.EmptyTrash(), c.Import(),
 			nil, nil, nil, nil, nil, nil, nil, // the methods for AI clients have no HTTP endpoints
 			c.AddFile(), c.GetFile(), c.DeleteFile(), c.History(), c.HistoryVersion(), c.CheckFiles(), c.Events(), c.GitStatus(), c.GitSync(), c.Sync()),
 		Assistant: genassistant.NewClient(a.Status(), a.Ask()),

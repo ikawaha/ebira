@@ -73,13 +73,16 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	CreateAiNotebookResultTransport struct {
-		// Notebook ID, which is also its directory name. It is derived from the
-		// display name when the notebook is created: an ASCII name is lower-cased with
-		// dashes, and a name with other characters, such as Japanese, is
-		// Punycode-encoded into an ID that starts with xn--, as in internationalized
-		// domain names. Pass the ID as is wherever a notebook is asked for, and show
-		// people the name instead
+		// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+		// notebook. It is derived from the display name when the notebook is created:
+		// an ASCII name is lower-cased with dashes, and a name with other characters,
+		// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+		// in internationalized domain names. Pass the ID as is wherever a notebook is
+		// asked for, and show people the name instead
 		ID *string `json:"id"`
+		// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+		// a sub notebook are not among those of its parent
+		Parent *string `json:"parent,omitempty"`
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name *string `json:"name"`
 		// Sort key among the notebooks other than inbox and trash; lower comes first
@@ -451,13 +454,16 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	NotebookTransport struct {
-		// Notebook ID, which is also its directory name. It is derived from the
-		// display name when the notebook is created: an ASCII name is lower-cased with
-		// dashes, and a name with other characters, such as Japanese, is
-		// Punycode-encoded into an ID that starts with xn--, as in internationalized
-		// domain names. Pass the ID as is wherever a notebook is asked for, and show
-		// people the name instead
+		// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+		// notebook. It is derived from the display name when the notebook is created:
+		// an ASCII name is lower-cased with dashes, and a name with other characters,
+		// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+		// in internationalized domain names. Pass the ID as is wherever a notebook is
+		// asked for, and show people the name instead
 		ID *string `json:"id"`
+		// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
+		// a sub notebook are not among those of its parent
+		Parent *string `json:"parent,omitempty"`
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name *string `json:"name"`
 		// Sort key among the notebooks other than inbox and trash; lower comes first

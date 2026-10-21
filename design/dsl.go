@@ -19,10 +19,19 @@ var noteIDDSL = func() {
 	Example("be4c1193735ee1")
 }
 
-// notebookIDDSL is the pattern and an example of a notebook ID.
+// notebookIDDSL is the pattern and an example of a notebook ID: a name, or
+// <parent>/<sub> for a sub notebook.
 var notebookIDDSL = func() {
-	Pattern(idPattern)
+	Pattern(`^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$`)
 	Example("inbox")
+}
+
+// trashedNotebookIDDSL is the pattern and an example of the ID of a notebook
+// in the trash: a notebook ID, with <parent>/<sub> for a sub notebook deleted
+// with its parent, or <parent>~<sub> for a sub notebook deleted on its own.
+var trashedNotebookIDDSL = func() {
+	Pattern(`^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$`)
+	Example("dev~design")
 }
 
 // revDSL is the pattern and an example of the ID of a version of a note.

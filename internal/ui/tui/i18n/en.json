@@ -46,6 +46,10 @@
   "status.moveTargetInvalid": "choose a notebook, not all notes, a tag or the trash",
   "status.moveCancelled": "not moved",
   "status.noteMoved": "moved the note",
+  "status.chooseNotebookParent": "move the notebook \"{name}\": choose the notebook to put it in, or All for the top, and press enter (esc to cancel)",
+  "status.notebookParentInvalid": "choose a notebook other than the inbox, the trash and sub notebooks, or All to move a sub notebook to the top",
+  "status.notebookHasSubs": "a notebook with sub notebooks cannot go into another",
+  "status.notebookMoved": "moved the notebook",
 
   "sort.order": "order",
   "sort.created": "created",
@@ -132,6 +136,7 @@
   "key.kind": "kind",
   "key.match": "match",
   "key.move": "move",
+  "key.moveNotebook": "move",
   "key.new": "new",
   "key.newNote": "new note",
   "key.notebook": "notebook",
@@ -169,7 +174,7 @@
   "draft.noTitle": "a title is required",
   "draft.idChange": "changing the id of an existing note is not supported",
   "draft.badID": "invalid id \"{id}\": use 1-64 of a-z, 0-9, - and _, starting with a letter or digit",
-  "draft.badNotebook": "invalid notebook \"{notebook}\": use 1-64 of a-z, 0-9, - and _, starting with a letter or digit",
+  "draft.badNotebook": "invalid notebook \"{notebook}\": use 1-64 of a-z, 0-9, - and _, starting with a letter or digit, and <notebook>/<name> for a sub notebook",
   "draft.useDelete": "use delete (d) to move a note to the trash",
   "draft.inTrash": "cannot create a note in the trash"
 }

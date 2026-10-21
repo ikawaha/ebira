@@ -779,7 +779,7 @@ paths:
                             - kind
                             - sort
                 "400":
-                    description: 'bad_request: The name is empty'
+                    description: 'bad_request: The name is empty, or the parent cannot hold sub notebooks'
                     schema:
                         $ref: '#/definitions/NotesCreateNotebookBadRequestResponseBody'
                     examples:
@@ -814,8 +814,20 @@ paths:
                             name: verification_required
                             temporary: false
                             timeout: false
+                "404":
+                    description: 'not_found: The parent does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesCreateNotebookNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
                 "409":
-                    description: 'already_exists: A notebook with the name exists'
+                    description: 'already_exists: A notebook with the name exists (in the parent, for a sub notebook)'
                     schema:
                         $ref: '#/definitions/NotesCreateNotebookAlreadyExistsResponseBody'
                     examples:
@@ -843,7 +855,7 @@ paths:
                   description: Notebook ID
                   required: true
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 - name: save_notebook_request_body
                   in: body
                   required: true
@@ -863,7 +875,7 @@ paths:
                             - kind
                             - sort
                 "400":
-                    description: 'bad_request: The change is not allowed for the notebook, such as an order for inbox or trash'
+                    description: 'bad_request: The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook'
                     schema:
                         $ref: '#/definitions/NotesSaveNotebookBadRequestResponseBody'
                     examples:
@@ -918,7 +930,7 @@ paths:
             tags:
                 - notes
             summary: delete_notebook notes
-            description: Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.
+            description: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.
             operationId: notes#delete_notebook
             parameters:
                 - name: id
@@ -926,7 +938,7 @@ paths:
                   description: Notebook ID
                   required: true
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             responses:
                 "204":
                     description: No Content response.
@@ -994,6 +1006,102 @@ paths:
                 - http
             security:
                 - session_cookie_ebira_session: []
+    /notebooks/move/{id}:
+        post:
+            tags:
+                - notes
+            summary: move_notebook notes
+            description: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.
+            operationId: notes#move_notebook
+            parameters:
+                - name: id
+                  in: path
+                  description: Notebook ID
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+                - name: move_notebook_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesMoveNotebookRequestBody'
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Notebook'
+                        required:
+                            - id
+                            - name
+                            - order
+                            - count
+                            - reserved
+                            - kind
+                            - sort
+                "400":
+                    description: 'bad_request: The move is not allowed, such as for the inbox, into a sub notebook, or of a notebook with sub notebooks'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotebookBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotebookUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotebookVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The notebook or the parent does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotebookNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+                "409":
+                    description: 'already_exists: A notebook with the same ID or name exists where it goes'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotebookAlreadyExistsResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: already_exists
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
     /notes:
         get:
             tags:
@@ -1007,7 +1115,7 @@ paths:
                   description: Only notes in this notebook. Omit for all notebooks except the trash
                   required: false
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 - name: tag
                   in: query
                   description: Only notes with this tag
@@ -1033,7 +1141,7 @@ paths:
                   description: With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own
                   required: false
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
                 - name: sort
                   in: query
                   description: 'Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)'
@@ -1169,6 +1277,76 @@ paths:
                             id: 123abc
                             message: parameter 'p' must be an integer
                             name: already_exists
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        patch:
+            tags:
+                - notes
+            summary: move_notes notes
+            description: 'Move notes to a notebook at once, such as several chosen in a list. Notes in the trash come out of it. The notes are checked first: when one does not exist, none is moved.'
+            operationId: notes#move_notes
+            parameters:
+                - name: move_notes_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesMoveNotesRequestBody'
+                    required:
+                        - ids
+                        - notebook
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The notebook is the trash, or a note cannot be moved, such as when its ID is used in more than one notebook'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotesBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotesUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotesVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: A note does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesMoveNotesNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
                             temporary: false
                             timeout: false
             schemes:
@@ -2064,7 +2242,7 @@ paths:
                   description: Only notes in this notebook. Omit for all notebooks except the trash
                   required: false
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 - name: tag
                   in: query
                   description: Only notes with this tag
@@ -2173,7 +2351,7 @@ paths:
                   description: Only notes in this notebook. Omit for all notebooks except the trash
                   required: false
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             responses:
                 "200":
                     description: OK response.
@@ -2294,15 +2472,15 @@ paths:
             tags:
                 - notes
             summary: delete_trashed_notebook notes
-            description: Permanently delete a notebook in the trash with its notes.
+            description: Permanently delete a notebook in the trash with its notes and sub notebooks.
             operationId: notes#delete_trashed_notebook
             parameters:
                 - name: id
                   in: path
-                  description: Notebook ID
+                  description: ID in the trash
                   required: true
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
             responses:
                 "204":
                     description: No Content response.
@@ -2358,20 +2536,20 @@ paths:
                 - http
             security:
                 - session_cookie_ebira_session: []
-    /trash/notebooks/{id}/restore:
+    /trash/notebooks/restore/{id}:
         post:
             tags:
                 - notes
             summary: restore_notebook notes
-            description: Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.
+            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.
             operationId: notes#restore_notebook
             parameters:
                 - name: id
                   in: path
-                  description: Notebook ID
+                  description: ID in the trash
                   required: true
                   type: string
-                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
             responses:
                 "200":
                     description: OK response.
@@ -2386,7 +2564,7 @@ paths:
                             - kind
                             - sort
                 "400":
-                    description: 'bad_request: The notebook ID is invalid'
+                    description: 'bad_request: The notebook ID is invalid, or the parent of the sub notebook is not there'
                     schema:
                         $ref: '#/definitions/NotesRestoreNotebookBadRequestResponseBody'
                     examples:
@@ -2443,6 +2621,76 @@ paths:
                             id: 123abc
                             message: parameter 'p' must be an integer
                             name: already_exists
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /trash/notes:
+        post:
+            tags:
+                - notes
+            summary: trash_notes notes
+            description: 'Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.'
+            operationId: notes#trash_notes
+            parameters:
+                - name: trash_notes_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesTrashNotesRequestBody'
+                    required:
+                        - ids
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: A note is in the trash already, or cannot be moved, such as when its ID is used in more than one notebook'
+                    schema:
+                        $ref: '#/definitions/NotesTrashNotesBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesTrashNotesUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesTrashNotesVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: A note does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesTrashNotesNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
                             temporary: false
                             timeout: false
             schemes:
@@ -3632,7 +3880,7 @@ definitions:
                     - end: 9063689078350173992
                       start: 5812498383206549952
                 trashed_from: inbox
-                trashed_notebook: inbox
+                trashed_notebook: dev~design
                 updated_at: "2026-10-16T09:30:00Z"
                 version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
             status: skipped
@@ -3684,7 +3932,7 @@ definitions:
                 type: string
                 description: Notebook (directory) the note is in
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             tags:
                 type: array
                 items:
@@ -3716,12 +3964,12 @@ definitions:
                 type: string
                 description: Notebook the note was in before it was moved to the trash
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             trashed_notebook:
                 type: string
                 description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
-                example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                example: dev~design
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
             updated_at:
                 type: string
                 description: Last update time
@@ -3756,7 +4004,7 @@ definitions:
                 - end: 9063689078350173992
                   start: 5812498383206549952
             trashed_from: inbox
-            trashed_notebook: inbox
+            trashed_notebook: dev~design
             updated_at: "2026-10-16T09:30:00Z"
         required:
             - id
@@ -3841,7 +4089,7 @@ definitions:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -3866,7 +4114,7 @@ definitions:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -3891,7 +4139,7 @@ definitions:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
             total:
                 type: integer
@@ -3923,7 +4171,7 @@ definitions:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                  trashed_notebook: inbox
+                  trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
@@ -3948,7 +4196,7 @@ definitions:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                  trashed_notebook: inbox
+                  trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
@@ -3973,7 +4221,7 @@ definitions:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                  trashed_notebook: inbox
+                  trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
             total: 7955538707107640227
         required:
@@ -4003,7 +4251,7 @@ definitions:
                 type: string
                 description: Notebook (directory) the note is in
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             snippet:
                 type: string
                 description: Excerpt around the matched terms (search only)
@@ -4048,8 +4296,8 @@ definitions:
             trashed_notebook:
                 type: string
                 description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
-                example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                example: dev~design
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
             updated_at:
                 type: string
                 description: Last update time
@@ -4079,7 +4327,7 @@ definitions:
                   start: 5812498383206549952
                 - end: 9063689078350173992
                   start: 5812498383206549952
-            trashed_notebook: inbox
+            trashed_notebook: dev~design
             updated_at: "2026-10-16T09:30:00Z"
         required:
             - id
@@ -4184,9 +4432,9 @@ definitions:
                 format: int64
             id:
                 type: string
-                description: 'Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead'
+                description: 'Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead'
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             kind:
                 type: string
                 description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop
@@ -4205,6 +4453,11 @@ definitions:
                 description: Sort key among the notebooks other than inbox and trash; lower comes first
                 example: 5084316890005250992
                 format: int64
+            parent:
+                type: string
+                description: 'For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent'
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             reserved:
                 type: boolean
                 description: Whether this is a system notebook (inbox or trash)
@@ -4224,6 +4477,7 @@ definitions:
             kind: private
             name: Aut sed quidem commodi dolore cumque.
             order: 5084316890005250992
+            parent: inbox
             reserved: false
             sort: created
         required:
@@ -4707,13 +4961,56 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesCreateNotebookNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesCreateNotebookRequestBody:
         title: NotesCreateNotebookRequestBody
         type: object
         properties:
             kind:
                 type: string
-                description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop
+                description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Ignored for a sub notebook, which takes the kind of its parent
                 default: default
                 example: private
                 enum:
@@ -4732,10 +5029,16 @@ definitions:
                 description: Sort key; lower comes first. Omit to put the notebook after the others
                 example: 6679760426203438774
                 format: int64
+            parent:
+                type: string
+                description: 'Notebook to create the notebook in, as a sub notebook, one level deep: not a sub notebook, the inbox or the trash'
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
         example:
             kind: private
             name: vo3
             order: 6679760426203438774
+            parent: inbox
         required:
             - name
     NotesCreateNotebookUnauthorizedResponseBody:
@@ -4841,7 +5144,7 @@ definitions:
                 type: string
                 description: Notebook to put the note in (default inbox; not trash)
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             tags:
                 type: array
                 items:
@@ -6944,7 +7247,7 @@ definitions:
                 type: string
                 description: Notebook to put the note in (default inbox; not trash)
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
         example:
             content: fsn
             files:
@@ -7257,6 +7560,431 @@ definitions:
             message: parameter 'p' must be an integer
             name: bad_request
             temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotebookAlreadyExistsResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotebookBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotebookNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotebookRequestBody:
+        title: NotesMoveNotebookRequestBody
+        type: object
+        properties:
+            parent:
+                type: string
+                description: 'Notebook to move the notebook into: not a sub notebook, the inbox or the trash. Omit to move a sub notebook to the top'
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+        example:
+            parent: inbox
+    NotesMoveNotebookUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotebookVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotesBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotesNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotesRequestBody:
+        title: NotesMoveNotesRequestBody
+        type: object
+        properties:
+            ids:
+                type: array
+                items:
+                    type: string
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                description: IDs of the notes
+                example:
+                    - be4c1193735ee1
+                minItems: 1
+                maxItems: 500
+            notebook:
+                type: string
+                description: Notebook to move the notes to; not trash (use trash_notes)
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+        example:
+            ids:
+                - be4c1193735ee1
+            notebook: inbox
+        required:
+            - ids
+            - notebook
+    NotesMoveNotesUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveNotesVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
             timeout: true
         required:
             - name
@@ -7970,7 +8698,7 @@ definitions:
         properties:
             kind:
                 type: string
-                description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Inbox cannot be collab, and the trash keeps the default kind (it is hidden from AI clients anyway)
+                description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Inbox cannot be collab, the trash keeps the default kind (it is hidden from AI clients anyway), and a sub notebook takes the kind of its parent
                 example: collab
                 enum:
                     - default
@@ -8344,6 +9072,198 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesTrashNotesBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTrashNotesNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTrashNotesRequestBody:
+        title: NotesTrashNotesRequestBody
+        type: object
+        properties:
+            ids:
+                type: array
+                items:
+                    type: string
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                description: IDs of the notes
+                example:
+                    - be4c1193735ee1
+                minItems: 1
+                maxItems: 500
+        example:
+            ids:
+                - be4c1193735ee1
+        required:
+            - ids
+    NotesTrashNotesUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesTrashNotesVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesTrashedNotebooksUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -8571,7 +9491,7 @@ definitions:
                 type: string
                 description: Notebook to move the note to (not trash)
                 example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             tags:
                 type: array
                 items:
@@ -8746,7 +9666,7 @@ definitions:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -8771,7 +9691,7 @@ definitions:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
@@ -8796,7 +9716,7 @@ definitions:
                           start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
-                      trashed_notebook: inbox
+                      trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
             total:
                 type: integer
@@ -8829,7 +9749,7 @@ definitions:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                  trashed_notebook: inbox
+                  trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
@@ -8854,7 +9774,7 @@ definitions:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                  trashed_notebook: inbox
+                  trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
@@ -8879,7 +9799,7 @@ definitions:
                       start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
-                  trashed_notebook: inbox
+                  trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
             total: 5184544928014764202
         required:
@@ -8979,9 +9899,9 @@ definitions:
                 format: int64
             id:
                 type: string
-                description: Notebook ID
-                example: inbox
-                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                description: 'ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent'
+                example: dev~design
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
             kind:
                 type: string
                 description: Kind of the notebook, kept for when it is restored
@@ -8995,11 +9915,17 @@ definitions:
                 type: string
                 description: Display name
                 example: Est aut velit ut ut.
+            parent:
+                type: string
+                description: 'For a sub notebook deleted with its parent: the ID of the parent in the trash'
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
         example:
             count: 7061346631093655665
-            id: inbox
+            id: dev~design
             kind: private
             name: Est aut velit ut ut.
+            parent: inbox
         required:
             - id
             - name

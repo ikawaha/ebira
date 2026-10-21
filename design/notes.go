@@ -17,7 +17,7 @@ var NoteTrait = func() {
 	})
 	RequiredAttribute("created_at", String, "Creation time", timeDSL)
 	RequiredAttribute("updated_at", String, "Last update time", timeDSL)
-	Attribute("trashed_notebook", String, "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook", notebookIDDSL)
+	Attribute("trashed_notebook", String, "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook", trashedNotebookIDDSL)
 	Attribute("created_by", String, "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people", func() {
 		Enum("ai")
 	})
@@ -51,9 +51,11 @@ var NoteSummary = Type("NoteSummary", func() {
 })
 
 // Notebook is a directory of notes. inbox and trash always exist. The display
-// name and order are kept in notes/<id>/_notebook.yaml.
+// name and order are kept in notes/<id>/_notebook.yaml. A notebook may hold
+// sub notebooks, one level deep, as directories in it.
 var Notebook = Type("Notebook", func() {
-	RequiredAttribute("id", String, "Notebook ID, which is also its directory name. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead", notebookIDDSL)
+	RequiredAttribute("id", String, "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead", notebookIDDSL)
+	Attribute("parent", String, "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent", notebookIDDSL)
 	RequiredAttribute("name", String, "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)")
 	RequiredAttribute("order", Int, "Sort key among the notebooks other than inbox and trash; lower comes first")
 	RequiredAttribute("count", Int, "Number of notes")
@@ -69,7 +71,8 @@ var Notebook = Type("Notebook", func() {
 // TrashedNotebook is a notebook deleted as a whole, kept in the trash with its
 // notes and settings.
 var TrashedNotebook = Type("TrashedNotebook", func() {
-	RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
+	RequiredAttribute("id", String, "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent", trashedNotebookIDDSL)
+	Attribute("parent", String, "For a sub notebook deleted with its parent: the ID of the parent in the trash", notebookIDDSL)
 	RequiredAttribute("name", String, "Display name")
 	RequiredAttribute("kind", String, "Kind of the notebook, kept for when it is restored", func() {
 		Enum(notebookKinds...)
@@ -306,7 +309,7 @@ var _ = Service("notes", func() {
 				Default(0)
 				Minimum(0)
 			})
-			Attribute("trashed_notebook", String, "With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own", notebookIDDSL)
+			Attribute("trashed_notebook", String, "With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own", trashedNotebookIDDSL)
 			Attribute("sort", String, sortDescription+". Omit for the sort setting of the notebook (order without a notebook)", func() {
 				Enum(sortKeys...)
 			})
@@ -420,6 +423,47 @@ var _ = Service("notes", func() {
 		})
 	})
 
+	// Several notes chosen in a list are moved at once, checked together
+	// first. They are for people only, as move and delete are.
+	Method("move_notes", func() {
+		Description("Move notes to a notebook at once, such as several chosen in a list. Notes in the trash come out of it. The notes are checked first: when one does not exist, none is moved.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("ids", ArrayOf(String, noteIDDSL), "IDs of the notes", func() {
+				MinLength(1)
+				MaxLength(500)
+			})
+			RequiredAttribute("notebook", String, "Notebook to move the notes to; not trash (use trash_notes)", notebookIDDSL)
+		})
+		Error("not_found", ErrorResult, "A note does not exist")
+		Error("bad_request", ErrorResult, "The notebook is the trash, or a note cannot be moved, such as when its ID is used in more than one notebook")
+		HTTP(func() {
+			PATCH("/notes")
+			Response(StatusNoContent)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("trash_notes", func() {
+		Description("Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("ids", ArrayOf(String, noteIDDSL), "IDs of the notes", func() {
+				MinLength(1)
+				MaxLength(500)
+			})
+		})
+		Error("not_found", ErrorResult, "A note does not exist")
+		Error("bad_request", ErrorResult, "A note is in the trash already, or cannot be moved, such as when its ID is used in more than one notebook")
+		HTTP(func() {
+			POST("/trash/notes")
+			Response(StatusNoContent)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
 	Method("search", func() {
 		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
@@ -528,18 +572,21 @@ var _ = Service("notes", func() {
 				MaxLength(100)
 			})
 			Attribute("order", Int, "Sort key; lower comes first. Omit to put the notebook after the others")
-			Attribute("kind", String, "Kind of the notebook. "+kindDescription, func() {
+			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Ignored for a sub notebook, which takes the kind of its parent", func() {
 				Enum(notebookKinds...)
 				Default("default")
 			})
+			Attribute("parent", String, "Notebook to create the notebook in, as a sub notebook, one level deep: not a sub notebook, the inbox or the trash", notebookIDDSL)
 		})
 		Result(Notebook)
-		Error("bad_request", ErrorResult, "The name is empty")
-		Error("already_exists", ErrorResult, "A notebook with the name exists")
+		Error("bad_request", ErrorResult, "The name is empty, or the parent cannot hold sub notebooks")
+		Error("not_found", ErrorResult, "The parent does not exist")
+		Error("already_exists", ErrorResult, "A notebook with the name exists (in the parent, for a sub notebook)")
 		HTTP(func() {
 			POST("/notebooks")
 			Response(StatusCreated)
 			Response("bad_request", StatusBadRequest)
+			Response("not_found", StatusNotFound)
 			Response("already_exists", StatusConflict)
 		})
 	})
@@ -551,7 +598,7 @@ var _ = Service("notes", func() {
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 			Attribute("name", String, "Display name; empty to reset it to the default")
 			Attribute("order", Int, "Sort key; lower comes first")
-			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Inbox cannot be collab, and the trash keeps the default kind (it is hidden from AI clients anyway)", func() {
+			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Inbox cannot be collab, the trash keeps the default kind (it is hidden from AI clients anyway), and a sub notebook takes the kind of its parent", func() {
 				Enum(notebookKinds...)
 			})
 			Attribute("sort", String, "Default order of the note list. "+sortDescription, func() {
@@ -560,17 +607,37 @@ var _ = Service("notes", func() {
 		})
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook does not exist")
-		Error("bad_request", ErrorResult, "The change is not allowed for the notebook, such as an order for inbox or trash")
+		Error("bad_request", ErrorResult, "The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook")
 		HTTP(func() {
-			PUT("/notebooks/{id}")
+			PUT("/notebooks/{*id}")
 			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
 		})
 	})
 
+	Method("move_notebook", func() {
+		Description("Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
+			Attribute("parent", String, "Notebook to move the notebook into: not a sub notebook, the inbox or the trash. Omit to move a sub notebook to the top", notebookIDDSL)
+		})
+		Result(Notebook)
+		Error("not_found", ErrorResult, "The notebook or the parent does not exist")
+		Error("bad_request", ErrorResult, "The move is not allowed, such as for the inbox, into a sub notebook, or of a notebook with sub notebooks")
+		Error("already_exists", ErrorResult, "A notebook with the same ID or name exists where it goes")
+		HTTP(func() {
+			POST("/notebooks/move/{*id}")
+			Response(StatusOK)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+			Response("already_exists", StatusConflict)
+		})
+	})
+
 	Method("delete_notebook", func() {
-		Description("Move a notebook with its notes and settings into the trash. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.")
+		Description("Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
@@ -579,7 +646,7 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The notebook is inbox or trash")
 		Error("already_exists", ErrorResult, "The trash holds a notebook with the same ID")
 		HTTP(func() {
-			DELETE("/notebooks/{id}")
+			DELETE("/notebooks/{*id}")
 			Response(StatusNoContent)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
@@ -598,17 +665,17 @@ var _ = Service("notes", func() {
 	})
 
 	Method("restore_notebook", func() {
-		Description("Move a notebook out of the trash with its notes and settings. Fails with already_exists if a notebook with the same ID exists.")
+		Description("Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
+			RequiredAttribute("id", String, "ID in the trash", trashedNotebookIDDSL)
 		})
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook is not in the trash")
-		Error("bad_request", ErrorResult, "The notebook ID is invalid")
+		Error("bad_request", ErrorResult, "The notebook ID is invalid, or the parent of the sub notebook is not there")
 		Error("already_exists", ErrorResult, "A notebook with the same ID exists")
 		HTTP(func() {
-			POST("/trash/notebooks/{id}/restore")
+			POST("/trash/notebooks/restore/{*id}")
 			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
@@ -617,15 +684,15 @@ var _ = Service("notes", func() {
 	})
 
 	Method("delete_trashed_notebook", func() {
-		Description("Permanently delete a notebook in the trash with its notes.")
+		Description("Permanently delete a notebook in the trash with its notes and sub notebooks.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
+			RequiredAttribute("id", String, "ID in the trash", trashedNotebookIDDSL)
 		})
 		Error("not_found", ErrorResult, "The notebook is not in the trash")
 		Error("bad_request", ErrorResult, "The notebook ID is invalid")
 		HTTP(func() {
-			DELETE("/trash/notebooks/{id}")
+			DELETE("/trash/notebooks/{*id}")
 			Response(StatusNoContent)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
@@ -767,7 +834,7 @@ var _ = Service("notes", func() {
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 		})
 		Error("not_found", ErrorResult, "The notebook does not exist, or is not in the notebook list of the client")
-		Error("bad_request", ErrorResult, "The notebook is the trash")
+		Error("bad_request", ErrorResult, "The notebook is the trash, or a sub notebook, which takes the kind of its parent")
 		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this")
 	})
 

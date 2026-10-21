@@ -21,6 +21,8 @@ type Client struct {
 	CreateEndpoint                goa.Endpoint
 	UpdateEndpoint                goa.Endpoint
 	DeleteEndpoint                goa.Endpoint
+	MoveNotesEndpoint             goa.Endpoint
+	TrashNotesEndpoint            goa.Endpoint
 	SearchEndpoint                goa.Endpoint
 	RestoreEndpoint               goa.Endpoint
 	MoveEndpoint                  goa.Endpoint
@@ -28,6 +30,7 @@ type Client struct {
 	TagsEndpoint                  goa.Endpoint
 	CreateNotebookEndpoint        goa.Endpoint
 	SaveNotebookEndpoint          goa.Endpoint
+	MoveNotebookEndpoint          goa.Endpoint
 	DeleteNotebookEndpoint        goa.Endpoint
 	TrashedNotebooksEndpoint      goa.Endpoint
 	RestoreNotebookEndpoint       goa.Endpoint
@@ -54,13 +57,15 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, search, restore, move, notebooks, tags, createNotebook, saveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
 		CreateEndpoint:                create,
 		UpdateEndpoint:                update,
 		DeleteEndpoint:                delete_,
+		MoveNotesEndpoint:             moveNotes,
+		TrashNotesEndpoint:            trashNotes,
 		SearchEndpoint:                search,
 		RestoreEndpoint:               restore,
 		MoveEndpoint:                  move,
@@ -68,6 +73,7 @@ func NewClient(list, get, create, update, delete_, search, restore, move, notebo
 		TagsEndpoint:                  tags,
 		CreateNotebookEndpoint:        createNotebook,
 		SaveNotebookEndpoint:          saveNotebook,
+		MoveNotebookEndpoint:          moveNotebook,
 		DeleteNotebookEndpoint:        deleteNotebook,
 		TrashedNotebooksEndpoint:      trashedNotebooks,
 		RestoreNotebookEndpoint:       restoreNotebook,
@@ -171,6 +177,30 @@ func (c *Client) Delete(ctx context.Context, p *DeletePayload) (err error) {
 	return
 }
 
+// MoveNotes calls the "move_notes" endpoint of the "notes" service.
+// MoveNotes may return the following errors:
+//   - "not_found" (type *goa.ServiceError): A note does not exist
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash, or a note cannot be moved, such as when its ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) MoveNotes(ctx context.Context, p *MoveNotesPayload) (err error) {
+	_, err = c.MoveNotesEndpoint(ctx, p)
+	return
+}
+
+// TrashNotes calls the "trash_notes" endpoint of the "notes" service.
+// TrashNotes may return the following errors:
+//   - "not_found" (type *goa.ServiceError): A note does not exist
+//   - "bad_request" (type *goa.ServiceError): A note is in the trash already, or cannot be moved, such as when its ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) TrashNotes(ctx context.Context, p *TrashNotesPayload) (err error) {
+	_, err = c.TrashNotesEndpoint(ctx, p)
+	return
+}
+
 // Search calls the "search" endpoint of the "notes" service.
 // Search may return the following errors:
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
@@ -248,8 +278,9 @@ func (c *Client) Tags(ctx context.Context, p *TagsPayload) (res []*TagCount, err
 
 // CreateNotebook calls the "create_notebook" endpoint of the "notes" service.
 // CreateNotebook may return the following errors:
-//   - "bad_request" (type *goa.ServiceError): The name is empty
-//   - "already_exists" (type *goa.ServiceError): A notebook with the name exists
+//   - "bad_request" (type *goa.ServiceError): The name is empty, or the parent cannot hold sub notebooks
+//   - "not_found" (type *goa.ServiceError): The parent does not exist
+//   - "already_exists" (type *goa.ServiceError): A notebook with the name exists (in the parent, for a sub notebook)
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -265,13 +296,30 @@ func (c *Client) CreateNotebook(ctx context.Context, p *CreateNotebookPayload) (
 // SaveNotebook calls the "save_notebook" endpoint of the "notes" service.
 // SaveNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist
-//   - "bad_request" (type *goa.ServiceError): The change is not allowed for the notebook, such as an order for inbox or trash
+//   - "bad_request" (type *goa.ServiceError): The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
 func (c *Client) SaveNotebook(ctx context.Context, p *SaveNotebookPayload) (res *Notebook, err error) {
 	var ires any
 	ires, err = c.SaveNotebookEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Notebook), nil
+}
+
+// MoveNotebook calls the "move_notebook" endpoint of the "notes" service.
+// MoveNotebook may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The notebook or the parent does not exist
+//   - "bad_request" (type *goa.ServiceError): The move is not allowed, such as for the inbox, into a sub notebook, or of a notebook with sub notebooks
+//   - "already_exists" (type *goa.ServiceError): A notebook with the same ID or name exists where it goes
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) MoveNotebook(ctx context.Context, p *MoveNotebookPayload) (res *Notebook, err error) {
+	var ires any
+	ires, err = c.MoveNotebookEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -309,7 +357,7 @@ func (c *Client) TrashedNotebooks(ctx context.Context, p *TrashedNotebooksPayloa
 // RestoreNotebook calls the "restore_notebook" endpoint of the "notes" service.
 // RestoreNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook is not in the trash
-//   - "bad_request" (type *goa.ServiceError): The notebook ID is invalid
+//   - "bad_request" (type *goa.ServiceError): The notebook ID is invalid, or the parent of the sub notebook is not there
 //   - "already_exists" (type *goa.ServiceError): A notebook with the same ID exists
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
@@ -464,7 +512,7 @@ func (c *Client) CreateAiNotebook(ctx context.Context, p *CreateAiNotebookPayloa
 // "notes" service.
 // MakeNotebookPrivate may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist, or is not in the notebook list of the client
-//   - "bad_request" (type *goa.ServiceError): The notebook is the trash
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash, or a sub notebook, which takes the kind of its parent
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
