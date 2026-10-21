@@ -120,7 +120,7 @@ type (
 	GetNotePayloadTransport struct {
 		// Note ID
 		ID *string `json:"id"`
-		// Search query to highlight
+		// Search query to highlight, as search takes it; its tags are not highlighted
 		Q *string `json:"q,omitempty"`
 	}
 	// GetNoteResultTransport is the internal JSON transport type for GetNoteResult.
@@ -304,7 +304,10 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	SearchNotesPayloadTransport struct {
-		// Search terms separated by spaces, combined with AND
+		// Search terms separated by spaces, combined with AND. "two words" in double
+		// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
+		// for notes with the tag (case and width do not matter); a query of tags alone
+		// lists the notes with them, last updated first
 		Q *string `json:"q"`
 		// Only notes in this notebook. Omit for all notebooks except the trash
 		Notebook *string `json:"notebook,omitempty"`

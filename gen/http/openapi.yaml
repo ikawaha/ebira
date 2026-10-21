@@ -1363,7 +1363,7 @@ paths:
             parameters:
                 - name: q
                   in: query
-                  description: Search query to highlight
+                  description: Search query to highlight, as search takes it; its tags are not highlighted
                   required: false
                   type: string
                 - name: id
@@ -2233,7 +2233,7 @@ paths:
             parameters:
                 - name: q
                   in: query
-                  description: Search terms separated by spaces, combined with AND
+                  description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first
                   required: true
                   type: string
                   minLength: 1

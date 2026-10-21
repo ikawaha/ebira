@@ -59,7 +59,10 @@ type (
 	SearchPayloadTransport struct {
 		// Session of people signed in with a passkey, set as a cookie by the server
 		Session *string `json:"session,omitempty"`
-		// Search terms separated by spaces, combined with AND
+		// Search terms separated by spaces, combined with AND. "two words" in double
+		// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
+		// for notes with the tag (case and width do not matter); a query of tags alone
+		// lists the notes with them, last updated first
 		Q *string `json:"q"`
 		// Only notes in this notebook. Omit for all notebooks except the trash
 		Notebook *string `json:"notebook,omitempty"`

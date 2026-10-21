@@ -708,7 +708,7 @@ var getNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
-		Description: "Search query to highlight",
+		Description: "Search query to highlight, as search takes it; its tags are not highlighted",
 	},
 }
 var getNoteResultFields = []tools.FieldMetadata{
@@ -1331,7 +1331,7 @@ var searchNotesPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
-		Description: "Search terms separated by spaces, combined with AND",
+		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
@@ -4678,7 +4678,7 @@ func validateGetNotePayloadJSONValue(path string, value any, description string)
 		case "q":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Search query to highlight",
+				typed[key], "Search query to highlight, as search takes it; its tags are not highlighted",
 			); err != nil {
 				return err
 			}
@@ -4861,7 +4861,7 @@ func validateSearchNotesPayloadJSONValue(path string, value any, description str
 		case "q":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Search terms separated by spaces, combined with AND",
+				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
 			); err != nil {
 				return err
 			}

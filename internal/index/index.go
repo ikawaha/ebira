@@ -697,24 +697,33 @@ func (ix *Index) TrashedNotebookCounts(ctx context.Context) (map[string]int, err
 	return counts, rows.Err()
 }
 
-// Search finds notes in notebook (all but the trash and exclude if empty) matching q,
-// whose space-separated terms are combined with AND. total is the number of
-// matched notes. In the ja and en modes, notes found only by bigrams
-// (substrings that morphemes or words miss) follow the notes found by
-// morphemes or words.
+// Search finds notes in notebook (all but the trash and exclude if empty) matching q
+// (see ParseQuery), whose terms and tags are combined with AND, and with tag
+// if not empty. total is the number of matched notes. In the ja and en
+// modes, notes found only by bigrams (substrings that morphemes or words
+// miss) follow the notes found by morphemes or words. A query of tags alone
+// lists the notes with them, last updated first.
 func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int, exclude ...string) (res []*Summary, total int, err error) {
-	terms := strings.Fields(q)
-	if len(terms) == 0 {
+	query := ParseQuery(q)
+	terms, tags := query.Terms, query.Tags
+	if tag != "" {
+		tags = append(tags, tag)
+	}
+	if len(terms) == 0 && len(tags) == 0 {
 		return []*Summary{}, 0, nil
+	}
+	tagWhere, tagArgs, err := ix.tagCond(ctx, tags)
+	if err != nil {
+		return nil, 0, err
 	}
 	var ids []string
 	seen := map[string]bool{}
 	tables := ix.fts
-	if len(tables) == 0 {
-		tables = []ftsTable{{}} // the like mode
+	if len(tables) == 0 || len(terms) == 0 {
+		tables = []ftsTable{{}} // the like mode, or no terms to match
 	}
 	for _, t := range tables {
-		found, err := ix.searchIDs(ctx, t, terms, notebook, tag, exclude)
+		found, err := ix.searchIDs(ctx, t, terms, notebook, tagWhere, tagArgs, exclude)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -738,8 +747,9 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 }
 
 // searchIDs returns the IDs of the notes matching terms in the full-text
-// table t, best first, or with LIKE by update time when t has no analyzer.
-func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, notebook, tag string, exclude []string) ([]string, error) {
+// table t, best first, or with LIKE by update time when t has no analyzer,
+// and the condition tagWhere on the tags (see tagCond).
+func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, notebook, tagWhere string, tagArgs []any, exclude []string) ([]string, error) {
 	var (
 		from  = `notes n`
 		where []string
@@ -770,9 +780,9 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, note
 	nbCond, nbArgs := notebookCond(notebook, exclude)
 	where = append(where, nbCond)
 	args = append(args, nbArgs...)
-	if tag != "" {
-		where = append(where, `n.id IN (SELECT id FROM note_tags WHERE tag = ?)`)
-		args = append(args, tag)
+	if tagWhere != "" {
+		where = append(where, tagWhere)
+		args = append(args, tagArgs...)
 	}
 	rows, err := ix.db.QueryContext(ctx, `SELECT n.id FROM `+from+` WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order+`, n.id`, args...)
 	if err != nil {
@@ -788,6 +798,41 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, note
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
+}
+
+// tagCond returns the condition that a note has all the tags, compared by
+// tagKey, and its arguments; "" without tags.
+func (ix *Index) tagCond(ctx context.Context, tags []string) (string, []any, error) {
+	if len(tags) == 0 {
+		return "", nil, nil
+	}
+	rows, err := ix.db.QueryContext(ctx, `SELECT DISTINCT tag FROM note_tags`)
+	if err != nil {
+		return "", nil, err
+	}
+	defer rows.Close()
+	byKey := map[string][]any{}
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return "", nil, err
+		}
+		byKey[tagKey(t)] = append(byKey[tagKey(t)], t)
+	}
+	if err := rows.Err(); err != nil {
+		return "", nil, err
+	}
+	var conds []string
+	var args []any
+	for _, t := range tags {
+		forms := byKey[tagKey(t)]
+		if len(forms) == 0 {
+			return "0", nil, nil // no note has the tag
+		}
+		conds = append(conds, `n.id IN (SELECT id FROM note_tags WHERE tag IN (?`+strings.Repeat(", ?", len(forms)-1)+`))`)
+		args = append(args, forms...)
+	}
+	return strings.Join(conds, " AND "), args, nil
 }
 
 // summaries returns the summaries of the notes ids in that order, with the
@@ -831,9 +876,9 @@ func (ix *Index) highlighter(terms []string) highlighters {
 }
 
 // Highlight returns the ranges of title and body matched by the query q, as
-// Search matches them.
+// Search matches them; its tags match nothing in the text.
 func (ix *Index) Highlight(q, title, body string) (titleSpans, bodySpans []Span) {
-	h := ix.highlighter(strings.Fields(q))
+	h := ix.highlighter(ParseQuery(q).Terms)
 	return h.find(title), h.findInBody(body, false)
 }
 

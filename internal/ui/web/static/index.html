@@ -15,8 +15,20 @@
 <header class="bar">
   <h1 class="logo">ebira</h1>
   <form class="search" id="search-form" role="search">
-    <input id="q" type="search" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false">
+    <input id="q" type="search" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tag-suggest">
+    <ul id="tag-suggest" class="tag-suggest" role="listbox" data-i18n-aria-label="tagSuggest" hidden></ul>
     <button type="button" id="q-clear" class="search-clear" hidden data-i18n-title="searchClear" data-i18n-aria-label="searchClear">&times;</button>
+    <button type="button" id="q-help" class="search-help-button" aria-expanded="false" aria-controls="search-help" data-i18n-title="searchHelpTitle" data-i18n-aria-label="searchHelpTitle">?</button>
+    <div id="search-help" class="search-help" role="dialog" data-i18n-aria-label="searchHelpTitle" hidden>
+      <h2 data-i18n="searchHelpTitle"></h2>
+      <dl>
+        <dt><code>york pizza</code></dt><dd data-i18n="searchHelpWords"></dd>
+        <dt><code>"new york"</code></dt><dd data-i18n="searchHelpPhrase"></dd>
+        <dt><code>tag:todo</code></dt><dd data-i18n="searchHelpTag"></dd>
+        <dt><code>tag:todo tag:travel</code></dt><dd data-i18n="searchHelpTagOnly"></dd>
+      </dl>
+      <p data-i18n="searchHelpNote"></p>
+    </div>
   </form>
   <button type="button" id="ask-toggle" data-i18n-title="askToggleTitle" data-i18n="assistant"></button>
   <span class="mode" id="mode" data-i18n-title="searchMode"></span>

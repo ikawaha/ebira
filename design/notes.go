@@ -336,7 +336,7 @@ var _ = Service("notes", func() {
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
-			Attribute("q", String, "Search query to highlight")
+			Attribute("q", String, "Search query to highlight, as search takes it; its tags are not highlighted")
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from the client")
@@ -468,7 +468,7 @@ var _ = Service("notes", func() {
 		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND", func() {
+			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first", func() {
 				MinLength(1)
 			})
 			notebookFilter()
@@ -487,7 +487,7 @@ var _ = Service("notes", func() {
 			Param("tag")
 			Param("limit")
 		})
-		Tool("search_notes", "Full-text search over notes. Japanese terms are supported", func() {
+		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase and tag:name to require a tag", func() {
 			ReadOnlyHint(true)
 		})
 	})

@@ -109,7 +109,7 @@ mark.current { background: var(--mark-current); }
 .search { flex: 1; max-width: 560px; position: relative; }
 .search input {
   width: 100%;
-  padding: 6px 30px 6px 10px; /* room for the clear button */
+  padding: 6px 54px 6px 10px; /* room for the clear and help buttons */
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -118,9 +118,29 @@ mark.current { background: var(--mark-current); }
 }
 .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; } /* the clear button stands in for it */
-.search-clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.search-clear { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: 16px; line-height: 1; cursor: pointer; }
 .search-clear:hover, .search-clear:focus-visible { background: var(--bg-side); color: var(--fg); }
 .search-clear[hidden] { display: none; }
+/* The help of the search syntax: a "?" at the right end of the box, which
+   opens a panel below it. */
+.search-help-button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--fg-muted); font-size: 12px; font-weight: 600; line-height: 1; cursor: pointer; }
+.search-help-button:hover, .search-help-button:focus-visible, .search-help-button[aria-expanded="true"] { color: var(--fg); border-color: var(--accent); }
+.search-help { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: min(420px, calc(100vw - 32px)); padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); font-size: 13px; }
+.search-help[hidden] { display: none; }
+/* The tags offered while tag: is typed in the search box. */
+.tag-suggest { position: absolute; top: calc(100% + 4px); left: 0; z-index: 31; min-width: 200px; max-width: min(360px, calc(100vw - 32px)); margin: 0; padding: 4px; list-style: none; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); font-size: 13px; }
+.tag-suggest[hidden] { display: none; }
+.tag-suggest li { display: flex; gap: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.tag-suggest li[aria-selected="true"], .tag-suggest li:hover { background: var(--bg-active); }
+.tag-suggest .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tag-suggest .name::before { content: "#"; color: var(--fg-muted); margin-right: 2px; }
+.tag-suggest .count { color: var(--fg-muted); font-size: 12px; }
+.search-help h2 { margin: 0 0 6px; font-size: 13px; }
+.search-help dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+.search-help dt { white-space: nowrap; }
+.search-help dd { margin: 0; color: var(--fg-muted); }
+.search-help code { font-size: 12px; padding: 1px 4px; border-radius: 3px; background: var(--code-bg); }
+.search-help p { margin: 8px 0 0; color: var(--fg-muted); font-size: 12px; }
 .mode { color: var(--fg-muted); font-size: 12px; }
 .status { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--fg-muted); font-size: 12px; white-space: nowrap; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-muted); flex: none; }

@@ -317,7 +317,7 @@ type GetInputTransport struct {
 	Session *string `json:"session,omitempty"`
 	// Note ID
 	ID *string `json:"id"`
-	// Search query to highlight
+	// Search query to highlight, as search takes it; its tags are not highlighted
 	Q *string `json:"q,omitempty"`
 }
 
@@ -339,7 +339,7 @@ func ValidateGetInputTransport(value *GetInputTransport) (err error) {
 type GetPayloadTransport struct {
 	// Note ID
 	ID *string `json:"id"`
-	// Search query to highlight
+	// Search query to highlight, as search takes it; its tags are not highlighted
 	Q *string `json:"q,omitempty"`
 }
 
@@ -1257,7 +1257,10 @@ func ValidateNotebooksResultTransport(value NotebooksResultTransport) (err error
 type SearchInputTransport struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string `json:"session,omitempty"`
-	// Search terms separated by spaces, combined with AND
+	// Search terms separated by spaces, combined with AND. "two words" in double
+	// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
+	// for notes with the tag (case and width do not matter); a query of tags alone
+	// lists the notes with them, last updated first
 	Q *string `json:"q"`
 	// Only notes in this notebook. Omit for all notebooks except the trash
 	Notebook *string `json:"notebook,omitempty"`
@@ -1316,7 +1319,10 @@ func ValidateSearchPayloadIntTransport(value SearchPayloadIntTransport) (err err
 
 // SearchPayloadTransport stores JSON fields until they have been validated.
 type SearchPayloadTransport struct {
-	// Search terms separated by spaces, combined with AND
+	// Search terms separated by spaces, combined with AND. "two words" in double
+	// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
+	// for notes with the tag (case and width do not matter); a query of tags alone
+	// lists the notes with them, last updated first
 	Q *string `json:"q"`
 	// Only notes in this notebook. Omit for all notebooks except the trash
 	Notebook *string `json:"notebook,omitempty"`

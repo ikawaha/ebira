@@ -179,7 +179,7 @@
               "type": "string"
             },
             "q": {
-              "description": "Search terms separated by spaces, combined with AND",
+              "description": "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
               "minLength": 1,
               "type": "string"
             },

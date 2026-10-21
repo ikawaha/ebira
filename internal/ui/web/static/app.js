@@ -698,6 +698,7 @@ async function loadNotebooks() {
   state.notebooks = notebooks;
   state.tags = tags;
   state.trashed = trashed;
+  notebookTags = { notebook: null, tags: [] }; // read again when offered
   if (state.notebook && !state.notebooks.some((n) => n.id === state.notebook)) {
     state.notebook = null; // deleted
   }
@@ -3052,6 +3053,24 @@ function showSearchClear() {
   $("q-clear").hidden = !$("q").value;
 }
 
+// The help of the search syntax opens below the box with "?", and closes
+// with "?" again, Esc or a click elsewhere.
+function toggleSearchHelp(open = $("search-help").hidden) {
+  $("search-help").hidden = !open;
+  $("q-help").setAttribute("aria-expanded", String(open));
+}
+
+$("q-help").addEventListener("click", () => toggleSearchHelp());
+document.addEventListener("click", (e) => {
+  if (!$("search-help").hidden && !e.target.closest("#search-help, #q-help")) toggleSearchHelp(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("search-help").hidden) {
+    e.stopPropagation();
+    toggleSearchHelp(false);
+  }
+}, true);
+
 $("q-clear").addEventListener("click", () => {
   $("q").value = "";
   $("q").dispatchEvent(new Event("input"));
@@ -3060,9 +3079,10 @@ $("q-clear").addEventListener("click", () => {
 
 $("q").addEventListener("input", () => {
   showSearchClear();
+  suggestTags();
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
-    const q = $("q").value.trim();
+    const q = searchQuery();
     if (q === state.query) return;
     state.query = q;
     loadNotes({ chosen: true }).then(() => loadNote()); // refresh the highlights
@@ -3070,6 +3090,134 @@ $("q").addEventListener("input", () => {
 });
 
 $("search-form").addEventListener("submit", (e) => e.preventDefault());
+
+// Tag completion: while the word at the cursor starts with tag:, the tags
+// that start with what follows are offered below the box, those of the
+// notebook shown (all of them for all notes). Arrows choose one, Enter or Tab
+// puts it in, Esc closes the list. The tag being typed is left out of the
+// search until it is complete, so that the list does not empty meanwhile.
+
+// TAG_AT_CURSOR matches a tag being typed at the end of the text before the
+// cursor: tag:name, or tag:"name for one with spaces.
+const TAG_AT_CURSOR = /(^|\s)tag:(?:"([^"]*)|([^\s"]*))$/i;
+
+// tagKey compares tags as the server does: NFKC and lower case.
+const tagKey = (s) => s.normalize("NFKC").toLowerCase();
+
+let suggested = []; // the tags offered
+let suggestIndex = -1; // the one chosen with the arrows
+let notebookTags = { notebook: null, tags: [] }; // the tags of the notebook shown
+
+// typedTag returns the tag being typed at the cursor: where its word starts,
+// and the text after tag:; or null.
+function typedTag() {
+  const q = $("q");
+  const before = q.value.slice(0, q.selectionStart ?? q.value.length);
+  const m = TAG_AT_CURSOR.exec(before);
+  if (!m) return null;
+  return { start: m.index + m[1].length, prefix: m[2] ?? m[3] ?? "" };
+}
+
+// tagChoices returns the tags to offer: those of the notebook shown, else all.
+async function tagChoices() {
+  const nb = state.notebook && state.notebook !== "trash" ? state.notebook : null;
+  if (!nb) return state.tags;
+  if (notebookTags.notebook !== nb) {
+    try {
+      notebookTags = { notebook: nb, tags: await api("/tags", { params: { notebook: nb } }) };
+    } catch (_) {
+      return state.tags;
+    }
+  }
+  return notebookTags.tags;
+}
+
+// searchQuery returns the query to search: the box, without a tag being
+// typed unless a tag of that name exists.
+function searchQuery() {
+  const q = $("q").value;
+  const typed = typedTag();
+  if (!typed || state.tags.some((tg) => tagKey(tg.name) === tagKey(typed.prefix))) return q.trim();
+  return (q.slice(0, typed.start) + q.slice($("q").selectionStart ?? q.length)).trim();
+}
+
+async function suggestTags() {
+  const typed = typedTag();
+  if (!typed) {
+    hideTagSuggest();
+    return;
+  }
+  const key = tagKey(typed.prefix);
+  const tags = (await tagChoices())
+    .filter((tg) => tagKey(tg.name).startsWith(key))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 10);
+  if (typedTag()?.start !== typed.start) return; // typed on meanwhile
+  suggested = tags;
+  suggestIndex = tags.length ? 0 : -1;
+  renderTagSuggest();
+}
+
+function renderTagSuggest() {
+  const ul = $("tag-suggest");
+  ul.replaceChildren(...suggested.map((tg, i) => {
+    const li = el("li", "", el("span", "name", tg.name), el("span", "count", String(tg.count)));
+    li.id = `tag-suggest-${i}`;
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(i === suggestIndex));
+    li.addEventListener("mousedown", (e) => e.preventDefault()); // keep the focus in the box
+    li.addEventListener("click", () => putTag(tg.name));
+    return li;
+  }));
+  ul.hidden = !suggested.length;
+  $("q").setAttribute("aria-expanded", String(!ul.hidden));
+  if (suggestIndex >= 0) $("q").setAttribute("aria-activedescendant", `tag-suggest-${suggestIndex}`);
+  else $("q").removeAttribute("aria-activedescendant");
+}
+
+function hideTagSuggest() {
+  suggested = [];
+  suggestIndex = -1;
+  renderTagSuggest();
+}
+
+// putTag puts tag in place of the tag being typed, quoted when it has spaces,
+// followed by a space, and searches.
+function putTag(tag) {
+  const typed = typedTag();
+  if (!typed) return;
+  const q = $("q");
+  const end = q.selectionStart ?? q.value.length;
+  const word = /\s|"/.test(tag) ? `tag:"${tag.replaceAll('"', "")}" ` : `tag:${tag} `;
+  // The rest of the word after the cursor is part of the tag being typed.
+  const inQuotes = q.value.slice(typed.start + 4, typed.start + 5) === '"';
+  const rest = q.value.slice(end).replace(inQuotes ? /^[^"]*"?/ : /^\S*/, "").replace(/^\s/, "");
+  q.value = q.value.slice(0, typed.start) + word + rest;
+  const caret = typed.start + word.length;
+  q.setSelectionRange(caret, caret);
+  hideTagSuggest();
+  q.dispatchEvent(new Event("input"));
+}
+
+$("q").addEventListener("keydown", (e) => {
+  if (!suggested.length || e.isComposing) return;
+  const move = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+  if (move) {
+    suggestIndex = (suggestIndex + move + suggested.length) % suggested.length;
+    renderTagSuggest();
+  } else if ((e.key === "Enter" || e.key === "Tab") && suggestIndex >= 0) {
+    putTag(suggested[suggestIndex].name);
+  } else if (e.key === "Escape") {
+    hideTagSuggest();
+  } else {
+    return;
+  }
+  // The keys go to the list, not to the search box or the page.
+  e.preventDefault();
+  e.stopPropagation();
+});
+$("q").addEventListener("blur", hideTagSuggest);
+$("q").addEventListener("click", suggestTags); // the cursor moved
 
 // Keys: / search, Esc clear, j/k or arrows move, n/N jump between matches,
 // e edit, c create, u restore, s sort, J/K move the note in the manual order,

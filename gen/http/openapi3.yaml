@@ -1904,11 +1904,11 @@ paths:
             parameters:
                 - name: q
                   in: query
-                  description: Search query to highlight
+                  description: Search query to highlight, as search takes it; its tags are not highlighted
                   allowEmptyValue: true
                   schema:
                     type: string
-                    description: Search query to highlight
+                    description: Search query to highlight, as search takes it; its tags are not highlighted
                     example: Magni consequatur iste quisquam qui.
                   example: Magni consequatur iste quisquam qui.
                 - name: id
@@ -2941,12 +2941,12 @@ paths:
             parameters:
                 - name: q
                   in: query
-                  description: Search terms separated by spaces, combined with AND
+                  description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first
                   allowEmptyValue: true
                   required: true
                   schema:
                     type: string
-                    description: Search terms separated by spaces, combined with AND
+                    description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first
                     example: k
                     minLength: 1
                   example: k
