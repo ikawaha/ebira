@@ -42,13 +42,23 @@ ebira は、検索に強いノートアプリです。ノートは 1 つずつ�
 
 ```mermaid
 flowchart LR
-  ED["✏️ エディタ · git pull"] --> Y["📄 YAML のノート"]
-  Y -->|"監視 · 同期"| I[("🔎 SQLite の索引")]
-  S["ebira サーバー"] --> Y
-  I --> S
-  S --> W["🌐 Web UI"]
-  S --> T["⌨️ TUI"]
-  S --> M["🤖 MCP · AI クライアント"]
+  W["🌐 Web UI"] --> R
+  T["⌨️ TUI"] --> R
+  C["🤖 AI クライアント"] --> M
+  subgraph S["ebira サーバー"]
+    R["REST · あなたとして"]
+    M["MCP · AI として"]
+    N["ノート"]
+    A["💬 アシスタント"]
+    I[("🔎 SQLite の索引")]
+    R & M --> N
+    R -->|"質問"| A
+    N --> A
+    N <--> I
+  end
+  A <--> L["☁️ Claude / Gemini"]
+  N <--> F["📄 YAML のファイル"]
+  F <-.->|"git · Dropbox"| O["💻 ほかの端末"]
 ```
 
 ## Web UI と TUI

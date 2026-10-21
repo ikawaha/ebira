@@ -42,13 +42,23 @@ Plain files are the best home for notes: they outlive apps, and git gives you sy
 
 ```mermaid
 flowchart LR
-  ED["✏️ your editor · git pull"] --> Y["📄 YAML notes"]
-  Y -->|"watch · sync"| I[("🔎 SQLite index")]
-  S["ebira server"] --> Y
-  I --> S
-  S --> W["🌐 web UI"]
-  S --> T["⌨️ TUI"]
-  S --> M["🤖 MCP · AI clients"]
+  W["🌐 web UI"] --> R
+  T["⌨️ TUI"] --> R
+  C["🤖 AI clients"] --> M
+  subgraph S["ebira server"]
+    R["REST · as you"]
+    M["MCP · as AI"]
+    N["notes"]
+    A["💬 assistant"]
+    I[("🔎 SQLite index")]
+    R & M --> N
+    R -->|"ask"| A
+    N --> A
+    N <--> I
+  end
+  A <--> L["☁️ Claude / Gemini"]
+  N <--> F["📄 YAML files"]
+  F <-.->|"git · Dropbox"| O["💻 other machines"]
 ```
 
 ## Web UI and TUI
