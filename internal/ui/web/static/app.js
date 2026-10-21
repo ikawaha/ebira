@@ -66,6 +66,122 @@ function canReorder() {
 
 const $ = (id) => document.getElementById(id);
 
+// Column widths: the resizers between the columns set the widths, kept per
+// browser. Double-click or Enter puts a column back to its default width.
+const COLUMNS = { side: { prop: "--w-side", min: 170 }, list: { prop: "--w-list", min: 200 }, ask: { prop: "--w-ask", min: 260 } };
+const PREVIEW_MIN = 280; // the preview keeps this much while a column grows
+
+function columnPane(col) {
+  return { side: document.querySelector(".pane.notebooks"), list: document.querySelector(".pane.list"), ask: $("assistant") }[col];
+}
+
+function setColumnWidth(col, px) {
+  const pane = columnPane(col);
+  const room = $("preview").getBoundingClientRect().width - PREVIEW_MIN;
+  const max = pane.getBoundingClientRect().width + Math.max(0, room);
+  const w = Math.round(Math.max(COLUMNS[col].min, Math.min(max, px)));
+  document.querySelector(".panes").style.setProperty(COLUMNS[col].prop, `${w}px`);
+}
+
+function savedColumnWidths() {
+  try {
+    return JSON.parse(localStorage.getItem("ebira.columns") || "{}") || {};
+  } catch (_) {
+    return {}; // the defaults
+  }
+}
+
+function loadColumnWidths() {
+  const saved = savedColumnWidths();
+  for (const [col, { prop, min }] of Object.entries(COLUMNS)) {
+    document.querySelector(".panes").style.removeProperty(prop);
+    if (Number.isFinite(saved[col])) document.querySelector(".panes").style.setProperty(prop, `${Math.max(min, saved[col])}px`);
+  }
+}
+
+// saveColumnWidth keeps the width of col as it is now, or forgets it when it
+// has the default width. Only the column moved is kept: the others may have
+// been narrowed for the room.
+function saveColumnWidth(col) {
+  const saved = savedColumnWidths();
+  const v = document.querySelector(".panes").style.getPropertyValue(COLUMNS[col].prop);
+  if (v) saved[col] = parseFloat(v);
+  else delete saved[col];
+  try {
+    localStorage.setItem("ebira.columns", JSON.stringify(saved));
+  } catch (_) { /* kept for this page only */ }
+}
+
+// fitColumns puts back the saved widths, then narrows the columns, the list
+// first, while the preview has less than PREVIEW_MIN, such as when the
+// assistant opens or the window narrows. The narrowed widths are not saved, so
+// the chosen ones come back when there is room again.
+function fitColumns() {
+  loadColumnWidths();
+  if (getComputedStyle(document.querySelector(".resizer")).display === "none") return; // one column
+  // The columns may be wider than the window in all, leaving the preview no
+  // width at all: count from the width of the window.
+  const width = (col) => (columnPane(col).hidden ? 0 : columnPane(col).getBoundingClientRect().width);
+  let short = PREVIEW_MIN - (document.querySelector(".panes").clientWidth - width("side") - width("list") - width("ask"));
+  for (const col of ["list", "ask", "side"]) {
+    if (short <= 0) return;
+    if (columnPane(col).hidden) continue;
+    const w = width(col);
+    const cut = Math.min(short, w - COLUMNS[col].min);
+    if (cut <= 0) continue;
+    document.querySelector(".panes").style.setProperty(COLUMNS[col].prop, `${Math.round(w - cut)}px`);
+    short -= cut;
+  }
+}
+
+function resetColumnWidth(col) {
+  document.querySelector(".panes").style.removeProperty(COLUMNS[col].prop);
+  saveColumnWidth(col);
+}
+
+for (const r of document.querySelectorAll(".resizer")) {
+  const col = r.dataset.col;
+  // The assistant is right of its resizer: moving the resizer right narrows it.
+  const sign = col === "ask" ? -1 : 1;
+  r.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const x = e.clientX, w = columnPane(col).getBoundingClientRect().width;
+    r.setPointerCapture(e.pointerId);
+    r.classList.add("dragging");
+    document.body.classList.add("resizing");
+    const move = (e) => setColumnWidth(col, w + sign * (e.clientX - x));
+    const end = () => {
+      r.removeEventListener("pointermove", move);
+      r.removeEventListener("pointerup", end);
+      r.removeEventListener("pointercancel", end);
+      r.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      saveColumnWidth(col);
+    };
+    r.addEventListener("pointermove", move);
+    r.addEventListener("pointerup", end);
+    r.addEventListener("pointercancel", end);
+  });
+  r.addEventListener("dblclick", () => resetColumnWidth(col));
+  r.addEventListener("keydown", (e) => {
+    const step = e.shiftKey ? 64 : 16;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      e.stopPropagation(); // not the keys of the list
+      const w = columnPane(col).getBoundingClientRect().width;
+      setColumnWidth(col, w + sign * (e.key === "ArrowRight" ? step : -step));
+      saveColumnWidth(col);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      resetColumnWidth(col);
+    }
+  });
+}
+fitColumns();
+window.addEventListener("resize", fitColumns);
+
 // Messages: the text of the UI is in i18n/<lang>.json, keyed by name, so that
 // the code holds no text of a language. {name} in a message is replaced with
 // the value of name. English is the base: a message missing in the language
@@ -2380,6 +2496,7 @@ function toggleAssistant(open = $("assistant").hidden) {
   $("assistant").hidden = !open;
   document.querySelector(".panes").classList.toggle("with-assistant", open);
   $("ask-toggle").classList.toggle("active", open);
+  fitColumns();
   if (open) {
     renderAskEmpty();
     $("ask-q").focus();
@@ -2543,6 +2660,16 @@ $("ask-q").addEventListener("keydown", (e) => {
     e.preventDefault();
     $("ask-form").requestSubmit();
   }
+});
+
+// A name of a notebook or a tag cut off by the width of the column shows in
+// full on hover. The title is set on hover, as the width changes with the
+// window and the name.
+document.addEventListener("mouseover", (e) => {
+  const name = e.target.closest?.(".notebooks .name");
+  if (!name) return;
+  if (name.scrollWidth > name.clientWidth) name.title = name.textContent;
+  else name.removeAttribute("title");
 });
 
 // Links to notes (/#note/<ID>), in answers or in notes, open the note in the

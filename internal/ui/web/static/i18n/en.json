@@ -16,6 +16,7 @@
   "askPlaceholder": "A question about your notes (Enter to send, Shift+Enter for a new line)",
   "askToggleTitle": "Ask the assistant (a)",
   "askUnavailable": "The assistant is unavailable: {error}",
+  "resizeColumn": "Drag to resize the column; double-click to reset",
   "assistant": "Assistant",
   "bannerChanged": "This note was changed elsewhere. When you save, you can choose which to keep.",
   "bannerDeleted": "This note was deleted or moved elsewhere.",

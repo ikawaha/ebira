@@ -16,6 +16,7 @@
   "askPlaceholder": "ノートについての質問（Enter で送信、Shift+Enter で改行）",
   "askToggleTitle": "アシスタントに質問（a）",
   "askUnavailable": "アシスタントを使えません: {error}",
+  "resizeColumn": "ドラッグで列の幅を変える（ダブルクリックで元に戻す）",
   "assistant": "アシスタント",
   "bannerChanged": "このノートは外で変更されました。保存するときに、どちらを残すか選べます。",
   "bannerDeleted": "このノートは外で削除されたか、移動されました。",

@@ -129,13 +129,24 @@ mark.current { background: var(--mark-current); }
 
 /* Panes */
 
+/* The widths of the columns are variables, which the resizers between the
+   columns set on the element (app.js). The resizers take columns of no width. */
 .panes {
+  --w-side: 220px;
+  --w-list: 340px;
+  --w-ask: 380px;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 220px 340px 1fr;
+  grid-template-columns: var(--w-side) 0 var(--w-list) 0 1fr;
 }
-.panes.with-assistant { grid-template-columns: 220px 340px 1fr 380px; }
+.panes.with-assistant { grid-template-columns: var(--w-side) 0 var(--w-list) 0 1fr 0 var(--w-ask); }
+.panes:not(.with-assistant) .resizer[data-col="ask"] { display: none; }
+.resizer { position: relative; z-index: 5; width: 0; }
+.resizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: -3px; width: 6px; cursor: col-resize; }
+.resizer:hover::after, .resizer:focus-visible::after, .resizer.dragging::after { background: var(--accent); opacity: .5; }
+.resizer:focus-visible { outline: none; }
+body.resizing { cursor: col-resize; user-select: none; }
 .pane { min-width: 0; overflow-y: auto; }
 .notebooks ul, .list ul { list-style: none; margin: 0; padding: 0; }
 
@@ -356,7 +367,7 @@ mark.current { background: var(--mark-current); }
 .ask-actions .hint { flex: 1; color: var(--fg-muted); font-size: 11px; }
 
 @media (max-width: 1200px) {
-  .panes.with-assistant { grid-template-columns: 180px 280px 1fr 340px; }
+  .panes.with-assistant { --w-side: 180px; --w-list: 280px; --w-ask: 340px; }
 }
 
 dialog {
@@ -413,6 +424,7 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 
 @media (max-width: 760px) {
   .panes, .panes.with-assistant { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; overflow-y: auto; }
+  .resizer { display: none; }
   .assistant { border-left: none; border-top: 1px solid var(--border); min-height: 60vh; }
   .pane { overflow: visible; }
   .notebooks, .list { border-right: none; border-bottom: 1px solid var(--border); }
