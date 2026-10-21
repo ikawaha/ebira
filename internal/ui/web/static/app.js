@@ -1764,7 +1764,7 @@ async function loadNote() {
     ...tagList(n.tags, true));
   const mark = aiMark(n, t("createdByAI"));
   if (mark) meta.append(mark);
-  const actions = el("div", "actions");
+  const actions = el("div", "actions", button(t("copy"), copyNote, { title: t("copyTitle") }));
   if (n.notebook === "trash") {
     actions.append(
       button(t("restore"), restoreNote, { title: t("restoreTitle") }),
@@ -1793,6 +1793,25 @@ async function loadNote() {
     updateMarkCount();
   }
   pv.scrollTop = keepScroll;
+}
+
+// noteMarkdown returns note n as Markdown to copy: its title as a heading,
+// then its body. The paths of its images are left as they are.
+function noteMarkdown(n) {
+  return n.title ? `# ${n.title}\n\n${n.body || ""}` : n.body || "";
+}
+
+// copyNote copies the note in the preview to the clipboard as Markdown.
+async function copyNote() {
+  const n = state.note;
+  if (!n) return;
+  try {
+    await navigator.clipboard.writeText(noteMarkdown(n));
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(t("copiedMarkdown", { title: n.title || t("untitled") }));
 }
 
 function showPreview(...children) {
@@ -2629,6 +2648,17 @@ function offerUndo(message, fn) {
   undoTimer = setTimeout(hideToast, UNDO_MS);
 }
 
+// showToast shows message in the bar for a moment, without an undo.
+function showToast(message) {
+  undoAction = null;
+  const bar = $("toast");
+  bar.querySelector(".toast-msg").textContent = message;
+  bar.querySelector("button").hidden = true;
+  bar.hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideToast, 3000);
+}
+
 function hideToast() {
   $("toast").hidden = true;
   undoAction = null;
@@ -3101,6 +3131,7 @@ document.addEventListener("keydown", (e) => {
     case "e": if (state.note) { e.preventDefault(); startEdit(state.note); } break;
     case "c": e.preventDefault(); startEdit(null); break;
     case "u": restoreNote(); break;
+    case "y": if (state.note && !state.editing) { e.preventDefault(); copyNote(); } break;
     case "a": e.preventDefault(); toggleAssistant(true); break;
     case "T": e.preventDefault(); setSide(state.side === "tags" ? "notebooks" : "tags"); break;
     case "F2":

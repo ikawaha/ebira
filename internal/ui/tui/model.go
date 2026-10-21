@@ -1117,6 +1117,15 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.renderPreview(true)
 		return m, nil
 
+	case copiedMsg:
+		if msg.text != "" {
+			// No clipboard command here: ask the terminal (OSC 52).
+			m.setStatus(statusInfo, "status.copiedTerminal")
+			return m, tea.SetClipboard(msg.text)
+		}
+		m.setStatus(statusInfo, "status.copied")
+		return m, nil
+
 	case eventMsg:
 		return m, m.handleEvent(msg.ev)
 
@@ -1591,6 +1600,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "m":
 		if m.note != nil && m.note.Notebook == trashNotebook {
 			m.startMove(m.note)
+		}
+		return m, nil
+	case "y":
+		// The note in the preview, as Markdown with its title.
+		if m.note != nil && (m.focus == focusList || m.focus == focusPreview) {
+			return m, copyNote(m.note)
 		}
 		return m, nil
 	}

@@ -619,7 +619,7 @@ func (m Model) renderFooter() string {
 	case focusEdit:
 		hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.cancel"}, {"tab/shift+tab", "key.field"}, {"ctrl+z/y", "key.undo"}}
 	case focusPreview:
-		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"e", "key.edit"}, {"E", "key.editor"}}
+		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}}
 		if m.answerOn {
 			hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.closeAnswer"}, {"?", "key.askAgain"}}
 		}
@@ -649,7 +649,7 @@ func (m Model) renderFooter() string {
 			hints = [][2]string{{"j/k", "key.tag"}, {"enter", "key.notes"}, {"T", "key.notebooks"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		}
 	default:
-		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"s", "key.sort"}}
+		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"y", "key.copy"}, {"s", "key.sort"}}
 		if m.inTrashedNotebook() {
 			// The notes of a notebook in the trash are read only.
 			hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"d", "key.deletePermanently"}, {"h", "key.notebooks"}}
