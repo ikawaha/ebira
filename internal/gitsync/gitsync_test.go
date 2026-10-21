@@ -356,3 +356,59 @@ func TestConnectInRepository(t *testing.T) {
 		t.Errorf("no repository of the notes: %v", err)
 	}
 }
+
+// TestConnectFailure checks that a failed Connect leaves the notes as they
+// were: a wrong URL writes nothing, and a refused push undoes the repository
+// or the remote it made, so that it can be tried again with another URL.
+func TestConnectFailure(t *testing.T) {
+	gitEnv(t)
+	ctx := context.Background()
+	base := t.TempDir()
+	notes := filepath.Join(base, "notes")
+	write(t, filepath.Join(notes, "inbox", "a.yaml"), "title: A\n")
+	exists := func(p string) bool {
+		_, err := os.Stat(p)
+		return err == nil
+	}
+
+	// A wrong URL: no repository is made.
+	if _, err := Connect(ctx, notes, filepath.Join(base, "nothing.git"), noLock, isNote, copies(notes)); err == nil {
+		t.Fatal("Connect to a missing remote succeeded")
+	}
+	if exists(filepath.Join(notes, ".git")) {
+		t.Error("a repository was left after a wrong URL")
+	}
+
+	// A refused push: the repository made by this call goes.
+	refusing := filepath.Join(base, "refusing.git")
+	run(t, base, "init", "--quiet", "--bare", refusing)
+	write(t, filepath.Join(refusing, "hooks", "pre-receive"), "#!/bin/sh\nexit 1\n")
+	if err := os.Chmod(filepath.Join(refusing, "hooks", "pre-receive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Connect(ctx, notes, refusing, noLock, isNote, copies(notes)); err == nil {
+		t.Fatal("Connect with a refused push succeeded")
+	}
+	if exists(filepath.Join(notes, ".git")) {
+		t.Error("a repository was left after a refused push")
+	}
+
+	// A repository of the user's own: only the remote added goes.
+	run(t, notes, "init", "--quiet")
+	if _, err := Connect(ctx, notes, refusing, noLock, isNote, copies(notes)); err == nil {
+		t.Fatal("Connect with a refused push succeeded")
+	}
+	if !exists(filepath.Join(notes, ".git")) {
+		t.Error("the repository of the user was removed")
+	}
+	if out, _ := exec.Command("git", "-C", notes, "remote").Output(); strings.TrimSpace(string(out)) != "" {
+		t.Errorf("remotes left: %q", out)
+	}
+
+	// Then the right URL works.
+	remote := filepath.Join(base, "remote.git")
+	run(t, base, "init", "--quiet", "--bare", remote)
+	if res, err := Connect(ctx, notes, remote, noLock, isNote, copies(notes)); err != nil || !res.Pushed {
+		t.Errorf("Connect after the failures = %+v, %v", res, err)
+	}
+}

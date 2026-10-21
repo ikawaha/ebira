@@ -179,9 +179,33 @@ func Clone(ctx context.Context, url, dir string) error {
 // a branch already, such as of notes started on another machine, it is
 // merged first, as Sync does, even with an unrelated history. Notes in a
 // repository above dir are refused: set the remote of that one with git.
-func Connect(ctx context.Context, dir, url string, locked func(f func() error) error, isNote IsNote, resolve Resolver) (*Result, error) {
+func Connect(ctx context.Context, dir, url string, locked func(f func() error) error, isNote IsNote, resolve Resolver) (res *Result, err error) {
 	r, err := Open(ctx, dir)
-	if errors.Is(err, ErrNotRepo) { // none, or one above that ignores dir
+	create := errors.Is(err, ErrNotRepo) // none, or one above that ignores dir
+	if err != nil && !create {
+		return nil, err
+	}
+	addOrigin := create
+	if !create {
+		if r.rel != "." {
+			return nil, fmt.Errorf("the notes are in the repository %s; set its remote with git", r.root)
+		}
+		if err := r.checkIdle(ctx); err != nil {
+			return nil, err
+		}
+		if cur, err := r.git(ctx, "remote", "get-url", "origin"); err != nil {
+			addOrigin = true
+		} else if cur = strings.TrimSpace(cur); cur != url {
+			return nil, fmt.Errorf("the remote origin of %s is %s already; change it with git remote set-url", r.root, cur)
+		}
+	}
+	// The remote is checked before anything is written, so that a wrong URL
+	// leaves the notes as they were.
+	branch, err := RemoteBranch(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	if create {
 		abs, err := filepath.Abs(dir)
 		if err != nil {
 			return nil, err
@@ -189,31 +213,28 @@ func Connect(ctx context.Context, dir, url string, locked func(f func() error) e
 		if _, err := (&Repo{root: abs}).git(ctx, "init", "--quiet"); err != nil {
 			return nil, err
 		}
-		r, err = Open(ctx, dir)
-		if err != nil {
+		if r, err = Open(ctx, dir); err != nil {
 			return nil, err
 		}
-	} else if err != nil {
-		return nil, err
 	}
-	if r.rel != "." {
-		return nil, fmt.Errorf("the notes are in the repository %s; set its remote with git", r.root)
-	}
-	if err := r.checkIdle(ctx); err != nil {
-		return nil, err
-	}
-	if cur, err := r.git(ctx, "remote", "get-url", "origin"); err != nil {
+	if addOrigin {
 		if _, err := r.git(ctx, "remote", "add", "origin", url); err != nil {
 			return nil, err
 		}
-	} else if cur = strings.TrimSpace(cur); cur != url {
-		return nil, fmt.Errorf("the remote origin of %s is %s already; change it with git remote set-url", r.root, cur)
 	}
-	branch, err := RemoteBranch(ctx, url)
-	if err != nil {
-		return nil, err
-	}
-	res := &Result{Conflicts: []Conflict{}}
+	// Failing later, such as when the push is refused, undoes what this call
+	// made: the repository it created, or the remote it added. The notes
+	// themselves are left alone.
+	defer func() {
+		switch {
+		case err == nil:
+		case create:
+			os.RemoveAll(filepath.Join(r.root, ".git"))
+		case addOrigin:
+			r.git(context.WithoutCancel(ctx), "remote", "remove", "origin")
+		}
+	}()
+	res = &Result{Conflicts: []Conflict{}}
 	err = locked(func() error {
 		n, err := r.commit(ctx)
 		if err != nil {
