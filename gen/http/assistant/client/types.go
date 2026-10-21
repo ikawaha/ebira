@@ -19,11 +19,38 @@ type AskRequestBody struct {
 	Question string `form:"question" json:"question" xml:"question"`
 }
 
+// StatusResponseBody is the type of the "assistant" service "status" endpoint
+// HTTP response body.
+type StatusResponseBody struct {
+	// Whether the assistant can answer questions
+	Available *bool `form:"available,omitempty" json:"available,omitempty" xml:"available,omitempty"`
+	// Why the assistant cannot answer questions, when it cannot
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+}
+
 // AskResponseBody is the type of the "assistant" service "ask" endpoint HTTP
 // response body.
 type AskResponseBody struct {
 	// Answer in Markdown
 	Answer *string `form:"answer,omitempty" json:"answer,omitempty" xml:"answer,omitempty"`
+}
+
+// StatusUnavailableResponseBody is the type of the "assistant" service
+// "status" endpoint HTTP response body for the "unavailable" error.
+type StatusUnavailableResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // AskUnavailableResponseBody is the type of the "assistant" service "ask"
@@ -53,6 +80,32 @@ func NewAskRequestBody(p *assistant.AskPayload) *AskRequestBody {
 	return body
 }
 
+// NewStatusResultOK builds a "assistant" service "status" endpoint result from
+// a HTTP "OK" response.
+func NewStatusResultOK(body *StatusResponseBody) *assistant.StatusResult {
+	v := &assistant.StatusResult{
+		Available: *body.Available,
+		Reason:    body.Reason,
+	}
+
+	return v
+}
+
+// NewStatusUnavailable builds a assistant service status endpoint unavailable
+// error.
+func NewStatusUnavailable(body *StatusUnavailableResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewAskResultOK builds a "assistant" service "ask" endpoint result from a
 // HTTP "OK" response.
 func NewAskResultOK(body *AskResponseBody) *assistant.AskResult {
@@ -77,10 +130,42 @@ func NewAskUnavailable(body *AskUnavailableResponseBody) *goa.ServiceError {
 	return v
 }
 
+// ValidateStatusResponseBody runs the validations defined on StatusResponseBody
+func ValidateStatusResponseBody(body *StatusResponseBody) (err error) {
+	if body.Available == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("available", "body"))
+	}
+	return
+}
+
 // ValidateAskResponseBody runs the validations defined on AskResponseBody
 func ValidateAskResponseBody(body *AskResponseBody) (err error) {
 	if body.Answer == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("answer", "body"))
+	}
+	return
+}
+
+// ValidateStatusUnavailableResponseBody runs the validations defined on
+// StatusUnavailableResponseBody
+func ValidateStatusUnavailableResponseBody(body *StatusUnavailableResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }

@@ -15,14 +15,29 @@ import (
 
 // Client is the "assistant" service client.
 type Client struct {
-	AskEndpoint goa.Endpoint
+	StatusEndpoint goa.Endpoint
+	AskEndpoint    goa.Endpoint
 }
 
 // NewClient initializes a "assistant" service client given the endpoints.
-func NewClient(ask goa.Endpoint) *Client {
+func NewClient(status, ask goa.Endpoint) *Client {
 	return &Client{
-		AskEndpoint: ask,
+		StatusEndpoint: status,
+		AskEndpoint:    ask,
 	}
+}
+
+// Status calls the "status" endpoint of the "assistant" service.
+// Status may return the following errors:
+//   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set
+//   - error: internal error
+func (c *Client) Status(ctx context.Context) (res *StatusResult, err error) {
+	var ires any
+	ires, err = c.StatusEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(*StatusResult), nil
 }
 
 // Ask calls the "ask" endpoint of the "assistant" service.

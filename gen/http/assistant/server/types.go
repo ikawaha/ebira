@@ -21,11 +21,38 @@ type AskRequestBody struct {
 	Question *string `form:"question,omitempty" json:"question,omitempty" xml:"question,omitempty"`
 }
 
+// StatusResponseBody is the type of the "assistant" service "status" endpoint
+// HTTP response body.
+type StatusResponseBody struct {
+	// Whether the assistant can answer questions
+	Available bool `form:"available" json:"available" xml:"available"`
+	// Why the assistant cannot answer questions, when it cannot
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+}
+
 // AskResponseBody is the type of the "assistant" service "ask" endpoint HTTP
 // response body.
 type AskResponseBody struct {
 	// Answer in Markdown
 	Answer string `form:"answer" json:"answer" xml:"answer"`
+}
+
+// StatusUnavailableResponseBody is the type of the "assistant" service
+// "status" endpoint HTTP response body for the "unavailable" error.
+type StatusUnavailableResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
 // AskUnavailableResponseBody is the type of the "assistant" service "ask"
@@ -46,11 +73,35 @@ type AskUnavailableResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// NewStatusResponseBody builds the HTTP response body from the result of the
+// "status" endpoint of the "assistant" service.
+func NewStatusResponseBody(res *assistant.StatusResult) *StatusResponseBody {
+	body := &StatusResponseBody{
+		Available: res.Available,
+		Reason:    res.Reason,
+	}
+	return body
+}
+
 // NewAskResponseBody builds the HTTP response body from the result of the
 // "ask" endpoint of the "assistant" service.
 func NewAskResponseBody(res *assistant.AskResult) *AskResponseBody {
 	body := &AskResponseBody{
 		Answer: res.Answer,
+	}
+	return body
+}
+
+// NewStatusUnavailableResponseBody builds the HTTP response body from the
+// result of the "status" endpoint of the "assistant" service.
+func NewStatusUnavailableResponseBody(res *goa.ServiceError) *StatusUnavailableResponseBody {
+	body := &StatusUnavailableResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
 	}
 	return body
 }

@@ -15,6 +15,9 @@ import (
 
 // Answers questions about the notes with the assistant agent.
 type Service interface {
+	// Tell whether the assistant can answer questions, so that a UI can say so
+	// before a question is asked.
+	Status(context.Context) (res *StatusResult, err error)
 	// Ask a question about the notes. The agent searches and reads the notes, then
 	// answers citing the notes it used. Each question is answered on its own,
 	// without the earlier ones.
@@ -35,7 +38,7 @@ const ServiceName = "assistant"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [1]string{"ask"}
+var MethodNames = [2]string{"status", "ask"}
 
 // AskPayload is the payload type of the assistant service ask method.
 type AskPayload struct {
@@ -47,6 +50,14 @@ type AskPayload struct {
 type AskResult struct {
 	// Answer in Markdown
 	Answer string
+}
+
+// StatusResult is the result type of the assistant service status method.
+type StatusResult struct {
+	// Whether the assistant can answer questions
+	Available bool
+	// Why the assistant cannot answer questions, when it cannot
+	Reason *string
 }
 
 // MakeUnavailable builds a goa.ServiceError from an error.

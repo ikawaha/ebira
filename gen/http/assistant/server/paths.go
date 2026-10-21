@@ -7,6 +7,11 @@
 
 package server
 
+// StatusAssistantPath returns the URL path to the assistant service status HTTP endpoint.
+func StatusAssistantPath() string {
+	return "/ask"
+}
+
 // AskAssistantPath returns the URL path to the assistant service ask HTTP endpoint.
 func AskAssistantPath() string {
 	return "/ask"

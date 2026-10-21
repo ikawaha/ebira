@@ -34,6 +34,17 @@ var _ = Service("assistant", func() {
 		Response("unavailable", StatusServiceUnavailable)
 	})
 
+	Method("status", func() {
+		Description("Tell whether the assistant can answer questions, so that a UI can say so before a question is asked.")
+		Result(func() {
+			RequiredAttribute("available", Boolean, "Whether the assistant can answer questions")
+			Attribute("reason", String, "Why the assistant cannot answer questions, when it cannot")
+		})
+		HTTP(func() {
+			GET("/ask")
+		})
+	})
+
 	Method("ask", func() {
 		Description("Ask a question about the notes. The agent searches and reads the notes, then answers citing the notes it used. Each question is answered on its own, without the earlier ones.")
 		Payload(func() {

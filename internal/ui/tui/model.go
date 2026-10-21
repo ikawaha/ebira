@@ -177,6 +177,11 @@ type (
 		text string
 		err  error
 	}
+	// assistantStatusMsg tells whether the assistant can answer questions.
+	assistantStatusMsg struct {
+		res *genassistant.StatusResult
+		err error
+	}
 	noteMsg struct {
 		note *gennotes.Note
 		q    string
@@ -429,6 +434,19 @@ type answer struct {
 	text     string
 	err      error
 	pending  bool
+}
+
+// checkAssistant asks the server whether the assistant can answer questions,
+// so that the question prompt is closed at once when it cannot.
+func (m *Model) checkAssistant() tea.Cmd {
+	if m.ask == nil {
+		return nil
+	}
+	ctx, api := m.ctx, m.ask
+	return func() tea.Msg {
+		res, err := api.Status(ctx)
+		return assistantStatusMsg{res: res, err: err}
+	}
 }
 
 // askTimeout bounds one question; the agent may search and read several notes.
@@ -857,6 +875,21 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.applyList(msg)
+
+	case assistantStatusMsg:
+		// When the status is unknown, such as with an older server, the
+		// question itself tells.
+		if msg.err != nil || msg.res.Available || m.prompt != promptAsk {
+			return m, nil
+		}
+		m.prompt = promptNone
+		m.promptIn.Blur()
+		var reason string
+		if msg.res.Reason != nil {
+			reason = *msg.res.Reason
+		}
+		m.setStatus(statusError, "status.assistantUnavailable", "err", reason)
+		return m, nil
 
 	case answerMsg:
 		if msg.seq != m.askSeq || m.answer == nil {
@@ -1430,7 +1463,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.prompt = promptAsk
 		m.promptIn.CharLimit = 2000 // as the API allows
 		m.promptIn.SetValue("")
-		return m, m.promptIn.Focus()
+		return m, tea.Batch(m.promptIn.Focus(), m.checkAssistant())
 	case "/":
 		m.focus = focusSearch
 		return m, m.input.Focus()

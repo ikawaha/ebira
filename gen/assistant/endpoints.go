@@ -15,19 +15,30 @@ import (
 
 // Endpoints wraps the "assistant" service endpoints.
 type Endpoints struct {
-	Ask goa.Endpoint
+	Status goa.Endpoint
+	Ask    goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "assistant" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		Ask: NewAskEndpoint(s),
+		Status: NewStatusEndpoint(s),
+		Ask:    NewAskEndpoint(s),
 	}
 }
 
 // Use applies the given middleware to all the "assistant" service endpoints.
 func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.Status = m(e.Status)
 	e.Ask = m(e.Ask)
+}
+
+// NewStatusEndpoint returns an endpoint function that calls the method
+// "status" of service "assistant".
+func NewStatusEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.Status(ctx)
+	}
 }
 
 // NewAskEndpoint returns an endpoint function that calls the method "ask" of

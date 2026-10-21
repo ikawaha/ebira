@@ -5,6 +5,7 @@
   "status.reorderHint": "J/K で動かせるのは、手動の順で並べたノートブックのノートだけです（検索中は不可。s で並べ方を変えます）",
   "status.loadFailed": "読み込めませんでした: {err}",
   "status.assistantFailed": "アシスタントが失敗しました: {err}",
+  "status.assistantUnavailable": "アシスタントを使えません: {err}",
   "status.answered": "答えが届きました",
   "status.notDeletedChanged": "削除しませんでした: ノートが外で変更されています。確かめてからやり直してください",
   "status.deleteFailed": "削除できませんでした: {err}",

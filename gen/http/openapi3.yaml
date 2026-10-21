@@ -7,6 +7,35 @@ servers:
     - url: http://localhost:13579
 paths:
     /ask:
+        get:
+            tags:
+                - assistant
+            summary: status assistant
+            description: Tell whether the assistant can answer questions, so that a UI can say so before a question is asked.
+            operationId: assistant#status
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/StatusResponseBody'
+                            example:
+                                available: false
+                                reason: Sit eligendi quod dolores.
+                "503":
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unavailable
+                                temporary: false
+                                timeout: false
         post:
             tags:
                 - assistant
@@ -66,7 +95,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/StatusResponseBody'
+                                $ref: '#/components/schemas/StatusResponseBody2'
                             example:
                                 mode: passkey
                                 registered: false
@@ -3511,7 +3540,7 @@ components:
                 fault:
                     type: boolean
                     description: Is the error a server-side fault?
-                    example: false
+                    example: true
                 id:
                     type: string
                     description: ID is a unique identifier for this particular occurrence of the problem.
@@ -3527,18 +3556,18 @@ components:
                 temporary:
                     type: boolean
                     description: Is the error temporary?
-                    example: true
+                    example: false
                 timeout:
                     type: boolean
                     description: Is the error a timeout?
                     example: false
             description: Error response result type
             example:
-                fault: false
+                fault: true
                 id: 123abc
                 message: parameter 'p' must be an integer
                 name: bad_request
-                temporary: true
+                temporary: false
                 timeout: false
             required:
                 - name
@@ -4868,6 +4897,22 @@ components:
                 - total
                 - notes
         StatusResponseBody:
+            type: object
+            properties:
+                available:
+                    type: boolean
+                    description: Whether the assistant can answer questions
+                    example: false
+                reason:
+                    type: string
+                    description: Why the assistant cannot answer questions, when it cannot
+                    example: Sit eligendi quod dolores.
+            example:
+                available: false
+                reason: Sit eligendi quod dolores.
+            required:
+                - available
+        StatusResponseBody2:
             type: object
             properties:
                 mode:

@@ -5,6 +5,7 @@
   "status.reorderHint": "J/K moves notes of a notebook sorted by order, without a search (s changes the sort)",
   "status.loadFailed": "load failed: {err}",
   "status.assistantFailed": "the assistant failed: {err}",
+  "status.assistantUnavailable": "the assistant is unavailable: {err}",
   "status.answered": "answered",
   "status.notDeletedChanged": "not deleted: the note was changed outside; review it and try again",
   "status.deleteFailed": "delete failed: {err}",

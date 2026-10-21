@@ -19,6 +19,7 @@ import (
 // Server lists the assistant service endpoint HTTP handlers.
 type Server struct {
 	Mounts []*MountPoint
+	Status http.Handler
 	Ask    http.Handler
 }
 
@@ -49,9 +50,11 @@ func New(
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
+			{"Status", "GET", "/ask"},
 			{"Ask", "POST", "/ask"},
 		},
-		Ask: NewAskHandler(e.Ask, mux, decoder, encoder, errhandler, formatter),
+		Status: NewStatusHandler(e.Status, mux, decoder, encoder, errhandler, formatter),
+		Ask:    NewAskHandler(e.Ask, mux, decoder, encoder, errhandler, formatter),
 	}
 }
 
@@ -60,6 +63,7 @@ func (s *Server) Service() string { return "assistant" }
 
 // Use wraps the server handlers with the given middleware.
 func (s *Server) Use(m func(http.Handler) http.Handler) {
+	s.Status = m(s.Status)
 	s.Ask = m(s.Ask)
 }
 
@@ -68,12 +72,59 @@ func (s *Server) MethodNames() []string { return assistant.MethodNames[:] }
 
 // Mount configures the mux to serve the assistant endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
+	MountStatusHandler(mux, h.Status)
 	MountAskHandler(mux, h.Ask)
 }
 
 // Mount configures the mux to serve the assistant endpoints.
 func (s *Server) Mount(mux goahttp.Muxer) {
 	Mount(mux, s)
+}
+
+// MountStatusHandler configures the mux to serve the "assistant" service
+// "status" endpoint.
+func MountStatusHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/ask", f)
+}
+
+// NewStatusHandler creates a HTTP handler which loads the HTTP request and
+// calls the "assistant" service "status" endpoint.
+func NewStatusHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		encodeResponse = EncodeStatusResponse(encoder)
+		encodeError    = EncodeStatusError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "status")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "assistant")
+		var err error
+		res, err := endpoint(ctx, nil)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
 }
 
 // MountAskHandler configures the mux to serve the "assistant" service "ask"

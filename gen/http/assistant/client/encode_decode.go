@@ -19,6 +19,87 @@ import (
 	goahttp "goa.design/goa/v3/http"
 )
 
+// BuildStatusRequest instantiates a HTTP request object with method and path
+// set to call the "assistant" service "status" endpoint
+func (c *Client) BuildStatusRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: StatusAssistantPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("assistant", "status", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// DecodeStatusResponse returns a decoder for responses returned by the
+// assistant status endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeStatusResponse may return the following errors:
+//   - "unavailable" (type *goa.ServiceError): http.StatusServiceUnavailable
+//   - error: internal error
+func DecodeStatusResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("assistant", "status", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("assistant", "status", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body StatusResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("assistant", "status", err)
+			}
+			err = ValidateStatusResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("assistant", "status", err)
+			}
+			res := NewStatusResultOK(&body)
+			return res, nil
+		case http.StatusServiceUnavailable:
+			var (
+				body StatusUnavailableResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("assistant", "status", err)
+			}
+			err = ValidateStatusUnavailableResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("assistant", "status", err)
+			}
+			return nil, NewStatusUnavailable(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("assistant", "status", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("assistant", "status", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildAskRequest instantiates a HTTP request object with method and path set
 // to call the "assistant" service "ask" endpoint
 func (c *Client) BuildAskRequest(ctx context.Context, v any) (*http.Request, error) {

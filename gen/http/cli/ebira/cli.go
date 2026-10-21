@@ -26,7 +26,7 @@ import (
 func UsageCommands() []string {
 	return []string{
 		"notes (list|get|create|update|delete|search|restore|move|notebooks|tags|create-notebook|save-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
-		"assistant ask",
+		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
 }
@@ -34,7 +34,7 @@ func UsageCommands() []string {
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
 	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"inbox\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
-		os.Args[0] + " " + "assistant ask --body '{\n      \"question\": \"8kf\"\n   }'" + "\n" +
+		os.Args[0] + " " + "assistant status" + "\n" +
 		os.Args[0] + " " + "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"" + "\n" +
 		""
 }
@@ -197,6 +197,8 @@ func ParseEndpoint(
 
 		assistantFlags = flag.NewFlagSet("assistant", flag.ContinueOnError)
 
+		assistantStatusFlags = flag.NewFlagSet("status", flag.ExitOnError)
+
 		assistantAskFlags    = flag.NewFlagSet("ask", flag.ExitOnError)
 		assistantAskBodyFlag = new(cliStringFlag)
 
@@ -349,6 +351,7 @@ func ParseEndpoint(
 	notesSyncFlags.Usage = notesSyncUsage
 
 	assistantFlags.Usage = assistantUsage
+	assistantStatusFlags.Usage = assistantStatusUsage
 	assistantAskFlags.Usage = assistantAskUsage
 
 	authFlags.Usage = authUsage
@@ -491,6 +494,9 @@ func ParseEndpoint(
 
 		case "assistant":
 			switch epn {
+			case "status":
+				epf = assistantStatusFlags
+
 			case "ask":
 				epf = assistantAskFlags
 
@@ -654,6 +660,8 @@ func ParseEndpoint(
 		case "assistant":
 			c := assistantc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
+			case "status":
+				endpoint = c.Status()
 			case "ask":
 				endpoint = c.Ask()
 				data, err = assistantc.BuildAskPayload(assistantAskBodyFlag.value)
@@ -1333,11 +1341,28 @@ func assistantUsage() {
 	fmt.Fprintln(os.Stderr, `Answers questions about the notes with the assistant agent.`)
 	fmt.Fprintf(os.Stderr, "Usage:\n    %s [globalflags] assistant COMMAND [flags]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "COMMAND:")
+	fmt.Fprintln(os.Stderr, `    status: Tell whether the assistant can answer questions, so that a UI can say so before a question is asked.`)
 	fmt.Fprintln(os.Stderr, `    ask: Ask a question about the notes. The agent searches and reads the notes, then answers citing the notes it used. Each question is answered on its own, without the earlier ones.`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
 	fmt.Fprintf(os.Stderr, "    %s assistant COMMAND --help\n", os.Args[0])
 }
+func assistantStatusUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] assistant status", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Tell whether the assistant can answer questions, so that a UI can say so before a question is asked.`)
+
+	// Flags list
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "assistant status")
+}
+
 func assistantAskUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] assistant ask", os.Args[0])

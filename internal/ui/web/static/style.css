@@ -334,6 +334,7 @@ mark.current { background: var(--mark-current); }
 .assistant-head span { flex: 1; }
 .ask-log { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .ask-log .empty { color: var(--fg-muted); font-size: 12px; margin: 0; }
+.ask-log .ask-unavailable { font-size: 12px; margin: 0; }
 .ask-question { align-self: flex-end; max-width: 90%; background: var(--bg-active); border-radius: 8px; padding: 6px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ask-answer { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; }
 .ask-answer > p { margin: 8px 0; }
@@ -350,6 +351,7 @@ mark.current { background: var(--mark-current); }
   padding: 6px 8px;
 }
 .ask-form textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.ask-form textarea:disabled { opacity: 0.5; cursor: not-allowed; }
 .ask-actions { display: flex; align-items: center; gap: 8px; }
 .ask-actions .hint { flex: 1; color: var(--fg-muted); font-size: 11px; }
 

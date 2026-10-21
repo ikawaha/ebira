@@ -2383,6 +2383,7 @@ function toggleAssistant(open = $("assistant").hidden) {
   if (open) {
     renderAskEmpty();
     $("ask-q").focus();
+    checkAssistant();
   } else if ($("assistant").contains(document.activeElement)) {
     document.activeElement.blur();
   }
@@ -2393,6 +2394,30 @@ function renderAskEmpty() {
   if (!log.children.length) {
     log.append(el("p", "empty", t("askEmpty")));
   }
+}
+
+// checkAssistant asks the server, each time the assistant opens, whether it
+// can answer questions; when it cannot, the reason replaces the guide and the
+// question box is disabled. The server may have been restarted with an API key
+// meanwhile, so the answer is not kept.
+async function checkAssistant() {
+  let s;
+  try {
+    s = await api("/ask");
+  } catch (_) {
+    return; // unknown, such as with an older server: the question itself tells
+  }
+  const log = $("ask-log");
+  log.querySelector(".ask-unavailable")?.remove();
+  $("ask-q").disabled = !s.available;
+  $("ask-send").disabled = !s.available || !!askController;
+  if (s.available) {
+    renderAskEmpty();
+    if (!$("assistant").hidden && !$("assistant").contains(document.activeElement)) $("ask-q").focus();
+    return;
+  }
+  log.querySelector(".empty")?.remove();
+  log.append(el("p", "error ask-unavailable", t("askUnavailable", { error: s.reason || "" })));
 }
 
 async function ask(question) {
@@ -2424,7 +2449,7 @@ async function ask(question) {
   } finally {
     clearInterval(timer);
     askController = null;
-    $("ask-send").disabled = false;
+    $("ask-send").disabled = $("ask-q").disabled;
   }
 }
 
@@ -2503,11 +2528,12 @@ $("ask-clear").addEventListener("click", () => {
   askController?.abort();
   $("ask-log").replaceChildren();
   renderAskEmpty();
+  checkAssistant();
 });
 $("ask-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const q = $("ask-q").value.trim();
-  if (!q || askController) return;
+  if (!q || askController || $("ask-q").disabled) return;
   $("ask-q").value = "";
   ask(q);
 });

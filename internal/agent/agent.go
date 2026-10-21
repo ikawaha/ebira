@@ -61,6 +61,11 @@ func (a *Assistant) Ask(ctx context.Context, p *genassistant.AskPayload) (*genas
 	return &genassistant.AskResult{Answer: sb.String()}, nil
 }
 
+// Status reports that the assistant can answer questions.
+func (a *Assistant) Status(context.Context) (*genassistant.StatusResult, error) {
+	return &genassistant.StatusResult{Available: true}, nil
+}
+
 // Unavailable is the assistant service when the assistant cannot run; every
 // question fails with unavailable and Reason.
 type Unavailable struct {
@@ -69,4 +74,9 @@ type Unavailable struct {
 
 func (u Unavailable) Ask(context.Context, *genassistant.AskPayload) (*genassistant.AskResult, error) {
 	return nil, genassistant.MakeUnavailable(errors.New(u.Reason))
+}
+
+// Status reports that the assistant cannot answer questions, and why.
+func (u Unavailable) Status(context.Context) (*genassistant.StatusResult, error) {
+	return &genassistant.StatusResult{Available: false, Reason: &u.Reason}, nil
 }

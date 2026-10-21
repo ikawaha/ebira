@@ -17,6 +17,9 @@ import (
 
 // Client lists the assistant service endpoint HTTP clients.
 type Client struct {
+	// Status Doer is the HTTP client used to make requests to the status endpoint.
+	StatusDoer goahttp.Doer
+
 	// Ask Doer is the HTTP client used to make requests to the ask endpoint.
 	AskDoer goahttp.Doer
 
@@ -40,12 +43,32 @@ func NewClient(
 	restoreBody bool,
 ) *Client {
 	return &Client{
+		StatusDoer:          doer,
 		AskDoer:             doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,
 		decoder:             dec,
 		encoder:             enc,
+	}
+}
+
+// Status returns an endpoint that makes HTTP requests to the assistant service
+// status server.
+func (c *Client) Status() goa.Endpoint {
+	var (
+		decodeResponse = DecodeStatusResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildStatusRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.StatusDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("assistant", "status", err)
+		}
+		return decodeResponse(resp)
 	}
 }
 

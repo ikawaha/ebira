@@ -77,3 +77,38 @@ func TestAskError(t *testing.T) {
 		t.Errorf("view with an error:\n%s", view)
 	}
 }
+
+func TestAskUnavailable(t *testing.T) {
+	m := New(context.Background(), &Clients{}, false, "ja")
+	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	m = tm.(Model)
+
+	// The assistant is available: the prompt stays open.
+	m, _ = press(t, m, text("?"))
+	tm, _ = m.Update(assistantStatusMsg{res: &genassistant.StatusResult{Available: true}})
+	m = tm.(Model)
+	if m.prompt != promptAsk {
+		t.Fatal("the prompt was closed although the assistant is available")
+	}
+	m, _ = press(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
+
+	// It is not: the prompt is closed and the reason is shown.
+	m, _ = press(t, m, text("?"))
+	reason := "the assistant is not configured"
+	tm, _ = m.Update(assistantStatusMsg{res: &genassistant.StatusResult{Available: false, Reason: &reason}})
+	m = tm.(Model)
+	if m.prompt != promptNone {
+		t.Error("the prompt is still open")
+	}
+	if view := ansi.Strip(m.render()); !strings.Contains(view, "アシスタントを使えません: the assistant is not configured") {
+		t.Errorf("view:\n%s", view)
+	}
+
+	// A status that arrives after the prompt was closed does nothing.
+	m.setStatusText(statusInfo, "")
+	tm, _ = m.Update(assistantStatusMsg{res: &genassistant.StatusResult{Available: false, Reason: &reason}})
+	m = tm.(Model)
+	if strings.Contains(ansi.Strip(m.render()), "アシスタントを使えません") {
+		t.Error("a late status was shown")
+	}
+}
