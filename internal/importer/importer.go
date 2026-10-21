@@ -133,6 +133,11 @@ func Parse(in Input) (*Note, error) {
 	if h, rest, ok := firstHeading(body); ok && (n.Title == "" || h == n.Title) {
 		n.Title, body = h, rest
 	}
+	// Else a level 1 heading further down is the title, as when the file
+	// begins with a line copied from a page; the body keeps it.
+	if n.Title == "" {
+		n.Title = laterHeading(body)
+	}
 	if n.Title == "" {
 		base := path.Base(strings.ReplaceAll(in.Name, `\`, "/"))
 		n.Title = strings.TrimSpace(norm.NFC.String(strings.TrimSuffix(base, path.Ext(base))))
@@ -195,6 +200,34 @@ func firstHeading(body string) (string, string, bool) {
 		return "", body, false
 	}
 	return strings.TrimSpace(m[1]), rest, true
+}
+
+// fence matches the line that opens or closes a fenced code block.
+var fence = regexp.MustCompile("^ {0,3}(```|~~~)")
+
+// laterHeading returns the text of the first level 1 heading in body, outside
+// fenced code blocks, where a line such as a shell comment is no heading; or
+// "".
+func laterHeading(body string) string {
+	var open string // the fence of the code block we are in
+	for line := range strings.SplitSeq(body, "\n") {
+		if m := fence.FindStringSubmatch(line); m != nil {
+			switch {
+			case open == "":
+				open = m[1]
+			case m[1] == open:
+				open = ""
+			}
+			continue
+		}
+		if open != "" {
+			continue
+		}
+		if m := heading.FindStringSubmatch(line); m != nil && strings.TrimSpace(m[1]) != "" {
+			return strings.TrimSpace(m[1])
+		}
+	}
+	return ""
 }
 
 // parseTags reads tags given as a list or as a comma-separated string. A
