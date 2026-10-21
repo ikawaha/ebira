@@ -4,6 +4,11 @@
 
 <h1 align="center">ebira</h1>
 
+<blockquote lang="ja">
+  <p title="Yoichi took a humming-bulb arrow, set it to the string, drew it to the full and let it fly with a twang. Though he was a small man, the arrow was twelve hand-breadths and three fingers long and the bow was strong; the humming bulb sang out so long that it echoed across the bay, and without fail it struck the fan an inch or so from the rivet and cut it clean through. The arrow went into the sea, and the fan rose up into the sky. Tossed once, twice by the spring wind, it scattered down onto the sea.">与一鏑を取つてつがひ、よつぴいてひやうど放つ。小兵といふぢやう、十二束三伏、弓は強し、鏑は浦響くほどに長鳴りして、あやまたず扇の要際一寸ばかりを射て、ひふつとぞ射切つたる。鏑は海へ入りければ、扇は空へぞ上がりける。春風に一もみ二もみもまれて、海へさつとぞ散つたりける。</p>
+  <p title="The fan, all crimson with a rising sun on it, drifted on the white waves in the glow of the setting sun, sinking and rising as it rocked. Out at sea the Heike beat on the sides of their boats in admiration; on the shore the Genji beat on their quivers, their ebira, and roared.">皆紅の扇の日出だしたるが、夕日の輝いたるに、白波の上にただよひ、浮きぬ沈みぬ揺られければ、沖には平家、舷を叩いて感じたり、陸には源氏、箙を叩いてどよめきけり。</p>
+</blockquote>
+
 <p align="center">
   <strong>Your notes as plain YAML files, synced with git if you like.<br>Searchable in Japanese and English, and shared with your AI on your terms.</strong>
 </p>
