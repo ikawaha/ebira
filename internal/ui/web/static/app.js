@@ -585,6 +585,8 @@ const KIND_SVG = {
   // Not kinds either: a sub notebook in the note list, and the way back up.
   folder: ["M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"],
   up: ["M12 19V6", "M6.5 11.5L12 6l5.5 5.5"],
+  // And the button that copies the title of a note: two sheets.
+  copy: ["rect:9,9,11,11,2", "M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"],
 };
 
 // kindSVG returns the drawing of a notebook kind, or null for the default kind.
@@ -1779,8 +1781,14 @@ async function loadNote() {
   }
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
+  const title = el("h2", "", highlighted(n.title || t("untitled"), n.title_highlights));
+  if (n.title) {
+    const copy = button(kindSVG("copy"), copyTitle, { title: t("copyNoteTitle"), cls: "title-copy" });
+    copy.setAttribute("aria-label", t("copyNoteTitle"));
+    title.append(copy);
+  }
   showPreview(el("header", "note-head",
-    el("div", "head-row", el("h2", "", highlighted(n.title || t("untitled"), n.title_highlights)), actions),
+    el("div", "head-row", title, actions),
     meta), body);
   pv.dataset.id = id;
   marks = [...pv.querySelectorAll("mark")];
@@ -1813,6 +1821,19 @@ async function copyNote() {
     return;
   }
   showToast(t("copiedMarkdown", { title: n.title || t("untitled") }));
+}
+
+// copyTitle copies the title of the note in the preview to the clipboard.
+async function copyTitle() {
+  const n = state.note;
+  if (!n?.title) return;
+  try {
+    await navigator.clipboard.writeText(n.title);
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(t("copiedTitle", { title: n.title }));
 }
 
 function showPreview(...children) {

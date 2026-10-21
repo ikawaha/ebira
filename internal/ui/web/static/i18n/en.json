@@ -196,6 +196,8 @@
   "copyTitle": "Copy as Markdown, with the title, to the clipboard (y)",
   "copiedMarkdown": "Copied {title} as Markdown.",
   "copyFailed": "Could not copy: {error}",
+  "copyNoteTitle": "Copy the title",
+  "copiedTitle": "Copied the title {title}.",
   "selectionCount": "{n} notes selected",
   "selectionHint": "Cmd/Ctrl-click to add or remove a note, Shift-click for a range, Cmd/Ctrl+A for all; drag them onto a notebook to move them.",
   "selectionClear": "Clear the selection",

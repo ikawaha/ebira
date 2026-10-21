@@ -196,6 +196,8 @@
   "copyTitle": "題名を付けた Markdown でクリップボードにコピー（y）",
   "copiedMarkdown": "「{title}」を Markdown でコピーしました。",
   "copyFailed": "コピーできませんでした: {error}",
+  "copyNoteTitle": "題名をコピー",
+  "copiedTitle": "題名「{title}」をコピーしました。",
   "selectionCount": "{n} 件のノートを選択中",
   "selectionHint": "⌘ / Ctrl を押しながらクリックで足す・外す、Shift を押しながらクリックで範囲、⌘ / Ctrl+A で全部。ノートブックへドラッグすると移せます。",
   "selectionClear": "選択を解く",
