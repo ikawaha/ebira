@@ -164,6 +164,7 @@ ebira runs on macOS and Linux.
 | `ebira sync [-remote URL]` | Sync the notes with their git repository: commit, merge the upstream branch and push; `-remote` connects them to a repository first |
 | `ebira auth passkey [-no-open]` | Register a passkey for the web UI, on a one-time URL (experimental; see [What it guards](#what-it-guards-and-what-it-does-not)) |
 | `ebira auth reset [-yes]` | Remove every passkey and end every session, such as when the passkeys are lost |
+| `ebira version` | Show the version of `ebira`: the commit it was built from, and the build, which `ebira server status` shows for the server |
 
 Flags of `serve` (also taken by `server start` and `server restart`):
 

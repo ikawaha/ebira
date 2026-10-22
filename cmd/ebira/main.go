@@ -12,6 +12,7 @@
 //	ebira import [flags] path...  import Markdown files as notes
 //	ebira auth passkey [flags]    register a passkey for the web UI
 //	ebira auth reset [flags]      remove the passkeys and end every session
+//	ebira version                 show the version of this ebira
 //
 // One server runs per notes directory; the server started in the background
 // keeps running after the TUI exits or the browser closes.
@@ -62,6 +63,8 @@ const usage = `usage:
                                 upstream branch and push
   ebira auth passkey [flags]    register a passkey for the web UI, through a one-time URL
   ebira auth reset [flags]      remove the passkeys and end every session, such as when they are lost
+  ebira version                 show the version of this ebira: the commit it was built from and
+                                the build, which ebira server status shows for the server
 
 Run a command with -h for its flags.
 
@@ -88,6 +91,10 @@ func run(args []string) error {
 	if len(args) > 0 && args[0] == "help" {
 		fmt.Print(usage)
 		return nil
+	}
+	// The version is told even when the settings file has an error.
+	if len(args) > 0 && (args[0] == "version" || args[0] == "-version" || args[0] == "--version") {
+		return runVersion(os.Stdout)
 	}
 	var err error
 	if settings, err = config.Load(); err != nil {

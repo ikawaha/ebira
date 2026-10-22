@@ -164,6 +164,7 @@ macOS と Linux で動きます。
 | `ebira sync [-remote URL]` | ノートを git のリポジトリと同期する（コミット、上流のブランチのマージ、push）。`-remote` で先にリポジトリにつなぐ |
 | `ebira auth passkey [-no-open]` | Web UI のパスキーを、使い捨ての URL で登録する（試作。[守れること](#守れること守れないこと)） |
 | `ebira auth reset [-yes]` | パスキーをすべて消し、すべてのセッションを終える（パスキーを無くしたときなど） |
+| `ebira version` | `ebira` の版を出す（作ったコミットと、`ebira server status` がサーバーについて出すビルド） |
 
 `serve` のフラグ（`server start` と `server restart` でも使えます）:
 
