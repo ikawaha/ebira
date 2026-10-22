@@ -19,6 +19,67 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
+// AddAiFilePayloadTransport stores JSON fields until they have been validated.
+type AddAiFilePayloadTransport struct {
+	// Note ID
+	ID *string `json:"id"`
+	// File name
+	Name *string `json:"name"`
+	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	Content []byte `json:"content"`
+}
+
+// ValidateAddAiFilePayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateAddAiFilePayloadTransport(value *AddAiFilePayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Name != nil {
+		if utf8.RuneCountInString(*value.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
+		}
+	}
+	return err
+}
+
+// AddAiFileResultTransport stores JSON fields until they have been validated.
+type AddAiFileResultTransport struct {
+	// File name
+	Name *string `json:"name"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path *string `json:"path"`
+}
+
+// ValidateAddAiFileResultTransport checks decoded JSON before it becomes a service value.
+func ValidateAddAiFileResultTransport(value *AddAiFileResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	return err
+}
+
 // CreateAiNotePayloadTransport stores JSON fields until they have been validated.
 type CreateAiNotePayloadTransport struct {
 	// Note ID; random if omitted. Must be omitted for a drop notebook
@@ -482,6 +543,42 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 	return err
 }
 
+// ImportAiNotePayloadAIImportFileTransport stores JSON fields until they have been validated.
+type ImportAiNotePayloadAIImportFileTransport struct {
+	// Path of the image as the Markdown file refers to it, such as
+	// ![](images/chart.png), one of the paths the file refers to
+	Ref *string `json:"ref"`
+	// File name
+	Name *string `json:"name"`
+	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	Content []byte `json:"content"`
+}
+
+// ValidateImportAiNotePayloadAIImportFileTransport checks decoded JSON before it becomes a service value.
+func ValidateImportAiNotePayloadAIImportFileTransport(value *ImportAiNotePayloadAIImportFileTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Ref == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ref", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if value.Name != nil {
+		if utf8.RuneCountInString(*value.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
+		}
+	}
+	return err
+}
+
 // ImportAiNotePayloadTransport stores JSON fields until they have been validated.
 type ImportAiNotePayloadTransport struct {
 	// ID of a notebook of the collab or drop kind
@@ -493,6 +590,8 @@ type ImportAiNotePayloadTransport struct {
 	// keys are kept in the note file. Without a title, the first heading of level
 	// 1 is the title, else the file name
 	Content *string `json:"content"`
+	// Images the file refers to, at most 10 and 20 MB in all
+	Files []*ImportAiNotePayloadAIImportFileTransport `json:"files,omitempty"`
 }
 
 // ValidateImportAiNotePayloadTransport checks decoded JSON before it becomes a service value.
@@ -523,6 +622,16 @@ func ValidateImportAiNotePayloadTransport(value *ImportAiNotePayloadTransport) (
 	if value.Content != nil {
 		if utf8.RuneCountInString(*value.Content) > 5242880 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *value.Content, utf8.RuneCountInString(*value.Content), 5242880, false))
+		}
+	}
+	if len(value.Files) > 10 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.files", value.Files, len(value.Files), 10, false))
+	}
+	for _, e := range value.Files {
+		if e != nil {
+			if err2 := ValidateImportAiNotePayloadAIImportFileTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 	return err
@@ -1751,6 +1860,52 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 	return err
 }
 
+// DecodeAddAiFilePayload checks JSON field names from the Goa design and returns a service value.
+func DecodeAddAiFilePayload(data []byte) (out *notes.AddAiFilePayload, err error) {
+	var body *AddAiFilePayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode AddAiFilePayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode AddAiFilePayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode AddAiFilePayload JSON after first value: %w", err)
+	}
+	if err := ValidateAddAiFilePayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate AddAiFilePayload JSON: %w", err)
+	}
+	{
+		out = &notes.AddAiFilePayload{
+			ID:      *body.ID,
+			Name:    *body.Name,
+			Content: body.Content,
+		}
+	}
+	return out, nil
+}
+
+// EncodeAddAiFileResult turns a service value into JSON using the field names in the Goa design.
+func EncodeAddAiFileResult(in *notes.NoteFile) ([]byte, error) {
+	var body *AddAiFileResultTransport
+	{
+		body = &AddAiFileResultTransport{
+			Name: &in.Name,
+			Path: &in.Path,
+		}
+	}
+	if err := ValidateAddAiFileResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate AddAiFileResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode AddAiFileResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // DecodeCreateAiNotePayload checks JSON field names from the Goa design and returns a service value.
 func DecodeCreateAiNotePayload(data []byte) (out *notes.CreateAiNotePayload, err error) {
 	var body *CreateAiNotePayloadTransport
@@ -2032,6 +2187,16 @@ func DecodeImportAiNotePayload(data []byte) (out *notes.ImportAiNotePayload, err
 			Notebook: *body.Notebook,
 			Name:     *body.Name,
 			Content:  *body.Content,
+		}
+		if body.Files != nil {
+			out.Files = make([]*notes.AIImportFile, len(body.Files))
+			for i, val := range body.Files {
+				if val == nil {
+					out.Files[i] = nil
+					continue
+				}
+				out.Files[i] = decodeImportAiNotePayloadAIImportFileTransportToAIImportFile(val)
+			}
 		}
 	}
 	return out, nil
@@ -2556,6 +2721,16 @@ func EncodeUpdateAiNoteResult(in *notes.Note) ([]byte, error) {
 		return nil, fmt.Errorf("encode UpdateAiNoteResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+func decodeImportAiNotePayloadAIImportFileTransportToAIImportFile(v *ImportAiNotePayloadAIImportFileTransport) *notes.AIImportFile {
+	res := &notes.AIImportFile{
+		Ref:     *v.Ref,
+		Name:    *v.Name,
+		Content: v.Content,
+	}
+
+	return res
 }
 
 func encodeNoteSummaryToListResultNoteSummaryTransport(v *notes.NoteSummary) *ListResultNoteSummaryTransport {

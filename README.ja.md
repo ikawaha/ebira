@@ -293,12 +293,15 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `search_notes` | ノートを日本語でも英語でも検索する。結果には該当箇所の抜粋が付く |
 | `get_note` | ノートを、本文と版（version）と一緒に取得する |
 | `create_ai_note` | `collab` のノートブックに新しいノートを書く。`drop` のノートブックには置くだけ |
-| `import_ai_note` | Markdown のファイルを、front matter ごと新しいノートとして同じように取り込む |
+| `import_ai_note` | Markdown のファイルを、front matter と参照する画像ごと、新しいノートとして同じように取り込む |
+| `add_ai_file` | `collab` のノートブックのノートに画像を足す（本文から参照する） |
 | `update_ai_note` | `collab` のノートブックのノートを書き換える。`get_note` の版が要る |
 | `delete_ai_note` | `collab` のノートブックのノートをゴミ箱へ移す。`get_note` の版が要る |
 | `move_ai_note` | `collab` のノートブックのノートを並べ替える（別のノートの後ろか、先頭へ） |
 | `create_ai_notebook` | AI が書くための、新しい `collab` のノートブックを作る |
 | `make_notebook_private` | ノートブックを AI から見えなくする。戻せるのはあなただけ |
+
+AI からの画像は PNG・JPEG・GIF・WebP で、1 枚 5MB まで、1 つのノートに 10 枚・合わせて 20MB までです。
 
 版があるので、AI の変更は安全です。AI が読んだあとでノートが変わっていれば、その変更は拒まれ、あなたが書いた内容は上書きされません。
 

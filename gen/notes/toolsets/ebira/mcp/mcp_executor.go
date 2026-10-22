@@ -23,6 +23,8 @@ import (
 func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 	return runtime.ToolCallExecutorFunc(func(ctx context.Context, _ *runtime.ToolCallMeta, call *runtime.ToolCall) (*runtime.ToolExecutionResult, error) {
 		switch call.Name {
+		case genebira.AddAiFile:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "add_ai_file", genebira.SpecAddAiFile())
 		case genebira.CreateAiNote:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "create_ai_note", genebira.SpecCreateAiNote())
 		case genebira.CreateAiNotebook:

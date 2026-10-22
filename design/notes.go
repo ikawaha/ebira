@@ -161,6 +161,20 @@ var ImportFile = Type("ImportFile", func() {
 	RequiredAttribute("content", Bytes, "The image: PNG, JPEG, GIF or WebP, at most 10 MB")
 })
 
+// AIImportFile is an image sent with a Markdown file by an AI client, which
+// may send smaller images than people.
+var AIImportFile = Type("AIImportFile", func() {
+	RequiredAttribute("ref", String, "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to", func() {
+		Example("images/chart.png")
+	})
+	RequiredAttribute("name", String, "File name", func() {
+		MinLength(1)
+		MaxLength(255)
+		Example("chart.png")
+	})
+	RequiredAttribute("content", Bytes, "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB")
+})
+
 // ImportResult is the outcome of importing a Markdown file.
 var ImportResult = Type("ImportResult", func() {
 	RequiredAttribute("status", String, "created, or skipped when a file with the same content was imported before", func() {
@@ -287,10 +301,13 @@ var _ = Service("notes", func() {
 	//     but not turn an existing notebook into one.
 	//   - They may make any notebook they can see private at any time
 	//     (make_notebook_private), which only takes access away from them.
+	//   - They may add images to notes in notebooks of the collab kind
+	//     (add_ai_file), and send images with a new note (import_ai_note),
+	//     in smaller sizes than people.
 	// Never add Tool to create_notebook or save_notebook, which set any kind,
-	// or to create, update, delete and import, which are for people. The files of
-	// notes (add_file, get_file, delete_file, check_files) are for people too
-	// for now. TestMCPTools in
+	// or to create, update, delete and import, which are for people. Reading,
+	// deleting and checking the files of notes (get_file, delete_file,
+	// check_files), and add_file, are for people. TestMCPTools in
 	// internal/service lists the allowed tools.
 	MCP("ebira", "0.1.0")
 	JSONRPC(func() { POST("/mcp") })
@@ -770,15 +787,38 @@ var _ = Service("notes", func() {
 
 	Method("import_ai_note", func() {
 		NoSecurity()
-		Description("Import a Markdown file as a new note in a notebook of the collab or drop kind, as create_ai_note does, converting it as people's imports do: the front matter gives the title, tags and times, and its other keys are kept. Images cannot be imported; their links are left as they are. A file whose content was imported before into a notebook visible to AI clients is skipped. The note is marked as created by AI.")
+		Description("Import a Markdown file as a new note in a notebook of the collab or drop kind, as create_ai_note does, converting it as people's imports do: the front matter gives the title, tags and times, and its other keys are kept. Images the file refers to by relative paths can be sent with it, at most 10 of at most 5 MB each and 20 MB in all; they are added to the note and the body refers to them. The links to images not sent are left as they are. A file whose content was imported before into a notebook visible to AI clients is skipped. The note is marked as created by AI.")
 		Payload(func() {
 			RequiredAttribute("notebook", String, "ID of a notebook of the collab or drop kind", notebookIDDSL)
 			importContent()
+			Attribute("files", ArrayOf(AIImportFile), "Images the file refers to, at most 10 and 20 MB in all", func() {
+				MaxLength(10)
+			})
 		})
 		Result(ImportResult)
-		Error("bad_request", ErrorResult, "The notebook is invalid, or the file is too large")
+		Error("bad_request", ErrorResult, "The notebook is invalid, the file is too large, or the images are too many or too large")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
-		Tool("import_ai_note", "Import a Markdown file, with its front matter, as a new note in a notebook shared with AI (kind collab) or of the drop kind")
+		Tool("import_ai_note", "Import a Markdown file, with its front matter and the images it refers to (at most 10, 5 MB each, 20 MB in all), as a new note in a notebook shared with AI (kind collab) or of the drop kind")
+	})
+
+	Method("add_ai_file", func() {
+		NoSecurity()
+		Description("Add an image to a note in a notebook of the collab kind: a PNG, JPEG, GIF or WebP image of at most 5 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path, with update_ai_note. Notes in other notebooks are read-only for AI clients; to add a note with images to a notebook of the drop kind, use import_ai_note.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("name", String, "File name", func() {
+				MinLength(1)
+				MaxLength(255)
+				Example("chart.png")
+			})
+			RequiredAttribute("content", Bytes, "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB")
+		})
+		Result(NoteFile)
+		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "The file is not a supported image")
+		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
+		Error("too_large", ErrorResult, "The file is larger than 5 MB")
+		Tool("add_ai_file", "Add an image (PNG, JPEG, GIF or WebP, at most 5 MB) to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note")
 	})
 
 	Method("update_ai_note", func() {

@@ -293,12 +293,15 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `search_notes` | Search the notes, in Japanese or English; the results come with snippets |
 | `get_note` | Get a note, with its body and its version |
 | `create_ai_note` | Write a new note in a `collab` notebook, or drop one in a `drop` notebook |
-| `import_ai_note` | Import a Markdown file, with its front matter, as a new note, the same way |
+| `import_ai_note` | Import a Markdown file, with its front matter and the images it refers to, as a new note, the same way |
+| `add_ai_file` | Add an image to a note in a `collab` notebook, to refer to from its body |
 | `update_ai_note` | Change a note in a `collab` notebook; needs the version from `get_note` |
 | `delete_ai_note` | Move a note in a `collab` notebook to the trash; needs the version from `get_note` |
 | `move_ai_note` | Reorder a note in a `collab` notebook: put it after another note, or first |
 | `create_ai_notebook` | Make a new `collab` notebook, for the AI to write in |
 | `make_notebook_private` | Hide a notebook from AI; only you can undo it |
+
+Images from AI are PNG, JPEG, GIF or WebP, at most 5 MB each, and at most 10 images and 20 MB in all with one note.
 
 The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten.
 

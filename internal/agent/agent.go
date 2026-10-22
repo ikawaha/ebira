@@ -32,7 +32,7 @@ func New(ctx context.Context, client model.Client, svc notes.Service, cfg Config
 		return nil, err
 	}
 	e := notes.NewEndpoints(svc)
-	c := notes.NewClient(e.List, e.Get, e.Create, e.Update, e.Delete, e.MoveNotes, e.TrashNotes, e.Search, e.Restore, e.Move, e.Notebooks, e.Tags, e.CreateNotebook, e.SaveNotebook, e.MoveNotebook, e.DeleteNotebook, e.TrashedNotebooks, e.RestoreNotebook, e.DeleteTrashedNotebook, e.EmptyTrash, e.Import, e.CreateAiNote, e.ImportAiNote, e.UpdateAiNote, e.DeleteAiNote, e.MoveAiNote, e.CreateAiNotebook, e.MakeNotebookPrivate, e.AddFile, e.GetFile, e.DeleteFile, e.History, e.HistoryVersion, e.CheckFiles, e.Events, e.GitStatus, e.GitSync, e.PreviewStyle, e.SetPreviewStyle, e.Sync)
+	c := notes.NewClient(e.List, e.Get, e.Create, e.Update, e.Delete, e.MoveNotes, e.TrashNotes, e.Search, e.Restore, e.Move, e.Notebooks, e.Tags, e.CreateNotebook, e.SaveNotebook, e.MoveNotebook, e.DeleteNotebook, e.TrashedNotebooks, e.RestoreNotebook, e.DeleteTrashedNotebook, e.EmptyTrash, e.Import, e.CreateAiNote, e.ImportAiNote, e.AddAiFile, e.UpdateAiNote, e.DeleteAiNote, e.MoveAiNote, e.CreateAiNotebook, e.MakeNotebookPrivate, e.AddFile, e.GetFile, e.DeleteFile, e.History, e.HistoryVersion, e.CheckFiles, e.Events, e.GitStatus, e.GitSync, e.PreviewStyle, e.SetPreviewStyle, e.Sync)
 	exec := assistantnotes.NewAssistantNotesExec(assistantnotes.WithClient(c))
 	if err := assistant.RegisterUsedToolsets(ctx, rt, assistant.WithNotesExecutor(exec)); err != nil {
 		return nil, err

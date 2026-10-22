@@ -8,6 +8,23 @@
 package ebira
 
 type (
+	// AddAiFilePayload defines the JSON payload for the ebira.add_ai_file tool.
+	AddAiFilePayload = struct {
+		// Note ID
+		ID string
+		// File name
+		Name string
+		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		Content []byte
+	}
+	// AddAiFileResult defines the JSON result for the ebira.add_ai_file tool.
+	AddAiFileResult = struct {
+		// File name
+		Name string
+		// Path of the file relative to the note file, to refer to it from the body,
+		// such as ![](<path>)
+		Path string
+	}
 	// CreateAiNotePayload defines the JSON payload for the ebira.create_ai_note tool.
 	CreateAiNotePayload = struct {
 		// Note ID; random if omitted. Must be omitted for a drop notebook
@@ -149,6 +166,8 @@ type (
 		// keys are kept in the note file. Without a title, the first heading of level
 		// 1 is the title, else the file name
 		Content string
+		// Images the file refers to, at most 10 and 20 MB in all
+		Files []*AIImportFile
 	}
 	// ImportAiNoteResult defines the JSON result for the ebira.import_ai_note tool.
 	ImportAiNoteResult = struct {
@@ -315,6 +334,16 @@ type (
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRange
+	}
+	// AIImportFile is a nested type used by the generated JSON contract.
+	AIImportFile = struct {
+		// Path of the image as the Markdown file refers to it, such as
+		// ![](images/chart.png), one of the paths the file refers to
+		Ref string
+		// File name
+		Name string
+		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		Content []byte
 	}
 	// Note is a nested type used by the generated JSON contract.
 	Note = struct {

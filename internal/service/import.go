@@ -50,7 +50,23 @@ func (s *Notes) ImportAiNote(ctx context.Context, p *gennotes.ImportAiNotePayloa
 	if err := s.requireKind(p.Notebook, store.KindCollab, store.KindDrop); err != nil {
 		return nil, err
 	}
-	return s.importNote(ctx, importArgs{notebook: p.Notebook, name: p.Name, content: p.Content}, store.CreatedByAI)
+	// The images of AI clients are limited more than people's, as they come
+	// base64-encoded in one request.
+	if len(p.Files) > aiMaxFiles {
+		return nil, gennotes.MakeBadRequest(fmt.Errorf("at most %d images can be sent with a note", aiMaxFiles))
+	}
+	files := make([]*gennotes.ImportFile, 0, len(p.Files))
+	total := 0
+	for _, f := range p.Files {
+		if len(f.Content) > aiMaxFileSize {
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("the image %s is larger than %d MB", f.Ref, aiMaxFileSize>>20))
+		}
+		if total += len(f.Content); total > aiMaxTotalSize {
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("the images are larger than %d MB in all", aiMaxTotalSize>>20))
+		}
+		files = append(files, &gennotes.ImportFile{Ref: f.Ref, Name: f.Name, Content: f.Content})
+	}
+	return s.importNote(ctx, importArgs{notebook: p.Notebook, name: p.Name, content: p.Content, files: files}, store.CreatedByAI)
 }
 
 // importNote converts the file with the importer and creates the note, with

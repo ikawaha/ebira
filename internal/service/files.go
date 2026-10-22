@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"slices"
@@ -13,11 +14,43 @@ import (
 	"github.com/ikawaha/ebira/internal/store"
 )
 
-// The files of notes, such as images, are for people only for now: AI
-// clients neither see nor add them, so a request without the mark of people
-// finds no files.
+// The files of notes, such as images, are for people, but for AI clients
+// adding images to notes in notebooks of the collab kind (AddAiFile) and
+// sending them with a new note (ImportAiNote), in smaller sizes: a request
+// without the mark of people finds no files.
 
 var errFilesForPeople = errors.New("the files of notes are not available to AI clients")
+
+// Limits of the images of AI clients, which come base64-encoded in one
+// request: the size of one, and the number and the size in all of those sent
+// with a note.
+const (
+	aiMaxFileSize  = 5 << 20
+	aiMaxFiles     = 10
+	aiMaxTotalSize = 20 << 20
+)
+
+// AddAiFile adds an image to a note in a notebook of the collab kind for an AI
+// client. A note hidden from AI clients is not found.
+func (s *Notes) AddAiFile(ctx context.Context, p *gennotes.AddAiFilePayload) (*gennotes.NoteFile, error) {
+	n, err := s.Get(ctx, &gennotes.GetPayload{ID: p.ID})
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireAINotebook(n.Notebook); err != nil {
+		return nil, err
+	}
+	if len(p.Content) > aiMaxFileSize {
+		return nil, gennotes.MakeTooLarge(fmt.Errorf("the image is larger than %d MB", aiMaxFileSize>>20))
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	name, err := s.store.AddFile(p.ID, p.Name, p.Content)
+	if err != nil {
+		return nil, mapFileErr(err)
+	}
+	return &gennotes.NoteFile{Name: name, Path: store.FilePath(p.ID, name)}, nil
+}
 
 // AddFile adds a file to a note (see store.AddFile).
 func (s *Notes) AddFile(ctx context.Context, p *gennotes.AddFilePayload, body io.ReadCloser) (*gennotes.NoteFile, error) {

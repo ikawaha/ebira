@@ -15,7 +15,7 @@ import (
 	"io"
 	sort "sort"
 	strconv "strconv"
-	utf8 "unicode/utf8"
+	"unicode/utf8"
 
 	rawjson "goa.design/goa-ai/runtime/agent/rawjson"
 	goa "goa.design/goa/v3/pkg"
@@ -114,10 +114,20 @@ type Service interface {
 	// Import a Markdown file as a new note in a notebook of the collab or drop
 	// kind, as create_ai_note does, converting it as people's imports do: the
 	// front matter gives the title, tags and times, and its other keys are kept.
-	// Images cannot be imported; their links are left as they are. A file whose
-	// content was imported before into a notebook visible to AI clients is
-	// skipped. The note is marked as created by AI.
+	// Images the file refers to by relative paths can be sent with it, at most 10
+	// of at most 5 MB each and 20 MB in all; they are added to the note and the
+	// body refers to them. The links to images not sent are left as they are. A
+	// file whose content was imported before into a notebook visible to AI clients
+	// is skipped. The note is marked as created by AI.
 	ImportAiNote(context.Context, *ImportAiNotePayload) (res *ImportResult, err error)
+	// Add an image to a note in a notebook of the collab kind: a PNG, JPEG, GIF or
+	// WebP image of at most 5 MB, told by its content. The name is cleaned up
+	// (letters, digits, - and _), gets the extension of the type, and a suffix
+	// such as -2 when it is taken. Refer to the file from the body with the
+	// returned path, with update_ai_note. Notes in other notebooks are read-only
+	// for AI clients; to add a note with images to a notebook of the drop kind,
+	// use import_ai_note.
+	AddAiFile(context.Context, *AddAiFilePayload) (res *NoteFile, err error)
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
 	// people meanwhile are not overwritten. Setting notebook moves the note to
@@ -220,7 +230,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [40]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "preview_style", "set_preview_style", "sync"}
+var MethodNames = [41]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "preview_style", "set_preview_style", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -238,6 +248,26 @@ type EventsClientStream interface {
 	Recv() (*NoteEvent, error)
 	// RecvWithContext reads instances of "NoteEvent" from the stream with context.
 	RecvWithContext(context.Context) (*NoteEvent, error)
+}
+
+type AIImportFile struct {
+	// Path of the image as the Markdown file refers to it, such as
+	// ![](images/chart.png), one of the paths the file refers to
+	Ref string
+	// File name
+	Name string
+	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	Content []byte
+}
+
+// AddAiFilePayload is the payload type of the notes service add_ai_file method.
+type AddAiFilePayload struct {
+	// Note ID
+	ID string
+	// File name
+	Name string
+	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	Content []byte
 }
 
 // AddFilePayload is the payload type of the notes service add_file method.
@@ -511,6 +541,8 @@ type ImportAiNotePayload struct {
 	// keys are kept in the note file. Without a title, the first heading of level
 	// 1 is the title, else the file name
 	Content string
+	// Images the file refers to, at most 10 and 20 MB in all
+	Files []*AIImportFile
 }
 
 type ImportFile struct {
@@ -672,7 +704,7 @@ type NoteEvent struct {
 	ID *string
 }
 
-// NoteFile is the result type of the notes service add_file method.
+// NoteFile is the result type of the notes service add_ai_file method.
 type NoteFile struct {
 	// File name
 	Name string
@@ -1114,6 +1146,42 @@ func (value *importResultIntTransport) UnmarshalJSON(data []byte) error {
 // ValidateimportResultIntTransport checks decoded JSON before it becomes a service value.
 func ValidateimportResultIntTransport(value importResultIntTransport) (err error) {
 
+	return err
+}
+
+// jsonAIImportFileTransport stores JSON fields until they have been validated.
+type jsonAIImportFileTransport struct {
+	// Path of the image as the Markdown file refers to it, such as
+	// ![](images/chart.png), one of the paths the file refers to
+	Ref *string `json:"ref"`
+	// File name
+	Name *string `json:"name"`
+	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	Content []byte `json:"content"`
+}
+
+// validatejsonAIImportFileTransport checks decoded JSON before it becomes a service value.
+func validatejsonAIImportFileTransport(value *jsonAIImportFileTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Ref == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ref", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if value.Name != nil {
+		if utf8.RuneCountInString(*value.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
+		}
+	}
 	return err
 }
 
@@ -2176,6 +2244,20 @@ func ValidatetrashedNotebookIntTransport(value trashedNotebookIntTransport) (err
 	return err
 }
 
+// validateAIImportFileOriginal checks the original typed value before JSON conversion.
+func validateAIImportFileOriginal(value *AIImportFile) (err error) {
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "value"))
+	}
+	if utf8.RuneCountInString(value.Name) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("value.name", value.Name, utf8.RuneCountInString(value.Name), 1, true))
+	}
+	if utf8.RuneCountInString(value.Name) > 255 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("value.name", value.Name, utf8.RuneCountInString(value.Name), 255, false))
+	}
+	return err
+}
+
 // validateBrokenFileRefOriginal checks the original typed value before JSON conversion.
 func validateBrokenFileRefOriginal(value *BrokenFileRef) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
@@ -2510,6 +2592,66 @@ func validateUnusedFileOriginal2(value *UnusedFile) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.added_at", value.AddedAt, goa.FormatDateTime))
 	return err
+}
+
+// EncodeAIImportFile turns a service value into JSON using the field names in the Goa design.
+func EncodeAIImportFile(in *AIImportFile) ([]byte, error) {
+	if err := checkAIImportFileValue(in); err != nil {
+		return nil, fmt.Errorf("encode AIImportFile JSON: %w", err)
+	}
+	if err := validateAIImportFileOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate AIImportFile value: %w", err)
+	}
+	var body *jsonAIImportFileTransport
+	{
+		body = &jsonAIImportFileTransport{
+			Ref:     &in.Ref,
+			Name:    &in.Name,
+			Content: in.Content,
+		}
+	}
+	if err := validatejsonAIImportFileTransport(body); err != nil {
+		return nil, fmt.Errorf("validate AIImportFile JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode AIImportFile JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeAIImportFile checks JSON field names from the Goa design and returns a service value.
+func DecodeAIImportFile(data []byte) (out *AIImportFile, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode AIImportFile JSON: %w", err)
+	}
+	if err := validateAIImportFileJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode AIImportFile JSON: %w", err)
+	}
+	var body *jsonAIImportFileTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode AIImportFile JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode AIImportFile JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode AIImportFile JSON after first value: %w", err)
+	}
+	if err := validatejsonAIImportFileTransport(body); err != nil {
+		return out, fmt.Errorf("validate AIImportFile JSON: %w", err)
+	}
+	{
+		out = &AIImportFile{
+			Ref:     *body.Ref,
+			Name:    *body.Name,
+			Content: body.Content,
+		}
+	}
+	return out, nil
 }
 
 // EncodeBrokenFileRef turns a service value into JSON using the field names in the Goa design.
@@ -4570,6 +4712,106 @@ func encodeUnusedFileToUnusedFileTransport(v *UnusedFile) *jsonUnusedFileTranspo
 	res.Size = &size
 
 	return res
+}
+
+// validateAIImportFileJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIImportFileJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "content":
+			if err := validateAIImportFileJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "ref":
+			if err := validateAIImportFileJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"content",
+				"name",
+				"ref",
+			})
+		}
+	}
+	return nil
+}
+
+// validateAIImportFileJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIImportFileJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateAIImportFileJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIImportFileJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validateAIImportFileJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIImportFileJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
 }
 
 // validateBrokenFileRefJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
@@ -9750,6 +9992,39 @@ func decodedJSONType(value any) string {
 // generatedJSONChildPath appends an unambiguous quoted member or array index.
 func generatedJSONChildPath(path, key string, _ bool) string {
 	return path + "[" + strconv.Quote(key) + "]"
+}
+
+// checkAIImportFileValue checks text and cycles before conversion.
+func checkAIImportFileValue(in *AIImportFile) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkAIImportFileAIImportFileValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkAIImportFileAIImportFileValue checks one generated value on the active path.
+func checkAIImportFileAIImportFileValue(in *AIImportFile, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Ref)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "ref", false))
+		}
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+	}
+	return nil
 }
 
 // checkBrokenFileRefValue checks text and cycles before conversion.

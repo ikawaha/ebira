@@ -8,6 +8,29 @@
 package http
 
 type (
+	// AddAiFilePayloadTransport is the internal JSON transport type for AddAiFilePayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	AddAiFilePayloadTransport struct {
+		// Note ID
+		ID *string `json:"id"`
+		// File name
+		Name *string `json:"name"`
+		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		Content []byte `json:"content"`
+	}
+	// AddAiFileResultTransport is the internal JSON transport type for AddAiFileResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	AddAiFileResultTransport struct {
+		// File name
+		Name *string `json:"name"`
+		// Path of the file relative to the note file, to refer to it from the body,
+		// such as ![](<path>)
+		Path *string `json:"path"`
+	}
 	// CreateAiNotePayloadTransport is the internal JSON transport type for CreateAiNotePayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -173,6 +196,8 @@ type (
 		// keys are kept in the note file. Without a title, the first heading of level
 		// 1 is the title, else the file name
 		Content *string `json:"content"`
+		// Images the file refers to, at most 10 and 20 MB in all
+		Files []*AIImportFileTransport `json:"files,omitempty"`
 	}
 	// ImportAiNoteResultTransport is the internal JSON transport type for ImportAiNoteResult.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -381,6 +406,19 @@ type (
 		TitleHighlights []*TextRangeTransport `json:"title_highlights,omitempty"`
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRangeTransport `json:"body_highlights,omitempty"`
+	}
+	// AIImportFileTransport is the internal JSON transport type for AIImportFileTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	AIImportFileTransport struct {
+		// Path of the image as the Markdown file refers to it, such as
+		// ![](images/chart.png), one of the paths the file refers to
+		Ref *string `json:"ref"`
+		// File name
+		Name *string `json:"name"`
+		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		Content []byte `json:"content"`
 	}
 	// NoteSummaryTransport is the internal JSON transport type for NoteSummaryTransport.
 	// It lives in the toolset-local http package and is used only for JSON

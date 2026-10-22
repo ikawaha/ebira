@@ -22,6 +22,22 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
+// AddAiFilePayloadCodec returns a fresh codec for *AddAiFilePayload.
+func AddAiFilePayloadCodec() tools.JSONCodec[*AddAiFilePayload] {
+	return tools.JSONCodec[*AddAiFilePayload]{
+		ToJSON:   MarshalAddAiFilePayload,
+		FromJSON: UnmarshalAddAiFilePayload,
+	}
+}
+
+// AddAiFileResultCodec returns a fresh codec for *AddAiFileResult.
+func AddAiFileResultCodec() tools.JSONCodec[*AddAiFileResult] {
+	return tools.JSONCodec[*AddAiFileResult]{
+		ToJSON:   MarshalAddAiFileResult,
+		FromJSON: UnmarshalAddAiFileResult,
+	}
+}
+
 // CreateAiNotePayloadCodec returns a fresh codec for *CreateAiNotePayload.
 func CreateAiNotePayloadCodec() tools.JSONCodec[*CreateAiNotePayload] {
 	return tools.JSONCodec[*CreateAiNotePayload]{
@@ -199,6 +215,32 @@ func UpdateAiNoteResultCodec() tools.JSONCodec[*UpdateAiNoteResult] {
 }
 
 var (
+	// addAiFilePayloadCodec provides an untyped codec for *AddAiFilePayload.
+	addAiFilePayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*AddAiFilePayload); ok {
+				return MarshalAddAiFilePayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *AddAiFilePayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalAddAiFilePayload(data)
+		},
+	}
+	// addAiFileResultCodec provides an untyped codec for *AddAiFileResult.
+	addAiFileResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*AddAiFileResult); ok {
+				return MarshalAddAiFileResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *AddAiFileResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalAddAiFileResult(data)
+		},
+	}
 	// createAiNotePayloadCodec provides an untyped codec for *CreateAiNotePayload.
 	createAiNotePayloadCodec = tools.JSONCodec[any]{
 		ToJSON: func(v any) ([]byte, error) {
@@ -486,6 +528,41 @@ var (
 		},
 	}
 )
+var addAiFilePayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Note ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "File name",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("content")},
+		JSONType:    "string",
+		Description: "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+	},
+}
+var addAiFileResultFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "File name",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("path")},
+		JSONType:    "string",
+		Description: "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)",
+	},
+}
 var createAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		JSONType: "object",
@@ -834,6 +911,31 @@ var importAiNotePayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("content")},
 		JSONType:    "string",
 		Description: "The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("files")},
+		JSONType:    "array",
+		Description: "Images the file refers to, at most 10 and 20 MB in all",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("files"), tools.DynamicField{}},
+		JSONType:    "object",
+		Description: "Images the file refers to, at most 10 and 20 MB in all",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("files"), tools.DynamicField{}, tools.FixedField("ref")},
+		JSONType:    "string",
+		Description: "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("files"), tools.DynamicField{}, tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "File name",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("files"), tools.DynamicField{}, tools.FixedField("content")},
+		JSONType:    "string",
+		Description: "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
 	},
 }
 var importAiNoteResultFields = []tools.FieldMetadata{
@@ -1641,6 +1743,40 @@ func newValidationError(err error) error {
 	}
 	return tools.NewValidationError(err.Error(), issues, nil)
 }
+func enrichAddAiFilePayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(addAiFilePayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichAddAiFileResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(addAiFileResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
 func enrichCreateAiNotePayloadValidationError(err error) error {
 	var ve *tools.ValidationError
 	if !errors.As(err, &ve) {
@@ -1997,6 +2133,68 @@ func enrichUpdateAiNoteResultValidationError(err error) error {
 		}
 	}
 	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func invalidAddAiFilePayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "AddAiFilePayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(addAiFilePayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidAddAiFileResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "AddAiFileResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(addAiFileResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
 }
 func invalidCreateAiNotePayloadFieldTypeError(err error) error {
 	var typeErr *json.UnmarshalTypeError
@@ -2681,6 +2879,92 @@ func invalidUpdateAiNoteResultFieldTypeError(err error) error {
 	)
 }
 
+// MarshalAddAiFilePayload serializes *AddAiFilePayload into JSON.
+func MarshalAddAiFilePayload(v *AddAiFilePayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("addAiFilePayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.AddAiFilePayloadTransport
+	out = &toolhttp.AddAiFilePayloadTransport{
+		ID:      &in.ID,
+		Name:    &in.Name,
+		Content: in.Content,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalAddAiFilePayload deserializes JSON into *AddAiFilePayload.
+func UnmarshalAddAiFilePayload(data []byte) (*AddAiFilePayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("addAiFilePayload JSON is empty")
+	}
+	var tv toolhttp.AddAiFilePayloadTransport
+	if err := validateAddAiFilePayloadJSON(data); err != nil {
+		return nil, invalidAddAiFilePayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidAddAiFilePayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateAddAiFilePayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichAddAiFilePayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *AddAiFilePayload
+	out = &AddAiFilePayload{
+		ID:      *in.ID,
+		Name:    *in.Name,
+		Content: in.Content,
+	}
+	return out, nil
+}
+
+// MarshalAddAiFileResult serializes *AddAiFileResult into JSON.
+func MarshalAddAiFileResult(v *AddAiFileResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("addAiFileResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.AddAiFileResultTransport
+	out = &toolhttp.AddAiFileResultTransport{
+		Name: &in.Name,
+		Path: &in.Path,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalAddAiFileResult deserializes JSON into *AddAiFileResult.
+func UnmarshalAddAiFileResult(data []byte) (*AddAiFileResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("addAiFileResult JSON is empty")
+	}
+	var tv toolhttp.AddAiFileResultTransport
+	if err := validateAddAiFileResultJSON(data); err != nil {
+		return nil, invalidAddAiFileResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidAddAiFileResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateAddAiFileResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichAddAiFileResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *AddAiFileResult
+	out = &AddAiFileResult{
+		Name: *in.Name,
+		Path: *in.Path,
+	}
+	return out, nil
+}
+
 // MarshalCreateAiNotePayload serializes *CreateAiNotePayload into JSON.
 func MarshalCreateAiNotePayload(v *CreateAiNotePayload) ([]byte, error) {
 	if v == nil {
@@ -3142,6 +3426,16 @@ func MarshalImportAiNotePayload(v *ImportAiNotePayload) ([]byte, error) {
 		Name:     &in.Name,
 		Content:  &in.Content,
 	}
+	if in.Files != nil {
+		out.Files = make([]*toolhttp.AIImportFileTransport, len(in.Files))
+		for i, val := range in.Files {
+			if val == nil {
+				out.Files[i] = nil
+				continue
+			}
+			out.Files[i] = encodeAIImportFileToAIImportFileTransport(val)
+		}
+	}
 	return json.Marshal(out)
 }
 
@@ -3169,6 +3463,16 @@ func UnmarshalImportAiNotePayload(data []byte) (*ImportAiNotePayload, error) {
 		Notebook: *in.Notebook,
 		Name:     *in.Name,
 		Content:  *in.Content,
+	}
+	if in.Files != nil {
+		out.Files = make([]*AIImportFile, len(in.Files))
+		for i, val := range in.Files {
+			if val == nil {
+				out.Files[i] = nil
+				continue
+			}
+			out.Files[i] = decodeAIImportFileTransportToAIImportFile(val)
+		}
 	}
 	return out, nil
 }
@@ -4169,6 +4473,36 @@ func validateImportAiNoteResultJSON(data []byte) error {
 		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateImportAiNoteResultJSONValue("", root, "")
+}
+
+// validateAddAiFilePayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateAddAiFilePayloadJSON(data []byte) error {
+	var root any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&root); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("multiple JSON documents")
+	}
+	return validateAddAiFilePayloadJSONValue("", root, "")
+}
+
+// validateAddAiFileResultJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateAddAiFileResultJSON(data []byte) error {
+	var root any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&root); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("multiple JSON documents")
+	}
+	return validateAddAiFileResultJSONValue("", root, "")
 }
 
 // validateUpdateAiNotePayloadJSON parses one JSON document and checks the exact value
@@ -5294,6 +5628,13 @@ func validateImportAiNotePayloadJSONValue(path string, value any, description st
 			); err != nil {
 				return err
 			}
+		case "files":
+			if err := validateImportAiNotePayloadRootFilesJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Images the file refers to, at most 10 and 20 MB in all",
+			); err != nil {
+				return err
+			}
 		case "name":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -5311,8 +5652,85 @@ func validateImportAiNotePayloadJSONValue(path string, value any, description st
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"content",
+				"files",
 				"name",
 				"notebook",
+			})
+		}
+	}
+	return nil
+}
+
+// validateImportAiNotePayloadRootFilesJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportAiNotePayloadRootFilesJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateImportAiNotePayloadAIImportFileTransportJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateImportAiNotePayloadAIImportFileTransportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportAiNotePayloadAIImportFileTransportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "content":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "ref":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"content",
+				"name",
+				"ref",
 			})
 		}
 	}
@@ -5373,6 +5791,102 @@ func validateImportAiNoteResultJSONValue(path string, value any, description str
 				"note",
 				"status",
 				"warnings",
+			})
+		}
+	}
+	return nil
+}
+
+// validateAddAiFilePayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAddAiFilePayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "content":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Note ID",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"content",
+				"id",
+				"name",
+			})
+		}
+	}
+	return nil
+}
+
+// validateAddAiFileResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAddAiFileResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"name",
+				"path",
 			})
 		}
 	}
@@ -5730,6 +6244,24 @@ func encodeTextRangeToTextRangeTransport(v *TextRange) *toolhttp.TextRangeTransp
 	res := &toolhttp.TextRangeTransport{
 		Start: &v.Start,
 		End:   &v.End,
+	}
+
+	return res
+}
+func decodeAIImportFileTransportToAIImportFile(v *toolhttp.AIImportFileTransport) *AIImportFile {
+	res := &AIImportFile{
+		Ref:     *v.Ref,
+		Name:    *v.Name,
+		Content: v.Content,
+	}
+
+	return res
+}
+func encodeAIImportFileToAIImportFileTransport(v *AIImportFile) *toolhttp.AIImportFileTransport {
+	res := &toolhttp.AIImportFileTransport{
+		Ref:     &v.Ref,
+		Name:    &v.Name,
+		Content: v.Content,
 	}
 
 	return res

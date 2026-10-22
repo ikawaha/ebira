@@ -39,6 +39,7 @@ type Client struct {
 	ImportEndpoint                goa.Endpoint
 	CreateAiNoteEndpoint          goa.Endpoint
 	ImportAiNoteEndpoint          goa.Endpoint
+	AddAiFileEndpoint             goa.Endpoint
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
 	MoveAiNoteEndpoint            goa.Endpoint
@@ -59,7 +60,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -84,6 +85,7 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		ImportEndpoint:                import_,
 		CreateAiNoteEndpoint:          createAiNote,
 		ImportAiNoteEndpoint:          importAiNote,
+		AddAiFileEndpoint:             addAiFile,
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
 		MoveAiNoteEndpoint:            moveAiNote,
@@ -432,7 +434,7 @@ func (c *Client) CreateAiNote(ctx context.Context, p *CreateAiNotePayload) (res 
 
 // ImportAiNote calls the "import_ai_note" endpoint of the "notes" service.
 // ImportAiNote may return the following errors:
-//   - "bad_request" (type *goa.ServiceError): The notebook is invalid, or the file is too large
+//   - "bad_request" (type *goa.ServiceError): The notebook is invalid, the file is too large, or the images are too many or too large
 //   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab or drop kind
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
@@ -444,6 +446,24 @@ func (c *Client) ImportAiNote(ctx context.Context, p *ImportAiNotePayload) (res 
 		return
 	}
 	return ires.(*ImportResult), nil
+}
+
+// AddAiFile calls the "add_ai_file" endpoint of the "notes" service.
+// AddAiFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): The file is not a supported image
+//   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
+//   - "too_large" (type *goa.ServiceError): The file is larger than 5 MB
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) AddAiFile(ctx context.Context, p *AddAiFilePayload) (res *NoteFile, err error) {
+	var ires any
+	ires, err = c.AddAiFileEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*NoteFile), nil
 }
 
 // UpdateAiNote calls the "update_ai_note" endpoint of the "notes" service.

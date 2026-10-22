@@ -40,6 +40,7 @@ type Endpoints struct {
 	Import                goa.Endpoint
 	CreateAiNote          goa.Endpoint
 	ImportAiNote          goa.Endpoint
+	AddAiFile             goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
 	MoveAiNote            goa.Endpoint
@@ -114,6 +115,7 @@ func NewEndpoints(s Service) *Endpoints {
 		Import:                NewImportEndpoint(s, a.APIKeyAuth),
 		CreateAiNote:          NewCreateAiNoteEndpoint(s),
 		ImportAiNote:          NewImportAiNoteEndpoint(s),
+		AddAiFile:             NewAddAiFileEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
 		MoveAiNote:            NewMoveAiNoteEndpoint(s),
@@ -159,6 +161,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Import = m(e.Import)
 	e.CreateAiNote = m(e.CreateAiNote)
 	e.ImportAiNote = m(e.ImportAiNote)
+	e.AddAiFile = m(e.AddAiFile)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
 	e.MoveAiNote = m(e.MoveAiNote)
@@ -676,6 +679,15 @@ func NewImportAiNoteEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*ImportAiNotePayload)
 		return s.ImportAiNote(ctx, p)
+	}
+}
+
+// NewAddAiFileEndpoint returns an endpoint function that calls the method
+// "add_ai_file" of service "notes".
+func NewAddAiFileEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*AddAiFilePayload)
+		return s.AddAiFile(ctx, p)
 	}
 }
 

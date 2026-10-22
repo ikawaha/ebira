@@ -13,6 +13,42 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
+// ValidateAddAiFilePayloadTransport runs the validations defined on AddAiFilePayloadTransport.
+func ValidateAddAiFilePayloadTransport(body *AddAiFilePayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*body.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
+		}
+	}
+	return
+}
+
+// ValidateAddAiFileResultTransport runs the validations defined on AddAiFileResultTransport.
+func ValidateAddAiFileResultTransport(body *AddAiFileResultTransport) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	return
+}
+
 // ValidateCreateAiNotePayloadTransport runs the validations defined on CreateAiNotePayloadTransport.
 func ValidateCreateAiNotePayloadTransport(body *CreateAiNotePayloadTransport) (err error) {
 	if body.Notebook == nil {
@@ -275,6 +311,16 @@ func ValidateImportAiNotePayloadTransport(body *ImportAiNotePayloadTransport) (e
 	if body.Content != nil {
 		if utf8.RuneCountInString(*body.Content) > 5242880 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *body.Content, utf8.RuneCountInString(*body.Content), 5242880, false))
+		}
+	}
+	if len(body.Files) > 10 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.files", body.Files, len(body.Files), 10, false))
+	}
+	for _, e := range body.Files {
+		if e != nil {
+			if err2 := ValidateAIImportFileTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 	return
@@ -607,6 +653,28 @@ func ValidateUpdateAiNoteResultTransport(body *UpdateAiNoteResultTransport) (err
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// ValidateAIImportFileTransport runs the validations defined on AIImportFileTransport.
+func ValidateAIImportFileTransport(body *AIImportFileTransport) (err error) {
+	if body.Ref == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ref", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*body.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
 		}
 	}
 	return
