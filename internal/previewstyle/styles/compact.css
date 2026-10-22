@@ -1,0 +1,23 @@
+/* ebira preview style: compact
+   Smaller text and tighter spacing, to see more of a note at once. This
+   file is yours to change; the web UI tells it is changed. The colors of the
+   web UI, such as var(--border), follow its light and dark themes. */
+
+/* The body: a little smaller, with closer lines. */
+font-size: 13px;
+line-height: 1.45;
+
+/* Headings: smaller steps and less room around them. */
+h1 { font-size: 1.4em; margin: 0.6em 0 0.3em; }
+h2 { font-size: 1.2em; margin: 0.6em 0 0.3em; }
+h3, h4 { font-size: 1.05em; margin: 0.5em 0 0.2em; }
+
+/* Paragraphs, lists and blocks closer together. */
+p { margin: 0.35em 0; }
+ul, ol { margin: 0.3em 0; padding-left: 1.3em; }
+li + li { margin-top: 0.1em; }
+pre { padding: 8px; margin: 0.5em 0; }
+blockquote { margin: 0.4em 0; }
+hr { margin: 0.8em 0; border: none; border-top: 1px solid var(--border); }
+table { font-size: 0.95em; }
+th, td { padding: 2px 6px; }

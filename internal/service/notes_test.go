@@ -991,6 +991,14 @@ func TestPeopleOnly(t *testing.T) {
 			_, err := svc.Import(ctx, &gennotes.ImportPayload{Notebook: &diary.ID, Name: "x.md", Content: "x"})
 			return err
 		},
+		"preview_style": func(ctx context.Context) error {
+			_, err := svc.PreviewStyle(ctx, nil)
+			return err
+		},
+		"set_preview_style": func(ctx context.Context) error {
+			_, err := svc.SetPreviewStyle(ctx, &gennotes.SetPreviewStylePayload{Style: "band"})
+			return err
+		},
 	}
 	for name, call := range calls {
 		if err := call(ai); errorName(err) != "unauthorized" {

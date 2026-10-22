@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|notebooks|tags|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|notebooks|tags|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|preview-style|set-preview-style|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -205,6 +205,13 @@ func ParseEndpoint(
 		notesGitSyncBodyFlag    = new(cliStringFlag)
 		notesGitSyncSessionFlag = new(cliStringFlag)
 
+		notesPreviewStyleFlags       = flag.NewFlagSet("preview-style", flag.ExitOnError)
+		notesPreviewStyleSessionFlag = new(cliStringFlag)
+
+		notesSetPreviewStyleFlags       = flag.NewFlagSet("set-preview-style", flag.ExitOnError)
+		notesSetPreviewStyleBodyFlag    = new(cliStringFlag)
+		notesSetPreviewStyleSessionFlag = new(cliStringFlag)
+
 		notesSyncFlags       = flag.NewFlagSet("sync", flag.ExitOnError)
 		notesSyncSessionFlag = new(cliStringFlag)
 
@@ -325,6 +332,9 @@ func ParseEndpoint(
 	notesGitStatusFlags.Var(notesGitStatusSessionFlag, "session", "")
 	notesGitSyncFlags.Var(notesGitSyncBodyFlag, "body", "")
 	notesGitSyncFlags.Var(notesGitSyncSessionFlag, "session", "")
+	notesPreviewStyleFlags.Var(notesPreviewStyleSessionFlag, "session", "")
+	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleBodyFlag, "body", "")
+	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleSessionFlag, "session", "")
 	notesSyncFlags.Var(notesSyncSessionFlag, "session", "")
 	assistantAskFlags.Var(assistantAskBodyFlag, "body", "")
 	authStatusFlags.Var(authStatusSessionFlag, "session", "")
@@ -371,6 +381,8 @@ func ParseEndpoint(
 	notesEventsFlags.Usage = notesEventsUsage
 	notesGitStatusFlags.Usage = notesGitStatusUsage
 	notesGitSyncFlags.Usage = notesGitSyncUsage
+	notesPreviewStyleFlags.Usage = notesPreviewStyleUsage
+	notesSetPreviewStyleFlags.Usage = notesSetPreviewStyleUsage
 	notesSyncFlags.Usage = notesSyncUsage
 
 	assistantFlags.Usage = assistantUsage
@@ -518,6 +530,12 @@ func ParseEndpoint(
 
 			case "git-sync":
 				epf = notesGitSyncFlags
+
+			case "preview-style":
+				epf = notesPreviewStyleFlags
+
+			case "set-preview-style":
+				epf = notesSetPreviewStyleFlags
 
 			case "sync":
 				epf = notesSyncFlags
@@ -694,6 +712,12 @@ func ParseEndpoint(
 			case "git-sync":
 				endpoint = c.GitSync()
 				data, err = notesc.BuildGitSyncPayload(notesGitSyncBodyFlag.value, notesGitSyncSessionFlag.value)
+			case "preview-style":
+				endpoint = c.PreviewStyle()
+				data, err = notesc.BuildPreviewStylePayload(notesPreviewStyleSessionFlag.value)
+			case "set-preview-style":
+				endpoint = c.SetPreviewStyle()
+				data, err = notesc.BuildSetPreviewStylePayload(notesSetPreviewStyleBodyFlag.value, notesSetPreviewStyleSessionFlag.value)
 			case "sync":
 				endpoint = c.Sync()
 				data, err = notesc.BuildSyncPayload(notesSyncSessionFlag.value)
@@ -788,6 +812,8 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    events: Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
 	fmt.Fprintln(os.Stderr, `    git-status: Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
 	fmt.Fprintln(os.Stderr, `    git-sync: Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.`)
+	fmt.Fprintln(os.Stderr, `    preview-style: Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.`)
+	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
 	fmt.Fprintln(os.Stderr, `    sync: Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
@@ -1421,6 +1447,44 @@ func notesGitSyncUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-sync --body '{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }' --session \"Voluptas est harum enim corrupti fugit.\"")
+}
+
+func notesPreviewStyleUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes preview-style", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes preview-style --session \"Accusantium labore quibusdam voluptatem error molestiae cupiditate.\"")
+}
+
+func notesSetPreviewStyleUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes set-preview-style", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes set-preview-style --body '{\n      \"style\": \"band\"\n   }' --session \"Rem dignissimos molestiae.\"")
 }
 
 func notesSyncUsage() {

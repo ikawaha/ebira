@@ -159,6 +159,16 @@ func GitSyncNotesPath() string {
 	return "/git/sync"
 }
 
+// PreviewStyleNotesPath returns the URL path to the notes service preview_style HTTP endpoint.
+func PreviewStyleNotesPath() string {
+	return "/preview-style"
+}
+
+// SetPreviewStyleNotesPath returns the URL path to the notes service set_preview_style HTTP endpoint.
+func SetPreviewStyleNotesPath() string {
+	return "/preview-style"
+}
+
 // SyncNotesPath returns the URL path to the notes service sync HTTP endpoint.
 func SyncNotesPath() string {
 	return "/sync"

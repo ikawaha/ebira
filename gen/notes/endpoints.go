@@ -54,6 +54,8 @@ type Endpoints struct {
 	Events                goa.Endpoint
 	GitStatus             goa.Endpoint
 	GitSync               goa.Endpoint
+	PreviewStyle          goa.Endpoint
+	SetPreviewStyle       goa.Endpoint
 	Sync                  goa.Endpoint
 }
 
@@ -126,6 +128,8 @@ func NewEndpoints(s Service) *Endpoints {
 		Events:                NewEventsEndpoint(s, a.APIKeyAuth),
 		GitStatus:             NewGitStatusEndpoint(s, a.APIKeyAuth),
 		GitSync:               NewGitSyncEndpoint(s, a.APIKeyAuth),
+		PreviewStyle:          NewPreviewStyleEndpoint(s, a.APIKeyAuth),
+		SetPreviewStyle:       NewSetPreviewStyleEndpoint(s, a.APIKeyAuth),
 		Sync:                  NewSyncEndpoint(s, a.APIKeyAuth),
 	}
 }
@@ -169,6 +173,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Events = m(e.Events)
 	e.GitStatus = m(e.GitStatus)
 	e.GitSync = m(e.GitSync)
+	e.PreviewStyle = m(e.PreviewStyle)
+	e.SetPreviewStyle = m(e.SetPreviewStyle)
 	e.Sync = m(e.Sync)
 }
 
@@ -926,6 +932,52 @@ func NewGitSyncEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.End
 			return nil, err
 		}
 		return s.GitSync(ctx, p)
+	}
+}
+
+// NewPreviewStyleEndpoint returns an endpoint function that calls the method
+// "preview_style" of service "notes".
+func NewPreviewStyleEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*PreviewStylePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.PreviewStyle(ctx, p)
+	}
+}
+
+// NewSetPreviewStyleEndpoint returns an endpoint function that calls the
+// method "set_preview_style" of service "notes".
+func NewSetPreviewStyleEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SetPreviewStylePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.SetPreviewStyle(ctx, p)
 	}
 }
 

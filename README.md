@@ -352,7 +352,9 @@ The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` 
 
 ### Styling the preview
 
-Put CSS in `~/.config/ebira/preview.css` (next to the settings file) to style the body of notes in the web UI's preview, as Quiver's preview styles do. It is read on each page load, and applies to the body only: write `h1 { … }` and the rest of the page is left alone. The colors of the web UI, such as `var(--accent)`, `var(--fg)` and `var(--fg-muted)`, follow the light and dark themes:
+Choose **Preview style…** in the settings menu to pick a built-in style, Band, Document, Compact or Lined: the one chosen is tried on the note open, and **Use** writes it to `~/.config/ebira/preview.css`, where you may change it. A file you changed, or wrote yourself, is copied to `preview.css.bak` before it is replaced.
+
+Or put CSS in `~/.config/ebira/preview.css` (next to the settings file) to style the body of notes in the web UI's preview, as Quiver's preview styles do. It is read on each page load, and applies to the body only: write `h1 { … }` and the rest of the page is left alone. The colors of the web UI, such as `var(--accent)`, `var(--fg)` and `var(--fg-muted)`, follow the light and dark themes:
 
 ```css
 h1 { border-bottom: 2px solid var(--accent); color: var(--accent); }

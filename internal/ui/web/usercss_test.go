@@ -80,3 +80,27 @@ func TestServePreviewCSS(t *testing.T) {
 		t.Errorf("body = %q", body)
 	}
 }
+
+func TestServeStyles(t *testing.T) {
+	srv := httptest.NewServer(Handler(Options{}))
+	defer srv.Close()
+	for path, want := range map[string]int{
+		"styles/band.css":    http.StatusOK,
+		"styles/lined.css":   http.StatusOK,
+		"styles/nothing.css": http.StatusNotFound,
+		"styles/band":        http.StatusNotFound,
+	} {
+		res, err := http.Get(srv.URL + AssetsPrefix + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		if res.StatusCode != want {
+			t.Errorf("%s: status %d, want %d", path, res.StatusCode, want)
+		}
+		if want == http.StatusOK && !strings.HasPrefix(string(b), previewScope+" {") {
+			t.Errorf("%s: not nested in the scope: %.40q", path, b)
+		}
+	}
+}

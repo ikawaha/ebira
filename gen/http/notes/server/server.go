@@ -51,6 +51,8 @@ type Server struct {
 	Events                http.Handler
 	GitStatus             http.Handler
 	GitSync               http.Handler
+	PreviewStyle          http.Handler
+	SetPreviewStyle       http.Handler
 	Sync                  http.Handler
 }
 
@@ -111,6 +113,8 @@ func New(
 			{"Events", "GET", "/events"},
 			{"GitStatus", "GET", "/git/status"},
 			{"GitSync", "POST", "/git/sync"},
+			{"PreviewStyle", "GET", "/preview-style"},
+			{"SetPreviewStyle", "PUT", "/preview-style"},
 			{"Sync", "POST", "/sync"},
 		},
 		List:                  NewListHandler(e.List, mux, decoder, encoder, errhandler, formatter),
@@ -143,6 +147,8 @@ func New(
 		Events:                NewEventsHandler(e.Events, mux, decoder, encoder, errhandler, formatter),
 		GitStatus:             NewGitStatusHandler(e.GitStatus, mux, decoder, encoder, errhandler, formatter),
 		GitSync:               NewGitSyncHandler(e.GitSync, mux, decoder, encoder, errhandler, formatter),
+		PreviewStyle:          NewPreviewStyleHandler(e.PreviewStyle, mux, decoder, encoder, errhandler, formatter),
+		SetPreviewStyle:       NewSetPreviewStyleHandler(e.SetPreviewStyle, mux, decoder, encoder, errhandler, formatter),
 		Sync:                  NewSyncHandler(e.Sync, mux, decoder, encoder, errhandler, formatter),
 	}
 }
@@ -182,6 +188,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Events = m(s.Events)
 	s.GitStatus = m(s.GitStatus)
 	s.GitSync = m(s.GitSync)
+	s.PreviewStyle = m(s.PreviewStyle)
+	s.SetPreviewStyle = m(s.SetPreviewStyle)
 	s.Sync = m(s.Sync)
 }
 
@@ -220,6 +228,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountEventsHandler(mux, h.Events)
 	MountGitStatusHandler(mux, h.GitStatus)
 	MountGitSyncHandler(mux, h.GitSync)
+	MountPreviewStyleHandler(mux, h.PreviewStyle)
+	MountSetPreviewStyleHandler(mux, h.SetPreviewStyle)
 	MountSyncHandler(mux, h.Sync)
 }
 
@@ -1843,6 +1853,112 @@ func NewGitSyncHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "git_sync")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountPreviewStyleHandler configures the mux to serve the "notes" service
+// "preview_style" endpoint.
+func MountPreviewStyleHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/preview-style", f)
+}
+
+// NewPreviewStyleHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "preview_style" endpoint.
+func NewPreviewStyleHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodePreviewStyleRequest(mux, decoder)
+		encodeResponse = EncodePreviewStyleResponse(encoder)
+		encodeError    = EncodePreviewStyleError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "preview_style")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountSetPreviewStyleHandler configures the mux to serve the "notes" service
+// "set_preview_style" endpoint.
+func MountSetPreviewStyleHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/preview-style", f)
+}
+
+// NewSetPreviewStyleHandler creates a HTTP handler which loads the HTTP
+// request and calls the "notes" service "set_preview_style" endpoint.
+func NewSetPreviewStyleHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeSetPreviewStyleRequest(mux, decoder)
+		encodeResponse = EncodeSetPreviewStyleResponse(encoder)
+		encodeError    = EncodeSetPreviewStyleError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "set_preview_style")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

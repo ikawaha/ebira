@@ -53,11 +53,13 @@ type Client struct {
 	EventsEndpoint                goa.Endpoint
 	GitStatusEndpoint             goa.Endpoint
 	GitSyncEndpoint               goa.Endpoint
+	PreviewStyleEndpoint          goa.Endpoint
+	SetPreviewStyleEndpoint       goa.Endpoint
 	SyncEndpoint                  goa.Endpoint
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -96,6 +98,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		EventsEndpoint:                events,
 		GitStatusEndpoint:             gitStatus,
 		GitSyncEndpoint:               gitSync,
+		PreviewStyleEndpoint:          previewStyle,
+		SetPreviewStyleEndpoint:       setPreviewStyle,
 		SyncEndpoint:                  sync,
 	}
 }
@@ -655,6 +659,35 @@ func (c *Client) GitSync(ctx context.Context, p *GitSyncPayload) (res *GitSyncRe
 		return
 	}
 	return ires.(*GitSyncResult), nil
+}
+
+// PreviewStyle calls the "preview_style" endpoint of the "notes" service.
+// PreviewStyle may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) PreviewStyle(ctx context.Context, p *PreviewStylePayload) (res *PreviewStyle, err error) {
+	var ires any
+	ires, err = c.PreviewStyleEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*PreviewStyle), nil
+}
+
+// SetPreviewStyle calls the "set_preview_style" endpoint of the "notes"
+// service.
+// SetPreviewStyle may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) SetPreviewStyle(ctx context.Context, p *SetPreviewStylePayload) (res *PreviewStyle, err error) {
+	var ires any
+	ires, err = c.SetPreviewStyleEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*PreviewStyle), nil
 }
 
 // Sync calls the "sync" endpoint of the "notes" service.

@@ -147,6 +147,13 @@ type GitSyncRequestBody struct {
 	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
 }
 
+// SetPreviewStyleRequestBody is the type of the "notes" service
+// "set_preview_style" endpoint HTTP request body.
+type SetPreviewStyleRequestBody struct {
+	// Built-in style to use, or default for none
+	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -572,6 +579,40 @@ type GitSyncResponseBody struct {
 	Conflicts []*GitConflictResponseBody `form:"conflicts" json:"conflicts" xml:"conflicts"`
 	// Files that could not be read when the index was updated after the sync
 	Errors []string `form:"errors" json:"errors" xml:"errors"`
+}
+
+// PreviewStyleResponseBody is the type of the "notes" service "preview_style"
+// endpoint HTTP response body.
+type PreviewStyleResponseBody struct {
+	// The built-in style the CSS file for the preview is, or was made from:
+	// default when there is no file, and empty for CSS of the user's own
+	Style string `form:"style" json:"style" xml:"style"`
+	// Whether the file differs from the built-in style it was made from
+	Modified bool `form:"modified" json:"modified" xml:"modified"`
+	// Path of the CSS file for the preview, next to the settings file, where the
+	// user may change it
+	Path string `form:"path" json:"path" xml:"path"`
+	// Path of the copy of the file made before it was replaced or removed, as it
+	// was not a built-in style as it is; only in the result of set_preview_style,
+	// when one was made
+	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
+}
+
+// SetPreviewStyleResponseBody is the type of the "notes" service
+// "set_preview_style" endpoint HTTP response body.
+type SetPreviewStyleResponseBody struct {
+	// The built-in style the CSS file for the preview is, or was made from:
+	// default when there is no file, and empty for CSS of the user's own
+	Style string `form:"style" json:"style" xml:"style"`
+	// Whether the file differs from the built-in style it was made from
+	Modified bool `form:"modified" json:"modified" xml:"modified"`
+	// Path of the CSS file for the preview, next to the settings file, where the
+	// user may change it
+	Path string `form:"path" json:"path" xml:"path"`
+	// Path of the copy of the file made before it was replaced or removed, as it
+	// was not a built-in style as it is; only in the result of set_preview_style,
+	// when one was made
+	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -2586,6 +2627,80 @@ type GitSyncUnauthorizedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// PreviewStyleUnauthorizedResponseBody is the type of the "notes" service
+// "preview_style" endpoint HTTP response body for the "unauthorized" error.
+type PreviewStyleUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// PreviewStyleVerificationRequiredResponseBody is the type of the "notes"
+// service "preview_style" endpoint HTTP response body for the
+// "verification_required" error.
+type PreviewStyleVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SetPreviewStyleUnauthorizedResponseBody is the type of the "notes" service
+// "set_preview_style" endpoint HTTP response body for the "unauthorized" error.
+type SetPreviewStyleUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SetPreviewStyleVerificationRequiredResponseBody is the type of the "notes"
+// service "set_preview_style" endpoint HTTP response body for the
+// "verification_required" error.
+type SetPreviewStyleVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // SyncUnauthorizedResponseBody is the type of the "notes" service "sync"
 // endpoint HTTP response body for the "unauthorized" error.
 type SyncUnauthorizedResponseBody struct {
@@ -3336,6 +3451,30 @@ func NewGitSyncResponseBody(res *notes.GitSyncResult) *GitSyncResponseBody {
 		}
 	} else {
 		body.Errors = []string{}
+	}
+	return body
+}
+
+// NewPreviewStyleResponseBody builds the HTTP response body from the result of
+// the "preview_style" endpoint of the "notes" service.
+func NewPreviewStyleResponseBody(res *notes.PreviewStyle) *PreviewStyleResponseBody {
+	body := &PreviewStyleResponseBody{
+		Style:    res.Style,
+		Modified: res.Modified,
+		Path:     res.Path,
+		Backup:   res.Backup,
+	}
+	return body
+}
+
+// NewSetPreviewStyleResponseBody builds the HTTP response body from the result
+// of the "set_preview_style" endpoint of the "notes" service.
+func NewSetPreviewStyleResponseBody(res *notes.PreviewStyle) *SetPreviewStyleResponseBody {
+	body := &SetPreviewStyleResponseBody{
+		Style:    res.Style,
+		Modified: res.Modified,
+		Path:     res.Path,
+		Backup:   res.Backup,
 	}
 	return body
 }
@@ -4908,6 +5047,63 @@ func NewGitSyncUnauthorizedResponseBody(res *goa.ServiceError) *GitSyncUnauthori
 	return body
 }
 
+// NewPreviewStyleUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "preview_style" endpoint of the "notes" service.
+func NewPreviewStyleUnauthorizedResponseBody(res *goa.ServiceError) *PreviewStyleUnauthorizedResponseBody {
+	body := &PreviewStyleUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewPreviewStyleVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "preview_style" endpoint of the "notes" service.
+func NewPreviewStyleVerificationRequiredResponseBody(res *goa.ServiceError) *PreviewStyleVerificationRequiredResponseBody {
+	body := &PreviewStyleVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSetPreviewStyleUnauthorizedResponseBody builds the HTTP response body
+// from the result of the "set_preview_style" endpoint of the "notes" service.
+func NewSetPreviewStyleUnauthorizedResponseBody(res *goa.ServiceError) *SetPreviewStyleUnauthorizedResponseBody {
+	body := &SetPreviewStyleUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSetPreviewStyleVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "set_preview_style" endpoint of the "notes"
+// service.
+func NewSetPreviewStyleVerificationRequiredResponseBody(res *goa.ServiceError) *SetPreviewStyleVerificationRequiredResponseBody {
+	body := &SetPreviewStyleVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewSyncUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "sync" endpoint of the "notes" service.
 func NewSyncUnauthorizedResponseBody(res *goa.ServiceError) *SyncUnauthorizedResponseBody {
@@ -5284,6 +5480,26 @@ func NewGitSyncPayload(body *GitSyncRequestBody, session *string) *notes.GitSync
 	return v
 }
 
+// NewPreviewStylePayload builds a notes service preview_style endpoint payload.
+func NewPreviewStylePayload(session *string) *notes.PreviewStylePayload {
+	v := &notes.PreviewStylePayload{}
+	v.Session = session
+
+	return v
+}
+
+// NewSetPreviewStylePayload builds a notes service set_preview_style endpoint
+// payload.
+func NewSetPreviewStylePayload(body *SetPreviewStyleRequestBody, session *string) *notes.SetPreviewStylePayload {
+	v := &notes.SetPreviewStylePayload{}
+	if body.Style != nil {
+		v.Style = *body.Style
+	}
+	v.Session = session
+
+	return v
+}
+
 // NewSyncPayload builds a notes service sync endpoint payload.
 func NewSyncPayload(session *string) *notes.SyncPayload {
 	v := &notes.SyncPayload{}
@@ -5456,6 +5672,17 @@ func ValidateImportRequestBody(body *ImportRequestBody) (err error) {
 			if err2 := validateImportFileRequestBody(e, "body.files[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// ValidateSetPreviewStyleRequestBody runs the validations defined on
+// SetPreviewStyleRequestBody
+func ValidateSetPreviewStyleRequestBody(body *SetPreviewStyleRequestBody) (err error) {
+	if body.Style != nil {
+		if !(*body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"default", "band", "document", "compact", "lined"}))
 		}
 	}
 	return

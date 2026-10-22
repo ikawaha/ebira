@@ -2931,6 +2931,108 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /preview-style:
+        get:
+            tags:
+                - notes
+            summary: preview_style notes
+            description: 'Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user''s own. For people only.'
+            operationId: notes#preview_style
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PreviewStyle'
+                            example:
+                                backup: /Users/you/.config/ebira/preview.css.bak
+                                modified: true
+                                path: /Users/you/.config/ebira/preview.css
+                                style: band
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        put:
+            tags:
+                - notes
+            summary: set_preview_style notes
+            description: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.
+            operationId: notes#set_preview_style
+            requestBody:
+                description: Request body for set_preview_style.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetPreviewStyleRequestBody'
+                        example:
+                            style: band
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PreviewStyle'
+                            example:
+                                backup: /Users/you/.config/ebira/preview.css.bak
+                                modified: false
+                                path: /Users/you/.config/ebira/preview.css
+                                style: band
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /search:
         get:
             tags:
@@ -5005,6 +5107,41 @@ components:
             required:
                 - id
                 - created_at
+        PreviewStyle:
+            type: object
+            properties:
+                backup:
+                    type: string
+                    description: Path of the copy of the file made before it was replaced or removed, as it was not a built-in style as it is; only in the result of set_preview_style, when one was made
+                    example: /Users/you/.config/ebira/preview.css.bak
+                modified:
+                    type: boolean
+                    description: Whether the file differs from the built-in style it was made from
+                    example: true
+                path:
+                    type: string
+                    description: Path of the CSS file for the preview, next to the settings file, where the user may change it
+                    example: /Users/you/.config/ebira/preview.css
+                style:
+                    type: string
+                    description: 'The built-in style the CSS file for the preview is, or was made from: default when there is no file, and empty for CSS of the user''s own'
+                    example: band
+                    enum:
+                        - ""
+                        - default
+                        - band
+                        - document
+                        - compact
+                        - lined
+            example:
+                backup: /Users/you/.config/ebira/preview.css.bak
+                modified: true
+                path: /Users/you/.config/ebira/preview.css
+                style: band
+            required:
+                - style
+                - modified
+                - path
         RegisterBeginRequestBody:
             type: object
             properties:
@@ -5233,6 +5370,22 @@ components:
                 - mode
                 - total
                 - notes
+        SetPreviewStyleRequestBody:
+            type: object
+            properties:
+                style:
+                    type: string
+                    description: Built-in style to use, or default for none
+                    example: band
+                    enum:
+                        - default
+                        - band
+                        - document
+                        - compact
+                        - lined
+            description: Request body for set_preview_style.
+            example:
+                style: band
         StatusResponseBody:
             type: object
             properties:

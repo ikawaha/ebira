@@ -230,6 +230,24 @@ var GitStatus = Type("GitStatus", func() {
 	})
 })
 
+// previewStyleNames are the built-in styles of the preview, as in
+// internal/previewstyle, and default for none.
+var previewStyleNames = []any{"default", "band", "document", "compact", "lined"}
+
+var PreviewStyle = Type("PreviewStyle", func() {
+	RequiredAttribute("style", String, "The built-in style the CSS file for the preview is, or was made from: default when there is no file, and empty for CSS of the user's own", func() {
+		Enum(append([]any{""}, previewStyleNames...)...)
+		Example("band")
+	})
+	RequiredAttribute("modified", Boolean, "Whether the file differs from the built-in style it was made from")
+	RequiredAttribute("path", String, "Path of the CSS file for the preview, next to the settings file, where the user may change it", func() {
+		Example("/Users/you/.config/ebira/preview.css")
+	})
+	Attribute("backup", String, "Path of the copy of the file made before it was replaced or removed, as it was not a built-in style as it is; only in the result of set_preview_style, when one was made", func() {
+		Example("/Users/you/.config/ebira/preview.css.bak")
+	})
+})
+
 var GitConflict = Type("GitConflict", func() {
 	RequiredAttribute("path", String, "File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it", func() {
 		Example("inbox/3f9a1c0e7b2d4a.yaml")
@@ -1001,6 +1019,36 @@ var _ = Service("notes", func() {
 			})
 			Response("forbidden", StatusForbidden)
 			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	// The style of the preview is the setting of this machine's web UI, for
+	// people only, so not an MCP tool. set_preview_style writes only a
+	// built-in style, never content from the request.
+	Method("preview_style", func() {
+		Description("Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.")
+		Payload(sessionDSL)
+		Result(PreviewStyle)
+		HTTP(func() {
+			GET("/preview-style")
+		})
+	})
+
+	Method("set_preview_style", func() {
+		Description("Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("style", String, "Built-in style to use, or default for none", func() {
+				Enum(previewStyleNames...)
+				Example("band")
+			})
+		})
+		Result(PreviewStyle)
+		HTTP(func() {
+			PUT("/preview-style")
+			Body(func() {
+				Attribute("style")
+			})
 		})
 	})
 

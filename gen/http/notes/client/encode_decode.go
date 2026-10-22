@@ -4479,6 +4479,240 @@ func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restore
 	}
 }
 
+// BuildPreviewStyleRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "preview_style" endpoint
+func (c *Client) BuildPreviewStyleRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: PreviewStyleNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "preview_style", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodePreviewStyleRequest returns an encoder for requests sent to the notes
+// preview_style server.
+func EncodePreviewStyleRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.PreviewStylePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "preview_style", "*notes.PreviewStylePayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodePreviewStyleResponse returns a decoder for responses returned by the
+// notes preview_style endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodePreviewStyleResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodePreviewStyleResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "preview_style", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "preview_style", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body PreviewStyleResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "preview_style", err)
+			}
+			err = ValidatePreviewStyleResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "preview_style", err)
+			}
+			res := NewPreviewStylePreviewStyleOK(&body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body PreviewStyleUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "preview_style", err)
+			}
+			err = ValidatePreviewStyleUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "preview_style", err)
+			}
+			return nil, NewPreviewStyleUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body PreviewStyleVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "preview_style", err)
+			}
+			err = ValidatePreviewStyleVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "preview_style", err)
+			}
+			return nil, NewPreviewStyleVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "preview_style", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "preview_style", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildSetPreviewStyleRequest instantiates a HTTP request object with method
+// and path set to call the "notes" service "set_preview_style" endpoint
+func (c *Client) BuildSetPreviewStyleRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SetPreviewStyleNotesPath()}
+	req, err := http.NewRequest("PUT", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "set_preview_style", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeSetPreviewStyleRequest returns an encoder for requests sent to the
+// notes set_preview_style server.
+func EncodeSetPreviewStyleRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.SetPreviewStylePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "set_preview_style", "*notes.SetPreviewStylePayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewSetPreviewStyleRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "set_preview_style", err)
+		}
+		return nil
+	}
+}
+
+// DecodeSetPreviewStyleResponse returns a decoder for responses returned by
+// the notes set_preview_style endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeSetPreviewStyleResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeSetPreviewStyleResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_preview_style", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "set_preview_style", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body SetPreviewStyleResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_preview_style", err)
+			}
+			err = ValidateSetPreviewStyleResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_preview_style", err)
+			}
+			res := NewSetPreviewStylePreviewStyleOK(&body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body SetPreviewStyleUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_preview_style", err)
+			}
+			err = ValidateSetPreviewStyleUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_preview_style", err)
+			}
+			return nil, NewSetPreviewStyleUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body SetPreviewStyleVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_preview_style", err)
+			}
+			err = ValidateSetPreviewStyleVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_preview_style", err)
+			}
+			return nil, NewSetPreviewStyleVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_preview_style", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "set_preview_style", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildSyncRequest instantiates a HTTP request object with method and path set
 // to call the "notes" service "sync" endpoint
 func (c *Client) BuildSyncRequest(ctx context.Context, v any) (*http.Request, error) {

@@ -147,6 +147,13 @@ type GitSyncRequestBody struct {
 	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
 }
 
+// SetPreviewStyleRequestBody is the type of the "notes" service
+// "set_preview_style" endpoint HTTP request body.
+type SetPreviewStyleRequestBody struct {
+	// Built-in style to use, or default for none
+	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -556,6 +563,40 @@ type GitSyncResponseBody struct {
 	Conflicts []*GitConflictResponseBody `form:"conflicts,omitempty" json:"conflicts,omitempty" xml:"conflicts,omitempty"`
 	// Files that could not be read when the index was updated after the sync
 	Errors []string `form:"errors,omitempty" json:"errors,omitempty" xml:"errors,omitempty"`
+}
+
+// PreviewStyleResponseBody is the type of the "notes" service "preview_style"
+// endpoint HTTP response body.
+type PreviewStyleResponseBody struct {
+	// The built-in style the CSS file for the preview is, or was made from:
+	// default when there is no file, and empty for CSS of the user's own
+	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
+	// Whether the file differs from the built-in style it was made from
+	Modified *bool `form:"modified,omitempty" json:"modified,omitempty" xml:"modified,omitempty"`
+	// Path of the CSS file for the preview, next to the settings file, where the
+	// user may change it
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// Path of the copy of the file made before it was replaced or removed, as it
+	// was not a built-in style as it is; only in the result of set_preview_style,
+	// when one was made
+	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
+}
+
+// SetPreviewStyleResponseBody is the type of the "notes" service
+// "set_preview_style" endpoint HTTP response body.
+type SetPreviewStyleResponseBody struct {
+	// The built-in style the CSS file for the preview is, or was made from:
+	// default when there is no file, and empty for CSS of the user's own
+	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
+	// Whether the file differs from the built-in style it was made from
+	Modified *bool `form:"modified,omitempty" json:"modified,omitempty" xml:"modified,omitempty"`
+	// Path of the CSS file for the preview, next to the settings file, where the
+	// user may change it
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// Path of the copy of the file made before it was replaced or removed, as it
+	// was not a built-in style as it is; only in the result of set_preview_style,
+	// when one was made
+	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -2570,6 +2611,80 @@ type GitSyncUnauthorizedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// PreviewStyleUnauthorizedResponseBody is the type of the "notes" service
+// "preview_style" endpoint HTTP response body for the "unauthorized" error.
+type PreviewStyleUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// PreviewStyleVerificationRequiredResponseBody is the type of the "notes"
+// service "preview_style" endpoint HTTP response body for the
+// "verification_required" error.
+type PreviewStyleVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SetPreviewStyleUnauthorizedResponseBody is the type of the "notes" service
+// "set_preview_style" endpoint HTTP response body for the "unauthorized" error.
+type SetPreviewStyleUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SetPreviewStyleVerificationRequiredResponseBody is the type of the "notes"
+// service "set_preview_style" endpoint HTTP response body for the
+// "verification_required" error.
+type SetPreviewStyleVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // SyncUnauthorizedResponseBody is the type of the "notes" service "sync"
 // endpoint HTTP response body for the "unauthorized" error.
 type SyncUnauthorizedResponseBody struct {
@@ -2944,6 +3059,15 @@ func NewImportRequestBody(p *notes.ImportPayload) *ImportRequestBody {
 func NewGitSyncRequestBody(p *notes.GitSyncPayload) *GitSyncRequestBody {
 	body := &GitSyncRequestBody{
 		Remote: p.Remote,
+	}
+	return body
+}
+
+// NewSetPreviewStyleRequestBody builds the HTTP request body from the payload
+// of the "set_preview_style" endpoint of the "notes" service.
+func NewSetPreviewStyleRequestBody(p *notes.SetPreviewStylePayload) *SetPreviewStyleRequestBody {
+	body := &SetPreviewStyleRequestBody{
+		Style: &p.Style,
 	}
 	return body
 }
@@ -5085,6 +5209,92 @@ func NewGitSyncUnauthorized(body *GitSyncUnauthorizedResponseBody) *goa.ServiceE
 	return v
 }
 
+// NewPreviewStylePreviewStyleOK builds a "notes" service "preview_style"
+// endpoint result from a HTTP "OK" response.
+func NewPreviewStylePreviewStyleOK(body *PreviewStyleResponseBody) *notes.PreviewStyle {
+	v := &notes.PreviewStyle{
+		Style:    *body.Style,
+		Modified: *body.Modified,
+		Path:     *body.Path,
+		Backup:   body.Backup,
+	}
+
+	return v
+}
+
+// NewPreviewStyleUnauthorized builds a notes service preview_style endpoint
+// unauthorized error.
+func NewPreviewStyleUnauthorized(body *PreviewStyleUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewPreviewStyleVerificationRequired builds a notes service preview_style
+// endpoint verification_required error.
+func NewPreviewStyleVerificationRequired(body *PreviewStyleVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSetPreviewStylePreviewStyleOK builds a "notes" service
+// "set_preview_style" endpoint result from a HTTP "OK" response.
+func NewSetPreviewStylePreviewStyleOK(body *SetPreviewStyleResponseBody) *notes.PreviewStyle {
+	v := &notes.PreviewStyle{
+		Style:    *body.Style,
+		Modified: *body.Modified,
+		Path:     *body.Path,
+		Backup:   body.Backup,
+	}
+
+	return v
+}
+
+// NewSetPreviewStyleUnauthorized builds a notes service set_preview_style
+// endpoint unauthorized error.
+func NewSetPreviewStyleUnauthorized(body *SetPreviewStyleUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSetPreviewStyleVerificationRequired builds a notes service
+// set_preview_style endpoint verification_required error.
+func NewSetPreviewStyleVerificationRequired(body *SetPreviewStyleVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewSyncResultOK builds a "notes" service "sync" endpoint result from a HTTP
 // "OK" response.
 func NewSyncResultOK(body *SyncResponseBody) *notes.SyncResult {
@@ -5805,6 +6015,46 @@ func ValidateGitSyncResponseBody(body *GitSyncResponseBody) (err error) {
 			if err2 := validateGitConflictResponseBody(e, "body.conflicts[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// ValidatePreviewStyleResponseBody runs the validations defined on
+// PreviewStyleResponseBody
+func ValidatePreviewStyleResponseBody(body *PreviewStyleResponseBody) (err error) {
+	if body.Style == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("style", "body"))
+	}
+	if body.Modified == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("modified", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.Style != nil {
+		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+		}
+	}
+	return
+}
+
+// ValidateSetPreviewStyleResponseBody runs the validations defined on
+// SetPreviewStyleResponseBody
+func ValidateSetPreviewStyleResponseBody(body *SetPreviewStyleResponseBody) (err error) {
+	if body.Style == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("style", "body"))
+	}
+	if body.Modified == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("modified", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.Style != nil {
+		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined"}))
 		}
 	}
 	return
@@ -8446,6 +8696,102 @@ func ValidateGitSyncBadRequestResponseBody(body *GitSyncBadRequestResponseBody) 
 // ValidateGitSyncUnauthorizedResponseBody runs the validations defined on
 // GitSyncUnauthorizedResponseBody
 func ValidateGitSyncUnauthorizedResponseBody(body *GitSyncUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidatePreviewStyleUnauthorizedResponseBody runs the validations defined on
+// PreviewStyleUnauthorizedResponseBody
+func ValidatePreviewStyleUnauthorizedResponseBody(body *PreviewStyleUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidatePreviewStyleVerificationRequiredResponseBody runs the validations
+// defined on PreviewStyleVerificationRequiredResponseBody
+func ValidatePreviewStyleVerificationRequiredResponseBody(body *PreviewStyleVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSetPreviewStyleUnauthorizedResponseBody runs the validations defined
+// on SetPreviewStyleUnauthorizedResponseBody
+func ValidateSetPreviewStyleUnauthorizedResponseBody(body *SetPreviewStyleUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSetPreviewStyleVerificationRequiredResponseBody runs the validations
+// defined on SetPreviewStyleVerificationRequiredResponseBody
+func ValidateSetPreviewStyleVerificationRequiredResponseBody(body *SetPreviewStyleVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

@@ -15,6 +15,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/ikawaha/ebira/internal/previewstyle"
 )
 
 //go:embed static
@@ -78,8 +80,13 @@ type Options struct {
 	PreviewCSS string
 }
 
+// stylesDir is where the built-in styles of the preview are served, under
+// AssetsPrefix.
+const stylesDir = "styles/"
+
 // Handler serves the web UI: the page at Prefix, and its files under
-// AssetsPrefix, with the CSS for the preview at AssetsPrefix+PreviewCSSFile.
+// AssetsPrefix, with the CSS for the preview at AssetsPrefix+PreviewCSSFile
+// and the built-in styles at AssetsPrefix+"styles/<name>.css".
 func Handler(o Options) http.Handler {
 	lang, theme, search := o.Lang, o.Theme, o.Search
 	sub, err := fs.Sub(static, "static")
@@ -114,6 +121,16 @@ func Handler(o Options) http.Handler {
 			http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(page))
 		case r.URL.Path == AssetsPrefix+PreviewCSSFile:
 			servePreviewCSS(w, o.PreviewCSS)
+		case strings.HasPrefix(r.URL.Path, AssetsPrefix+stylesDir):
+			// A built-in style, to try it in the preview before using it.
+			name, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, AssetsPrefix+stylesDir), ".css")
+			css, found := previewstyle.CSS(name)
+			if !ok || !found {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "text/css; charset=utf-8")
+			io.WriteString(w, PreviewCSS(string(css)))
 		case strings.HasPrefix(r.URL.Path, AssetsPrefix) && r.URL.Path != AssetsPrefix+"index.html":
 			files.ServeHTTP(w, r)
 		default:

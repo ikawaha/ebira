@@ -297,6 +297,7 @@ func runServe(args []string) error {
 	if p, err := config.Path(); err == nil {
 		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)
 	}
+	svc.SetPreviewCSS(previewCSS)
 	ui := web.Handler(web.Options{Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS})
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)

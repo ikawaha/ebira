@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <script src="assets/theme.js"></script>
 <link rel="stylesheet" href="assets/style.css">
-<link rel="stylesheet" href="assets/preview.css">
+<link rel="stylesheet" href="assets/preview.css" id="preview-css">
 <script src="assets/vendor/marked.umd.js" defer></script>
 <script src="assets/vendor/purify.min.js" defer></script>
 <script src="assets/app.js" defer></script>
@@ -47,6 +47,7 @@
       <div class="menu" id="settings-menu" role="menu" hidden>
         <button type="button" role="menuitem" id="import-open" data-i18n-title="importMarkdownTitle" data-i18n="importMarkdown"></button>
         <button type="button" role="menuitem" id="files-check-open" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
+        <button type="button" role="menuitem" id="preview-style-open" data-i18n-title="previewStyleTitle" data-i18n="previewStyle"></button>
         <button type="button" role="menuitem" id="git-sync-open" data-i18n-title="gitSyncTitle" data-i18n="gitSync" hidden></button>
         <div class="menu-sep" role="separator"></div>
         <div class="menu-label" data-i18n="language"></div>
@@ -135,5 +136,6 @@
 <dialog id="git-sync" class="files-check" data-i18n-aria-label="gitSync"></dialog>
 <dialog id="auth" class="files-check auth" data-i18n-aria-label="authTitle"></dialog>
 <dialog id="passkeys" class="files-check auth" data-i18n-aria-label="passkeysTitle"></dialog>
+<dialog id="preview-style" class="preview-style" data-i18n-aria-label="previewStyleHead"></dialog>
 </body>
 </html>

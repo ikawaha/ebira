@@ -187,6 +187,14 @@ type Service interface {
 	// this side's version; a file deleted on one side and changed on the other
 	// keeps the changed version. The index is updated afterwards. For people only.
 	GitSync(context.Context, *GitSyncPayload) (res *GitSyncResult, err error)
+	// Tell the style of the preview of the web UI: which built-in style the CSS
+	// file for the preview, next to the settings file, is or was made from, or
+	// that it is CSS of the user's own. For people only.
+	PreviewStyle(context.Context, *PreviewStylePayload) (res *PreviewStyle, err error)
+	// Make the CSS file for the preview a built-in style, or remove it with
+	// default. A file that is not a built-in style as it is, changed or of the
+	// user's own, is copied to preview.css.bak first. For people only.
+	SetPreviewStyle(context.Context, *SetPreviewStylePayload) (res *PreviewStyle, err error)
 	// Scan the notes directory and bring the SQLite index in line with the YAML
 	// files. Not needed while the server watches files.
 	Sync(context.Context, *SyncPayload) (res *SyncResult, err error)
@@ -212,7 +220,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [38]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "sync"}
+var MethodNames = [40]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "notebooks", "tags", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "preview_style", "set_preview_style", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -778,6 +786,29 @@ type NotebooksPayload struct {
 	Session *string
 }
 
+// PreviewStyle is the result type of the notes service preview_style method.
+type PreviewStyle struct {
+	// The built-in style the CSS file for the preview is, or was made from:
+	// default when there is no file, and empty for CSS of the user's own
+	Style string
+	// Whether the file differs from the built-in style it was made from
+	Modified bool
+	// Path of the CSS file for the preview, next to the settings file, where the
+	// user may change it
+	Path string
+	// Path of the copy of the file made before it was replaced or removed, as it
+	// was not a built-in style as it is; only in the result of set_preview_style,
+	// when one was made
+	Backup *string
+}
+
+// PreviewStylePayload is the payload type of the notes service preview_style
+// method.
+type PreviewStylePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
 // RestoreNotebookPayload is the payload type of the notes service
 // restore_notebook method.
 type RestoreNotebookPayload struct {
@@ -849,6 +880,15 @@ type SearchResult struct {
 	Total int
 	// Matched notes
 	Notes []*NoteSummary
+}
+
+// SetPreviewStylePayload is the payload type of the notes service
+// set_preview_style method.
+type SetPreviewStylePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Built-in style to use, or default for none
+	Style string
 }
 
 // SyncPayload is the payload type of the notes service sync method.
@@ -1762,6 +1802,44 @@ func validatejsonNotebookTransport(value *jsonNotebookTransport) (err error) {
 	return err
 }
 
+// jsonPreviewStyleTransport stores JSON fields until they have been validated.
+type jsonPreviewStyleTransport struct {
+	// The built-in style the CSS file for the preview is, or was made from:
+	// default when there is no file, and empty for CSS of the user's own
+	Style *string `json:"style"`
+	// Whether the file differs from the built-in style it was made from
+	Modified *bool `json:"modified"`
+	// Path of the CSS file for the preview, next to the settings file, where the
+	// user may change it
+	Path *string `json:"path"`
+	// Path of the copy of the file made before it was replaced or removed, as it
+	// was not a built-in style as it is; only in the result of set_preview_style,
+	// when one was made
+	Backup *string `json:"backup,omitempty"`
+}
+
+// validatejsonPreviewStyleTransport checks decoded JSON before it becomes a service value.
+func validatejsonPreviewStyleTransport(value *jsonPreviewStyleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Style == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("style", "body"))
+	}
+	if value.Modified == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("modified", "body"))
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if value.Style != nil {
+		if !(*value.Style == "" || *value.Style == "default" || *value.Style == "band" || *value.Style == "document" || *value.Style == "compact" || *value.Style == "lined") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *value.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+		}
+	}
+	return err
+}
+
 // jsonSearchResultTransport stores JSON fields until they have been validated.
 type jsonSearchResultTransport struct {
 	// Search mode used
@@ -2357,6 +2435,14 @@ func validateNotebookOriginal(value *Notebook) (err error) {
 	}
 	if !(value.Sort == "order" || value.Sort == "created" || value.Sort == "updated" || value.Sort == "title") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.sort", value.Sort, []any{"order", "created", "updated", "title"}))
+	}
+	return err
+}
+
+// validatePreviewStyleOriginal checks the original typed value before JSON conversion.
+func validatePreviewStyleOriginal(value *PreviewStyle) (err error) {
+	if !(value.Style == "" || value.Style == "default" || value.Style == "band" || value.Style == "document" || value.Style == "compact" || value.Style == "lined") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.style", value.Style, []any{"", "default", "band", "document", "compact", "lined"}))
 	}
 	return err
 }
@@ -3531,6 +3617,68 @@ func DecodeNotebook(data []byte) (out *Notebook, err error) {
 			Reserved: *body.Reserved,
 			Kind:     *body.Kind,
 			Sort:     *body.Sort,
+		}
+	}
+	return out, nil
+}
+
+// EncodePreviewStyle turns a service value into JSON using the field names in the Goa design.
+func EncodePreviewStyle(in *PreviewStyle) ([]byte, error) {
+	if err := checkPreviewStyleValue(in); err != nil {
+		return nil, fmt.Errorf("encode PreviewStyle JSON: %w", err)
+	}
+	if err := validatePreviewStyleOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate PreviewStyle value: %w", err)
+	}
+	var body *jsonPreviewStyleTransport
+	{
+		body = &jsonPreviewStyleTransport{
+			Style:    &in.Style,
+			Modified: &in.Modified,
+			Path:     &in.Path,
+			Backup:   in.Backup,
+		}
+	}
+	if err := validatejsonPreviewStyleTransport(body); err != nil {
+		return nil, fmt.Errorf("validate PreviewStyle JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode PreviewStyle JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodePreviewStyle checks JSON field names from the Goa design and returns a service value.
+func DecodePreviewStyle(data []byte) (out *PreviewStyle, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode PreviewStyle JSON: %w", err)
+	}
+	if err := validatePreviewStyleJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode PreviewStyle JSON: %w", err)
+	}
+	var body *jsonPreviewStyleTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode PreviewStyle JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode PreviewStyle JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode PreviewStyle JSON after first value: %w", err)
+	}
+	if err := validatejsonPreviewStyleTransport(body); err != nil {
+		return out, fmt.Errorf("validate PreviewStyle JSON: %w", err)
+	}
+	{
+		out = &PreviewStyle{
+			Style:    *body.Style,
+			Modified: *body.Modified,
+			Path:     *body.Path,
+			Backup:   body.Backup,
 		}
 	}
 	return out, nil
@@ -8164,6 +8312,130 @@ func validateNotebookJSONValue9(path string, value any, description string) erro
 	return nil
 }
 
+// validatePreviewStyleJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validatePreviewStyleJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "backup":
+			if err := validatePreviewStyleJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the copy of the file made before it was replaced or removed, as it was not a built-in style as it is; only in the result of set_preview_style, when one was made",
+			); err != nil {
+				return err
+			}
+		case "modified":
+			if err := validatePreviewStyleJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the file differs from the built-in style it was made from",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validatePreviewStyleJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the CSS file for the preview, next to the settings file, where the user may change it",
+			); err != nil {
+				return err
+			}
+		case "style":
+			if err := validatePreviewStyleJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The built-in style the CSS file for the preview is, or was made from: default when there is no file, and empty for CSS of the user's own",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"backup",
+				"modified",
+				"path",
+				"style",
+			})
+		}
+	}
+	return nil
+}
+
+// validatePreviewStyleJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validatePreviewStyleJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validatePreviewStyleJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validatePreviewStyleJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validatePreviewStyleJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validatePreviewStyleJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
+// validatePreviewStyleJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validatePreviewStyleJSONValue5(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
 // validateSearchResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateSearchResultJSONValue(path string, value any, description string) error {
 	field := path
@@ -10424,6 +10696,44 @@ func checkNotebookNotebookValue(in *Notebook, field string, active map[any]bool)
 		}
 		if !utf8.ValidString(string(in.Sort)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "sort", false))
+		}
+	}
+	return nil
+}
+
+// checkPreviewStyleValue checks text and cycles before conversion.
+func checkPreviewStyleValue(in *PreviewStyle) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkPreviewStylePreviewStyleValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkPreviewStylePreviewStyleValue checks one generated value on the active path.
+func checkPreviewStylePreviewStyleValue(in *PreviewStyle, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Style)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "style", false))
+		}
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+		if in.Backup != nil {
+			if !utf8.ValidString(string(*in.Backup)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "backup", false))
+			}
 		}
 	}
 	return nil

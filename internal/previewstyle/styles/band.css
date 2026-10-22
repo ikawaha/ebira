@@ -1,0 +1,42 @@
+/* ebira preview style: band
+   Headings with rules and a band, a dotted rule and bold in a warm color.
+   This file is yours to change; the web UI tells it is changed. The colors
+   of the web UI, such as var(--accent), follow its light and dark themes. */
+
+/* Headings: a rule above and below h1, a band for h2, a bar for h3. */
+h1 {
+  color: var(--accent);
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  padding: 6px 0;
+}
+h2 {
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+/* Inside the band, code, links and bold take the color of its text. */
+h2 code { color: inherit; background: color-mix(in srgb, var(--bg) 25%, transparent); }
+h2 a:link, h2 a:visited { color: inherit; text-decoration: underline; }
+h3 {
+  border-left: 5px solid var(--accent);
+  padding-left: 8px;
+}
+
+/* A dotted rule; links underlined only when hovered. */
+hr { border: none; border-top: 2px dotted var(--fg-muted); }
+a:link, a:visited { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Bold in a warm color for each theme, but in the band. */
+strong:not(h2 *) { color: #b03a2e; }
+:root[data-theme="dark"] & strong:not(h2 *) { color: #f4d35e; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) & strong:not(h2 *) { color: #f4d35e; }
+}
+
+/* Lists a little less indented; quotes on a tinted background. */
+ul, ol { padding-left: 1.4em; }
+blockquote { background: var(--code-bg); border-left-color: var(--accent); padding: 4px 12px; border-radius: 0 4px 4px 0; }
+blockquote p { margin: 4px 0; }

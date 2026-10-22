@@ -1178,6 +1178,50 @@ func BuildGitSyncPayload(notesGitSyncBody *string, notesGitSyncSession *string) 
 	return v, nil
 }
 
+// BuildPreviewStylePayload builds the payload for the notes preview_style
+// endpoint from CLI flags.
+func BuildPreviewStylePayload(notesPreviewStyleSession *string) (*notes.PreviewStylePayload, error) {
+	var session *string
+	{
+		if notesPreviewStyleSession != nil {
+			session = notesPreviewStyleSession
+		}
+	}
+	v := &notes.PreviewStylePayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildSetPreviewStylePayload builds the payload for the notes
+// set_preview_style endpoint from CLI flags.
+func BuildSetPreviewStylePayload(notesSetPreviewStyleBody *string, notesSetPreviewStyleSession *string) (*notes.SetPreviewStylePayload, error) {
+	var err error
+	var body SetPreviewStyleRequestBody
+	{
+		if notesSetPreviewStyleBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesSetPreviewStyleBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"style\": \"band\"\n   }'")
+		}
+	}
+	var session *string
+	{
+		if notesSetPreviewStyleSession != nil {
+			session = notesSetPreviewStyleSession
+		}
+	}
+	v := &notes.SetPreviewStylePayload{}
+	if body.Style != nil {
+		v.Style = *body.Style
+	}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildSyncPayload builds the payload for the notes sync endpoint from CLI
 // flags.
 func BuildSyncPayload(notesSyncSession *string) (*notes.SyncPayload, error) {

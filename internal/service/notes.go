@@ -31,6 +31,9 @@ type Notes struct {
 	events  *broker
 	now     func() time.Time
 	nbState string // last known notebook list, for notebooks events
+	// previewCSS is the path of the CSS file for the preview of the web UI
+	// (see SetPreviewCSS).
+	previewCSS string
 }
 
 var _ gennotes.Service = (*Notes)(nil)

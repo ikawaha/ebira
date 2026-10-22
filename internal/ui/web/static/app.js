@@ -2972,6 +2972,79 @@ async function ask(question) {
 $("ask-toggle").addEventListener("click", () => toggleAssistant());
 // Settings menu: the gear at the bottom of the left column.
 
+// The style of the preview: a built-in style written to preview.css, next to
+// the settings file, where the user may change it (see GET and PUT
+// /preview-style). The dialog tries the style chosen on the note open by
+// swapping the stylesheet of the preview, and puts it back when it closes.
+
+const PREVIEW_STYLES = ["default", "band", "document", "compact", "lined"];
+
+// styleName is the name of a built-in style shown to people.
+const styleName = (s) => t("style" + s[0].toUpperCase() + s.slice(1));
+
+// tryPreviewStyle shows style in the preview without writing it; null puts
+// back preview.css, read again.
+function tryPreviewStyle(style) {
+  const link = $("preview-css");
+  link.disabled = style === "default";
+  if (style === null) link.href = `assets/preview.css?v=${Date.now()}`;
+  else if (style !== "default") link.href = `assets/styles/${style}.css`;
+}
+
+async function openPreviewStyle() {
+  const d = $("preview-style");
+  const head = el("div", "files-head", el("h2", "", t("previewStyleHead")), button("×", () => d.close(), { title: t("closeTitle") }));
+  d.replaceChildren(head);
+  if (!d.open) d.showModal();
+  let cur;
+  try {
+    cur = await api("/preview-style");
+  } catch (e) {
+    d.append(el("p", "error", t("previewStyleFailed", { error: e.message })));
+    return;
+  }
+  const now = cur.style === "" ? t("previewStyleOwn")
+    : cur.modified ? t("previewStyleModified", { style: styleName(cur.style) }) : styleName(cur.style);
+  const list = el("fieldset", "styles");
+  for (const s of PREVIEW_STYLES) {
+    const radio = el("input");
+    radio.type = "radio";
+    radio.name = "preview-style";
+    radio.value = s;
+    radio.checked = s === cur.style;
+    radio.addEventListener("change", () => tryPreviewStyle(s));
+    list.append(el("label", "", radio, el("span", "", el("b", "", styleName(s)), " ", el("span", "desc", t("style" + s[0].toUpperCase() + s.slice(1) + "Desc")))));
+  }
+  const msg = el("p", "error");
+  msg.hidden = true;
+  const use = button(t("previewStyleUse"), async () => {
+    const style = list.querySelector("input:checked")?.value;
+    if (!style) return;
+    // A file not a built-in style as it is goes to the backup: say so first.
+    if ((cur.style === "" || cur.modified) && !confirm(t("previewStyleConfirm", { path: cur.path, backup: cur.path + ".bak" }))) return;
+    let res;
+    try {
+      res = await api("/preview-style", { method: "PUT", body: { style } });
+    } catch (e) {
+      msg.textContent = t("previewStyleFailed", { error: e.message });
+      msg.hidden = false;
+      return;
+    }
+    d.close();
+    showToast(t("previewStyleDone", { style: styleName(style) }) + (res.backup ? " " + t("previewStyleBackedUp", { backup: res.backup }) : ""));
+  }, { cls: "primary" });
+  d.replaceChildren(head,
+    el("p", "now", t("previewStyleNow", { style: now })),
+    list,
+    el("p", "hint", t("previewStyleTry")),
+    el("p", "hint", t("previewStyleFile", { path: cur.path })),
+    msg,
+    el("div", "files-actions", button(t("cancel"), () => d.close()), use));
+  (list.querySelector("input:checked") || list.querySelector("input")).focus();
+}
+
+$("preview-style").addEventListener("close", () => tryPreviewStyle(null));
+
 function toggleSettings(open = $("settings-menu").hidden) {
   $("settings-menu").hidden = !open;
   $("settings").setAttribute("aria-expanded", String(open));
@@ -2994,6 +3067,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
   }
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
+$("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
 // Theme: auto (the system's), light or dark, chosen in the settings menu and
 // kept in the browser; without a choice, the server's (see theme.js).
@@ -3272,7 +3346,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open) return;
+  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("preview-style").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

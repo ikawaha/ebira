@@ -64,7 +64,7 @@ func NewClient(rawURL string) (*Clients, error) {
 	return &Clients{
 		Notes: gennotes.NewClient(c.List(), c.Get(), c.Create(), c.Update(), c.Delete(), c.MoveNotes(), c.TrashNotes(), c.Search(), c.Restore(), c.Move(), c.Notebooks(), c.Tags(), c.CreateNotebook(), c.SaveNotebook(), c.MoveNotebook(), c.DeleteNotebook(), c.TrashedNotebooks(), c.RestoreNotebook(), c.DeleteTrashedNotebook(), c.EmptyTrash(), c.Import(),
 			nil, nil, nil, nil, nil, nil, nil, // the methods for AI clients have no HTTP endpoints
-			c.AddFile(), c.GetFile(), c.DeleteFile(), c.History(), c.HistoryVersion(), c.CheckFiles(), c.Events(), c.GitStatus(), c.GitSync(), c.Sync()),
+			c.AddFile(), c.GetFile(), c.DeleteFile(), c.History(), c.HistoryVersion(), c.CheckFiles(), c.Events(), c.GitStatus(), c.GitSync(), c.PreviewStyle(), c.SetPreviewStyle(), c.Sync()),
 		Assistant: genassistant.NewClient(a.Status(), a.Ask()),
 		Auth:      genauth.NewClient(au.Status(), au.RegisterBegin(), au.RegisterFinish(), au.LoginBegin(), au.LoginFinish(), au.DeviceStart(), au.DeviceToken(), au.DeviceApprove(), au.Passkeys(), au.DeletePasskey(), au.RevokeSessions(), au.Logout()),
 		Web:       web,

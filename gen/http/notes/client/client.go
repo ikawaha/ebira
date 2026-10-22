@@ -131,6 +131,14 @@ type Client struct {
 	// endpoint.
 	GitSyncDoer goahttp.Doer
 
+	// PreviewStyle Doer is the HTTP client used to make requests to the
+	// preview_style endpoint.
+	PreviewStyleDoer goahttp.Doer
+
+	// SetPreviewStyle Doer is the HTTP client used to make requests to the
+	// set_preview_style endpoint.
+	SetPreviewStyleDoer goahttp.Doer
+
 	// Sync Doer is the HTTP client used to make requests to the sync endpoint.
 	SyncDoer goahttp.Doer
 
@@ -184,6 +192,8 @@ func NewClient(
 		EventsDoer:                doer,
 		GitStatusDoer:             doer,
 		GitSyncDoer:               doer,
+		PreviewStyleDoer:          doer,
+		SetPreviewStyleDoer:       doer,
 		SyncDoer:                  doer,
 		RestoreResponseBody:       restoreBody,
 		scheme:                    scheme,
@@ -932,6 +942,54 @@ func (c *Client) GitSync() goa.Endpoint {
 		resp, err := c.GitSyncDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "git_sync", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// PreviewStyle returns an endpoint that makes HTTP requests to the notes
+// service preview_style server.
+func (c *Client) PreviewStyle() goa.Endpoint {
+	var (
+		encodeRequest  = EncodePreviewStyleRequest(c.encoder)
+		decodeResponse = DecodePreviewStyleResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildPreviewStyleRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.PreviewStyleDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "preview_style", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// SetPreviewStyle returns an endpoint that makes HTTP requests to the notes
+// service set_preview_style server.
+func (c *Client) SetPreviewStyle() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSetPreviewStyleRequest(c.encoder)
+		decodeResponse = DecodeSetPreviewStyleResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildSetPreviewStyleRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.SetPreviewStyleDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "set_preview_style", err)
 		}
 		return decodeResponse(resp)
 	}
