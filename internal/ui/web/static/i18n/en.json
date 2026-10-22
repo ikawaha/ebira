@@ -102,7 +102,7 @@
   "searchInfoTop": "Notes with \"{query}\" in {where}: {total} (top {shown} shown)",
   "searchPlaceholder": "Search (/ to focus, Esc to clear)",
   "searchPlaceholderMode": "Search: / to focus, Esc to clear [{mode}]",
-  "previewStyle": "Preview style…",
+  "previewStyle": "Style…",
   "previewStyleTitle": "Choose the look of the preview; it is written to preview.css, which you may change",
   "previewStyleHead": "Preview style",
   "previewStyleNow": "Now: {style}",

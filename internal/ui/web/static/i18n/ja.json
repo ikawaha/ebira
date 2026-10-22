@@ -102,7 +102,7 @@
   "searchInfoTop": "{where} で「{query}」: {total} 件（上位 {shown} 件を表示）",
   "searchPlaceholder": "検索（/ で移動、Esc で消去）",
   "searchPlaceholderMode": "検索： / で移動、Esc で消去 [{mode}]",
-  "previewStyle": "プレビューのスタイル…",
+  "previewStyle": "スタイル…",
   "previewStyleTitle": "プレビューの見た目を選ぶ（preview.css に書き、手直しできます）",
   "previewStyleHead": "プレビューのスタイル",
   "previewStyleNow": "今: {style}",
