@@ -264,6 +264,14 @@ body.resizing { cursor: col-resize; user-select: none; }
 .list li.sub-notebook:hover { background: var(--bg-hover); }
 .list li.sub-notebook.up { color: var(--fg-muted); }
 .list li.sub-notebook .icon { flex: none; width: 1.4em; }
+/* An opened sub notebook shows its notes under its row, indented on a tint
+   of its color. */
+.list li.sub-notebook .twisty { flex: none; display: flex; margin-right: -4px; color: var(--fg-muted); }
+.list li.sub-notebook .twisty svg { width: 14px; height: 14px; transition: transform .15s; }
+.list li.sub-notebook.open .twisty svg { transform: rotate(90deg); }
+.list li.in-sub { padding-left: 36px; background: color-mix(in srgb, var(--sub-bg) 45%, var(--bg)); }
+.list li.in-sub:hover { background: var(--bg-hover); }
+.list li.in-sub.active, .list li.in-sub.chosen { background: var(--bg-active); }
 .list li.sub-notebook .icon svg { display: block; width: 16px; height: 16px; margin: 0 auto; color: var(--fg-muted); }
 .list li.sub-notebook .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .list li.sub-notebook.up .name { font-weight: normal; }

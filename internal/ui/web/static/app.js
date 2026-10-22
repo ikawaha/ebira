@@ -22,7 +22,23 @@ const state = {
   editing: null, // the editor's state while editing; see startEdit
   allSort: loadAllSort(), // sort of all notes; a notebook keeps its own on the server
   want: 0, // number of notes of the list to show, a page more on "load more"
+  expanded: loadExpanded(), // keys of the sub notebooks opened in the note list of their parent (see subKey)
+  subNotes: new Map(), // key of an opened sub notebook: its notes {notes, total, want}
 };
+
+// loadExpanded reads the sub notebooks opened in the note list, kept per
+// browser.
+function loadExpanded() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem("ebira.expanded") || "[]"));
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function saveExpanded() {
+  try { localStorage.setItem("ebira.expanded", JSON.stringify([...state.expanded])); } catch (_) { /* this page only */ }
+}
 
 // LIST_PAGE is the number of notes read at a time, the most the API allows.
 const LIST_PAGE = 500;
@@ -64,6 +80,71 @@ function currentSort() {
 // notebook in the manual order, without a search.
 function canReorder() {
   return !state.query && !!state.notebook && state.notebook !== "trash" && currentSort() === "order";
+}
+
+// Sub notebooks open in the note list of their parent, as an accordion: a
+// click on the row of one shows its notes right under it, and another click
+// folds them. subKey names one, in the trash or not.
+const subKey = (id, trashed) => (trashed ? "trash:" : "") + id;
+
+// openSubs returns the sub notebooks opened in the list shown, in the order
+// of their rows: {key, sub, trashed}. None with a search, a tag, or a sub
+// notebook listed alone.
+function openSubs() {
+  if (state.query || state.tag || !state.notebook) return [];
+  const trashed = state.notebook === "trash";
+  const cur = trashed ? state.trashedNotebook : state.notebook;
+  if (!cur || parentOf(cur, trashed)) return [];
+  return (trashed ? state.trashed : state.notebooks).filter((n) => n.parent === cur)
+    .map((sub) => ({ key: subKey(sub.id, trashed), sub, trashed }))
+    .filter((x) => state.expanded.has(x.key));
+}
+
+// listedNotes returns the notes of the list in the order shown: those of the
+// opened sub notebooks under their rows at the top, then the notebook's own.
+function listedNotes() {
+  return [...openSubs().flatMap((x) => state.subNotes.get(x.key)?.notes ?? []), ...state.notes];
+}
+
+const findListed = (id) => listedNotes().find((n) => n.id === id);
+
+// listOf returns the list note id is in, with whether its notes can be moved
+// by hand: those of an opened sub notebook, or the notebook's own.
+function listOf(id) {
+  for (const x of openSubs()) {
+    const notes = state.subNotes.get(x.key)?.notes ?? [];
+    if (notes.some((n) => n.id === id)) return { notes, reorder: !x.trashed && (x.sub.sort || "order") === "order" };
+  }
+  return { notes: state.notes, reorder: canReorder() };
+}
+
+// readSubNotes reads the notes of the opened sub notebook x, in its own sort,
+// as many pages as shown before.
+async function readSubNotes(x) {
+  const want = state.subNotes.get(x.key)?.want || LIST_PAGE;
+  const notes = [];
+  let total = 0;
+  do {
+    const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id };
+    const r = await api("/notes", { params: { ...params, limit: LIST_PAGE, offset: notes.length } });
+    notes.push(...r.notes);
+    total = r.total;
+    if (!r.notes.length) break;
+  } while (notes.length < Math.min(want, total));
+  return { notes, total, want };
+}
+
+// toggleSub opens or folds the sub notebook key in the note list.
+function toggleSub(key) {
+  if (state.expanded.has(key)) {
+    state.expanded.delete(key);
+    saveExpanded();
+    renderNotes();
+    return;
+  }
+  state.expanded.add(key);
+  saveExpanded();
+  loadNotes();
 }
 
 const $ = (id) => document.getElementById(id);
@@ -588,6 +669,8 @@ const KIND_SVG = {
   // Not kinds either: a sub notebook in the note list, and the way back up.
   folder: ["M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"],
   up: ["M12 19V6", "M6.5 11.5L12 6l5.5 5.5"],
+  // The mark of a sub notebook that opens in the list, turned down when open.
+  chevron: ["M9 5.5l6.5 6.5L9 18.5"],
   // And the buttons of the preview: copy the title (two sheets), copy the
   // note (a page with a folded corner and lines), edit (a pencil) and history
   // (a clock with an arrow turning back); the trash is the can above.
@@ -995,6 +1078,12 @@ function openNotebookMenu(li, id, trashed, e) {
     m.append(b);
   };
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
+  // A sub notebook, opened under its parent, can be listed alone too.
+  const sub = trashed ? state.trashed.find((x) => x.id === trashed) : state.notebooks.find((x) => x.id === id);
+  if (sub?.parent && (trashed ? state.trashedNotebook !== trashed : state.notebook !== id)) {
+    item(t("subNotebookOpenAlone"), () => selectNotebook(id, trashed));
+    sep();
+  }
   if (trashed) {
     item(t("notebookRestore"), () => restoreNotebook(trashed));
     item(t("notebookDeletePermanently"), () => purgeNotebook(trashed), "danger");
@@ -1331,12 +1420,22 @@ async function loadNotes({ chosen = false, first = false } = {}) {
         if (!r.notes.length) break;
       } while (notes.length < Math.min(state.want, total));
     }
+    const subs = new Map();
+    await Promise.all(openSubs().map(async (x) => {
+      try {
+        subs.set(x.key, await readSubNotes(x));
+      } catch (_) {
+        subs.set(x.key, { notes: [], total: 0, want: LIST_PAGE }); // shown empty; the row stays
+      }
+    }));
     if (seq !== loadSeq) return;
     state.notes = notes;
     state.total = total;
+    state.subNotes = subs;
     const many = state.chosen.size > 1;
+    const listed = listedNotes();
     for (const id of state.chosen) {
-      if (!notes.some((n) => n.id === id)) state.chosen.delete(id);
+      if (!listed.some((n) => n.id === id)) state.chosen.delete(id);
     }
     if (state.chosen.size < 2) state.chosen.clear();
     if (many && !state.chosen.size) loadNote(); // back to the preview
@@ -1367,7 +1466,7 @@ function applySelectionCheck() {
   checkSelection = false;
   if (pickFirst) {
     pickFirst = false;
-    const first = state.notes[0]?.id ?? null;
+    const first = listedNotes()[0]?.id ?? null;
     if (first !== state.selected) {
       state.selected = first;
       markSelected();
@@ -1375,7 +1474,7 @@ function applySelectionCheck() {
       return;
     }
   }
-  if (state.selected && !state.notes.some((n) => n.id === state.selected)) {
+  if (state.selected && !listedNotes().some((n) => n.id === state.selected)) {
     state.selected = null;
     loadNote();
   } else {
@@ -1428,8 +1527,9 @@ function cycleSort() {
 // manual order.
 async function moveNote(id, after, undoing) {
   // The note above it now, to put it back after.
-  const i = state.notes.findIndex((n) => n.id === id);
-  const before = i > 0 ? state.notes[i - 1].id : null;
+  const { notes } = listOf(id);
+  const i = notes.findIndex((n) => n.id === id);
+  const before = i > 0 ? notes[i - 1].id : null;
   try {
     await api(`${noteURL(id)}/move`, { method: "POST", body: after ? { after } : {} });
   } catch (e) {
@@ -1439,7 +1539,7 @@ async function moveNote(id, after, undoing) {
     return;
   }
   if (!undoing && i >= 0) {
-    offerUndo(t("toastReordered", { title: state.notes[i].title || t("untitled") }), () => moveNote(id, before, true));
+    offerUndo(t("toastReordered", { title: notes[i].title || t("untitled") }), () => moveNote(id, before, true));
   }
   await loadNotes();
   markSelected();
@@ -1447,13 +1547,15 @@ async function moveNote(id, after, undoing) {
 
 // moveSelected moves the selected note up (-1) or down (+1).
 function moveSelected(delta) {
-  if (!canReorder()) return;
-  const i = state.notes.findIndex((n) => n.id === state.selected);
+  if (state.query || !state.selected) return;
+  const { notes, reorder } = listOf(state.selected);
+  if (!reorder) return;
+  const i = notes.findIndex((n) => n.id === state.selected);
   const j = i + delta;
-  if (i < 0 || j < 0 || j >= state.notes.length) return;
+  if (i < 0 || j < 0 || j >= notes.length) return;
   // Down: after the next note. Up: after the note above the previous one, or
   // first.
-  const after = delta > 0 ? state.notes[j].id : (state.notes[j - 1]?.id ?? null);
+  const after = delta > 0 ? notes[j].id : (notes[j - 1]?.id ?? null);
   moveNote(state.selected, after);
 }
 
@@ -1461,18 +1563,19 @@ function moveSelected(delta) {
 // the dragged note above it, on the lower half below it.
 let dragID = null;
 
-function dropAfter(li, e) {
+function dropAfter(li, e, list) {
   const r = li.getBoundingClientRect();
   const below = e.clientY > r.top + r.height / 2;
-  const others = state.notes.filter((n) => n.id !== dragID);
+  const others = list.filter((n) => n.id !== dragID);
   const i = others.findIndex((n) => n.id === li.dataset.id);
   if (below) return { after: others[i].id, below };
   return { after: i > 0 ? others[i - 1].id : null, below };
 }
 
 // enableDrag lets the note li be dragged onto a notebook, to move it there,
-// and, with reorder, within the list.
-function enableDrag(li, reorder) {
+// and, with reorder, within list, the notes it is shown with: those of the
+// notebook, or of an opened sub notebook.
+function enableDrag(li, reorder, list) {
   li.draggable = true;
   li.addEventListener("dragstart", (e) => {
     dragID = li.dataset.id;
@@ -1487,19 +1590,20 @@ function enableDrag(li, reorder) {
     for (const x of $("notebooks").children) x.classList.remove("drop-into");
   });
   if (!reorder) return;
+  const within = () => dragID && dragID !== li.dataset.id && !draggedNotes() && list.some((n) => n.id === dragID);
   li.addEventListener("dragover", (e) => {
-    if (!dragID || dragID === li.dataset.id || draggedNotes()) return;
+    if (!within()) return;
     e.preventDefault();
-    const { below } = dropAfter(li, e);
+    const { below } = dropAfter(li, e, list);
     li.classList.toggle("drop-below", below);
     li.classList.toggle("drop-above", !below);
   });
   li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below"));
   li.addEventListener("drop", (e) => {
-    if (!dragID || dragID === li.dataset.id || draggedNotes()) return;
+    if (!within()) return;
     e.preventDefault();
     const id = dragID;
-    const { after } = dropAfter(li, e);
+    const { after } = dropAfter(li, e, list);
     moveNote(id, after);
   });
 }
@@ -1532,10 +1636,14 @@ function subNotebookRows() {
     return [li];
   }
   const subs = (trashed ? state.trashed : state.notebooks).filter((n) => n.parent === cur);
-  return subs.map((sub) => {
-    const li = row("", "folder", sub.name, sub.count, () => selectNotebook(trashed ? "trash" : sub.id, trashed ? sub.id : null));
+  return subs.flatMap((sub) => {
+    const key = subKey(sub.id, trashed);
+    const open = state.expanded.has(key);
+    const li = row(open ? "open" : "", "folder", sub.name, sub.count, () => toggleSub(key));
+    li.prepend(el("span", "twisty", kindSVG("chevron")));
+    li.setAttribute("aria-expanded", String(open));
     li.dataset.notebook = trashed ? "trash" : sub.id;
-    li.title = t("subNotebookOpen", { name: sub.name });
+    li.title = t(open ? "subNotebookCollapse" : "subNotebookExpand", { name: sub.name });
     li.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       openNotebookMenu(li, trashed ? "trash" : sub.id, trashed ? sub.id : null, e);
@@ -1560,7 +1668,19 @@ function subNotebookRows() {
       });
       li.addEventListener("dragend", endNotebookDrag);
     }
-    return li;
+    if (!open) return [li];
+    // Its notes, under it.
+    const s = state.subNotes.get(key) ?? { notes: [], total: 0 };
+    const reorder = !trashed && (sub.sort || "order") === "order";
+    const rows = s.notes.map((n) => noteRow(n, sub.sort || "order", reorder, s.notes, "in-sub"));
+    if (s.notes.length < s.total) {
+      const more = button(t("loadMore", { rest: s.total - s.notes.length }), () => {
+        s.want = s.notes.length + LIST_PAGE;
+        loadNotes();
+      }, { cls: "more" });
+      rows.push(el("li", "more-row in-sub", more));
+    }
+    return [li, ...rows];
   });
 }
 
@@ -1568,31 +1688,7 @@ function renderNotes() {
   if (renaming && parentOf(renaming)) return; // a sub notebook row is being renamed
   const ul = $("notes");
   ul.replaceChildren(...subNotebookRows());
-  const sort = currentSort();
-  const reorder = canReorder();
-  for (const n of state.notes) {
-    const li = el("li", (n.id === state.selected ? "active" : "") + (state.chosen.has(n.id) ? " chosen" : ""));
-    li.dataset.id = n.id;
-    enableDrag(li, reorder && n.notebook !== "trash"); // a note in the trash can be moved to a notebook
-    const head = el("div", "title-row", el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
-    const mark = aiMark(n);
-    if (mark) head.append(mark);
-    li.append(head);
-    // The time shown follows the sort: creation for the creation order (and
-    // the manual order, which starts as it), update otherwise.
-    const created = !state.query && (sort === "created" || sort === "order");
-    const time = created ? t("createdAt", { time: formatTime(n.created_at) }) : formatTime(n.updated_at);
-    const meta = el("div", "meta", el("span", "", time));
-    if (!state.notebook) meta.append(el("span", "", notebookName(n.notebook)));
-    meta.append(...tagList(n.tags));
-    li.append(meta);
-    if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
-    li.addEventListener("click", (e) => chooseNote(n.id, e));
-    li.addEventListener("mousedown", (e) => {
-      if (e.shiftKey) e.preventDefault(); // choosing, not selecting text
-    });
-    ul.append(li);
-  }
+  for (const n of state.notes) ul.append(noteRow(n, currentSort(), canReorder(), state.notes, ""));
   if (!state.query && state.notes.length < state.total) {
     const more = button(t("loadMore", { rest: state.total - state.notes.length }), () => {
       state.want = state.notes.length + LIST_PAGE;
@@ -1600,6 +1696,32 @@ function renderNotes() {
     }, { cls: "more" });
     ul.append(el("li", "more-row", more));
   }
+}
+
+// noteRow returns the row of note n in the list, shown in sort; with reorder,
+// it can be dragged within list, the notes it is shown with.
+function noteRow(n, sort, reorder, list, cls) {
+  const li = el("li", [cls, n.id === state.selected ? "active" : "", state.chosen.has(n.id) ? "chosen" : ""].filter(Boolean).join(" "));
+  li.dataset.id = n.id;
+  enableDrag(li, reorder && n.notebook !== "trash", list); // a note in the trash can be moved to a notebook
+  const head = el("div", "title-row", el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
+  const mark = aiMark(n);
+  if (mark) head.append(mark);
+  li.append(head);
+  // The time shown follows the sort: creation for the creation order (and
+  // the manual order, which starts as it), update otherwise.
+  const created = !state.query && (sort === "created" || sort === "order");
+  const time = created ? t("createdAt", { time: formatTime(n.created_at) }) : formatTime(n.updated_at);
+  const meta = el("div", "meta", el("span", "", time));
+  if (!state.notebook) meta.append(el("span", "", notebookName(n.notebook)));
+  meta.append(...tagList(n.tags));
+  li.append(meta);
+  if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
+  li.addEventListener("click", (e) => chooseNote(n.id, e));
+  li.addEventListener("mousedown", (e) => {
+    if (e.shiftKey) e.preventDefault(); // choosing, not selecting text
+  });
+  return li;
 }
 
 function markSelected() {
@@ -1634,7 +1756,7 @@ function chooseNote(id, e) {
     return;
   }
   if (!leaveEditor()) return;
-  const ids = state.notes.map((n) => n.id);
+  const ids = listedNotes().map((n) => n.id);
   if (e.shiftKey && ids.includes(state.anchor ?? state.selected)) {
     const a = ids.indexOf(state.anchor ?? state.selected), b = ids.indexOf(id);
     state.chosen = new Set(ids.slice(Math.min(a, b), Math.max(a, b) + 1));
@@ -1660,8 +1782,9 @@ function chooseNote(id, e) {
 
 // chooseAll chooses all the notes in the list.
 function chooseAll() {
-  if (state.notes.length < 2 || !leaveEditor()) return;
-  state.chosen = new Set(state.notes.map((n) => n.id));
+  const notes = listedNotes();
+  if (notes.length < 2 || !leaveEditor()) return;
+  state.chosen = new Set(notes.map((n) => n.id));
   markChosen();
   showChosen();
 }
@@ -1680,7 +1803,7 @@ function markChosen() {
 // done to them: move them to a notebook, move them to the trash.
 function showChosen() {
   const ids = [...state.chosen];
-  const notes = ids.map((id) => state.notes.find((n) => n.id === id)).filter(Boolean);
+  const notes = ids.map(findListed).filter(Boolean);
   noteSeq++; // drop a preview being loaded
   state.note = null;
   const actions = el("div", "actions", moveSelect((nb) => moveNotesTo(ids, nb)));
@@ -1702,7 +1825,7 @@ async function moveNotesTo(ids, nb) {
     alert(t("moveWhileEditing"));
     return;
   }
-  const notes = ids.map((id) => state.notes.find((n) => n.id === id)).filter(Boolean);
+  const notes = ids.map(findListed).filter(Boolean);
   const target = state.notebooks.find((x) => x.id === nb);
   if (nb !== "trash" && target && target.kind !== "private" && notes.some((n) => noteKind(n) === "private") &&
       !confirm(t("confirmMovePrivateMany", { notebook: notebookName(nb) }))) return;
@@ -1738,10 +1861,11 @@ async function moveNotesTo(ids, nb) {
 }
 
 function moveSelection(delta) {
-  if (!state.notes.length) return;
-  const i = state.notes.findIndex((n) => n.id === state.selected);
-  const next = i < 0 ? 0 : Math.min(Math.max(i + delta, 0), state.notes.length - 1);
-  selectNote(state.notes[next].id);
+  const notes = listedNotes();
+  if (!notes.length) return;
+  const i = notes.findIndex((n) => n.id === state.selected);
+  const next = i < 0 ? 0 : Math.min(Math.max(i + delta, 0), notes.length - 1);
+  selectNote(notes[next].id);
 }
 
 // Preview
@@ -1890,8 +2014,9 @@ async function deleteNote() {
     return;
   }
   if (n.notebook !== "trash") offerUndo(t("toastTrashed", { title: n.title || t("untitled") }), () => undoTrash(n.id));
-  const i = state.notes.findIndex((x) => x.id === n.id);
-  const next = state.notes[i + 1] || state.notes[i - 1];
+  const listed = listedNotes();
+  const i = listed.findIndex((x) => x.id === n.id);
+  const next = listed[i + 1] || listed[i - 1];
   state.selected = next ? next.id : null;
   refreshAfterWrite();
 }
@@ -2591,7 +2716,7 @@ function acceptNote(li, id) {
   const target = () => {
     if (!dragID) return false;
     return (draggedNotes() ?? [dragID]).some((x) => {
-      const n = state.notes.find((m) => m.id === x);
+      const n = findListed(x);
       return !!n && n.notebook !== id;
     });
   };
@@ -2619,7 +2744,7 @@ async function moveNoteTo(id, nb) {
     alert(t("moveWhileEditing"));
     return;
   }
-  const n = state.notes.find((x) => x.id === id) || (state.note?.id === id ? state.note : null);
+  const n = findListed(id) || (state.note?.id === id ? state.note : null);
   const title = n?.title || t("untitled");
   const target = state.notebooks.find((x) => x.id === nb);
   if (n && nb !== "trash" && noteKind(n) === "private" && target && target.kind !== "private" &&
