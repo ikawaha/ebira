@@ -141,7 +141,6 @@ mark.current { background: var(--mark-current); }
 .search-help dd { margin: 0; color: var(--fg-muted); }
 .search-help code { font-size: 12px; padding: 1px 4px; border-radius: 3px; background: var(--code-bg); }
 .search-help p { margin: 8px 0 0; color: var(--fg-muted); font-size: 12px; }
-.mode { color: var(--fg-muted); font-size: 12px; }
 .status { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--fg-muted); font-size: 12px; white-space: nowrap; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-muted); flex: none; }
 .status.ok .status-dot { background: var(--ok); }

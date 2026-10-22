@@ -238,6 +238,9 @@ async function loadMessages() {
   for (const [attr, name] of [["title", "i18nTitle"], ["placeholder", "i18nPlaceholder"], ["aria-label", "i18nAriaLabel"]]) {
     for (const e of document.querySelectorAll(`[data-${attr === "aria-label" ? "i18n-aria-label" : "i18n-" + attr}]`)) e.setAttribute(attr, t(e.dataset[name]));
   }
+  // The search box tells the search mode, which the server sets in the page.
+  const mode = document.documentElement.dataset.searchMode;
+  if (mode) $("q").placeholder = t("searchPlaceholderMode", { mode });
 }
 
 // API
@@ -1290,12 +1293,11 @@ async function loadNotes({ chosen = false, first = false } = {}) {
   const seq = ++loadSeq;
   const info = $("list-info");
   try {
-    let notes, total, mode;
+    let notes, total;
     if (state.query) {
       const r = await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, limit: 200 } });
       notes = r.notes;
       total = r.total;
-      mode = r.mode;
       if (state.trashedNotebook) {
         // The search takes no notebook in the trash: the notes of the trash
         // are narrowed here.
@@ -1323,7 +1325,6 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     }
     if (state.chosen.size < 2) state.chosen.clear();
     if (many && !state.chosen.size) loadNote(); // back to the preview
-    if (mode) $("mode").textContent = mode;
     const where = state.tag ? "#" + state.tag
       : state.trashedNotebook ? notebookName("trash") + " / " + trashedName(state.trashedNotebook)
       : state.notebook ? notebookName(state.notebook) : t("all");

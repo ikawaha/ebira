@@ -7,6 +7,7 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -49,6 +50,10 @@ var Themes = []string{"auto", "light", "dark"}
 // ValidTheme reports whether theme is one of Themes.
 func ValidTheme(theme string) bool { return slices.Contains(Themes, theme) }
 
+// searchMode matches the names of search modes, which go into the page as
+// they are.
+var searchMode = regexp.MustCompile(`^[a-z0-9]+$`)
+
 // Handler serves the web UI: the page at Prefix, and its files under
 // AssetsPrefix. lang, one of Langs or empty, is the language set for this
 // server, given to the page as the lang attribute of its html element; empty
@@ -56,8 +61,10 @@ func ValidTheme(theme string) bool { return slices.Contains(Themes, theme) }
 // empty, is the color theme set for this server, given to the page as the
 // data-theme attribute of its html element when it is light or dark; auto and
 // empty follow the system. A language or theme chosen in the page's settings
-// menu wins over both.
-func Handler(lang, theme string) http.Handler {
+// menu wins over both. search is the search mode of the server, such as ja,
+// given as the data-search-mode attribute, which the page tells in the
+// placeholder of the search box; empty tells none.
+func Handler(lang, theme, search string) http.Handler {
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
 		panic(err) // the embedded directory always exists
@@ -72,6 +79,9 @@ func Handler(lang, theme string) http.Handler {
 	}
 	if theme == "light" || theme == "dark" {
 		attrs += ` data-theme="` + theme + `"`
+	}
+	if searchMode.MatchString(search) {
+		attrs += ` data-search-mode="` + search + `"`
 	}
 	page = bytes.Replace(page, []byte("<html>"), []byte("<html"+attrs+">"), 1)
 	files := http.StripPrefix(AssetsPrefix, http.FileServerFS(sub))

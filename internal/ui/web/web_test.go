@@ -13,7 +13,7 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	srv := httptest.NewServer(Handler("", ""))
+	srv := httptest.NewServer(Handler("", "", ""))
 	defer srv.Close()
 	for _, path := range []string{"/", "/assets/app.js", "/assets/style.css", "/assets/i18n/ja.json", "/assets/vendor/marked.umd.js", "/assets/vendor/purify.min.js", "/assets/vendor/katex/katex.min.js", "/assets/vendor/katex/katex.min.css", "/assets/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "/assets/vendor/mermaid.min.js", "/assets/vendor/codemirror.js"} {
 		res, err := http.Get(srv.URL + path)
@@ -36,14 +36,16 @@ func TestHandler(t *testing.T) {
 }
 
 func TestHandlerLang(t *testing.T) {
-	for _, tt := range []struct{ lang, theme, want string }{
-		{"", "", "<html>"},
-		{"ja", "", `<html lang="ja">`},
-		{"en", "auto", `<html lang="en">`},
-		{"", "dark", `<html data-theme="dark">`},
-		{"ja", "light", `<html lang="ja" data-theme="light">`},
+	for _, tt := range []struct{ lang, theme, search, want string }{
+		{"", "", "", "<html>"},
+		{"ja", "", "", `<html lang="ja">`},
+		{"en", "auto", "", `<html lang="en">`},
+		{"", "dark", "", `<html data-theme="dark">`},
+		{"ja", "light", "", `<html lang="ja" data-theme="light">`},
+		{"ja", "", "bigram", `<html lang="ja" data-search-mode="bigram">`},
+		{"", "", `x"><script>`, "<html>"}, // not a mode
 	} {
-		srv := httptest.NewServer(Handler(tt.lang, tt.theme))
+		srv := httptest.NewServer(Handler(tt.lang, tt.theme, tt.search))
 		for _, path := range []string{"/"} {
 			res, err := http.Get(srv.URL + path)
 			if err != nil {
