@@ -303,6 +303,10 @@ body.resizing { cursor: col-resize; user-select: none; }
 .head-row h2:hover .title-copy, .title-copy:focus-visible { opacity: 1; }
 .title-copy:hover { color: var(--fg); background: var(--bg-active); }
 .actions { display: flex; gap: 6px; padding-top: 4px; }
+/* The buttons of the preview drawn as icons; their names show on hover. */
+.icon-button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 26px; padding: 0; color: var(--fg-muted); }
+.icon-button:hover, .icon-button:focus-visible { color: var(--fg); }
+.icon-button svg { width: 16px; height: 16px; }
 .note-head .meta { color: var(--fg-muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .matches { margin-left: auto; display: flex; gap: 4px; align-items: center; }
 .ai-mark + .matches { margin-left: 0; }

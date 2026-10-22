@@ -13,7 +13,7 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	srv := httptest.NewServer(Handler("", "", ""))
+	srv := httptest.NewServer(Handler(Options{}))
 	defer srv.Close()
 	for _, path := range []string{"/", "/assets/app.js", "/assets/style.css", "/assets/i18n/ja.json", "/assets/vendor/marked.umd.js", "/assets/vendor/purify.min.js", "/assets/vendor/katex/katex.min.js", "/assets/vendor/katex/katex.min.css", "/assets/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "/assets/vendor/mermaid.min.js", "/assets/vendor/codemirror.js"} {
 		res, err := http.Get(srv.URL + path)
@@ -45,7 +45,7 @@ func TestHandlerLang(t *testing.T) {
 		{"ja", "", "bigram", `<html lang="ja" data-search-mode="bigram">`},
 		{"", "", `x"><script>`, "<html>"}, // not a mode
 	} {
-		srv := httptest.NewServer(Handler(tt.lang, tt.theme, tt.search))
+		srv := httptest.NewServer(Handler(Options{Lang: tt.lang, Theme: tt.theme, Search: tt.search}))
 		for _, path := range []string{"/"} {
 			res, err := http.Get(srv.URL + path)
 			if err != nil {

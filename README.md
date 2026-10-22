@@ -350,6 +350,21 @@ lang: en
 
 The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) `git_sync` and `auth` (`none` or `passkey`). API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
+### Styling the preview
+
+Put CSS in `~/.config/ebira/preview.css` (next to the settings file) to style the body of notes in the web UI's preview, as Quiver's preview styles do. It is read on each page load, and applies to the body only: write `h1 { … }` and the rest of the page is left alone. The colors of the web UI, such as `var(--accent)`, `var(--fg)` and `var(--fg-muted)`, follow the light and dark themes:
+
+```css
+h1 { border-bottom: 2px solid var(--accent); color: var(--accent); }
+h2 { background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 8px; }
+hr { border: none; border-top: 2px dotted var(--fg-muted); }
+strong { color: #c0392b; }
+:root[data-theme="dark"] & strong { color: #f7dc6f; }  /* the dark theme chosen in the menu */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) & strong { color: #f7dc6f; } }  /* the system's */
+```
+
+So that the CSS cannot send the content of notes anywhere, what would make the browser fetch something is dropped: `@import`, and `url()` and the like except with a `data:` URL. Fonts installed on the machine work; web fonts do not.
+
 ## License
 
 [AGPL-3.0-or-later](LICENSE)

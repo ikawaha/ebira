@@ -588,9 +588,22 @@ const KIND_SVG = {
   // Not kinds either: a sub notebook in the note list, and the way back up.
   folder: ["M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"],
   up: ["M12 19V6", "M6.5 11.5L12 6l5.5 5.5"],
-  // And the button that copies the title of a note: two sheets.
+  // And the buttons of the preview: copy the title (two sheets), copy the
+  // note (a page with a folded corner and lines), edit (a pencil) and history
+  // (a clock with an arrow turning back); the trash is the can above.
   copy: ["rect:9,9,11,11,2", "M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"],
+  document: ["M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z", "M14 3v4h4", "M8.5 12h7", "M8.5 16h7"],
+  edit: ["M4 20h4L19 9l-4-4L4 16z", "M13.5 6.5l4 4"],
+  history: ["M3.5 12a8.5 8.5 0 1 0 2.5-6", "M3.5 4v4.5H8", "M12 7.5V12l3 2"],
 };
+
+// iconButton returns a button that shows the drawing of KIND_SVG named icon,
+// named by label for the tooltip and screen readers.
+function iconButton(icon, label, onClick) {
+  const b = button(kindSVG(icon), onClick, { title: label, cls: "icon-button" });
+  b.setAttribute("aria-label", label);
+  return b;
+}
 
 // kindSVG returns the drawing of a notebook kind, or null for the default kind.
 function kindSVG(kind) {
@@ -1114,7 +1127,7 @@ function renameNotebook(id) {
   input.addEventListener("click", (e) => e.stopPropagation());
   input.addEventListener("keydown", (e) => {
     e.stopPropagation();
-    if (e.isComposing) return;
+    if (e.isComposing || e.keyCode === 229) return; // Safari ends an IME conversion with keyCode 229
     if (e.key === "Enter") {
       e.preventDefault();
       finish(true);
@@ -1234,8 +1247,10 @@ function openNewNotebook(parent = null) {
 }
 
 $("notebook-add").addEventListener("click", () => openNewNotebook());
+// Cancel is not a submit button: Enter in the name submits with the first
+// submit button of the form, which must be the one that creates.
+$("notebook-new-cancel").addEventListener("click", () => $("notebook-new").close());
 $("notebook-new-form").addEventListener("submit", async (e) => {
-  if (e.submitter?.value === "cancel") return; // the dialog closes
   e.preventDefault();
   const name = $("notebook-new-name").value.trim();
   if (!name) return;
@@ -1768,7 +1783,7 @@ async function loadNote() {
     ...tagList(n.tags, true));
   const mark = aiMark(n, t("createdByAI"));
   if (mark) meta.append(mark);
-  const actions = el("div", "actions", button(t("copy"), copyNote, { title: t("copyTitle") }));
+  const actions = el("div", "actions", iconButton("document", t("copyTitle"), copyNote));
   if (n.notebook === "trash") {
     actions.append(
       button(t("restore"), restoreNote, { title: t("restoreTitle") }),
@@ -1776,9 +1791,9 @@ async function loadNote() {
       button(t("deletePermanently"), deleteNote, { cls: "danger" }));
   } else {
     actions.append(
-      button(t("edit"), () => startEdit(n), { title: t("editTitle") }),
-      button(t("history"), openHistory, { title: t("historyTitle") }),
-      button(t("toTrash"), deleteNote));
+      iconButton("edit", t("editTitle"), () => startEdit(n)),
+      iconButton("history", t("historyTitle"), openHistory),
+      iconButton("trash", t("toTrashTitle"), deleteNote));
   }
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
@@ -2079,6 +2094,16 @@ function startEdit(note) {
   form.querySelector("button.primary").type = "submit";
   form.querySelector("button.primary").title = t("saveTitle");
   form.addEventListener("submit", (e) => { e.preventDefault(); saveNote(); });
+  // Enter in a field does not submit the form, which would save and close the
+  // note before its body is written: in the title it goes on to the body, in
+  // the other fields it does nothing. Cmd+S or Ctrl+S and Save save.
+  for (const input of [f.title, f.tags, f.id].filter(Boolean)) {
+    input.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.isComposing || e.keyCode === 229) return; // Safari ends an IME conversion with keyCode 229
+      e.preventDefault();
+      if (input === f.title) ed.view.focus();
+    });
+  }
 
   const pv = $("preview");
   pv.replaceChildren(form);
@@ -3222,7 +3247,7 @@ function putTag(tag) {
 }
 
 $("q").addEventListener("keydown", (e) => {
-  if (!suggested.length || e.isComposing) return;
+  if (!suggested.length || e.isComposing || e.keyCode === 229) return; // Safari ends an IME conversion with keyCode 229
   const move = { ArrowDown: 1, ArrowUp: -1 }[e.key];
   if (move) {
     suggestIndex = (suggestIndex + move + suggested.length) % suggested.length;

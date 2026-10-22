@@ -293,7 +293,11 @@ func runServe(args []string) error {
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
-	ui := web.Handler(*o.lang, *o.theme, string(mode))
+	previewCSS := ""
+	if p, err := config.Path(); err == nil {
+		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)
+	}
+	ui := web.Handler(web.Options{Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS})
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)
 	root.Handle(web.LegacyPrefix, http.RedirectHandler(web.Prefix, http.StatusMovedPermanently))

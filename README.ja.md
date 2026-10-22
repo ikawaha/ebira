@@ -350,6 +350,21 @@ lang: ja
 
 キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
+### プレビューの見た目を変える
+
+`~/.config/ebira/preview.css`（設定ファイルの隣）に CSS を書くと、Web UI のプレビューのノートの本文の見た目を変えられます（Quiver のプレビューのスタイルと同じ使い方です）。ページを開くたびに読み、本文の中だけに効きます。`h1 { … }` と書いても、ページのほかの部分は変わりません。Web UI の色（`var(--accent)`、`var(--fg)`、`var(--fg-muted)` など）を使えば、ライトとダークのテーマに合わせて変わります:
+
+```css
+h1 { border-bottom: 2px solid var(--accent); color: var(--accent); }
+h2 { background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 8px; }
+hr { border: none; border-top: 2px dotted var(--fg-muted); }
+strong { color: #c0392b; }
+:root[data-theme="dark"] & strong { color: #f7dc6f; }  /* メニューでダークを選んだとき */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) & strong { color: #f7dc6f; } }  /* システムがダークのとき */
+```
+
+CSS でノートの中身を外へ送れないように、ブラウザに何かを読みに行かせる書き方は取り除きます: `@import` と、`data:` の URL 以外の `url()` などです。端末に入っているフォントは使えますが、Web フォントは使えません。
+
 ## ライセンス
 
 [AGPL-3.0-or-later](LICENSE)

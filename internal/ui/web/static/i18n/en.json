@@ -124,6 +124,7 @@
   "title": "Title",
   "titleRequired": "Enter a title",
   "toTrash": "Move to trash",
+  "toTrashTitle": "Move to the trash",
   "trashedFrom": "(from {notebook})",
   "untitled": "(Untitled)",
   "updatedAt": "Updated {time}",

@@ -7,6 +7,7 @@
 <link rel="icon" href="data:,">
 <script src="assets/theme.js"></script>
 <link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/preview.css">
 <script src="assets/vendor/marked.umd.js" defer></script>
 <script src="assets/vendor/purify.min.js" defer></script>
 <script src="assets/app.js" defer></script>
@@ -122,7 +123,7 @@
     </fieldset>
     <p class="error" id="notebook-new-error" hidden></p>
     <div class="form-actions">
-      <button type="submit" value="cancel" formnovalidate data-i18n="cancel"></button>
+      <button type="button" id="notebook-new-cancel" data-i18n="cancel"></button>
       <button type="submit" value="create" class="primary" data-i18n="notebookCreate"></button>
     </div>
   </form>

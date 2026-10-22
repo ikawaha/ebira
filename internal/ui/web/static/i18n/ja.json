@@ -124,6 +124,7 @@
   "title": "タイトル",
   "titleRequired": "タイトルを入れてください",
   "toTrash": "ゴミ箱へ",
+  "toTrashTitle": "ゴミ箱へ移す",
   "trashedFrom": "（元: {notebook}）",
   "untitled": "(無題)",
   "updatedAt": "更新 {time}",
