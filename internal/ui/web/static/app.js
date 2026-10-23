@@ -708,6 +708,8 @@ const KIND_SVG = {
   // (a clock with an arrow turning back); the trash is the can above.
   copy: ["rect:9,9,11,11,2", "M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"],
   document: ["M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z", "M14 3v4h4", "M8.5 12h7", "M8.5 16h7"],
+  // Find in the note: a magnifier.
+  find: ["circle:10.5,10.5,6", "M15 15l5 5"],
   edit: ["M4 20h4L19 9l-4-4L4 16z", "M13.5 6.5l4 4"],
   history: ["M3.5 12a8.5 8.5 0 1 0 2.5-6", "M3.5 4v4.5H8", "M12 7.5V12l3 2"],
 };
@@ -1941,7 +1943,7 @@ async function loadNote() {
     ...tagList(n.tags, true));
   const mark = aiMark(n, t("createdByAI"));
   if (mark) meta.append(mark);
-  const actions = el("div", "actions", iconButton("document", t("copyTitle"), copyNote));
+  const actions = el("div", "actions", iconButton("find", t("findTitle"), () => (find.open ? closeFind() : openFind())), iconButton("document", t("copyTitle"), copyNote));
   if (n.notebook === "trash") {
     actions.append(
       button(t("restore"), restoreNote, { title: t("restoreTitle") }),
@@ -1961,11 +1963,18 @@ async function loadNote() {
     copy.setAttribute("aria-label", t("copyNoteTitle"));
     title.append(copy);
   }
+  // The find bar is drawn again with the note: the focus and the caret in it
+  // stay, as the note may be drawn again while one types, such as on a change.
+  const typing = document.activeElement?.id === "find-q" ? [$("find-q").selectionStart, $("find-q").selectionEnd] : null;
   showPreview(el("header", "note-head",
     el("div", "head-row", title, actions),
-    meta), body);
+    meta, findBar()), body);
+  if (typing) {
+    $("find-q").focus();
+    $("find-q").setSelectionRange(...typing);
+  }
   pv.dataset.id = id;
-  marks = [...pv.querySelectorAll("mark")];
+  marks = [...pv.querySelectorAll("mark:not(.find)")];
   markIndex = -1;
   if (marks.length) {
     const count = el("span", "", "");
@@ -1976,6 +1985,152 @@ async function loadNote() {
     updateMarkCount();
   }
   pv.scrollTop = keepScroll;
+  if (find.open) runFind(false);
+}
+
+// Find in the note: a bar in the head of the preview, opened with f or its
+// button (pressed again, it closes the bar), marks the text of the note that matches what is typed, without
+// asking the server or changing the list, as the search box does. Enter and
+// Shift+Enter, or n and N, go through the matches; Esc closes it. Text is
+// compared in NFKC and lower case, so that full-width and half-width forms,
+// and upper and lower case, match. The bar stays open from note to note.
+
+const find = { open: false, q: "", marks: [], index: -1 };
+
+// findBar returns the bar for the head of the preview, hidden unless open.
+function findBar() {
+  const input = el("input", "find-q");
+  input.id = "find-q";
+  input.type = "search";
+  input.value = find.q;
+  input.placeholder = t("findPlaceholder");
+  input.setAttribute("aria-label", t("findPlaceholder"));
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  input.addEventListener("input", () => {
+    find.q = input.value;
+    runFind(true);
+  });
+  input.addEventListener("keydown", (e) => {
+    e.stopPropagation(); // the keys of the page do not apply here
+    if (e.isComposing || e.keyCode === 229) return; // Safari ends an IME conversion with keyCode 229
+    if (e.key === "Enter") {
+      e.preventDefault();
+      jumpFind(e.shiftKey ? -1 : 1);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      closeFind();
+    }
+  });
+  const count = el("span", "find-count", "");
+  count.id = "find-count";
+  const bar = el("div", "find-bar", kindSVG("find"), input, count,
+    button("↑", () => jumpFind(-1), { title: t("prevMatch") }),
+    button("↓", () => jumpFind(1), { title: t("nextMatch") }),
+    button("×", closeFind, { title: t("closeTitle") }));
+  bar.id = "find-bar";
+  bar.hidden = !find.open;
+  return bar;
+}
+
+function openFind() {
+  const bar = $("find-bar");
+  if (!bar) return; // no note shown
+  find.open = true;
+  bar.hidden = false;
+  $("find-q").focus();
+  $("find-q").select();
+  runFind(false);
+}
+
+function closeFind() {
+  find.open = false;
+  clearFind();
+  const bar = $("find-bar");
+  if (bar) bar.hidden = true;
+}
+
+// clearFind takes the marks of the find away, putting the text back.
+function clearFind() {
+  for (const m of find.marks) {
+    const parent = m.parentNode;
+    if (!parent) continue;
+    m.replaceWith(...m.childNodes);
+    parent.normalize();
+  }
+  find.marks = [];
+  find.index = -1;
+}
+
+// foldText returns s in NFKC and lower case, with, for each of its UTF-16
+// units, the offset in s of the character it comes from.
+function foldText(s) {
+  let out = "";
+  const at = [];
+  for (let i = 0; i < s.length;) {
+    const c = String.fromCodePoint(s.codePointAt(i));
+    const f = c.normalize("NFKC").toLowerCase();
+    for (let k = 0; k < f.length; k++) at.push(i);
+    out += f;
+    i += c.length;
+  }
+  at.push(s.length);
+  return { text: out, at };
+}
+
+// runFind marks the matches of the find in the body of the note; with scroll,
+// as when the text to find changes, it goes to the first one, and without,
+// as when the note is drawn again, it stays at the match it was at.
+function runFind(scroll) {
+  const prev = find.index;
+  clearFind();
+  const body = $("preview").querySelector(".body");
+  const q = find.q.normalize("NFKC").toLowerCase().trim();
+  if (body && q) {
+    const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+      // Not inside math, diagrams or code drawn by scripts.
+      acceptNode: (n) => (n.parentElement?.closest(".katex, .math, .mermaid, svg") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      const { text, at } = foldText(node.data);
+      const ranges = [];
+      for (let i = text.indexOf(q); i >= 0; i = text.indexOf(q, i + q.length)) ranges.push([at[i], at[i + q.length]]);
+      // From the end, so that the offsets before stay right.
+      for (const [from, to] of ranges.reverse()) {
+        const range = document.createRange();
+        range.setStart(node, from);
+        range.setEnd(node, to);
+        const m = el("mark", "find");
+        range.surroundContents(m);
+        find.marks.push(m);
+      }
+    }
+    find.marks.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  }
+  if (scroll && find.marks.length) jumpFind(1);
+  else if (prev >= 0 && find.marks.length) {
+    find.index = Math.min(prev, find.marks.length - 1);
+    find.marks[find.index].classList.add("current");
+  }
+  updateFindCount();
+}
+
+function jumpFind(delta) {
+  if (!find.marks.length) return;
+  find.marks[find.index]?.classList.remove("current");
+  find.index = (find.index + delta + find.marks.length) % find.marks.length;
+  const m = find.marks[find.index];
+  m.classList.add("current");
+  m.scrollIntoView({ block: "center" });
+  updateFindCount();
+}
+
+function updateFindCount() {
+  const c = $("find-count");
+  if (!c) return;
+  c.textContent = !find.q.trim() ? "" : find.marks.length ? `${find.index < 0 ? "-" : find.index + 1} / ${find.marks.length}` : t("findNone");
 }
 
 // noteMarkdown returns note n as Markdown to copy: its title as a heading,
@@ -3427,7 +3582,9 @@ $("q").addEventListener("input", () => {
     const q = searchQuery();
     if (q === state.query) return;
     state.query = q;
-    loadNotes({ chosen: true }).then(() => loadNote()); // refresh the highlights
+    // The search box finds notes: the first one found is shown. To find
+    // within the note shown, there is the find bar of the preview.
+    loadNotes({ chosen: true, first: true }).then(() => loadNote()); // refresh the highlights
   }, 250);
 });
 
@@ -3613,8 +3770,9 @@ document.addEventListener("keydown", (e) => {
     case "/": e.preventDefault(); $("q").focus(); $("q").select(); break;
     case "j": case "ArrowDown": e.preventDefault(); moveSelection(1); break;
     case "k": case "ArrowUp": e.preventDefault(); moveSelection(-1); break;
-    case "n": jumpMark(1); break;
-    case "N": jumpMark(-1); break;
+    case "n": if (find.open && find.marks.length) jumpFind(1); else jumpMark(1); break;
+    case "N": if (find.open && find.marks.length) jumpFind(-1); else jumpMark(-1); break;
+    case "f": if (state.note && !state.editing) { e.preventDefault(); openFind(); } break;
     case "J": e.preventDefault(); moveSelected(1); break;
     case "K": e.preventDefault(); moveSelected(-1); break;
     case "s": e.preventDefault(); if (!state.query) cycleSort(); break;
@@ -3631,7 +3789,8 @@ document.addEventListener("keydown", (e) => {
       }
       break;
     case "Escape":
-      if (state.chosen.size) clearChosen();
+      if (find.open) closeFind();
+      else if (state.chosen.size) clearChosen();
       else if (!$("assistant").hidden) toggleAssistant(false);
       break;
   }

@@ -321,6 +321,15 @@ body.resizing { cursor: col-resize; user-select: none; }
 .icon-button svg { width: 16px; height: 16px; }
 .note-head .meta { color: var(--fg-muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .matches { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+/* The find in the note, under the meta of the head of the preview. */
+.find-bar { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.find-bar[hidden] { display: none; }
+.find-bar > svg { flex: none; width: 15px; height: 15px; color: var(--fg-muted); }
+.find-bar .find-q { flex: 1; min-width: 0; max-width: 320px; font: inherit; font-size: 13px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.find-bar .find-q:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.find-bar .find-q::-webkit-search-cancel-button { display: none; }
+.find-bar .find-count { min-width: 3.5em; color: var(--fg-muted); font-size: 12px; }
+.find-bar button { padding: 0 8px; }
 .ai-mark + .matches { margin-left: 0; }
 .matches button { padding: 0 8px; }
 

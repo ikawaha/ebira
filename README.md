@@ -241,7 +241,7 @@ When a note is changed on two machines, the service keeps one version and leaves
 | `en` | Takes English words with their stems (the Snowball English stemmer), without stop words such as *the* and *of*, and Japanese as bigrams; also searches trigrams, for parts of words | Notes in English: *plan* finds *plans* and *planning*, and a word being typed is still found |
 | `like` | SQL `LIKE` | Small collections |
 
-Words are combined with AND. Put a phrase in double quotes, `"new york"`, to find its words in that order, and add `tag:todo` (or `tag:"two words"`) to narrow the search to a tag; a search of tags alone lists the notes with them. The same works for AI clients through `search_notes`.
+Words are combined with AND. Put a phrase in double quotes, `"new york"`, to find its words in that order, and add `tag:todo` (or `tag:"two words"`) to narrow the search to a tag; a search of tags alone lists the notes with them. The same works for AI clients through `search_notes`. To find words within the note shown instead, press `f` or the magnifier in the preview: the matches are marked there, and Enter goes through them, leaving the list as it is.
 
 Text is normalized with NFKC and lowercased, so full-width and half-width characters, and upper and lower case, match each other. Set the mode for all your machines in `_ebira.yaml` of the notes directory:
 
