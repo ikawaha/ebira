@@ -138,6 +138,12 @@ ebira runs on macOS and Linux.
    ebira import -notebook reading ~/Documents/notes
    ```
 
+   Coming from Quiver, `scripts/quiver2ebira.py` converts a Quiver library (read only) into Markdown and, with `--import`, imports it into a running server, a notebook for each of Quiver's. The library is where you keep it; Finder finds it by its name, Quiver.qvlibrary:
+
+   ```bash
+   scripts/quiver2ebira.py path/to/Quiver.qvlibrary /tmp/quiver-md --skip "Quiver Tutorial" --import http://localhost:13579
+   ```
+
 4. **Sync with git**, or skip this step: without git, the notes are just files, which a folder synced by Dropbox or the like can share. If you set up a repository, ebira syncs every 10 minutes, or whenever you run `ebira sync`. To start syncing notes you already have:
 
    ```bash

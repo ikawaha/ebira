@@ -15,9 +15,9 @@
 # The TUI (ebira) uses a server already running for the notes directory, so
 # start the server with this script first to give the assistant its keys.
 #
-# Without -notes, the notes of the repository are used: notes/ at its top,
-# ignored by git. The index and the server's state are outside the notes
-# directory (see ebira help).
+# Without -notes, the notes directory of the settings file (notes_dir) is
+# used, as for ebira itself. The index and the server's state are outside the
+# notes directory (see ebira help).
 #
 # Environment:
 #   EBIRA_GEMINI_REF     secret reference of the Gemini API key
@@ -65,16 +65,6 @@ start | restart)
 	shift
 	;;
 esac
-
-has_notes=false
-for arg in "$@"; do
-	case $arg in
-	-notes | -notes=* | --notes | --notes=*) has_notes=true ;;
-	esac
-done
-if ! $has_notes; then
-	set -- -notes "$repo/notes" "$@"
-fi
 
 # ${vars[@]+...} keeps an empty array from failing under set -u in bash 3.2,
 # the version macOS ships.
