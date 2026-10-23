@@ -36,6 +36,38 @@ function loadExpanded() {
   }
 }
 
+// The view, the notebook (or notebook in the trash), tag, search and note
+// shown, is kept for the tab in sessionStorage, so that a reload comes back to
+// it. It is saved when the list or the note changes, and restored at start.
+function saveView() {
+  const view = { notebook: state.notebook, trashedNotebook: state.trashedNotebook, tag: state.tag, query: state.query, selected: state.selected };
+  try { sessionStorage.setItem("ebira.view", JSON.stringify(view)); } catch (_) { /* not kept */ }
+}
+
+// restoreView brings back the list of the view kept, as far as its notebook
+// or tag still exists, and returns the note that was shown.
+function restoreView() {
+  let view;
+  try {
+    view = JSON.parse(sessionStorage.getItem("ebira.view") || "null");
+  } catch (_) {
+    return null;
+  }
+  if (!view) return null;
+  if (view.notebook === "trash" ? !view.trashedNotebook || state.trashed.some((n) => n.id === view.trashedNotebook)
+    : !view.notebook || state.notebooks.some((n) => n.id === view.notebook)) {
+    state.notebook = view.notebook ?? null;
+    state.trashedNotebook = view.notebook === "trash" ? view.trashedNotebook ?? null : null;
+  }
+  if (view.tag && !state.notebook && state.tags.some((tg) => tg.name === view.tag)) state.tag = view.tag;
+  if (typeof view.query === "string" && view.query) {
+    state.query = view.query;
+    $("q").value = view.query;
+    showSearchClear();
+  }
+  return typeof view.selected === "string" ? view.selected : null;
+}
+
 function saveExpanded() {
   try { localStorage.setItem("ebira.expanded", JSON.stringify([...state.expanded])); } catch (_) { /* this page only */ }
 }
@@ -1449,6 +1481,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     renderSort();
     renderNotes();
     applySelectionCheck();
+    saveView();
   } catch (e) {
     if (seq !== loadSeq) return;
     state.notes = [];
@@ -1875,6 +1908,7 @@ let marks = [];
 let markIndex = -1;
 
 async function loadNote() {
+  saveView();
   if (state.editing) return; // the editor keeps its own copy
   if (state.chosen.size > 1) {
     showChosen();
@@ -3897,7 +3931,15 @@ $("logout").addEventListener("click", async () => {
     $("list-info").textContent = t("serverUnreachable", { error: e.message });
     $("list-info").classList.add("error");
   }
+  const selected = restoreView();
+  renderNotebooks();
   await loadNotes();
+  // The note shown before the reload, while it is still in the list.
+  if (selected && listedNotes().some((n) => n.id === selected)) {
+    state.selected = selected;
+    markSelected();
+    loadNote();
+  }
   openLinkedNote();
   connect();
   showGitSync();
