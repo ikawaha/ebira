@@ -847,6 +847,11 @@ async function loadNotebooks() {
   renderNotebooks();
 }
 
+// withSubs returns the count of notebook nb of list with the notes of its sub
+// notebooks, which the left column does not show, so that the counts there
+// add up to that of all notes.
+const withSubs = (list, nb) => list.reduce((a, n) => (n.parent === nb.id ? a + n.count : a), nb.count);
+
 // renderNotebooks renders the left column: the notebooks or the tags, each
 // below "all notes".
 function renderNotebooks() {
@@ -900,14 +905,14 @@ function renderNotebooks() {
   };
   for (const nb of state.notebooks) {
     if (nb.parent) continue; // in the note list of its parent
-    const li = item(nb.id, nb.name, nb.kind, nb.count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
+    const li = item(nb.id, nb.name, nb.kind, withSubs(state.notebooks, nb), nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
     if (nb.id === "trash") acceptNotebookTrash(li);
     ul.append(li);
     if (nb.id !== "trash") continue;
     for (const tn of state.trashed) {
       if (tn.parent) continue; // in the note list of its parent in the trash
-      ul.append(item("trash", tn.name, tn.kind, tn.count, "trashed", tn.id));
+      ul.append(item("trash", tn.name, tn.kind, withSubs(state.trashed, tn), "trashed", tn.id));
     }
   }
 }
