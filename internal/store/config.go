@@ -28,6 +28,10 @@ type Config struct {
 	// "-".
 	StopWords []string `yaml:"stop_words"`
 	StopTags  []string `yaml:"stop_tags"`
+	// Marks are the names of the marks, by their IDs (see MarkIDs), such as
+	// "red: important", which say what they mean. A mark without a name is
+	// shown by what it looks like.
+	Marks map[string]string `yaml:"marks,omitempty"`
 }
 
 // Config reads ConfigFile. A missing file gives the zero value, and an unknown

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/text/unicode/norm"
@@ -75,6 +76,7 @@ type Summary struct {
 	TrashedNotebook string
 	Title           string
 	Tags            []string
+	Marks           []string // see store.Note.Marks
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	CreatedBy       string // see store.Note.CreatedBy
@@ -109,6 +111,10 @@ type Index struct {
 	// onReplace, if set, is called with the content of a note that Upsert
 	// replaced with a different title, tags or body.
 	onReplace func(Replaced)
+	// markNames maps the names of the marks, by tagKey, to their IDs (see
+	// SetMarkNames).
+	markMu    sync.Mutex
+	markNames map[string]string
 }
 
 // Replaced is the content of a note before Upsert replaced it.
@@ -193,7 +199,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 7 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash
+const schemaVersion = 8 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -307,6 +313,14 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	if err != nil {
 		return err
 	}
+	cleaned := store.CleanMarks(n.Marks)
+	if cleaned == nil {
+		cleaned = []string{}
+	}
+	marks, err := json.Marshal(cleaned)
+	if err != nil {
+		return err
+	}
 	tx, err := ix.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -321,14 +335,14 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	// An update keeps the note's seq, and so its rowid in the full-text tables.
 	var seq int64
 	if err := tx.QueryRowContext(ctx, `
-INSERT INTO notes (id, notebook, trashed_notebook, title, tags, body, created_at, updated_at, sort_key, title_key, created_by, import_hash, file_mtime, file_size)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, import_hash, file_mtime, file_size)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO UPDATE SET
-	notebook = excluded.notebook, trashed_notebook = excluded.trashed_notebook, title = excluded.title, tags = excluded.tags, body = excluded.body,
+	notebook = excluded.notebook, trashed_notebook = excluded.trashed_notebook, title = excluded.title, tags = excluded.tags, marks = excluded.marks, body = excluded.body,
 	created_at = excluded.created_at, updated_at = excluded.updated_at, sort_key = excluded.sort_key, title_key = excluded.title_key,
 	created_by = excluded.created_by, import_hash = excluded.import_hash, file_mtime = excluded.file_mtime, file_size = excluded.file_size
 RETURNING seq`,
-		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.ImportHash, f.ModTime.UnixNano(), f.Size,
+		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.ImportHash, f.ModTime.UnixNano(), f.Size,
 	).Scan(&seq); err != nil {
 		return err
 	}
@@ -596,7 +610,7 @@ func (ix *Index) Tags(ctx context.Context, notebook string, exclude ...string) (
 }
 
 // summaryColumns are the columns that query scans.
-const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.created_at, n.updated_at, n.created_by`
+const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.marks, n.created_at, n.updated_at, n.created_by`
 
 // orderBy returns the ORDER BY clause of a list in the order sort (one of
 // store.Sorts; empty for store.SortOrder). The ID breaks ties, so that the
@@ -709,12 +723,16 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	if tag != "" {
 		tags = append(tags, tag)
 	}
-	if len(terms) == 0 && len(tags) == 0 {
+	if len(terms) == 0 && len(tags) == 0 && len(query.Marks) == 0 {
 		return []*Summary{}, 0, nil
 	}
 	tagWhere, tagArgs, err := ix.tagCond(ctx, tags)
 	if err != nil {
 		return nil, 0, err
+	}
+	if markWhere, markArgs := ix.markCond(query.Marks); markWhere != "" {
+		tagWhere = strings.Join(slices.DeleteFunc([]string{tagWhere, markWhere}, func(s string) bool { return s == "" }), " AND ")
+		tagArgs = append(tagArgs, markArgs...)
 	}
 	var ids []string
 	seen := map[string]bool{}
@@ -798,6 +816,44 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, note
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
+}
+
+// SetMarkNames sets the names of the marks, by their IDs (store.Config.Marks),
+// so that a search can ask for a mark by its name, such as mark:important.
+func (ix *Index) SetMarkNames(names map[string]string) {
+	byName := map[string]string{}
+	for id, name := range names {
+		if store.ValidMark(id) && name != "" {
+			byName[tagKey(name)] = id
+		}
+	}
+	ix.markMu.Lock()
+	ix.markNames = byName
+	ix.markMu.Unlock()
+}
+
+// markCond returns the condition that a note has all the marks, each given by
+// its ID or its name, compared by tagKey, and its arguments; "" without marks.
+func (ix *Index) markCond(marks []string) (string, []any) {
+	if len(marks) == 0 {
+		return "", nil
+	}
+	ix.markMu.Lock()
+	byName := ix.markNames
+	ix.markMu.Unlock()
+	var conds []string
+	var args []any
+	for _, m := range marks {
+		id := tagKey(m)
+		if !store.ValidMark(id) {
+			if id = byName[tagKey(m)]; id == "" {
+				return "0", nil // no such mark
+			}
+		}
+		conds = append(conds, `EXISTS (SELECT 1 FROM json_each(n.marks) WHERE value = ?)`)
+		args = append(args, id)
+	}
+	return strings.Join(conds, " AND "), args
 }
 
 // tagCond returns the condition that a note has all the tags, compared by
@@ -893,14 +949,17 @@ func (ix *Index) query(ctx context.Context, q string, args ...any) ([]*Summary, 
 	res := []*Summary{}
 	for rows.Next() {
 		var s Summary
-		var tags, created, updated string
-		if err := rows.Scan(&s.ID, &s.Notebook, &s.TrashedNotebook, &s.Title, &tags, &created, &updated, &s.CreatedBy, &s.Snippet); err != nil {
+		var tags, marks, created, updated string
+		if err := rows.Scan(&s.ID, &s.Notebook, &s.TrashedNotebook, &s.Title, &tags, &marks, &created, &updated, &s.CreatedBy, &s.Snippet); err != nil {
 			return nil, err
 		}
 		if s.CreatedAt, err = time.Parse(time.RFC3339, created); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(tags), &s.Tags); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(marks), &s.Marks); err != nil {
 			return nil, err
 		}
 		if s.UpdatedAt, err = time.Parse(time.RFC3339, updated); err != nil {

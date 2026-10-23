@@ -35,6 +35,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -52,8 +55,10 @@ type (
 		Session *string
 		// Search terms separated by spaces, combined with AND. "two words" in double
 		// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
-		// for notes with the tag (case and width do not matter); a query of tags alone
-		// lists the notes with them, last updated first
+		// for notes with the tag (case and width do not matter), and mark:red, or
+		// mark:"a name", for notes with the mark, by its ID or the name the user gave
+		// it; a query of tags and marks alone lists the notes with them, last updated
+		// first
 		Q string
 		// Only notes in this notebook. Omit for all notebooks except the trash
 		Notebook *string
@@ -93,6 +98,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Excerpt around the matched terms (search only)
 		Snippet *string
 		// Ranges of the title matched by the query, sorted and not overlapping (search

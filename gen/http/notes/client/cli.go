@@ -585,6 +585,113 @@ func BuildTagsPayload(notesTagsNotebook *string, notesTagsSession *string) (*not
 	return v, nil
 }
 
+// BuildMarksPayload builds the payload for the notes marks endpoint from CLI
+// flags.
+func BuildMarksPayload(notesMarksSession *string) (*notes.MarksPayload, error) {
+	var session *string
+	{
+		if notesMarksSession != nil {
+			session = notesMarksSession
+		}
+	}
+	v := &notes.MarksPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildSetMarksPayload builds the payload for the notes set_marks endpoint
+// from CLI flags.
+func BuildSetMarksPayload(notesSetMarksBody *string, notesSetMarksID *string, notesSetMarksSession *string) (*notes.SetMarksPayload, error) {
+	var err error
+	var body SetMarksRequestBody
+	{
+		if notesSetMarksBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesSetMarksBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"marks\": [\n         \"red\"\n      ]\n   }'")
+		}
+	}
+	var id string
+	{
+		if notesSetMarksID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesSetMarksID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesSetMarksSession != nil {
+			session = notesSetMarksSession
+		}
+	}
+	v := &notes.SetMarksPayload{}
+	if body.Marks != nil {
+		v.Marks = make([]string, len(body.Marks))
+		for i, val := range body.Marks {
+			v.Marks[i] = val
+		}
+	}
+	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildSaveMarkNamesPayload builds the payload for the notes save_mark_names
+// endpoint from CLI flags.
+func BuildSaveMarkNamesPayload(notesSaveMarkNamesBody *string, notesSaveMarkNamesSession *string) (*notes.SaveMarkNamesPayload, error) {
+	var err error
+	var body SaveMarkNamesRequestBody
+	{
+		if notesSaveMarkNamesBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesSaveMarkNamesBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"names\": {\n         \"red\": \"important\",\n         \"star\": \"later\"\n      }\n   }'")
+		}
+		if body.Names == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("names", "body"))
+		}
+		for k, v := range body.Names {
+			if !(k == "red" || k == "orange" || k == "yellow" || k == "green" || k == "blue" || k == "purple" || k == "gray" || k == "star" || k == "important" || k == "question" || k == "done" || k == "pin" || k == "urgent" || k == "idea") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.names.key", k, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+			}
+			if utf8.RuneCountInString(v) > 40 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("body.names[key]", v, utf8.RuneCountInString(v), 40, false))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesSaveMarkNamesSession != nil {
+			session = notesSaveMarkNamesSession
+		}
+	}
+	v := &notes.SaveMarkNamesPayload{}
+	if body.Names != nil {
+		v.Names = make(map[string]string, len(body.Names))
+		for key, val := range body.Names {
+			tk := key
+			tv := val
+			v.Names[tk] = tv
+		}
+	}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildCreateNotebookPayload builds the payload for the notes create_notebook
 // endpoint from CLI flags.
 func BuildCreateNotebookPayload(notesCreateNotebookBody *string, notesCreateNotebookSession *string) (*notes.CreateNotebookPayload, error) {

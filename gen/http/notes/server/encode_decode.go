@@ -1489,6 +1489,311 @@ func EncodeTagsError(encoder func(context.Context, http.ResponseWriter) goahttp.
 	}
 }
 
+// EncodeMarksResponse returns an encoder for responses returned by the notes
+// marks endpoint.
+func EncodeMarksResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.([]*notes.MarkInfo)
+		enc := encoder(ctx, w)
+		body := NewMarksResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeMarksRequest returns a decoder for requests sent to the notes marks
+// endpoint.
+func DecodeMarksRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.MarksPayload, error) {
+	return func(r *http.Request) (*notes.MarksPayload, error) {
+		var payload *notes.MarksPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewMarksPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeMarksError returns an encoder for errors returned by the marks notes
+// endpoint.
+func EncodeMarksError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMarksUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewMarksVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeSetMarksResponse returns an encoder for responses returned by the
+// notes set_marks endpoint.
+func EncodeSetMarksResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.Note)
+		enc := encoder(ctx, w)
+		body := NewSetMarksResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeSetMarksRequest returns a decoder for requests sent to the notes
+// set_marks endpoint.
+func DecodeSetMarksRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SetMarksPayload, error) {
+	return func(r *http.Request) (*notes.SetMarksPayload, error) {
+		var payload *notes.SetMarksPayload
+		var (
+			body SetMarksRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateSetMarksRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			id      string
+			session *string
+			c       *http.Cookie
+
+			params = mux.Vars(r)
+		)
+		id = params["id"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewSetMarksPayload(&body, id, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSetMarksError returns an encoder for errors returned by the set_marks
+// notes endpoint.
+func EncodeSetMarksError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSetMarksNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSetMarksBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSetMarksUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSetMarksVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeSaveMarkNamesResponse returns an encoder for responses returned by the
+// notes save_mark_names endpoint.
+func EncodeSaveMarkNamesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.([]*notes.MarkInfo)
+		enc := encoder(ctx, w)
+		body := NewSaveMarkNamesResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeSaveMarkNamesRequest returns a decoder for requests sent to the notes
+// save_mark_names endpoint.
+func DecodeSaveMarkNamesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SaveMarkNamesPayload, error) {
+	return func(r *http.Request) (*notes.SaveMarkNamesPayload, error) {
+		var payload *notes.SaveMarkNamesPayload
+		var (
+			body SaveMarkNamesRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateSaveMarkNamesRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewSaveMarkNamesPayload(&body, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSaveMarkNamesError returns an encoder for errors returned by the
+// save_mark_names notes endpoint.
+func EncodeSaveMarkNamesError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveMarkNamesUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveMarkNamesVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeCreateNotebookResponse returns an encoder for responses returned by
 // the notes create_notebook endpoint.
 func EncodeCreateNotebookResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -3731,6 +4036,12 @@ func marshalNotesNoteSummaryToNoteSummaryResponseBody(v *notes.NoteSummary) *Not
 	} else {
 		res.Tags = []string{}
 	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRangeResponseBody, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -3794,6 +4105,18 @@ func marshalNotesTagCountToTagCountResponse(v *notes.TagCount) *TagCountResponse
 	return res
 }
 
+// marshalNotesMarkInfoToMarkInfoResponse builds a value of type
+// *MarkInfoResponse from a value of type *notes.MarkInfo.
+func marshalNotesMarkInfoToMarkInfoResponse(v *notes.MarkInfo) *MarkInfoResponse {
+	res := &MarkInfoResponse{
+		ID:   v.ID,
+		Kind: v.Kind,
+		Name: v.Name,
+	}
+
+	return res
+}
+
 // marshalNotesTrashedNotebookToTrashedNotebookResponse builds a value of type
 // *TrashedNotebookResponse from a value of type *notes.TrashedNotebook.
 func marshalNotesTrashedNotebookToTrashedNotebookResponse(v *notes.TrashedNotebook) *TrashedNotebookResponse {
@@ -3842,6 +4165,12 @@ func marshalNotesNoteToNoteResponseBody(v *notes.Note) *NoteResponseBody {
 		}
 	} else {
 		res.Tags = []string{}
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRangeResponseBody, len(v.TitleHighlights))

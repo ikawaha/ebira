@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -181,7 +182,9 @@ func (c *Client) BuildGetRequest(ctx context.Context, v any) (*http.Request, err
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GetNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GetNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "get", u.String(), err)
@@ -512,7 +515,9 @@ func (c *Client) BuildUpdateRequest(ctx context.Context, v any) (*http.Request, 
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: UpdateNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: UpdateNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("PATCH", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "update", u.String(), err)
@@ -701,7 +706,9 @@ func (c *Client) BuildDeleteRequest(ctx context.Context, v any) (*http.Request, 
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "delete", u.String(), err)
@@ -1259,7 +1266,9 @@ func (c *Client) BuildRestoreRequest(ctx context.Context, v any) (*http.Request,
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RestoreNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v/restore", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RestoreNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "restore", u.String(), err)
@@ -1444,7 +1453,9 @@ func (c *Client) BuildMoveRequest(ctx context.Context, v any) (*http.Request, er
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v/move", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "move", u.String(), err)
@@ -1848,6 +1859,413 @@ func DecodeTagsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 	}
 }
 
+// BuildMarksRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "marks" endpoint
+func (c *Client) BuildMarksRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MarksNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "marks", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeMarksRequest returns an encoder for requests sent to the notes marks
+// server.
+func EncodeMarksRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.MarksPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "marks", "*notes.MarksPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodeMarksResponse returns a decoder for responses returned by the notes
+// marks endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeMarksResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeMarksResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "marks", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "marks", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body []*MarkInfoResponse
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "marks", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := validateMarkInfoResponse(e, "body[*]"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "marks", err)
+			}
+			res := NewMarksMarkInfoOK(body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body MarksUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "marks", err)
+			}
+			err = ValidateMarksUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "marks", err)
+			}
+			return nil, NewMarksUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body MarksVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "marks", err)
+			}
+			err = ValidateMarksVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "marks", err)
+			}
+			return nil, NewMarksVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "marks", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "marks", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildSetMarksRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "set_marks" endpoint
+func (c *Client) BuildSetMarksRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.SetMarksPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "set_marks", "*notes.SetMarksPayload", v)
+		}
+		id = p.ID
+	}
+
+	rawPath := fmt.Sprintf("/notes/%v/marks", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SetMarksNotesPath(id), RawPath: rawPath}
+	req, err := http.NewRequest("PUT", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "set_marks", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeSetMarksRequest returns an encoder for requests sent to the notes
+// set_marks server.
+func EncodeSetMarksRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.SetMarksPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "set_marks", "*notes.SetMarksPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewSetMarksRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "set_marks", err)
+		}
+		return nil
+	}
+}
+
+// DecodeSetMarksResponse returns a decoder for responses returned by the notes
+// set_marks endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeSetMarksResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeSetMarksResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "set_marks", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body SetMarksResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			err = ValidateSetMarksResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_marks", err)
+			}
+			res := NewSetMarksNoteOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body SetMarksNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			err = ValidateSetMarksNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_marks", err)
+			}
+			return nil, NewSetMarksNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body SetMarksBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			err = ValidateSetMarksBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_marks", err)
+			}
+			return nil, NewSetMarksBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body SetMarksUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			err = ValidateSetMarksUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_marks", err)
+			}
+			return nil, NewSetMarksUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body SetMarksVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			err = ValidateSetMarksVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "set_marks", err)
+			}
+			return nil, NewSetMarksVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "set_marks", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildSaveMarkNamesRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "save_mark_names" endpoint
+func (c *Client) BuildSaveMarkNamesRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SaveMarkNamesNotesPath()}
+	req, err := http.NewRequest("PUT", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "save_mark_names", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeSaveMarkNamesRequest returns an encoder for requests sent to the notes
+// save_mark_names server.
+func EncodeSaveMarkNamesRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.SaveMarkNamesPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "save_mark_names", "*notes.SaveMarkNamesPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewSaveMarkNamesRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "save_mark_names", err)
+		}
+		return nil
+	}
+}
+
+// DecodeSaveMarkNamesResponse returns a decoder for responses returned by the
+// notes save_mark_names endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+// DecodeSaveMarkNamesResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeSaveMarkNamesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_mark_names", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "save_mark_names", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body []*MarkInfoResponse
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_mark_names", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := validateMarkInfoResponse(e, "body[*]"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "save_mark_names", err)
+			}
+			res := NewSaveMarkNamesMarkInfoOK(body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body SaveMarkNamesUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_mark_names", err)
+			}
+			err = ValidateSaveMarkNamesUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "save_mark_names", err)
+			}
+			return nil, NewSaveMarkNamesUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body SaveMarkNamesVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_mark_names", err)
+			}
+			err = ValidateSaveMarkNamesVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "save_mark_names", err)
+			}
+			return nil, NewSaveMarkNamesVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "save_mark_names", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "save_mark_names", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildCreateNotebookRequest instantiates a HTTP request object with method
 // and path set to call the "notes" service "create_notebook" endpoint
 func (c *Client) BuildCreateNotebookRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -2025,7 +2443,9 @@ func (c *Client) BuildSaveNotebookRequest(ctx context.Context, v any) (*http.Req
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SaveNotebookNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notebooks/%v", (&url.URL{Path: fmt.Sprint(id)}).EscapedPath())
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SaveNotebookNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("PUT", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "save_notebook", u.String(), err)
@@ -2184,7 +2604,9 @@ func (c *Client) BuildMoveNotebookRequest(ctx context.Context, v any) (*http.Req
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveNotebookNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notebooks/move/%v", (&url.URL{Path: fmt.Sprint(id)}).EscapedPath())
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveNotebookNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "move_notebook", u.String(), err)
@@ -2358,7 +2780,9 @@ func (c *Client) BuildDeleteNotebookRequest(ctx context.Context, v any) (*http.R
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteNotebookNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notebooks/%v", (&url.URL{Path: fmt.Sprint(id)}).EscapedPath())
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteNotebookNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "delete_notebook", u.String(), err)
@@ -2636,7 +3060,9 @@ func (c *Client) BuildRestoreNotebookRequest(ctx context.Context, v any) (*http.
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RestoreNotebookNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/trash/notebooks/restore/%v", (&url.URL{Path: fmt.Sprint(id)}).EscapedPath())
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RestoreNotebookNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "restore_notebook", u.String(), err)
@@ -2807,7 +3233,9 @@ func (c *Client) BuildDeleteTrashedNotebookRequest(ctx context.Context, v any) (
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteTrashedNotebookNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/trash/notebooks/%v", (&url.URL{Path: fmt.Sprint(id)}).EscapedPath())
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteTrashedNotebookNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "delete_trashed_notebook", u.String(), err)
@@ -3188,7 +3616,9 @@ func (c *Client) BuildAddFileRequest(ctx context.Context, v any) (*http.Request,
 		body = rd.Body
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddFileNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v/files", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddFileNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("POST", u.String(), body)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "add_file", u.String(), err)
@@ -3377,7 +3807,9 @@ func (c *Client) BuildGetFileRequest(ctx context.Context, v any) (*http.Request,
 		id = p.ID
 		name = p.Name
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GetFileNotesPath(id, name)}
+
+	rawPath := fmt.Sprintf("/notes/%v/files/%v", url.PathEscape(fmt.Sprint(id)), url.PathEscape(fmt.Sprint(name)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: GetFileNotesPath(id, name), RawPath: rawPath}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "get_file", u.String(), err)
@@ -3528,7 +3960,9 @@ func (c *Client) BuildDeleteFileRequest(ctx context.Context, v any) (*http.Reque
 		id = p.ID
 		name = p.Name
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteFileNotesPath(id, name)}
+
+	rawPath := fmt.Sprintf("/notes/%v/files/%v", url.PathEscape(fmt.Sprint(id)), url.PathEscape(fmt.Sprint(name)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteFileNotesPath(id, name), RawPath: rawPath}
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "delete_file", u.String(), err)
@@ -3670,7 +4104,9 @@ func (c *Client) BuildHistoryRequest(ctx context.Context, v any) (*http.Request,
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryNotesPath(id)}
+
+	rawPath := fmt.Sprintf("/notes/%v/history", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryNotesPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "history", u.String(), err)
@@ -3833,7 +4269,9 @@ func (c *Client) BuildHistoryVersionRequest(ctx context.Context, v any) (*http.R
 		id = p.ID
 		rev = p.Rev
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryVersionNotesPath(id, rev)}
+
+	rawPath := fmt.Sprintf("/notes/%v/history/%v", url.PathEscape(fmt.Sprint(id)), url.PathEscape(fmt.Sprint(rev)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: HistoryVersionNotesPath(id, rev), RawPath: rawPath}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "history_version", u.String(), err)
@@ -4845,6 +5283,12 @@ func unmarshalNoteSummaryResponseBodyToNotesNoteSummary(v *NoteSummaryResponseBo
 	for i, val := range v.Tags {
 		res.Tags[i] = val
 	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*notes.TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -4908,6 +5352,18 @@ func unmarshalTagCountResponseToNotesTagCount(v *TagCountResponse) *notes.TagCou
 	return res
 }
 
+// unmarshalMarkInfoResponseToNotesMarkInfo builds a value of type
+// *notes.MarkInfo from a value of type *MarkInfoResponse.
+func unmarshalMarkInfoResponseToNotesMarkInfo(v *MarkInfoResponse) *notes.MarkInfo {
+	res := &notes.MarkInfo{
+		ID:   *v.ID,
+		Kind: *v.Kind,
+		Name: v.Name,
+	}
+
+	return res
+}
+
 // unmarshalTrashedNotebookResponseToNotesTrashedNotebook builds a value of
 // type *notes.TrashedNotebook from a value of type *TrashedNotebookResponse.
 func unmarshalTrashedNotebookResponseToNotesTrashedNotebook(v *TrashedNotebookResponse) *notes.TrashedNotebook {
@@ -4964,6 +5420,12 @@ func unmarshalNoteResponseBodyToNotesNote(v *NoteResponseBody) *notes.Note {
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
 		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*notes.TextRange, len(v.TitleHighlights))

@@ -34,6 +34,9 @@ type Notes struct {
 	// previewCSS is the path of the CSS file for the preview of the web UI
 	// (see SetPreviewCSS).
 	previewCSS string
+	// markNames are the names of the marks, by their IDs, from the settings
+	// of the notes (see SetMarkNames).
+	markNames map[string]string
 }
 
 var _ gennotes.Service = (*Notes)(nil)
@@ -989,7 +992,20 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 			return nil, err
 		}
 	}
-	return s.updateNote(ctx, &gennotes.UpdatePayload{ID: p.ID, Notebook: p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body, IfMatch: &p.Version})
+	res := n
+	if p.Notebook != nil || p.Title != nil || p.Tags != nil || p.Body != nil {
+		if res, err = s.updateNote(ctx, &gennotes.UpdatePayload{ID: p.ID, Notebook: p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body, IfMatch: &p.Version}); err != nil {
+			return nil, err
+		}
+	} else if !store.MatchVersion(p.Version, n.Version) {
+		return nil, gennotes.MakePreconditionFailed(errVersionMismatch)
+	}
+	// The marks go last, as the content may have changed the version they
+	// were checked against.
+	if p.Marks != nil {
+		return s.setMarks(ctx, p.ID, p.Marks)
+	}
+	return res, nil
 }
 
 // DeleteAiNote moves a note in a notebook of the collab kind to the trash for an AI
@@ -1226,6 +1242,7 @@ func toNote(n *store.Note) *gennotes.Note {
 		res.TrashedNotebook = &n.TrashedNotebook
 	}
 	res.CreatedBy = createdBy(n.CreatedBy)
+	res.Marks = store.CleanMarks(n.Marks)
 	return res
 }
 
@@ -1252,6 +1269,7 @@ func summaries(ss []*index.Summary, withSnippet bool) []*gennotes.NoteSummary {
 			r.TrashedNotebook = &s.TrashedNotebook
 		}
 		r.CreatedBy = createdBy(s.CreatedBy)
+		r.Marks = store.CleanMarks(s.Marks)
 		if withSnippet {
 			r.Snippet = &s.Snippet
 			r.TitleHighlights = textRanges(s.TitleHighlights)

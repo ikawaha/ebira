@@ -15,6 +15,7 @@ func mcpHTTPBindings() mcpruntime.HTTPBindings {
 	return mcpruntime.HTTPBindings{
 		Tools: map[string]mcpruntime.ToolBinding{
 			"get_note":       {ReadOnly: true},
+			"list_marks":     {ReadOnly: true},
 			"list_notebooks": {ReadOnly: true},
 			"list_notes":     {ReadOnly: true},
 			"list_tags":      {ReadOnly: true},

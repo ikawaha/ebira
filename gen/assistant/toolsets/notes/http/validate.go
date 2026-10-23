@@ -70,6 +70,14 @@ func ValidateGetResultTransport(body *GetResultTransport) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
 		}
 	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -178,6 +186,14 @@ func ValidateNoteSummaryTransport(body *NoteSummaryTransport) (err error) {
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	for _, e := range body.TitleHighlights {

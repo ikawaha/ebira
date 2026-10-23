@@ -9,6 +9,7 @@ package specs
 
 import (
 	notes "github.com/ikawaha/ebira/gen/assistant/toolsets/notes"
+	genregistry "goa.design/goa-ai/registry/gen/registry"
 	"goa.design/goa-ai/runtime/agent/policy"
 	tools "goa.design/goa-ai/runtime/agent/tools"
 )
@@ -16,7 +17,8 @@ import (
 // Specs returns fresh specifications for every tool available to this agent.
 func Specs() []tools.ToolSpec {
 	specs := make([]tools.ToolSpec, 0)
-	specs = append(specs, notes.Specs()...)
+	specs = append(specs, notes.SpecGet())
+	specs = append(specs, notes.SpecSearch())
 	return specs
 }
 
@@ -43,6 +45,20 @@ func Spec(name tools.Ident) (tools.ToolSpec, bool) {
 		return notes.Spec(notes.Search)
 	default:
 		return tools.ToolSpec{}, false
+	}
+}
+
+// ToolSchema returns the generated registry declaration of one tool
+// available to this agent, with fresh owned values. It returns false for tools
+// without a declaration, such as private page operations.
+func ToolSchema(name tools.Ident) (*genregistry.ToolSchema, bool) {
+	switch name {
+	case tools.Ident("notes.get"):
+		return notes.ToolSchema(name)
+	case tools.Ident("notes.search"):
+		return notes.ToolSchema(name)
+	default:
+		return nil, false
 	}
 }
 

@@ -168,7 +168,11 @@ func (m *Model) renderPreview(keepOffset bool) {
 	var b strings.Builder
 	on := m.highlightOn()
 	title, _ := highlightANSI(lipgloss.NewStyle().Bold(true).Foreground(m.th.fg).Render(m.note.Title), highlightWords(m.note.Title, m.note.TitleHighlights), on)
-	b.WriteString("\n  " + title + "\n")
+	lead := "\n  "
+	if badge, _ := noteMarkBadge(m.note.Marks); badge != "" {
+		lead = "\n " + badge + " "
+	}
+	b.WriteString(lead + title + "\n")
 	nb := m.notebookLabel(m.note.Notebook)
 	if m.note.TrashedNotebook != nil {
 		nb += " / " + strings.TrimPrefix(m.notebookName(trashedPrefix+*m.note.TrashedNotebook), "↳ ")
@@ -376,12 +380,15 @@ func (m Model) renderList(w, h int) string {
 			titleSt, subSt = titleSt.Background(m.th.selBg).Bold(true), subSt.Background(m.th.selBg)
 		}
 		hl := lipgloss.NewStyle().Foreground(m.th.badgeFg).Background(m.th.warn)
-		// The mark of a note created by AI goes at the end of the title line,
-		// apart from the title, so that a long title is cut instead.
-		titleLine := padHighlight(title, titleHL, titleSt, hl.Bold(true), innerW-1)
+		// The mark of the note goes before the title, drawn on the background
+		// of the row; the mark of a note created by AI goes at the end of the
+		// title line, apart from the title, so that a long title is cut
+		// instead.
+		badge, badgeW := styledMarkBadge(it.Marks, titleSt)
+		titleLine := badge + padHighlight(title, titleHL, titleSt, hl.Bold(true), innerW-1-badgeW)
 		if createdByAI(it.CreatedBy) {
 			mark := " " + aiMark + " "
-			titleLine = padHighlight(title, titleHL, titleSt, hl.Bold(true), innerW-1-ansi.StringWidth(mark)) + titleSt.Render(mark)
+			titleLine = badge + padHighlight(title, titleHL, titleSt, hl.Bold(true), innerW-1-badgeW-ansi.StringWidth(mark)) + titleSt.Render(mark)
 		}
 		lines = append(lines,
 			lead+titleLine,
@@ -578,6 +585,8 @@ func (m Model) renderFooter() string {
 			label = "prompt.ask"
 		}
 		return m.th.style(m.th.accent).Render(" "+m.tr.t(label)+" ") + m.promptIn.View() + m.keys([][2]string{{"enter", "key.ok"}, {"esc", "key.cancel"}})
+	case promptMark:
+		return m.renderMarkPrompt()
 	case promptNotebookKind:
 		name := ""
 		if nb := m.selectedNotebook(); nb != nil {
@@ -619,7 +628,7 @@ func (m Model) renderFooter() string {
 	case focusEdit:
 		hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.cancel"}, {"tab/shift+tab", "key.field"}, {"ctrl+z/y", "key.undo"}}
 	case focusPreview:
-		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}}
+		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}, {"M", "key.mark"}}
 		if m.answerOn {
 			hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.closeAnswer"}, {"?", "key.askAgain"}}
 		}
@@ -649,7 +658,7 @@ func (m Model) renderFooter() string {
 			hints = [][2]string{{"j/k", "key.tag"}, {"enter", "key.notes"}, {"T", "key.notebooks"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		}
 	default:
-		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"y", "key.copy"}, {"s", "key.sort"}}
+		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"y", "key.copy"}, {"M", "key.mark"}, {"s", "key.sort"}}
 		if m.inTrashedNotebook() {
 			// The notes of a notebook in the trash are read only.
 			hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"d", "key.deletePermanently"}, {"h", "key.notebooks"}}

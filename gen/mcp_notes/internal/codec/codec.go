@@ -163,6 +163,9 @@ type CreateAiNoteResultTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -222,6 +225,14 @@ func ValidateCreateAiNoteResultTransport(value *CreateAiNoteResultTransport) (er
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -462,6 +473,9 @@ type GetResultTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -521,6 +535,14 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -659,6 +681,9 @@ type ImportAiNoteResultNoteTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -718,6 +743,14 @@ func ValidateImportAiNoteResultNoteTransport(value *ImportAiNoteResultNoteTransp
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -949,6 +982,9 @@ type ListResultNoteSummaryTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `json:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -1000,6 +1036,14 @@ func ValidateListResultNoteSummaryTransport(value *ListResultNoteSummaryTranspor
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	for _, e := range value.TitleHighlights {
@@ -1090,6 +1134,84 @@ func ValidateMakeNotebookPrivatePayloadTransport(value *MakeNotebookPrivatePaylo
 	return err
 }
 
+// MarksInputTransport stores JSON fields until they have been validated.
+type MarksInputTransport struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string `json:"session,omitempty"`
+}
+
+// ValidateMarksInputTransport checks decoded JSON before it becomes a service value.
+func ValidateMarksInputTransport(value *MarksInputTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// MarksPayloadTransport stores JSON fields until they have been validated.
+type MarksPayloadTransport struct {
+}
+
+// ValidateMarksPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateMarksPayloadTransport(value *MarksPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// MarksResultMarkInfoTransport stores JSON fields until they have been validated.
+type MarksResultMarkInfoTransport struct {
+	// Mark ID
+	ID *string `json:"id"`
+	// color, or symbol for a mark drawn as an emoji
+	Kind *string `json:"kind"`
+	// Name the user gave the mark, which says what it means, such as important;
+	// absent for none
+	Name *string `json:"name,omitempty"`
+}
+
+// ValidateMarksResultMarkInfoTransport checks decoded JSON before it becomes a service value.
+func ValidateMarksResultMarkInfoTransport(value *MarksResultMarkInfoTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if value.ID != nil {
+		if !(*value.ID == "red" || *value.ID == "orange" || *value.ID == "yellow" || *value.ID == "green" || *value.ID == "blue" || *value.ID == "purple" || *value.ID == "gray" || *value.ID == "star" || *value.ID == "important" || *value.ID == "question" || *value.ID == "done" || *value.ID == "pin" || *value.ID == "urgent" || *value.ID == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.id", *value.ID, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
+	if value.Kind != nil {
+		if !(*value.Kind == "color" || *value.Kind == "symbol") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *value.Kind, []any{"color", "symbol"}))
+		}
+	}
+	return err
+}
+
+// MarksResultTransport stores JSON fields until they have been validated.
+type MarksResultTransport []*MarksResultMarkInfoTransport
+
+// ValidateMarksResultTransport checks decoded JSON before it becomes a service value.
+func ValidateMarksResultTransport(value MarksResultTransport) (err error) {
+	for _, e := range value {
+		if e != nil {
+			if err2 := ValidateMarksResultMarkInfoTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
 // MoveAiNotePayloadTransport stores JSON fields until they have been validated.
 type MoveAiNotePayloadTransport struct {
 	// Note ID
@@ -1160,6 +1282,9 @@ type MoveAiNoteResultTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -1219,6 +1344,14 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -1368,8 +1501,10 @@ type SearchInputTransport struct {
 	Session *string `json:"session,omitempty"`
 	// Search terms separated by spaces, combined with AND. "two words" in double
 	// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
-	// for notes with the tag (case and width do not matter); a query of tags alone
-	// lists the notes with them, last updated first
+	// for notes with the tag (case and width do not matter), and mark:red, or
+	// mark:"a name", for notes with the mark, by its ID or the name the user gave
+	// it; a query of tags and marks alone lists the notes with them, last updated
+	// first
 	Q *string `json:"q"`
 	// Only notes in this notebook. Omit for all notebooks except the trash
 	Notebook *string `json:"notebook,omitempty"`
@@ -1430,8 +1565,10 @@ func ValidateSearchPayloadIntTransport(value SearchPayloadIntTransport) (err err
 type SearchPayloadTransport struct {
 	// Search terms separated by spaces, combined with AND. "two words" in double
 	// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
-	// for notes with the tag (case and width do not matter); a query of tags alone
-	// lists the notes with them, last updated first
+	// for notes with the tag (case and width do not matter), and mark:red, or
+	// mark:"a name", for notes with the mark, by its ID or the name the user gave
+	// it; a query of tags and marks alone lists the notes with them, last updated
+	// first
 	Q *string `json:"q"`
 	// Only notes in this notebook. Omit for all notebooks except the trash
 	Notebook *string `json:"notebook,omitempty"`
@@ -1490,6 +1627,9 @@ type SearchResultNoteSummaryTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `json:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -1541,6 +1681,14 @@ func ValidateSearchResultNoteSummaryTransport(value *SearchResultNoteSummaryTran
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	for _, e := range value.TitleHighlights {
@@ -1708,6 +1856,9 @@ type UpdateAiNotePayloadTransport struct {
 	Tags []string `json:"tags,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body,omitempty"`
+	// Marks of the note, one at most for now; an empty list takes them away. See
+	// list_marks for what each means
+	Marks []string `json:"marks,omitempty"`
 }
 
 // ValidateUpdateAiNotePayloadTransport checks decoded JSON before it becomes a service value.
@@ -1730,6 +1881,14 @@ func ValidateUpdateAiNotePayloadTransport(value *UpdateAiNotePayloadTransport) (
 	if value.Title != nil {
 		if utf8.RuneCountInString(*value.Title) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 1, true))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	return err
@@ -1779,6 +1938,9 @@ type UpdateAiNoteResultTransport struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `json:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `json:"marks,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -1838,6 +2000,14 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *value.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(value.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
+	}
+	for _, e := range value.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -1959,6 +2129,12 @@ func EncodeCreateAiNoteResult(in *notes.Note) ([]byte, error) {
 		body.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
 			body.Tags[i] = val
+		}
+		if in.Marks != nil {
+			body.Marks = make([]string, len(in.Marks))
+			for i, val := range in.Marks {
+				body.Marks[i] = val
+			}
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*CreateAiNoteResultTextRangeTransport, len(in.TitleHighlights))
@@ -2133,6 +2309,12 @@ func EncodeGetResult(in *notes.Note) ([]byte, error) {
 		body.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
 			body.Tags[i] = val
+		}
+		if in.Marks != nil {
+			body.Marks = make([]string, len(in.Marks))
+			for i, val := range in.Marks {
+				body.Marks[i] = val
+			}
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*GetResultTextRangeTransport, len(in.TitleHighlights))
@@ -2344,6 +2526,71 @@ func DecodeMakeNotebookPrivatePayload(data []byte) (out *notes.MakeNotebookPriva
 	return out, nil
 }
 
+// ValidateMarksInputValue checks a service value against its declared field validation.
+func ValidateMarksInputValue(in *notes.MarksPayload) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "MarksInput")
+	}
+
+	var body *MarksInputTransport
+	{
+		body = &MarksInputTransport{
+			Session: in.Session,
+		}
+	}
+	if err := ValidateMarksInputTransport(body); err != nil {
+		return fmt.Errorf("validate MarksInput value: %w", err)
+	}
+	return nil
+}
+
+// DecodeMarksPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeMarksPayload(data []byte) (out *notes.MarksPayload, err error) {
+	var body *MarksPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode MarksPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode MarksPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode MarksPayload JSON after first value: %w", err)
+	}
+	if err := ValidateMarksPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate MarksPayload JSON: %w", err)
+	}
+	{
+		out = &notes.MarksPayload{}
+	}
+	return out, nil
+}
+
+// EncodeMarksResult turns a service value into JSON using the field names in the Goa design.
+func EncodeMarksResult(in []*notes.MarkInfo) ([]byte, error) {
+	var body MarksResultTransport
+	{
+		body = make([]*MarksResultMarkInfoTransport, len(in))
+		for i, val := range in {
+			if val == nil {
+				body[i] = nil
+				continue
+			}
+			body[i] = encodeMarkInfoToMarksResultMarkInfoTransport(val)
+		}
+	}
+	if err := ValidateMarksResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate MarksResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode MarksResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // DecodeMoveAiNotePayload checks JSON field names from the Goa design and returns a service value.
 func DecodeMoveAiNotePayload(data []byte) (out *notes.MoveAiNotePayload, err error) {
 	var body *MoveAiNotePayloadTransport
@@ -2389,6 +2636,12 @@ func EncodeMoveAiNoteResult(in *notes.Note) ([]byte, error) {
 		body.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
 			body.Tags[i] = val
+		}
+		if in.Marks != nil {
+			body.Marks = make([]string, len(in.Marks))
+			for i, val := range in.Marks {
+				body.Marks[i] = val
+			}
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*MoveAiNoteResultTextRangeTransport, len(in.TitleHighlights))
@@ -2668,6 +2921,12 @@ func DecodeUpdateAiNotePayload(data []byte) (out *notes.UpdateAiNotePayload, err
 				out.Tags[i] = val
 			}
 		}
+		if body.Marks != nil {
+			out.Marks = make([]string, len(body.Marks))
+			for i, val := range body.Marks {
+				out.Marks[i] = val
+			}
+		}
 	}
 	return out, nil
 }
@@ -2691,6 +2950,12 @@ func EncodeUpdateAiNoteResult(in *notes.Note) ([]byte, error) {
 		body.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
 			body.Tags[i] = val
+		}
+		if in.Marks != nil {
+			body.Marks = make([]string, len(in.Marks))
+			for i, val := range in.Marks {
+				body.Marks[i] = val
+			}
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*UpdateAiNoteResultTextRangeTransport, len(in.TitleHighlights))
@@ -2733,6 +2998,16 @@ func decodeImportAiNotePayloadAIImportFileTransportToAIImportFile(v *ImportAiNot
 	return res
 }
 
+func encodeMarkInfoToMarksResultMarkInfoTransport(v *notes.MarkInfo) *MarksResultMarkInfoTransport {
+	res := &MarksResultMarkInfoTransport{
+		ID:   &v.ID,
+		Kind: &v.Kind,
+		Name: v.Name,
+	}
+
+	return res
+}
+
 func encodeNoteSummaryToListResultNoteSummaryTransport(v *notes.NoteSummary) *ListResultNoteSummaryTransport {
 	res := &ListResultNoteSummaryTransport{
 		ID:              &v.ID,
@@ -2747,6 +3022,12 @@ func encodeNoteSummaryToListResultNoteSummaryTransport(v *notes.NoteSummary) *Li
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
 		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*ListResultTextRangeTransport, len(v.TitleHighlights))
@@ -2786,6 +3067,12 @@ func encodeNoteSummaryToSearchResultNoteSummaryTransport(v *notes.NoteSummary) *
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
 		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*SearchResultTextRangeTransport, len(v.TitleHighlights))
@@ -2827,6 +3114,12 @@ func encodeNoteToImportAiNoteResultNoteTransport(v *notes.Note) *ImportAiNoteRes
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
 		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*ImportAiNoteResultTextRangeTransport, len(v.TitleHighlights))

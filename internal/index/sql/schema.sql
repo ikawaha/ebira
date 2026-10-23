@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS notes (
 	trashed_notebook TEXT NOT NULL DEFAULT '', -- notebook deleted as a whole that holds the note, as trash/<id>
 	title      TEXT NOT NULL,
 	tags       TEXT NOT NULL, -- JSON array
+	marks      TEXT NOT NULL DEFAULT '[]', -- JSON array of store.MarkIDs
 	body       TEXT NOT NULL,
 	created_at TEXT NOT NULL,
 	updated_at TEXT NOT NULL,

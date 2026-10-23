@@ -55,6 +55,7 @@ const (
 	promptEmptyTrash    // confirmation to delete everything in the trash permanently
 	promptMovePrivate   // confirmation to move a note of a private notebook where AI can read it
 	promptMoveNotebook  // confirmation to move a private notebook where AI can read it
+	promptMark          // mark of the note in the preview
 )
 
 const searchDebounce = 150 * time.Millisecond
@@ -130,6 +131,8 @@ type Model struct {
 	status   string
 	statusK  statusKind
 	prompt   promptKind
+	marks    []*gennotes.MarkInfo // the marks a note can have, with their names
+	markSel  int                  // the choice at promptMark (see markChoices)
 	toDelete *gennotes.Note
 	draft    *draft  // draft of promptConflict or promptRetry
 	edit     *editor // inline editor, while editing
@@ -211,6 +214,7 @@ type (
 		notebooks []*gennotes.Notebook
 		trashed   []*gennotes.TrashedNotebook
 		tags      []*gennotes.TagCount
+		marks     []*gennotes.MarkInfo
 		err       error
 	}
 	// notebookOpMsg reports moving a notebook into or out of the trash, or
@@ -250,7 +254,7 @@ func (m *Model) loadNotebooks() tea.Cmd {
 			return notebooksMsg{err: err}
 		}
 		tags, err := api.Tags(ctx, &gennotes.TagsPayload{})
-		return notebooksMsg{notebooks: res, trashed: trashed, tags: tags, err: err}
+		return notebooksMsg{notebooks: res, trashed: trashed, tags: tags, marks: loadMarks(ctx, api), err: err}
 	}
 }
 
@@ -1093,6 +1097,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.loadList()
 
+	case markedMsg:
+		if msg.err != nil {
+			m.setStatus(statusError, "status.markFailed", "err", m.errText(msg.err))
+			return m, nil
+		}
+		return m, tea.Batch(m.loadList(), m.loadNote(msg.id))
 	case notebooksMsg:
 		if errorName(msg.err) == "unauthorized" {
 			return m, m.checkAuth()
@@ -1101,7 +1111,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
 		}
-		m.notebooks, m.trashed, m.tags = msg.notebooks, msg.trashed, msg.tags
+		m.notebooks, m.trashed, m.tags, m.marks = msg.notebooks, msg.trashed, msg.tags, msg.marks
 		if _, ok := trashedID(m.notebook); ok && !slices.ContainsFunc(m.notebookListRows(), func(r notebookRow) bool { return r.id == m.notebook }) {
 			m.notebook = trashNotebook // the notebook left the trash
 		}
@@ -1365,6 +1375,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.promptIn, cmd = m.promptIn.Update(msg)
 		return m, cmd
+	case promptMark:
+		return m, m.handleMarkKey(key)
 	case promptNotebookKind:
 		nb := m.selectedNotebook()
 		kind := map[string]string{"d": "default", "c": "collab", "w": "drop", "p": "private"}[key]
@@ -1606,6 +1618,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		// The note in the preview, as Markdown with its title.
 		if m.note != nil && (m.focus == focusList || m.focus == focusPreview) {
 			return m, copyNote(m.note)
+		}
+		return m, nil
+	case "M":
+		if m.focus == focusList || m.focus == focusPreview {
+			m.startMark()
 		}
 		return m, nil
 	}

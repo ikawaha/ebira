@@ -66,6 +66,20 @@ type MoveRequestBody struct {
 	After *string `form:"after,omitempty" json:"after,omitempty" xml:"after,omitempty"`
 }
 
+// SetMarksRequestBody is the type of the "notes" service "set_marks" endpoint
+// HTTP request body.
+type SetMarksRequestBody struct {
+	// Marks of the note
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+}
+
+// SaveMarkNamesRequestBody is the type of the "notes" service
+// "save_mark_names" endpoint HTTP request body.
+type SaveMarkNamesRequestBody struct {
+	// Names by mark ID
+	Names map[string]string `form:"names,omitempty" json:"names,omitempty" xml:"names,omitempty"`
+}
+
 // CreateNotebookRequestBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP request body.
 type CreateNotebookRequestBody struct {
@@ -186,6 +200,9 @@ type GetResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -219,6 +236,9 @@ type CreateResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -252,6 +272,9 @@ type UpdateResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -296,6 +319,9 @@ type RestoreResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -329,6 +355,9 @@ type MoveResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -346,6 +375,52 @@ type NotebooksResponseBody []*NotebookResponse
 // TagsResponseBody is the type of the "notes" service "tags" endpoint HTTP
 // response body.
 type TagsResponseBody []*TagCountResponse
+
+// MarksResponseBody is the type of the "notes" service "marks" endpoint HTTP
+// response body.
+type MarksResponseBody []*MarkInfoResponse
+
+// SetMarksResponseBody is the type of the "notes" service "set_marks" endpoint
+// HTTP response body.
+type SetMarksResponseBody struct {
+	// Note ID: the file name without the extension (notes/<notebook>/<id>.yaml),
+	// unique across notebooks
+	ID string `form:"id" json:"id" xml:"id"`
+	// Notebook (directory) the note is in
+	Notebook string `form:"notebook" json:"notebook" xml:"notebook"`
+	// Title
+	Title string `form:"title" json:"title" xml:"title"`
+	// Tags
+	Tags []string `form:"tags" json:"tags" xml:"tags"`
+	// Creation time
+	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
+	// Last update time
+	UpdatedAt string `form:"updated_at" json:"updated_at" xml:"updated_at"`
+	// For a note of a notebook deleted as a whole: the ID of that notebook, which
+	// is in the trash. notebook is then trash, and restoring the note puts it back
+	// into that notebook
+	TrashedNotebook *string `form:"trashed_notebook,omitempty" json:"trashed_notebook,omitempty" xml:"trashed_notebook,omitempty"`
+	// Who created the note: ai for a note created by an AI client
+	// (create_ai_note); absent for people
+	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Body in Markdown
+	Body string `form:"body" json:"body" xml:"body"`
+	// Strong entity tag of the note file. Sent as the ETag header over HTTP
+	Version string `form:"version" json:"version" xml:"version"`
+	// Notebook the note was in before it was moved to the trash
+	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// Ranges of the title matched by the query of get, sorted and not overlapping
+	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
+	// Ranges of the body matched by the query of get, sorted and not overlapping
+	BodyHighlights []*TextRangeResponseBody `form:"body_highlights,omitempty" json:"body_highlights,omitempty" xml:"body_highlights,omitempty"`
+}
+
+// SaveMarkNamesResponseBody is the type of the "notes" service
+// "save_mark_names" endpoint HTTP response body.
+type SaveMarkNamesResponseBody []*MarkInfoResponse
 
 // CreateNotebookResponseBody is the type of the "notes" service
 // "create_notebook" endpoint HTTP response body.
@@ -1408,6 +1483,152 @@ type TagsUnauthorizedResponseBody struct {
 // TagsVerificationRequiredResponseBody is the type of the "notes" service
 // "tags" endpoint HTTP response body for the "verification_required" error.
 type TagsVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MarksUnauthorizedResponseBody is the type of the "notes" service "marks"
+// endpoint HTTP response body for the "unauthorized" error.
+type MarksUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// MarksVerificationRequiredResponseBody is the type of the "notes" service
+// "marks" endpoint HTTP response body for the "verification_required" error.
+type MarksVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SetMarksNotFoundResponseBody is the type of the "notes" service "set_marks"
+// endpoint HTTP response body for the "not_found" error.
+type SetMarksNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SetMarksBadRequestResponseBody is the type of the "notes" service
+// "set_marks" endpoint HTTP response body for the "bad_request" error.
+type SetMarksBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SetMarksUnauthorizedResponseBody is the type of the "notes" service
+// "set_marks" endpoint HTTP response body for the "unauthorized" error.
+type SetMarksUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SetMarksVerificationRequiredResponseBody is the type of the "notes" service
+// "set_marks" endpoint HTTP response body for the "verification_required"
+// error.
+type SetMarksVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveMarkNamesUnauthorizedResponseBody is the type of the "notes" service
+// "save_mark_names" endpoint HTTP response body for the "unauthorized" error.
+type SaveMarkNamesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveMarkNamesVerificationRequiredResponseBody is the type of the "notes"
+// service "save_mark_names" endpoint HTTP response body for the
+// "verification_required" error.
+type SaveMarkNamesVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -2759,6 +2980,9 @@ type NoteSummaryResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `form:"snippet,omitempty" json:"snippet,omitempty" xml:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -2818,6 +3042,17 @@ type TagCountResponse struct {
 	Count int `form:"count" json:"count" xml:"count"`
 }
 
+// MarkInfoResponse is used to define fields on response body types.
+type MarkInfoResponse struct {
+	// Mark ID
+	ID string `form:"id" json:"id" xml:"id"`
+	// color, or symbol for a mark drawn as an emoji
+	Kind string `form:"kind" json:"kind" xml:"kind"`
+	// Name the user gave the mark, which says what it means, such as important;
+	// absent for none
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
 // TrashedNotebookResponse is used to define fields on response body types.
 type TrashedNotebookResponse struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
@@ -2856,6 +3091,9 @@ type NoteResponseBody struct {
 	// Who created the note: ai for a note created by an AI client
 	// (create_ai_note); absent for people
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty" xml:"created_by,omitempty"`
+	// Marks of the note, to tell it at a glance, one at most for now: a color or a
+	// symbol (see list_marks for what each means to the user); absent for none
+	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -2975,6 +3213,12 @@ func NewGetResponseBody(res *notes.Note) *GetResponseBody {
 	} else {
 		body.Tags = []string{}
 	}
+	if res.Marks != nil {
+		body.Marks = make([]string, len(res.Marks))
+		for i, val := range res.Marks {
+			body.Marks[i] = val
+		}
+	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
 		for i, val := range res.TitleHighlights {
@@ -3020,6 +3264,12 @@ func NewCreateResponseBody(res *notes.Note) *CreateResponseBody {
 	} else {
 		body.Tags = []string{}
 	}
+	if res.Marks != nil {
+		body.Marks = make([]string, len(res.Marks))
+		for i, val := range res.Marks {
+			body.Marks[i] = val
+		}
+	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
 		for i, val := range res.TitleHighlights {
@@ -3064,6 +3314,12 @@ func NewUpdateResponseBody(res *notes.Note) *UpdateResponseBody {
 		}
 	} else {
 		body.Tags = []string{}
+	}
+	if res.Marks != nil {
+		body.Marks = make([]string, len(res.Marks))
+		for i, val := range res.Marks {
+			body.Marks[i] = val
+		}
 	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
@@ -3132,6 +3388,12 @@ func NewRestoreResponseBody(res *notes.Note) *RestoreResponseBody {
 	} else {
 		body.Tags = []string{}
 	}
+	if res.Marks != nil {
+		body.Marks = make([]string, len(res.Marks))
+		for i, val := range res.Marks {
+			body.Marks[i] = val
+		}
+	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
 		for i, val := range res.TitleHighlights {
@@ -3176,6 +3438,12 @@ func NewMoveResponseBody(res *notes.Note) *MoveResponseBody {
 		}
 	} else {
 		body.Tags = []string{}
+	}
+	if res.Marks != nil {
+		body.Marks = make([]string, len(res.Marks))
+		for i, val := range res.Marks {
+			body.Marks[i] = val
+		}
 	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
@@ -3224,6 +3492,86 @@ func NewTagsResponseBody(res []*notes.TagCount) []*TagCountResponse {
 			continue
 		}
 		body[i] = marshalNotesTagCountToTagCountResponse(val)
+	}
+	return body
+}
+
+// NewMarksResponseBody builds the HTTP response body from the result of the
+// "marks" endpoint of the "notes" service.
+func NewMarksResponseBody(res []*notes.MarkInfo) []*MarkInfoResponse {
+	body := make([]*MarkInfoResponse, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalNotesMarkInfoToMarkInfoResponse(val)
+	}
+	return body
+}
+
+// NewSetMarksResponseBody builds the HTTP response body from the result of the
+// "set_marks" endpoint of the "notes" service.
+func NewSetMarksResponseBody(res *notes.Note) *SetMarksResponseBody {
+	body := &SetMarksResponseBody{
+		ID:              res.ID,
+		Notebook:        res.Notebook,
+		Title:           res.Title,
+		CreatedAt:       res.CreatedAt,
+		UpdatedAt:       res.UpdatedAt,
+		TrashedNotebook: res.TrashedNotebook,
+		CreatedBy:       res.CreatedBy,
+		Body:            res.Body,
+		Version:         res.Version,
+		TrashedFrom:     res.TrashedFrom,
+	}
+	if res.Tags != nil {
+		body.Tags = make([]string, len(res.Tags))
+		for i, val := range res.Tags {
+			body.Tags[i] = val
+		}
+	} else {
+		body.Tags = []string{}
+	}
+	if res.Marks != nil {
+		body.Marks = make([]string, len(res.Marks))
+		for i, val := range res.Marks {
+			body.Marks[i] = val
+		}
+	}
+	if res.TitleHighlights != nil {
+		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
+		for i, val := range res.TitleHighlights {
+			if val == nil {
+				body.TitleHighlights[i] = nil
+				continue
+			}
+			body.TitleHighlights[i] = marshalNotesTextRangeToTextRangeResponseBody(val)
+		}
+	}
+	if res.BodyHighlights != nil {
+		body.BodyHighlights = make([]*TextRangeResponseBody, len(res.BodyHighlights))
+		for i, val := range res.BodyHighlights {
+			if val == nil {
+				body.BodyHighlights[i] = nil
+				continue
+			}
+			body.BodyHighlights[i] = marshalNotesTextRangeToTextRangeResponseBody(val)
+		}
+	}
+	return body
+}
+
+// NewSaveMarkNamesResponseBody builds the HTTP response body from the result
+// of the "save_mark_names" endpoint of the "notes" service.
+func NewSaveMarkNamesResponseBody(res []*notes.MarkInfo) []*MarkInfoResponse {
+	body := make([]*MarkInfoResponse, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalNotesMarkInfoToMarkInfoResponse(val)
 	}
 	return body
 }
@@ -4104,6 +4452,119 @@ func NewTagsUnauthorizedResponseBody(res *goa.ServiceError) *TagsUnauthorizedRes
 // the result of the "tags" endpoint of the "notes" service.
 func NewTagsVerificationRequiredResponseBody(res *goa.ServiceError) *TagsVerificationRequiredResponseBody {
 	body := &TagsVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMarksUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "marks" endpoint of the "notes" service.
+func NewMarksUnauthorizedResponseBody(res *goa.ServiceError) *MarksUnauthorizedResponseBody {
+	body := &MarksUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewMarksVerificationRequiredResponseBody builds the HTTP response body from
+// the result of the "marks" endpoint of the "notes" service.
+func NewMarksVerificationRequiredResponseBody(res *goa.ServiceError) *MarksVerificationRequiredResponseBody {
+	body := &MarksVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSetMarksNotFoundResponseBody builds the HTTP response body from the
+// result of the "set_marks" endpoint of the "notes" service.
+func NewSetMarksNotFoundResponseBody(res *goa.ServiceError) *SetMarksNotFoundResponseBody {
+	body := &SetMarksNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSetMarksBadRequestResponseBody builds the HTTP response body from the
+// result of the "set_marks" endpoint of the "notes" service.
+func NewSetMarksBadRequestResponseBody(res *goa.ServiceError) *SetMarksBadRequestResponseBody {
+	body := &SetMarksBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSetMarksUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "set_marks" endpoint of the "notes" service.
+func NewSetMarksUnauthorizedResponseBody(res *goa.ServiceError) *SetMarksUnauthorizedResponseBody {
+	body := &SetMarksUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSetMarksVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "set_marks" endpoint of the "notes" service.
+func NewSetMarksVerificationRequiredResponseBody(res *goa.ServiceError) *SetMarksVerificationRequiredResponseBody {
+	body := &SetMarksVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveMarkNamesUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "save_mark_names" endpoint of the "notes" service.
+func NewSaveMarkNamesUnauthorizedResponseBody(res *goa.ServiceError) *SaveMarkNamesUnauthorizedResponseBody {
+	body := &SaveMarkNamesUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveMarkNamesVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "save_mark_names" endpoint of the "notes"
+// service.
+func NewSaveMarkNamesVerificationRequiredResponseBody(res *goa.ServiceError) *SaveMarkNamesVerificationRequiredResponseBody {
+	body := &SaveMarkNamesVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -5281,6 +5742,44 @@ func NewTagsPayload(notebook *string, session *string) *notes.TagsPayload {
 	return v
 }
 
+// NewMarksPayload builds a notes service marks endpoint payload.
+func NewMarksPayload(session *string) *notes.MarksPayload {
+	v := &notes.MarksPayload{}
+	v.Session = session
+
+	return v
+}
+
+// NewSetMarksPayload builds a notes service set_marks endpoint payload.
+func NewSetMarksPayload(body *SetMarksRequestBody, id string, session *string) *notes.SetMarksPayload {
+	v := &notes.SetMarksPayload{}
+	if body.Marks != nil {
+		v.Marks = make([]string, len(body.Marks))
+		for i, val := range body.Marks {
+			v.Marks[i] = val
+		}
+	}
+	v.ID = id
+	v.Session = session
+
+	return v
+}
+
+// NewSaveMarkNamesPayload builds a notes service save_mark_names endpoint
+// payload.
+func NewSaveMarkNamesPayload(body *SaveMarkNamesRequestBody, session *string) *notes.SaveMarkNamesPayload {
+	v := &notes.SaveMarkNamesPayload{}
+	v.Names = make(map[string]string, len(body.Names))
+	for key, val := range body.Names {
+		tk := key
+		tv := val
+		v.Names[tk] = tv
+	}
+	v.Session = session
+
+	return v
+}
+
 // NewCreateNotebookPayload builds a notes service create_notebook endpoint
 // payload.
 func NewCreateNotebookPayload(body *CreateNotebookRequestBody, session *string) *notes.CreateNotebookPayload {
@@ -5586,6 +6085,37 @@ func ValidateTrashNotesRequestBody(body *TrashNotesRequestBody) (err error) {
 func ValidateMoveRequestBody(body *MoveRequestBody) (err error) {
 	if body.After != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *body.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateSetMarksRequestBody runs the validations defined on
+// SetMarksRequestBody
+func ValidateSetMarksRequestBody(body *SetMarksRequestBody) (err error) {
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
+	return
+}
+
+// ValidateSaveMarkNamesRequestBody runs the validations defined on
+// SaveMarkNamesRequestBody
+func ValidateSaveMarkNamesRequestBody(body *SaveMarkNamesRequestBody) (err error) {
+	if body.Names == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("names", "body"))
+	}
+	for k, v := range body.Names {
+		if !(k == "red" || k == "orange" || k == "yellow" || k == "green" || k == "blue" || k == "purple" || k == "gray" || k == "star" || k == "important" || k == "question" || k == "done" || k == "pin" || k == "urgent" || k == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.names.key", k, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+		if utf8.RuneCountInString(v) > 40 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.names[key]", v, utf8.RuneCountInString(v), 40, false))
+		}
 	}
 	return
 }

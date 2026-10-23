@@ -69,6 +69,21 @@ func TagsNotesPath() string {
 	return "/tags"
 }
 
+// MarksNotesPath returns the URL path to the notes service marks HTTP endpoint.
+func MarksNotesPath() string {
+	return "/marks"
+}
+
+// SetMarksNotesPath returns the URL path to the notes service set_marks HTTP endpoint.
+func SetMarksNotesPath(id string) string {
+	return fmt.Sprintf("/notes/%v/marks", id)
+}
+
+// SaveMarkNamesNotesPath returns the URL path to the notes service save_mark_names HTTP endpoint.
+func SaveMarkNamesNotesPath() string {
+	return "/marks"
+}
+
 // CreateNotebookNotesPath returns the URL path to the notes service create_notebook HTTP endpoint.
 func CreateNotebookNotesPath() string {
 	return "/notebooks"

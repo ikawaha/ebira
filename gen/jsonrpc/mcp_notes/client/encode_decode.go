@@ -10,6 +10,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -608,7 +609,7 @@ func unmarshalContentItemResponseToMcpnotesContentItem(v *ContentItemResponse) *
 func unmarshalContentIconResponseToMcpnotesContentIcon(v *ContentIconResponse) *mcpnotes.ContentIcon {
 	res := &mcpnotes.ContentIcon{
 		Src:      *v.Src,
-		MimeType: v.MimeType,
+		MIMEType: v.MIMEType,
 		Theme:    v.Theme,
 	}
 	if v.Sizes != nil {
@@ -714,6 +715,14 @@ func unmarshalElicitationFormParamsResponseToMcpnotesElicitationFormParams(v *El
 		Message:         *v.Message,
 		RequestedSchema: v.RequestedSchema,
 	}
+	if v.Extensions != nil {
+		res.Extensions = make(map[string]json.RawMessage, len(v.Extensions))
+		for key, val := range v.Extensions {
+			tk := key
+			tv := val
+			res.Extensions[tk] = tv
+		}
+	}
 
 	return res
 }
@@ -725,6 +734,14 @@ func unmarshalElicitationURLParamsResponseToMcpnotesElicitationURLParams(v *Elic
 	res := &mcpnotes.ElicitationURLParams{
 		Message: *v.Message,
 		URL:     *v.URL,
+	}
+	if v.Extensions != nil {
+		res.Extensions = make(map[string]json.RawMessage, len(v.Extensions))
+		for key, val := range v.Extensions {
+			tk := key
+			tv := val
+			res.Extensions[tk] = tv
+		}
 	}
 
 	return res

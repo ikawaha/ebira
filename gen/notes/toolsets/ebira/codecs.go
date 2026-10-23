@@ -12,10 +12,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"sort"
 	"strconv"
 	"strings"
+	utf8 "unicode/utf8"
 
 	toolhttp "github.com/ikawaha/ebira/gen/notes/toolsets/ebira/http"
 	"goa.design/goa-ai/runtime/agent/tools"
@@ -107,6 +107,22 @@ func ImportAiNoteResultCodec() tools.JSONCodec[*ImportAiNoteResult] {
 	return tools.JSONCodec[*ImportAiNoteResult]{
 		ToJSON:   MarshalImportAiNoteResult,
 		FromJSON: UnmarshalImportAiNoteResult,
+	}
+}
+
+// ListMarksPayloadCodec returns a fresh codec for *ListMarksPayload.
+func ListMarksPayloadCodec() tools.JSONCodec[*ListMarksPayload] {
+	return tools.JSONCodec[*ListMarksPayload]{
+		ToJSON:   MarshalListMarksPayload,
+		FromJSON: UnmarshalListMarksPayload,
+	}
+}
+
+// ListMarksResultCodec returns a fresh codec for ListMarksResult.
+func ListMarksResultCodec() tools.JSONCodec[ListMarksResult] {
+	return tools.JSONCodec[ListMarksResult]{
+		ToJSON:   MarshalListMarksResult,
+		FromJSON: UnmarshalListMarksResult,
 	}
 }
 
@@ -356,6 +372,32 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalImportAiNoteResult(data)
+		},
+	}
+	// listMarksPayloadCodec provides an untyped codec for *ListMarksPayload.
+	listMarksPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*ListMarksPayload); ok {
+				return MarshalListMarksPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *ListMarksPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalListMarksPayload(data)
+		},
+	}
+	// listMarksResultCodec provides an untyped codec for ListMarksResult.
+	listMarksResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(ListMarksResult); ok {
+				return MarshalListMarksResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for ListMarksResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalListMarksResult(data)
 		},
 	}
 	// listNotebooksPayloadCodec provides an untyped codec for *ListNotebooksPayload.
@@ -648,6 +690,16 @@ var createAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -838,6 +890,16 @@ var getNoteResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -998,6 +1060,16 @@ var importAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1066,6 +1138,35 @@ var importAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("warnings"), tools.DynamicField{}},
 		JSONType:    "string",
 		Description: "What could not be converted as is, such as images left out",
+	},
+}
+var listMarksPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+}
+var listMarksResultFields = []tools.FieldMetadata{
+	{
+		JSONType: "array",
+	},
+	{
+		Path:     []tools.FieldPathSegment{tools.DynamicField{}},
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Mark ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("kind")},
+		JSONType:    "string",
+		Description: "color, or symbol for a mark drawn as an emoji",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "Name the user gave the mark, which says what it means, such as important; absent for none",
 	},
 }
 var listNotebooksPayloadFields = []tools.FieldMetadata{
@@ -1222,6 +1323,16 @@ var listNotesResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
 		JSONType:    "string",
 		Description: "Excerpt around the matched terms (search only)",
@@ -1371,6 +1482,16 @@ var moveAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1433,7 +1554,7 @@ var searchNotesPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
-		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
+		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
@@ -1521,6 +1642,16 @@ var searchNotesResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
 		JSONType:    "string",
 		Description: "Excerpt around the matched terms (search only)",
@@ -1605,6 +1736,16 @@ var updateAiNotePayloadFields = []tools.FieldMetadata{
 		JSONType:    "string",
 		Description: "Body in Markdown",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means",
+	},
 }
 var updateAiNoteResultFields = []tools.FieldMetadata{
 	{
@@ -1654,6 +1795,16 @@ var updateAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("created_by")},
 		JSONType:    "string",
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
@@ -1925,6 +2076,23 @@ func enrichImportAiNoteResultValidationError(err error) error {
 	m := make(map[string]string)
 	for _, is := range issues {
 		if field, ok := tools.LookupFieldMetadata(importAiNoteResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichListMarksResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(listMarksResultFields, is.Field); ok && field.Description != "" {
 			m[is.Field] = field.Description
 		}
 	}
@@ -2455,6 +2623,68 @@ func invalidImportAiNoteResultFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(importAiNoteResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidListMarksPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "ListMarksPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(listMarksPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidListMarksResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "ListMarksResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(listMarksResultFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -3047,6 +3277,12 @@ func MarshalCreateAiNoteResult(v *CreateAiNoteResult) ([]byte, error) {
 	for i, val := range in.Tags {
 		out.Tags[i] = val
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -3105,6 +3341,12 @@ func UnmarshalCreateAiNoteResult(data []byte) (*CreateAiNoteResult, error) {
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
 		out.Tags[i] = val
+	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -3331,6 +3573,12 @@ func MarshalGetNoteResult(v *GetNoteResult) ([]byte, error) {
 	for i, val := range in.Tags {
 		out.Tags[i] = val
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -3389,6 +3637,12 @@ func UnmarshalGetNoteResult(data []byte) (*GetNoteResult, error) {
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
 		out.Tags[i] = val
+	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -3529,6 +3783,86 @@ func UnmarshalImportAiNoteResult(data []byte) (*ImportAiNoteResult, error) {
 	out.Warnings = make([]string, len(in.Warnings))
 	for i, val := range in.Warnings {
 		out.Warnings[i] = val
+	}
+	return out, nil
+}
+
+// MarshalListMarksPayload serializes *ListMarksPayload into JSON.
+func MarshalListMarksPayload(v *ListMarksPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("listMarksPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.ListMarksPayloadTransport
+	out = &toolhttp.ListMarksPayloadTransport{}
+	return json.Marshal(out)
+}
+
+// UnmarshalListMarksPayload deserializes JSON into *ListMarksPayload.
+func UnmarshalListMarksPayload(data []byte) (*ListMarksPayload, error) {
+	if len(data) == 0 {
+		var v *ListMarksPayload
+		return v, nil
+	}
+	var tv toolhttp.ListMarksPayloadTransport
+	if err := validateListNotebooksPayloadJSON(data); err != nil {
+		return nil, invalidListMarksPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidListMarksPayloadFieldTypeError(err)
+	}
+	in := &tv
+	_ = in
+	var out *ListMarksPayload
+	out = &ListMarksPayload{}
+	return out, nil
+}
+
+// MarshalListMarksResult serializes ListMarksResult into JSON.
+func MarshalListMarksResult(v ListMarksResult) ([]byte, error) {
+	in := v
+	_ = in
+	var out toolhttp.ListMarksResultTransport
+	out = make([]*toolhttp.MarkInfoTransport, len(in))
+	for i, val := range in {
+		if val == nil {
+			out[i] = nil
+			continue
+		}
+		out[i] = encodeMarkInfoToMarkInfoTransport(val)
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalListMarksResult deserializes JSON into ListMarksResult.
+func UnmarshalListMarksResult(data []byte) (ListMarksResult, error) {
+	var zero ListMarksResult
+	if len(data) == 0 {
+		return zero, fmt.Errorf("listMarksResult JSON is empty")
+	}
+	var tv toolhttp.ListMarksResultTransport
+	if err := validateListMarksResultJSON(data); err != nil {
+		return zero, invalidListMarksResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return zero, invalidListMarksResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateListMarksResultTransport(tv); err != nil {
+		err = newValidationError(err)
+		err = enrichListMarksResultValidationError(err)
+		return zero, err
+	}
+	in := tv
+	_ = in
+	var out ListMarksResult
+	out = make([]*MarkInfo, len(in))
+	for i, val := range in {
+		if val == nil {
+			out[i] = nil
+			continue
+		}
+		out[i] = decodeMarkInfoTransportToMarkInfo(val)
 	}
 	return out, nil
 }
@@ -3923,6 +4257,12 @@ func MarshalMoveAiNoteResult(v *MoveAiNoteResult) ([]byte, error) {
 	for i, val := range in.Tags {
 		out.Tags[i] = val
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -3981,6 +4321,12 @@ func UnmarshalMoveAiNoteResult(data []byte) (*MoveAiNoteResult, error) {
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
 		out.Tags[i] = val
+	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -4135,6 +4481,12 @@ func MarshalUpdateAiNotePayload(v *UpdateAiNotePayload) ([]byte, error) {
 			out.Tags[i] = val
 		}
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	return json.Marshal(out)
 }
 
@@ -4171,6 +4523,12 @@ func UnmarshalUpdateAiNotePayload(data []byte) (*UpdateAiNotePayload, error) {
 			out.Tags[i] = val
 		}
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	return out, nil
 }
 
@@ -4197,6 +4555,12 @@ func MarshalUpdateAiNoteResult(v *UpdateAiNoteResult) ([]byte, error) {
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
 		out.Tags[i] = val
+	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
@@ -4257,6 +4621,12 @@ func UnmarshalUpdateAiNoteResult(data []byte) (*UpdateAiNoteResult, error) {
 	for i, val := range in.Tags {
 		out.Tags[i] = val
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -4283,14 +4653,9 @@ func UnmarshalUpdateAiNoteResult(data []byte) (*UpdateAiNoteResult, error) {
 // validateListNotesPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListNotesPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListNotesPayloadJSONValue("", root, "")
 }
@@ -4298,14 +4663,9 @@ func validateListNotesPayloadJSON(data []byte) error {
 // validateListNotesResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListNotesResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListNotesResultJSONValue("", root, "")
 }
@@ -4313,14 +4673,9 @@ func validateListNotesResultJSON(data []byte) error {
 // validateGetNotePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateGetNotePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateGetNotePayloadJSONValue("", root, "")
 }
@@ -4328,14 +4683,9 @@ func validateGetNotePayloadJSON(data []byte) error {
 // validateGetNoteResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateGetNoteResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateGetNoteResultJSONValue("", root, "")
 }
@@ -4343,14 +4693,9 @@ func validateGetNoteResultJSON(data []byte) error {
 // validateSearchNotesPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateSearchNotesPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateSearchNotesPayloadJSONValue("", root, "")
 }
@@ -4358,14 +4703,9 @@ func validateSearchNotesPayloadJSON(data []byte) error {
 // validateSearchNotesResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateSearchNotesResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateSearchNotesResultJSONValue("", root, "")
 }
@@ -4373,14 +4713,9 @@ func validateSearchNotesResultJSON(data []byte) error {
 // validateListNotebooksPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListNotebooksPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListNotebooksPayloadJSONValue("", root, "")
 }
@@ -4388,14 +4723,9 @@ func validateListNotebooksPayloadJSON(data []byte) error {
 // validateListNotebooksResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListNotebooksResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListNotebooksResultJSONValue("", root, "")
 }
@@ -4403,14 +4733,9 @@ func validateListNotebooksResultJSON(data []byte) error {
 // validateListTagsPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListTagsPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListTagsPayloadJSONValue("", root, "")
 }
@@ -4418,29 +4743,29 @@ func validateListTagsPayloadJSON(data []byte) error {
 // validateListTagsResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListTagsResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
 	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
-	}
 	return validateListTagsResultJSONValue("", root, "")
+}
+
+// validateListMarksResultJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateListMarksResultJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateListMarksResultJSONValue("", root, "")
 }
 
 // validateCreateAiNotePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateCreateAiNotePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateCreateAiNotePayloadJSONValue("", root, "")
 }
@@ -4448,14 +4773,9 @@ func validateCreateAiNotePayloadJSON(data []byte) error {
 // validateImportAiNotePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateImportAiNotePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateImportAiNotePayloadJSONValue("", root, "")
 }
@@ -4463,14 +4783,9 @@ func validateImportAiNotePayloadJSON(data []byte) error {
 // validateImportAiNoteResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateImportAiNoteResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateImportAiNoteResultJSONValue("", root, "")
 }
@@ -4478,14 +4793,9 @@ func validateImportAiNoteResultJSON(data []byte) error {
 // validateAddAiFilePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateAddAiFilePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateAddAiFilePayloadJSONValue("", root, "")
 }
@@ -4493,14 +4803,9 @@ func validateAddAiFilePayloadJSON(data []byte) error {
 // validateAddAiFileResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateAddAiFileResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateAddAiFileResultJSONValue("", root, "")
 }
@@ -4508,14 +4813,9 @@ func validateAddAiFileResultJSON(data []byte) error {
 // validateUpdateAiNotePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateUpdateAiNotePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateUpdateAiNotePayloadJSONValue("", root, "")
 }
@@ -4523,14 +4823,9 @@ func validateUpdateAiNotePayloadJSON(data []byte) error {
 // validateDeleteAiNotePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateDeleteAiNotePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateDeleteAiNotePayloadJSONValue("", root, "")
 }
@@ -4538,14 +4833,9 @@ func validateDeleteAiNotePayloadJSON(data []byte) error {
 // validateMoveAiNotePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateMoveAiNotePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateMoveAiNotePayloadJSONValue("", root, "")
 }
@@ -4553,14 +4843,9 @@ func validateMoveAiNotePayloadJSON(data []byte) error {
 // validateCreateAiNotebookPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateCreateAiNotebookPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateCreateAiNotebookPayloadJSONValue("", root, "")
 }
@@ -4568,14 +4853,9 @@ func validateCreateAiNotebookPayloadJSON(data []byte) error {
 // validateCreateAiNotebookResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateCreateAiNotebookResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateListNotebooksResultNotebookTransportJSONValue("", root, "")
 }
@@ -4583,16 +4863,133 @@ func validateCreateAiNotebookResultJSON(data []byte) error {
 // validateMakeNotebookPrivatePayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateMakeNotebookPrivatePayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
 	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
-	}
 	return validateMakeNotebookPrivatePayloadJSONValue("", root, "")
+}
+
+// readStrictToolJSON checks the complete JSON document for malformed text and
+// duplicate members, then returns values with their original number text.
+func readStrictToolJSON(data []byte) (any, error) {
+	if err := validateToolJSONText(data); err != nil {
+		return nil, err
+	}
+	if !json.Valid(data) {
+		// When two complete JSON values arrive, keep the caller's distinct
+		// multiple-document error instead of reporting malformed syntax.
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		var document json.RawMessage
+		if err := decoder.Decode(&document); err == nil {
+			if err := decoder.Decode(&document); err == nil {
+				return nil, fmt.Errorf("multiple JSON documents")
+			}
+		}
+		return nil, fmt.Errorf("invalid JSON syntax or nesting")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	return readToolJSONValue(decoder)
+}
+
+// readToolJSONValue reads one JSON value and rejects repeated object member
+// names, returning the value without replacing earlier members.
+func readToolJSONValue(decoder *json.Decoder) (any, error) {
+	token, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	switch token {
+	case json.Delim('{'):
+		object := make(map[string]any)
+		for decoder.More() {
+			token, err := decoder.Token()
+			if err != nil {
+				return nil, err
+			}
+			key, ok := token.(string)
+			if !ok {
+				return nil, fmt.Errorf("object member name must be a string")
+			}
+			if _, exists := object[key]; exists {
+				return nil, fmt.Errorf("duplicate JSON member %q", key)
+			}
+			value, err := readToolJSONValue(decoder)
+			if err != nil {
+				return nil, err
+			}
+			object[key] = value
+		}
+		if _, err := decoder.Token(); err != nil {
+			return nil, err
+		}
+		return object, nil
+	case json.Delim('['):
+		array := make([]any, 0)
+		for decoder.More() {
+			value, err := readToolJSONValue(decoder)
+			if err != nil {
+				return nil, err
+			}
+			array = append(array, value)
+		}
+		if _, err := decoder.Token(); err != nil {
+			return nil, err
+		}
+		return array, nil
+	default:
+		if _, delimiter := token.(json.Delim); delimiter {
+			return nil, fmt.Errorf("unexpected JSON delimiter %v", token)
+		}
+		return token, nil
+	}
+}
+
+// validateToolJSONText checks JSON bytes for invalid text and unpaired Unicode
+// escapes, returning an error before encoding/json can replace those characters.
+func validateToolJSONText(data []byte) error {
+	if !utf8.Valid(data) {
+		return fmt.Errorf("invalid UTF-8 in JSON")
+	}
+	for i := 0; i < len(data); i++ {
+		if data[i] != '"' {
+			continue
+		}
+		i++
+		for ; i < len(data) && data[i] != '"'; i++ {
+			if data[i] != '\\' {
+				continue
+			}
+			i++
+			if i >= len(data) || data[i] != 'u' {
+				continue
+			}
+			if i+4 >= len(data) {
+				return fmt.Errorf("incomplete Unicode escape")
+			}
+			code, err := strconv.ParseUint(string(data[i+1:i+5]), 16, 16)
+			if err != nil {
+				return fmt.Errorf("invalid Unicode escape: %w", err)
+			}
+			i += 4
+			if code >= 0xdc00 && code <= 0xdfff {
+				return fmt.Errorf("unpaired low Unicode surrogate")
+			}
+			if code < 0xd800 || code > 0xdbff {
+				continue
+			}
+			if i+6 >= len(data) || data[i+1] != '\\' || data[i+2] != 'u' {
+				return fmt.Errorf("unpaired high Unicode surrogate")
+			}
+			low, err := strconv.ParseUint(string(data[i+3:i+7]), 16, 16)
+			if err != nil || low < 0xdc00 || low > 0xdfff {
+				return fmt.Errorf("unpaired high Unicode surrogate")
+			}
+			i += 6
+		}
+	}
+	return nil
 }
 
 // validateListNotesPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
@@ -4815,6 +5212,13 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 			); err != nil {
 				return err
 			}
+		case "marks":
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+			); err != nil {
+				return err
+			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -4837,7 +5241,7 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 				return err
 			}
 		case "tags":
-			if err := validateListNotesResultNoteSummaryTransportTagsJSONValue(
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tags",
 			); err != nil {
@@ -4876,6 +5280,7 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 				"created_at",
 				"created_by",
 				"id",
+				"marks",
 				"notebook",
 				"snippet",
 				"snippet_highlights",
@@ -4885,6 +5290,30 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 				"trashed_notebook",
 				"updated_at",
 			})
+		}
+	}
+	return nil
+}
+
+// validateListNotesResultNoteSummaryTransportMarksJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListNotesResultNoteSummaryTransportMarksJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateStringJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -4953,30 +5382,6 @@ func validateListNotesResultTextRangeTransportJSONValue(path string, value any, 
 				"end",
 				"start",
 			})
-		}
-	}
-	return nil
-}
-
-// validateListNotesResultNoteSummaryTransportTagsJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateListNotesResultNoteSummaryTransportTagsJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateStringJSONValue(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
 		}
 	}
 	return nil
@@ -5081,6 +5486,13 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 			); err != nil {
 				return err
 			}
+		case "marks":
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+			); err != nil {
+				return err
+			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -5089,7 +5501,7 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 				return err
 			}
 		case "tags":
-			if err := validateListNotesResultNoteSummaryTransportTagsJSONValue(
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tags",
 			); err != nil {
@@ -5144,6 +5556,7 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 				"created_at",
 				"created_by",
 				"id",
+				"marks",
 				"notebook",
 				"tags",
 				"title",
@@ -5195,7 +5608,7 @@ func validateSearchNotesPayloadJSONValue(path string, value any, description str
 		case "q":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
+				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first",
 			); err != nil {
 				return err
 			}
@@ -5533,6 +5946,82 @@ func validateListTagsResultTagCountTransportJSONValue(path string, value any, de
 	return nil
 }
 
+// validateListMarksResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListMarksResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateListMarksResultMarkInfoTransportJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateListMarksResultMarkInfoTransportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListMarksResultMarkInfoTransportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Mark ID",
+			); err != nil {
+				return err
+			}
+		case "kind":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "color, or symbol for a mark drawn as an emoji",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Name the user gave the mark, which says what it means, such as important; absent for none",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"id",
+				"kind",
+				"name",
+			})
+		}
+	}
+	return nil
+}
+
 // validateCreateAiNotePayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateCreateAiNotePayloadJSONValue(path string, value any, description string) error {
 	field := path
@@ -5575,7 +6064,7 @@ func validateCreateAiNotePayloadJSONValue(path string, value any, description st
 				return err
 			}
 		case "tags":
-			if err := validateListNotesResultNoteSummaryTransportTagsJSONValue(
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tags",
 			); err != nil {
@@ -5779,7 +6268,7 @@ func validateImportAiNoteResultJSONValue(path string, value any, description str
 				return err
 			}
 		case "warnings":
-			if err := validateListNotesResultNoteSummaryTransportTagsJSONValue(
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "What could not be converted as is, such as images left out",
 			); err != nil {
@@ -5927,6 +6416,13 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 			); err != nil {
 				return err
 			}
+		case "marks":
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means",
+			); err != nil {
+				return err
+			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -5935,7 +6431,7 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 				return err
 			}
 		case "tags":
-			if err := validateListNotesResultNoteSummaryTransportTagsJSONValue(
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tags",
 			); err != nil {
@@ -5959,6 +6455,7 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 			return unknownJSONFieldError(path, key, []string{
 				"body",
 				"id",
+				"marks",
 				"notebook",
 				"tags",
 				"title",
@@ -6283,6 +6780,12 @@ func decodeNoteTransportToNote(v *toolhttp.NoteTransport) *Note {
 	for i, val := range v.Tags {
 		res.Tags[i] = val
 	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -6323,6 +6826,12 @@ func encodeNoteToNoteTransport(v *Note) *toolhttp.NoteTransport {
 	for i, val := range v.Tags {
 		res.Tags[i] = val
 	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -6342,6 +6851,24 @@ func encodeNoteToNoteTransport(v *Note) *toolhttp.NoteTransport {
 			}
 			res.BodyHighlights[i] = encodeTextRangeToTextRangeTransport(val)
 		}
+	}
+
+	return res
+}
+func decodeMarkInfoTransportToMarkInfo(v *toolhttp.MarkInfoTransport) *MarkInfo {
+	res := &MarkInfo{
+		ID:   *v.ID,
+		Kind: *v.Kind,
+		Name: v.Name,
+	}
+
+	return res
+}
+func encodeMarkInfoToMarkInfoTransport(v *MarkInfo) *toolhttp.MarkInfoTransport {
+	res := &toolhttp.MarkInfoTransport{
+		ID:   &v.ID,
+		Kind: &v.Kind,
+		Name: v.Name,
 	}
 
 	return res
@@ -6389,6 +6916,12 @@ func decodeNoteSummaryTransportToNoteSummary(v *toolhttp.NoteSummaryTransport) *
 	for i, val := range v.Tags {
 		res.Tags[i] = val
 	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -6426,6 +6959,12 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
 		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(v.TitleHighlights))

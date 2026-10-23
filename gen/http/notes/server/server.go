@@ -33,6 +33,9 @@ type Server struct {
 	Move                  http.Handler
 	Notebooks             http.Handler
 	Tags                  http.Handler
+	Marks                 http.Handler
+	SetMarks              http.Handler
+	SaveMarkNames         http.Handler
 	CreateNotebook        http.Handler
 	SaveNotebook          http.Handler
 	MoveNotebook          http.Handler
@@ -95,6 +98,9 @@ func New(
 			{"Move", "POST", "/notes/{id}/move"},
 			{"Notebooks", "GET", "/notebooks"},
 			{"Tags", "GET", "/tags"},
+			{"Marks", "GET", "/marks"},
+			{"SetMarks", "PUT", "/notes/{id}/marks"},
+			{"SaveMarkNames", "PUT", "/marks"},
 			{"CreateNotebook", "POST", "/notebooks"},
 			{"SaveNotebook", "PUT", "/notebooks/{*id}"},
 			{"MoveNotebook", "POST", "/notebooks/move/{*id}"},
@@ -129,6 +135,9 @@ func New(
 		Move:                  NewMoveHandler(e.Move, mux, decoder, encoder, errhandler, formatter),
 		Notebooks:             NewNotebooksHandler(e.Notebooks, mux, decoder, encoder, errhandler, formatter),
 		Tags:                  NewTagsHandler(e.Tags, mux, decoder, encoder, errhandler, formatter),
+		Marks:                 NewMarksHandler(e.Marks, mux, decoder, encoder, errhandler, formatter),
+		SetMarks:              NewSetMarksHandler(e.SetMarks, mux, decoder, encoder, errhandler, formatter),
+		SaveMarkNames:         NewSaveMarkNamesHandler(e.SaveMarkNames, mux, decoder, encoder, errhandler, formatter),
 		CreateNotebook:        NewCreateNotebookHandler(e.CreateNotebook, mux, decoder, encoder, errhandler, formatter),
 		SaveNotebook:          NewSaveNotebookHandler(e.SaveNotebook, mux, decoder, encoder, errhandler, formatter),
 		MoveNotebook:          NewMoveNotebookHandler(e.MoveNotebook, mux, decoder, encoder, errhandler, formatter),
@@ -170,6 +179,9 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Move = m(s.Move)
 	s.Notebooks = m(s.Notebooks)
 	s.Tags = m(s.Tags)
+	s.Marks = m(s.Marks)
+	s.SetMarks = m(s.SetMarks)
+	s.SaveMarkNames = m(s.SaveMarkNames)
 	s.CreateNotebook = m(s.CreateNotebook)
 	s.SaveNotebook = m(s.SaveNotebook)
 	s.MoveNotebook = m(s.MoveNotebook)
@@ -210,6 +222,9 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountMoveHandler(mux, h.Move)
 	MountNotebooksHandler(mux, h.Notebooks)
 	MountTagsHandler(mux, h.Tags)
+	MountMarksHandler(mux, h.Marks)
+	MountSetMarksHandler(mux, h.SetMarks)
+	MountSaveMarkNamesHandler(mux, h.SaveMarkNames)
 	MountCreateNotebookHandler(mux, h.CreateNotebook)
 	MountSaveNotebookHandler(mux, h.SaveNotebook)
 	MountMoveNotebookHandler(mux, h.MoveNotebook)
@@ -851,6 +866,165 @@ func NewTagsHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "tags")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountMarksHandler configures the mux to serve the "notes" service "marks"
+// endpoint.
+func MountMarksHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/marks", f)
+}
+
+// NewMarksHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "marks" endpoint.
+func NewMarksHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeMarksRequest(mux, decoder)
+		encodeResponse = EncodeMarksResponse(encoder)
+		encodeError    = EncodeMarksError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "marks")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountSetMarksHandler configures the mux to serve the "notes" service
+// "set_marks" endpoint.
+func MountSetMarksHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/notes/{id}/marks", f)
+}
+
+// NewSetMarksHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "set_marks" endpoint.
+func NewSetMarksHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeSetMarksRequest(mux, decoder)
+		encodeResponse = EncodeSetMarksResponse(encoder)
+		encodeError    = EncodeSetMarksError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "set_marks")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountSaveMarkNamesHandler configures the mux to serve the "notes" service
+// "save_mark_names" endpoint.
+func MountSaveMarkNamesHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/marks", f)
+}
+
+// NewSaveMarkNamesHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "save_mark_names" endpoint.
+func NewSaveMarkNamesHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeSaveMarkNamesRequest(mux, decoder)
+		encodeResponse = EncodeSaveMarkNamesResponse(encoder)
+		encodeError    = EncodeSaveMarkNamesError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "save_mark_names")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

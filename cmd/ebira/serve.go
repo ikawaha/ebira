@@ -213,6 +213,7 @@ func runServe(args []string) error {
 		return err
 	}
 	svc.SetHistory(hist)
+	svc.SetMarkNames(conf.Marks)
 	r, err := svc.Sync(ctx, nil)
 	if err != nil {
 		return err

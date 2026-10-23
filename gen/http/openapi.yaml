@@ -709,6 +709,97 @@ paths:
                 - http
             security:
                 - session_cookie_ebira_session: []
+    /marks:
+        get:
+            tags:
+                - notes
+            summary: marks notes
+            description: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.
+            operationId: notes#marks
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/definitions/MarkInfo'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMarksUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMarksVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        put:
+            tags:
+                - notes
+            summary: save_mark_names notes
+            description: 'Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.'
+            operationId: notes#save_mark_names
+            parameters:
+                - name: save_mark_names_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesSaveMarkNamesRequestBody'
+                    required:
+                        - names
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/definitions/MarkInfo'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSaveMarkNamesUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSaveMarkNamesVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
     /notebooks:
         get:
             tags:
@@ -2035,6 +2126,91 @@ paths:
                 - http
             security:
                 - session_cookie_ebira_session: []
+    /notes/{id}/marks:
+        put:
+            tags:
+                - notes
+            summary: set_marks notes
+            description: 'Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.'
+            operationId: notes#set_marks
+            parameters:
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: set_marks_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesSetMarksRequestBody'
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Note2'
+                        required:
+                            - id
+                            - notebook
+                            - title
+                            - tags
+                            - created_at
+                            - updated_at
+                            - body
+                            - version
+                "400":
+                    description: 'bad_request: The note is in the trash'
+                    schema:
+                        $ref: '#/definitions/NotesSetMarksBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSetMarksUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesSetMarksVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesSetMarksNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/move:
         post:
             tags:
@@ -2326,7 +2502,7 @@ paths:
             parameters:
                 - name: q
                   in: query
-                  description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first
+                  description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter), and mark:red, or mark:"a name", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first
                   required: true
                   type: string
                   minLength: 1
@@ -3927,7 +4103,7 @@ definitions:
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
             note:
-                $ref: '#/definitions/Note'
+                $ref: '#/definitions/Note2'
             status:
                 type: string
                 description: created, or skipped when a file with the same content was imported before
@@ -3958,6 +4134,8 @@ definitions:
                 created_at: "2026-10-16T09:30:00Z"
                 created_by: ai
                 id: be4c1193735ee1
+                marks:
+                    - red
                 notebook: inbox
                 tags:
                     - DB
@@ -3983,6 +4161,47 @@ definitions:
         required:
             - status
             - warnings
+    MarkInfo:
+        title: MarkInfo
+        type: object
+        properties:
+            id:
+                type: string
+                description: Mark ID
+                example: red
+                enum:
+                    - red
+                    - orange
+                    - yellow
+                    - green
+                    - blue
+                    - purple
+                    - gray
+                    - star
+                    - important
+                    - question
+                    - done
+                    - pin
+                    - urgent
+                    - idea
+            kind:
+                type: string
+                description: color, or symbol for a mark drawn as an emoji
+                example: color
+                enum:
+                    - color
+                    - symbol
+            name:
+                type: string
+                description: Name the user gave the mark, which says what it means, such as important; absent for none
+                example: important
+        example:
+            id: red
+            kind: color
+            name: important
+        required:
+            - id
+            - kind
     Note:
         title: Note
         type: object
@@ -4021,6 +4240,30 @@ definitions:
                 description: 'Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks'
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            marks:
+                type: array
+                items:
+                    type: string
+                    example: done
+                    enum:
+                        - red
+                        - orange
+                        - yellow
+                        - green
+                        - blue
+                        - purple
+                        - gray
+                        - star
+                        - important
+                        - question
+                        - done
+                        - pin
+                        - urgent
+                        - idea
+                description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
+                example:
+                    - red
+                maxItems: 1
             notebook:
                 type: string
                 description: Notebook (directory) the note is in
@@ -4082,6 +4325,8 @@ definitions:
             created_at: "2026-10-16T09:30:00Z"
             created_by: ai
             id: be4c1193735ee1
+            marks:
+                - red
             notebook: inbox
             tags:
                 - DB
@@ -4107,6 +4352,146 @@ definitions:
             - created_at
             - updated_at
             - body
+    Note2:
+        title: Note2
+        type: object
+        properties:
+            body:
+                type: string
+                description: Body in Markdown
+                example: Sequi magni ut sed.
+            body_highlights:
+                type: array
+                items:
+                    $ref: '#/definitions/TextRange'
+                description: Ranges of the body matched by the query of get, sorted and not overlapping
+                example:
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+            created_at:
+                type: string
+                description: Creation time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            created_by:
+                type: string
+                description: 'Who created the note: ai for a note created by an AI client (create_ai_note); absent for people'
+                example: ai
+                enum:
+                    - ai
+            id:
+                type: string
+                description: 'Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks'
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            marks:
+                type: array
+                items:
+                    type: string
+                    example: gray
+                    enum:
+                        - red
+                        - orange
+                        - yellow
+                        - green
+                        - blue
+                        - purple
+                        - gray
+                        - star
+                        - important
+                        - question
+                        - done
+                        - pin
+                        - urgent
+                        - idea
+                description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
+                example:
+                    - red
+                maxItems: 1
+            notebook:
+                type: string
+                description: Notebook (directory) the note is in
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            tags:
+                type: array
+                items:
+                    type: string
+                    example: Et qui et ut corrupti ea autem.
+                description: Tags
+                example:
+                    - DB
+                    - postgres
+            title:
+                type: string
+                description: Title
+                example: Get the CREATE TABLE statement
+            title_highlights:
+                type: array
+                items:
+                    $ref: '#/definitions/TextRange'
+                description: Ranges of the title matched by the query of get, sorted and not overlapping
+                example:
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+                    - end: 9063689078350173992
+                      start: 5812498383206549952
+            trashed_from:
+                type: string
+                description: Notebook the note was in before it was moved to the trash
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            trashed_notebook:
+                type: string
+                description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
+                example: dev~design
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+            updated_at:
+                type: string
+                description: Last update time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            version:
+                type: string
+                description: Strong entity tag of the note file. Sent as the ETag header over HTTP
+                example: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
+        example:
+            body: Sequi magni ut sed.
+            body_highlights:
+                - end: 9063689078350173992
+                  start: 5812498383206549952
+                - end: 9063689078350173992
+                  start: 5812498383206549952
+            created_at: "2026-10-16T09:30:00Z"
+            created_by: ai
+            id: be4c1193735ee1
+            marks:
+                - red
+            notebook: inbox
+            tags:
+                - DB
+                - postgres
+            title: Get the CREATE TABLE statement
+            title_highlights:
+                - end: 9063689078350173992
+                  start: 5812498383206549952
+                - end: 9063689078350173992
+                  start: 5812498383206549952
+            trashed_from: inbox
+            trashed_notebook: dev~design
+            updated_at: "2026-10-16T09:30:00Z"
+            version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
+        required:
+            - id
+            - notebook
+            - title
+            - tags
+            - created_at
+            - updated_at
+            - body
+            - version
     NoteEvent:
         title: NoteEvent
         type: object
@@ -4162,6 +4547,8 @@ definitions:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -4187,6 +4574,8 @@ definitions:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -4212,6 +4601,8 @@ definitions:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -4244,6 +4635,8 @@ definitions:
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
                   id: be4c1193735ee1
+                  marks:
+                    - red
                   notebook: inbox
                   snippet: Vel omnis omnis iure molestias iure eveniet.
                   snippet_highlights:
@@ -4269,6 +4662,8 @@ definitions:
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
                   id: be4c1193735ee1
+                  marks:
+                    - red
                   notebook: inbox
                   snippet: Vel omnis omnis iure molestias iure eveniet.
                   snippet_highlights:
@@ -4294,6 +4689,8 @@ definitions:
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
                   id: be4c1193735ee1
+                  marks:
+                    - red
                   notebook: inbox
                   snippet: Vel omnis omnis iure molestias iure eveniet.
                   snippet_highlights:
@@ -4340,6 +4737,30 @@ definitions:
                 description: 'Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks'
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            marks:
+                type: array
+                items:
+                    type: string
+                    example: urgent
+                    enum:
+                        - red
+                        - orange
+                        - yellow
+                        - green
+                        - blue
+                        - purple
+                        - gray
+                        - star
+                        - important
+                        - question
+                        - done
+                        - pin
+                        - urgent
+                        - idea
+                description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
+                example:
+                    - red
+                maxItems: 1
             notebook:
                 type: string
                 description: Notebook (directory) the note is in
@@ -4400,6 +4821,8 @@ definitions:
             created_at: "2026-10-16T09:30:00Z"
             created_by: ai
             id: be4c1193735ee1
+            marks:
+                - red
             notebook: inbox
             snippet: Vel omnis omnis iure molestias iure eveniet.
             snippet_highlights:
@@ -7575,6 +7998,92 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesMarksUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMarksVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesMoveBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -8785,6 +9294,112 @@ definitions:
             - temporary
             - timeout
             - fault
+    NotesSaveMarkNamesRequestBody:
+        title: NotesSaveMarkNamesRequestBody
+        type: object
+        properties:
+            names:
+                type: object
+                description: Names by mark ID
+                example:
+                    red: important
+                    star: later
+                additionalProperties:
+                    type: string
+                    example: ypp
+                    maxLength: 40
+        example:
+            names:
+                red: important
+                star: later
+        required:
+            - names
+    NotesSaveMarkNamesUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSaveMarkNamesVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesSaveNotebookBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -9071,6 +9686,209 @@ definitions:
             message: parameter 'p' must be an integer
             name: bad_request
             temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSetMarksBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSetMarksNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSetMarksRequestBody:
+        title: NotesSetMarksRequestBody
+        type: object
+        properties:
+            marks:
+                type: array
+                items:
+                    type: string
+                    example: blue
+                    enum:
+                        - red
+                        - orange
+                        - yellow
+                        - green
+                        - blue
+                        - purple
+                        - gray
+                        - star
+                        - important
+                        - question
+                        - done
+                        - pin
+                        - urgent
+                        - idea
+                description: Marks of the note
+                example:
+                    - red
+                maxItems: 1
+        example:
+            marks:
+                - red
+    NotesSetMarksUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSetMarksVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
             timeout: false
         required:
             - name
@@ -9963,6 +10781,8 @@ definitions:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -9988,6 +10808,8 @@ definitions:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -10013,6 +10835,8 @@ definitions:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -10046,6 +10870,8 @@ definitions:
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
                   id: be4c1193735ee1
+                  marks:
+                    - red
                   notebook: inbox
                   snippet: Vel omnis omnis iure molestias iure eveniet.
                   snippet_highlights:
@@ -10071,6 +10897,8 @@ definitions:
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
                   id: be4c1193735ee1
+                  marks:
+                    - red
                   notebook: inbox
                   snippet: Vel omnis omnis iure molestias iure eveniet.
                   snippet_highlights:
@@ -10096,6 +10924,8 @@ definitions:
                 - created_at: "2026-10-16T09:30:00Z"
                   created_by: ai
                   id: be4c1193735ee1
+                  marks:
+                    - red
                   notebook: inbox
                   snippet: Vel omnis omnis iure molestias iure eveniet.
                   snippet_highlights:

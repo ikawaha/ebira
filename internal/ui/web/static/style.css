@@ -219,6 +219,34 @@ body.resizing { cursor: col-resize; user-select: none; }
 .notebooks li.trashed.active { color: var(--fg); }
 .notebooks .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: 3px; background: var(--bg); color: var(--fg); }
 .menu.notebook-menu { position: fixed; bottom: auto; }
+
+/* Marks: a color as a dot, a symbol as an emoji, before the title of a note
+   in the list and in the preview. The colors read on the light and the dark
+   theme. */
+:root { --mk-red: #e5484d; --mk-orange: #f76b15; --mk-yellow: #d6a21a; --mk-green: #30a46c; --mk-blue: #3e63dd; --mk-purple: #8e4ec6; --mk-gray: #8b8d98; }
+:root[data-theme="dark"] { --mk-red: #ff6369; --mk-orange: #ff8b3e; --mk-yellow: #f5c542; --mk-green: #4cc38a; --mk-blue: #7b95ff; --mk-purple: #b98cff; --mk-gray: #a0a3ad; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --mk-red: #ff6369; --mk-orange: #ff8b3e; --mk-yellow: #f5c542; --mk-green: #4cc38a; --mk-blue: #7b95ff; --mk-purple: #b98cff; --mk-gray: #a0a3ad; }
+}
+.mark-badge { flex: none; display: inline-block; vertical-align: middle; }
+.mark-dot { width: 0.7em; height: 0.7em; border-radius: 50%; background: var(--mk-gray); }
+.mark-red { background: var(--mk-red); } .mark-orange { background: var(--mk-orange); } .mark-yellow { background: var(--mk-yellow); }
+.mark-green { background: var(--mk-green); } .mark-blue { background: var(--mk-blue); } .mark-purple { background: var(--mk-purple); } .mark-gray { background: var(--mk-gray); }
+.mark-symbol { font-size: 0.9em; line-height: 1; }
+.list .title-row .mark-badge { margin-right: -2px; } /* the row has a gap of 8px */
+.head-row h2 .mark-badge { margin-right: 8px; position: relative; top: -2px; }
+.mark-menu { padding: 6px; min-width: 0; }
+.mark-grid { display: grid; grid-template-columns: repeat(7, 30px); gap: 4px; margin: 2px 0 6px; }
+.mark-grid button { width: 30px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.mark-grid button.active { background: var(--bg-active); border-color: var(--accent); }
+.mark-grid .mark-dot { width: 14px; height: 14px; }
+.mark-menu .mark-none { text-align: left; }
+dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
+.mark-names .hint { color: var(--fg-muted); font-size: 12px; }
+.mark-names-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 8px 0; }
+.mark-name-row { display: flex; align-items: center; gap: 8px; }
+.mark-name-row .mark-dot { width: 12px; height: 12px; }
+.mark-name-row input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .notebooks li.empty:hover { background: none; }
 
 .list { border-right: 1px solid var(--border); }

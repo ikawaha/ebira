@@ -85,6 +85,33 @@
               "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
               "type": "string"
             },
+            "marks": {
+              "description": "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+              "example": [
+                "red"
+              ],
+              "items": {
+                "enum": [
+                  "red",
+                  "orange",
+                  "yellow",
+                  "green",
+                  "blue",
+                  "purple",
+                  "gray",
+                  "star",
+                  "important",
+                  "question",
+                  "done",
+                  "pin",
+                  "urgent",
+                  "idea"
+                ],
+                "type": "string"
+              },
+              "maxItems": 1,
+              "type": "array"
+            },
             "notebook": {
               "description": "Notebook (directory) the note is in",
               "example": "inbox",
@@ -179,7 +206,7 @@
               "type": "string"
             },
             "q": {
-              "description": "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
+              "description": "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first",
               "minLength": 1,
               "type": "string"
             },
@@ -223,6 +250,33 @@
                   "example": "be4c1193735ee1",
                   "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
                   "type": "string"
+                },
+                "marks": {
+                  "description": "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+                  "example": [
+                    "red"
+                  ],
+                  "items": {
+                    "enum": [
+                      "red",
+                      "orange",
+                      "yellow",
+                      "green",
+                      "blue",
+                      "purple",
+                      "gray",
+                      "star",
+                      "important",
+                      "question",
+                      "done",
+                      "pin",
+                      "urgent",
+                      "idea"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 1,
+                  "type": "array"
                 },
                 "notebook": {
                   "description": "Notebook (directory) the note is in",

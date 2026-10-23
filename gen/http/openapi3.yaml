@@ -851,6 +851,8 @@ paths:
                                     created_at: "2026-10-16T09:30:00Z"
                                     created_by: ai
                                     id: be4c1193735ee1
+                                    marks:
+                                        - red
                                     notebook: inbox
                                     tags:
                                         - DB
@@ -886,6 +888,138 @@ paths:
                                 name: bad_request
                                 temporary: false
                                 timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /marks:
+        get:
+            tags:
+                - notes
+            summary: marks notes
+            description: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.
+            operationId: notes#marks
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/MarkInfo'
+                                example:
+                                    - id: red
+                                      kind: color
+                                      name: important
+                                    - id: red
+                                      kind: color
+                                      name: important
+                                    - id: red
+                                      kind: color
+                                      name: important
+                            example:
+                                - id: red
+                                  kind: color
+                                  name: important
+                                - id: red
+                                  kind: color
+                                  name: important
+                                - id: red
+                                  kind: color
+                                  name: important
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        put:
+            tags:
+                - notes
+            summary: save_mark_names notes
+            description: 'Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.'
+            operationId: notes#save_mark_names
+            requestBody:
+                description: Request body for save_mark_names.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SaveMarkNamesRequestBody'
+                        example:
+                            names:
+                                red: important
+                                star: later
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/MarkInfo'
+                                example:
+                                    - id: red
+                                      kind: color
+                                      name: important
+                                    - id: red
+                                      kind: color
+                                      name: important
+                            example:
+                                - id: red
+                                  kind: color
+                                  name: important
+                                - id: red
+                                  kind: color
+                                  name: important
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     content:
@@ -1494,6 +1628,8 @@ paths:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
                                       id: be4c1193735ee1
+                                      marks:
+                                        - red
                                       notebook: inbox
                                       snippet: Vel omnis omnis iure molestias iure eveniet.
                                       snippet_highlights:
@@ -1519,6 +1655,8 @@ paths:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
                                       id: be4c1193735ee1
+                                      marks:
+                                        - red
                                       notebook: inbox
                                       snippet: Vel omnis omnis iure molestias iure eveniet.
                                       snippet_highlights:
@@ -1544,6 +1682,8 @@ paths:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
                                       id: be4c1193735ee1
+                                      marks:
+                                        - red
                                       notebook: inbox
                                       snippet: Vel omnis omnis iure molestias iure eveniet.
                                       snippet_highlights:
@@ -1732,6 +1872,8 @@ paths:
                                 created_at: "2026-10-16T09:30:00Z"
                                 created_by: ai
                                 id: be4c1193735ee1
+                                marks:
+                                    - red
                                 notebook: inbox
                                 tags:
                                     - DB
@@ -1950,6 +2092,8 @@ paths:
                                 created_at: "2026-10-16T09:30:00Z"
                                 created_by: ai
                                 id: be4c1193735ee1
+                                marks:
+                                    - red
                                 notebook: inbox
                                 tags:
                                     - DB
@@ -2087,6 +2231,8 @@ paths:
                                 created_at: "2026-10-16T09:30:00Z"
                                 created_by: ai
                                 id: be4c1193735ee1
+                                marks:
+                                    - red
                                 notebook: inbox
                                 tags:
                                     - DB
@@ -2669,6 +2815,121 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /notes/{id}/marks:
+        put:
+            tags:
+                - notes
+            summary: set_marks notes
+            description: 'Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.'
+            operationId: notes#set_marks
+            parameters:
+                - name: id
+                  in: path
+                  description: Note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Note ID
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+            requestBody:
+                description: Request body for set_marks.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetMarksRequestBody'
+                        example:
+                            marks:
+                                - red
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Note2'
+                            example:
+                                body: Sequi magni ut sed.
+                                body_highlights:
+                                    - end: 9063689078350173992
+                                      start: 5812498383206549952
+                                    - end: 9063689078350173992
+                                      start: 5812498383206549952
+                                created_at: "2026-10-16T09:30:00Z"
+                                created_by: ai
+                                id: be4c1193735ee1
+                                marks:
+                                    - red
+                                notebook: inbox
+                                tags:
+                                    - DB
+                                    - postgres
+                                title: Get the CREATE TABLE statement
+                                title_highlights:
+                                    - end: 9063689078350173992
+                                      start: 5812498383206549952
+                                    - end: 9063689078350173992
+                                      start: 5812498383206549952
+                                trashed_from: inbox
+                                trashed_notebook: dev~design
+                                updated_at: "2026-10-16T09:30:00Z"
+                                version: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
+                "400":
+                    description: 'bad_request: The note is in the trash'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/move:
         post:
             tags:
@@ -2725,6 +2986,8 @@ paths:
                                 created_at: "2026-10-16T09:30:00Z"
                                 created_by: ai
                                 id: be4c1193735ee1
+                                marks:
+                                    - red
                                 notebook: inbox
                                 tags:
                                     - DB
@@ -2849,6 +3112,8 @@ paths:
                                 created_at: "2026-10-16T09:30:00Z"
                                 created_by: ai
                                 id: be4c1193735ee1
+                                marks:
+                                    - red
                                 notebook: inbox
                                 tags:
                                     - DB
@@ -3043,12 +3308,12 @@ paths:
             parameters:
                 - name: q
                   in: query
-                  description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first
+                  description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter), and mark:red, or mark:"a name", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first
                   allowEmptyValue: true
                   required: true
                   schema:
                     type: string
-                    description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first
+                    description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter), and mark:red, or mark:"a name", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first
                     example: k
                     minLength: 1
                   example: k
@@ -3097,6 +3362,8 @@ paths:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
                                       id: be4c1193735ee1
+                                      marks:
+                                        - red
                                       notebook: inbox
                                       snippet: Vel omnis omnis iure molestias iure eveniet.
                                       snippet_highlights:
@@ -3122,6 +3389,8 @@ paths:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
                                       id: be4c1193735ee1
+                                      marks:
+                                        - red
                                       notebook: inbox
                                       snippet: Vel omnis omnis iure molestias iure eveniet.
                                       snippet_highlights:
@@ -3147,6 +3416,8 @@ paths:
                                     - created_at: "2026-10-16T09:30:00Z"
                                       created_by: ai
                                       id: be4c1193735ee1
+                                      marks:
+                                        - red
                                       notebook: inbox
                                       snippet: Vel omnis omnis iure molestias iure eveniet.
                                       snippet_highlights:
@@ -4295,6 +4566,8 @@ components:
                     created_at: "2026-10-16T09:30:00Z"
                     created_by: ai
                     id: be4c1193735ee1
+                    marks:
+                        - red
                     notebook: inbox
                     tags:
                         - DB
@@ -4320,6 +4593,46 @@ components:
             required:
                 - status
                 - warnings
+        MarkInfo:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Mark ID
+                    example: red
+                    enum:
+                        - red
+                        - orange
+                        - yellow
+                        - green
+                        - blue
+                        - purple
+                        - gray
+                        - star
+                        - important
+                        - question
+                        - done
+                        - pin
+                        - urgent
+                        - idea
+                kind:
+                    type: string
+                    description: color, or symbol for a mark drawn as an emoji
+                    example: color
+                    enum:
+                        - color
+                        - symbol
+                name:
+                    type: string
+                    description: Name the user gave the mark, which says what it means, such as important; absent for none
+                    example: important
+            example:
+                id: red
+                kind: color
+                name: important
+            required:
+                - id
+                - kind
         MoveNotebookRequestBody:
             type: object
             properties:
@@ -4406,6 +4719,30 @@ components:
                     description: 'Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                marks:
+                    type: array
+                    items:
+                        type: string
+                        example: done
+                        enum:
+                            - red
+                            - orange
+                            - yellow
+                            - green
+                            - blue
+                            - purple
+                            - gray
+                            - star
+                            - important
+                            - question
+                            - done
+                            - pin
+                            - urgent
+                            - idea
+                    description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
+                    example:
+                        - red
+                    maxItems: 1
                 notebook:
                     type: string
                     description: Notebook (directory) the note is in
@@ -4467,6 +4804,8 @@ components:
                 created_at: "2026-10-16T09:30:00Z"
                 created_by: ai
                 id: be4c1193735ee1
+                marks:
+                    - red
                 notebook: inbox
                 tags:
                     - DB
@@ -4498,15 +4837,13 @@ components:
                 body:
                     type: string
                     description: Body in Markdown
-                    example: Et libero.
+                    example: Sequi magni ut sed.
                 body_highlights:
                     type: array
                     items:
                         $ref: '#/components/schemas/TextRange'
                     description: Ranges of the body matched by the query of get, sorted and not overlapping
                     example:
-                        - end: 9063689078350173992
-                          start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
                         - end: 9063689078350173992
@@ -4527,6 +4864,30 @@ components:
                     description: 'Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                marks:
+                    type: array
+                    items:
+                        type: string
+                        example: gray
+                        enum:
+                            - red
+                            - orange
+                            - yellow
+                            - green
+                            - blue
+                            - purple
+                            - gray
+                            - star
+                            - important
+                            - question
+                            - done
+                            - pin
+                            - urgent
+                            - idea
+                    description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
+                    example:
+                        - red
+                    maxItems: 1
                 notebook:
                     type: string
                     description: Notebook (directory) the note is in
@@ -4536,7 +4897,7 @@ components:
                     type: array
                     items:
                         type: string
-                        example: Nobis tenetur laboriosam.
+                        example: Et qui et ut corrupti ea autem.
                     description: Tags
                     example:
                         - DB
@@ -4551,10 +4912,6 @@ components:
                         $ref: '#/components/schemas/TextRange'
                     description: Ranges of the title matched by the query of get, sorted and not overlapping
                     example:
-                        - end: 9063689078350173992
-                          start: 5812498383206549952
-                        - end: 9063689078350173992
-                          start: 5812498383206549952
                         - end: 9063689078350173992
                           start: 5812498383206549952
                         - end: 9063689078350173992
@@ -4579,10 +4936,8 @@ components:
                     description: Strong entity tag of the note file. Sent as the ETag header over HTTP
                     example: '"87ef7c76b82c5b1d299b08b474f6a7bb"'
             example:
-                body: Et libero.
+                body: Sequi magni ut sed.
                 body_highlights:
-                    - end: 9063689078350173992
-                      start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
                     - end: 9063689078350173992
@@ -4590,16 +4945,14 @@ components:
                 created_at: "2026-10-16T09:30:00Z"
                 created_by: ai
                 id: be4c1193735ee1
+                marks:
+                    - red
                 notebook: inbox
                 tags:
                     - DB
                     - postgres
                 title: Get the CREATE TABLE statement
                 title_highlights:
-                    - end: 9063689078350173992
-                      start: 5812498383206549952
-                    - end: 9063689078350173992
-                      start: 5812498383206549952
                     - end: 9063689078350173992
                       start: 5812498383206549952
                     - end: 9063689078350173992
@@ -4669,6 +5022,8 @@ components:
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
                           id: be4c1193735ee1
+                          marks:
+                            - red
                           notebook: inbox
                           snippet: Vel omnis omnis iure molestias iure eveniet.
                           snippet_highlights:
@@ -4694,6 +5049,8 @@ components:
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
                           id: be4c1193735ee1
+                          marks:
+                            - red
                           notebook: inbox
                           snippet: Vel omnis omnis iure molestias iure eveniet.
                           snippet_highlights:
@@ -4719,6 +5076,8 @@ components:
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
                           id: be4c1193735ee1
+                          marks:
+                            - red
                           notebook: inbox
                           snippet: Vel omnis omnis iure molestias iure eveniet.
                           snippet_highlights:
@@ -4751,6 +5110,8 @@ components:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -4776,6 +5137,8 @@ components:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -4801,6 +5164,8 @@ components:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -4846,6 +5211,30 @@ components:
                     description: 'Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                marks:
+                    type: array
+                    items:
+                        type: string
+                        example: urgent
+                        enum:
+                            - red
+                            - orange
+                            - yellow
+                            - green
+                            - blue
+                            - purple
+                            - gray
+                            - star
+                            - important
+                            - question
+                            - done
+                            - pin
+                            - urgent
+                            - idea
+                    description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
+                    example:
+                        - red
+                    maxItems: 1
                 notebook:
                     type: string
                     description: Notebook (directory) the note is in
@@ -4906,6 +5295,8 @@ components:
                 created_at: "2026-10-16T09:30:00Z"
                 created_by: ai
                 id: be4c1193735ee1
+                marks:
+                    - red
                 notebook: inbox
                 snippet: Vel omnis omnis iure molestias iure eveniet.
                 snippet_highlights:
@@ -5152,6 +5543,26 @@ components:
             description: Request body for register_begin.
             example:
                 token: Et recusandae esse ad.
+        SaveMarkNamesRequestBody:
+            type: object
+            properties:
+                names:
+                    type: object
+                    description: Names by mark ID
+                    example:
+                        red: important
+                        star: later
+                    additionalProperties:
+                        type: string
+                        example: ypp
+                        maxLength: 40
+            description: Request body for save_mark_names.
+            example:
+                names:
+                    red: important
+                    star: later
+            required:
+                - names
         SaveNotebookRequestBody:
             type: object
             properties:
@@ -5210,6 +5621,8 @@ components:
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
                           id: be4c1193735ee1
+                          marks:
+                            - red
                           notebook: inbox
                           snippet: Vel omnis omnis iure molestias iure eveniet.
                           snippet_highlights:
@@ -5235,6 +5648,8 @@ components:
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
                           id: be4c1193735ee1
+                          marks:
+                            - red
                           notebook: inbox
                           snippet: Vel omnis omnis iure molestias iure eveniet.
                           snippet_highlights:
@@ -5260,6 +5675,8 @@ components:
                         - created_at: "2026-10-16T09:30:00Z"
                           created_by: ai
                           id: be4c1193735ee1
+                          marks:
+                            - red
                           notebook: inbox
                           snippet: Vel omnis omnis iure molestias iure eveniet.
                           snippet_highlights:
@@ -5293,6 +5710,8 @@ components:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -5318,6 +5737,8 @@ components:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -5343,6 +5764,8 @@ components:
                     - created_at: "2026-10-16T09:30:00Z"
                       created_by: ai
                       id: be4c1193735ee1
+                      marks:
+                        - red
                       notebook: inbox
                       snippet: Vel omnis omnis iure molestias iure eveniet.
                       snippet_highlights:
@@ -5370,6 +5793,37 @@ components:
                 - mode
                 - total
                 - notes
+        SetMarksRequestBody:
+            type: object
+            properties:
+                marks:
+                    type: array
+                    items:
+                        type: string
+                        example: blue
+                        enum:
+                            - red
+                            - orange
+                            - yellow
+                            - green
+                            - blue
+                            - purple
+                            - gray
+                            - star
+                            - important
+                            - question
+                            - done
+                            - pin
+                            - urgent
+                            - idea
+                    description: Marks of the note
+                    example:
+                        - red
+                    maxItems: 1
+            description: Request body for set_marks.
+            example:
+                marks:
+                    - red
         SetPreviewStyleRequestBody:
             type: object
             properties:

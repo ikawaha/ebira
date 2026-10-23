@@ -6,6 +6,20 @@ import (
 )
 
 // NoteTrait is the attributes that Note and NoteSummary share.
+// markIDs are the marks a note can have, as store.MarkIDs: colors, and
+// symbols that the UIs draw as emoji (star, important, question, done, pin,
+// urgent and idea).
+var markIDs = []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}
+
+// marksDSL is the list of the marks of a note, one at most for now.
+var marksDSL = func() {
+	Elem(func() {
+		Enum(markIDs...)
+	})
+	MaxLength(1)
+	Example([]string{"red"})
+}
+
 var NoteTrait = func() {
 	RequiredAttribute("id", String, "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks", noteIDDSL)
 	RequiredAttribute("notebook", String, "Notebook (directory) the note is in", notebookIDDSL)
@@ -21,7 +35,21 @@ var NoteTrait = func() {
 	Attribute("created_by", String, "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people", func() {
 		Enum("ai")
 	})
+	Attribute("marks", ArrayOf(String), "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none", marksDSL)
 }
+
+var MarkInfo = Type("MarkInfo", func() {
+	RequiredAttribute("id", String, "Mark ID", func() {
+		Enum(markIDs...)
+		Example("red")
+	})
+	RequiredAttribute("kind", String, "color, or symbol for a mark drawn as an emoji", func() {
+		Enum("color", "symbol")
+	})
+	Attribute("name", String, "Name the user gave the mark, which says what it means, such as important; absent for none", func() {
+		Example("important")
+	})
+})
 
 // Note is a single note.
 var Note = Type("Note", func() {
@@ -301,6 +329,8 @@ var _ = Service("notes", func() {
 	//     but not turn an existing notebook into one.
 	//   - They may make any notebook they can see private at any time
 	//     (make_notebook_private), which only takes access away from them.
+	//   - They may set the marks of notes in notebooks of the collab kind
+	//     (update_ai_note), and read the names of the marks (list_marks).
 	//   - They may add images to notes in notebooks of the collab kind
 	//     (add_ai_file), and send images with a new note (import_ai_note),
 	//     in smaller sizes than people.
@@ -503,7 +533,7 @@ var _ = Service("notes", func() {
 		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first", func() {
+			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first", func() {
 				MinLength(1)
 			})
 			notebookFilter()
@@ -522,7 +552,7 @@ var _ = Service("notes", func() {
 			Param("tag")
 			Param("limit")
 		})
-		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase and tag:name to require a tag", func() {
+		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks)", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -593,6 +623,60 @@ var _ = Service("notes", func() {
 		})
 		Tool("list_tags", "List tags with their note counts; filter list_notes or search_notes by one of them", func() {
 			ReadOnlyHint(true)
+		})
+	})
+
+	Method("marks", func() {
+		Description("List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.")
+		Payload(sessionDSL)
+		Result(ArrayOf(MarkInfo))
+		HTTP(func() {
+			GET("/marks")
+		})
+		Tool("list_marks", "List the marks a note can have, with what each means to the user; search_notes finds the notes with one by mark:<id or name>", func() {
+			ReadOnlyHint(true)
+		})
+	})
+
+	// Marks are set by people with set_marks, and by AI clients on notes of
+	// the collab kind with update_ai_note.
+	Method("set_marks", func() {
+		Description("Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("marks", ArrayOf(String), "Marks of the note", marksDSL)
+		})
+		Result(Note)
+		Error("not_found", ErrorResult, "The note does not exist")
+		Error("bad_request", ErrorResult, "The note is in the trash")
+		HTTP(func() {
+			PUT("/notes/{id}/marks")
+			Body(func() {
+				Attribute("marks")
+			})
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("save_mark_names", func() {
+		Description("Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("names", MapOf(String, String), "Names by mark ID", func() {
+				Key(func() {
+					Enum(markIDs...)
+				})
+				Elem(func() {
+					MaxLength(40)
+				})
+				Example(map[string]string{"red": "important", "star": "later"})
+			})
+		})
+		Result(ArrayOf(MarkInfo))
+		HTTP(func() {
+			PUT("/marks")
 		})
 	})
 
@@ -833,13 +917,14 @@ var _ = Service("notes", func() {
 			})
 			Attribute("tags", ArrayOf(String), "Tags")
 			Attribute("body", String, "Body in Markdown")
+			Attribute("marks", ArrayOf(String), "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means", marksDSL)
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid")
 		Error("forbidden", ErrorResult, "The note, or the notebook to move it to, is not of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
-		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab); pass the version from get_note")
+		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note")
 	})
 
 	Method("delete_ai_note", func() {

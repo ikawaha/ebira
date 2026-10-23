@@ -29,6 +29,9 @@ type Endpoints struct {
 	Move                  goa.Endpoint
 	Notebooks             goa.Endpoint
 	Tags                  goa.Endpoint
+	Marks                 goa.Endpoint
+	SetMarks              goa.Endpoint
+	SaveMarkNames         goa.Endpoint
 	CreateNotebook        goa.Endpoint
 	SaveNotebook          goa.Endpoint
 	MoveNotebook          goa.Endpoint
@@ -104,6 +107,9 @@ func NewEndpoints(s Service) *Endpoints {
 		Move:                  NewMoveEndpoint(s, a.APIKeyAuth),
 		Notebooks:             NewNotebooksEndpoint(s, a.APIKeyAuth),
 		Tags:                  NewTagsEndpoint(s, a.APIKeyAuth),
+		Marks:                 NewMarksEndpoint(s, a.APIKeyAuth),
+		SetMarks:              NewSetMarksEndpoint(s, a.APIKeyAuth),
+		SaveMarkNames:         NewSaveMarkNamesEndpoint(s, a.APIKeyAuth),
 		CreateNotebook:        NewCreateNotebookEndpoint(s, a.APIKeyAuth),
 		SaveNotebook:          NewSaveNotebookEndpoint(s, a.APIKeyAuth),
 		MoveNotebook:          NewMoveNotebookEndpoint(s, a.APIKeyAuth),
@@ -150,6 +156,9 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Move = m(e.Move)
 	e.Notebooks = m(e.Notebooks)
 	e.Tags = m(e.Tags)
+	e.Marks = m(e.Marks)
+	e.SetMarks = m(e.SetMarks)
+	e.SaveMarkNames = m(e.SaveMarkNames)
 	e.CreateNotebook = m(e.CreateNotebook)
 	e.SaveNotebook = m(e.SaveNotebook)
 	e.MoveNotebook = m(e.MoveNotebook)
@@ -454,6 +463,75 @@ func NewTagsEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoi
 			return nil, err
 		}
 		return s.Tags(ctx, p)
+	}
+}
+
+// NewMarksEndpoint returns an endpoint function that calls the method "marks"
+// of service "notes".
+func NewMarksEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*MarksPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.Marks(ctx, p)
+	}
+}
+
+// NewSetMarksEndpoint returns an endpoint function that calls the method
+// "set_marks" of service "notes".
+func NewSetMarksEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SetMarksPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.SetMarks(ctx, p)
+	}
+}
+
+// NewSaveMarkNamesEndpoint returns an endpoint function that calls the method
+// "save_mark_names" of service "notes".
+func NewSaveMarkNamesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SaveMarkNamesPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.SaveMarkNames(ctx, p)
 	}
 }
 

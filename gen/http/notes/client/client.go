@@ -61,6 +61,17 @@ type Client struct {
 	// Tags Doer is the HTTP client used to make requests to the tags endpoint.
 	TagsDoer goahttp.Doer
 
+	// Marks Doer is the HTTP client used to make requests to the marks endpoint.
+	MarksDoer goahttp.Doer
+
+	// SetMarks Doer is the HTTP client used to make requests to the set_marks
+	// endpoint.
+	SetMarksDoer goahttp.Doer
+
+	// SaveMarkNames Doer is the HTTP client used to make requests to the
+	// save_mark_names endpoint.
+	SaveMarkNamesDoer goahttp.Doer
+
 	// CreateNotebook Doer is the HTTP client used to make requests to the
 	// create_notebook endpoint.
 	CreateNotebookDoer goahttp.Doer
@@ -174,6 +185,9 @@ func NewClient(
 		MoveDoer:                  doer,
 		NotebooksDoer:             doer,
 		TagsDoer:                  doer,
+		MarksDoer:                 doer,
+		SetMarksDoer:              doer,
+		SaveMarkNamesDoer:         doer,
 		CreateNotebookDoer:        doer,
 		SaveNotebookDoer:          doer,
 		MoveNotebookDoer:          doer,
@@ -486,6 +500,78 @@ func (c *Client) Tags() goa.Endpoint {
 		resp, err := c.TagsDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "tags", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// Marks returns an endpoint that makes HTTP requests to the notes service
+// marks server.
+func (c *Client) Marks() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMarksRequest(c.encoder)
+		decodeResponse = DecodeMarksResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildMarksRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.MarksDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "marks", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// SetMarks returns an endpoint that makes HTTP requests to the notes service
+// set_marks server.
+func (c *Client) SetMarks() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSetMarksRequest(c.encoder)
+		decodeResponse = DecodeSetMarksResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildSetMarksRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.SetMarksDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "set_marks", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// SaveMarkNames returns an endpoint that makes HTTP requests to the notes
+// service save_mark_names server.
+func (c *Client) SaveMarkNames() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSaveMarkNamesRequest(c.encoder)
+		decodeResponse = DecodeSaveMarkNamesResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildSaveMarkNamesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.SaveMarkNamesDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "save_mark_names", err)
 		}
 		return decodeResponse(resp)
 	}

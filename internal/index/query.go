@@ -8,21 +8,27 @@ import (
 )
 
 // Query is a search query, parsed: the terms to find, each a word or a phrase
-// that may hold spaces, and the tags the notes must have. All are combined
-// with AND.
+// that may hold spaces, and the tags and the marks the notes must have, each
+// mark by its ID or its name. All are combined with AND.
 type Query struct {
 	Terms []string
 	Tags  []string
+	Marks []string
 }
 
-// tagPrefix starts a tag in a query, as in tag:todo.
-const tagPrefix = "tag:"
+// tagPrefix starts a tag in a query, as in tag:todo, and markPrefix a mark, as
+// in mark:red.
+const (
+	tagPrefix  = "tag:"
+	markPrefix = "mark:"
+)
 
 // ParseQuery parses q. Terms are separated by spaces. A term in double
 // quotes is a phrase, which may hold spaces and matches its words in that
 // order; an unclosed quote runs to the end, so that a query being typed
 // still searches. tag:name, or tag:"a name" for a tag with spaces, asks for
-// notes with the tag; tag: alone is dropped, as while typing a tag.
+// notes with the tag; tag: alone is dropped, as while typing a tag. mark:red,
+// or mark:"a name", asks for notes with the mark, in the same way.
 func ParseQuery(q string) Query {
 	var res Query
 	rs := []rune(q)
@@ -47,19 +53,20 @@ func ParseQuery(q string) Query {
 			i = next
 			continue
 		}
-		if p := len([]rune(tagPrefix)); i+p <= len(rs) && strings.EqualFold(string(rs[i:i+p]), tagPrefix) {
-			var tag string
+		if prefix, list := prefixAt(rs, i, &res); prefix != "" {
+			var value string
+			p := len([]rune(prefix))
 			next := i + p
 			if next < len(rs) && rs[next] == '"' {
-				tag, next = quoted(next)
+				value, next = quoted(next)
 			} else {
 				for next < len(rs) && !unicode.IsSpace(rs[next]) {
 					next++
 				}
-				tag = string(rs[i+p : next])
+				value = string(rs[i+p : next])
 			}
-			if tag = strings.TrimSpace(tag); tag != "" {
-				res.Tags = append(res.Tags, tag)
+			if value = strings.TrimSpace(value); value != "" {
+				*list = append(*list, value)
 			}
 			i = next
 			continue
@@ -72,6 +79,20 @@ func ParseQuery(q string) Query {
 		i = j
 	}
 	return res
+}
+
+// prefixAt returns the prefix of a tag or a mark that starts at i, ignoring
+// case, and the list of res its value goes to; "" for neither.
+func prefixAt(rs []rune, i int, res *Query) (string, *[]string) {
+	for _, x := range []struct {
+		prefix string
+		list   *[]string
+	}{{tagPrefix, &res.Tags}, {markPrefix, &res.Marks}} {
+		if p := len([]rune(x.prefix)); i+p <= len(rs) && strings.EqualFold(string(rs[i:i+p]), x.prefix) {
+			return x.prefix, x.list
+		}
+	}
+	return "", nil
 }
 
 // tagKey is the key tags are compared by in a query: NFKC and lower case, so

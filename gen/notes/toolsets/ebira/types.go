@@ -60,6 +60,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -144,6 +147,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -180,6 +186,11 @@ type (
 		// What could not be converted as is, such as images left out
 		Warnings []string
 	}
+	// ListMarksPayload defines the JSON payload for the ebira.list_marks tool.
+	ListMarksPayload = struct {
+	}
+	// ListMarksResult defines the JSON result for the ebira.list_marks tool.
+	ListMarksResult = []*MarkInfo
 	// ListNotebooksPayload defines the JSON payload for the ebira.list_notebooks tool.
 	ListNotebooksPayload = struct {
 	}
@@ -253,6 +264,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -268,8 +282,10 @@ type (
 	SearchNotesPayload = struct {
 		// Search terms separated by spaces, combined with AND. "two words" in double
 		// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
-		// for notes with the tag (case and width do not matter); a query of tags alone
-		// lists the notes with them, last updated first
+		// for notes with the tag (case and width do not matter), and mark:red, or
+		// mark:"a name", for notes with the mark, by its ID or the name the user gave
+		// it; a query of tags and marks alone lists the notes with them, last updated
+		// first
 		Q string
 		// Only notes in this notebook. Omit for all notebooks except the trash
 		Notebook *string
@@ -301,6 +317,9 @@ type (
 		Tags []string
 		// Body in Markdown
 		Body *string
+		// Marks of the note, one at most for now; an empty list takes them away. See
+		// list_marks for what each means
+		Marks []string
 	}
 	// UpdateAiNoteResult defines the JSON result for the ebira.update_ai_note tool.
 	UpdateAiNoteResult = struct {
@@ -324,6 +343,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -344,6 +366,16 @@ type (
 		Name string
 		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
 		Content []byte
+	}
+	// MarkInfo is a nested type used by the generated JSON contract.
+	MarkInfo = struct {
+		// Mark ID
+		ID string
+		// color, or symbol for a mark drawn as an emoji
+		Kind string
+		// Name the user gave the mark, which says what it means, such as important;
+		// absent for none
+		Name *string
 	}
 	// Note is a nested type used by the generated JSON contract.
 	Note = struct {
@@ -367,6 +399,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -400,6 +435,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string
 		// Excerpt around the matched terms (search only)
 		Snippet *string
 		// Ranges of the title matched by the query, sorted and not overlapping (search

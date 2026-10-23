@@ -10,6 +10,7 @@ const state = {
   notebook: null, // selected notebook ID; null for all but the trash
   trashedNotebook: null, // with notebook "trash": the selected notebook in the trash, whose notes are listed
   tags: [], // tags with their note counts
+  marks: [], // the marks a note can have, with their names (GET /marks)
   tag: null, // selected tag; the list then has the notes with it in all notebooks
   side: loadSide(), // what the left column lists: "notebooks" or "tags"
   query: "",
@@ -710,6 +711,8 @@ const KIND_SVG = {
   document: ["M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z", "M14 3v4h4", "M8.5 12h7", "M8.5 16h7"],
   // Find in the note: a magnifier.
   find: ["circle:10.5,10.5,6", "M15 15l5 5"],
+  // Marks: a flag.
+  flag: ["M5.5 21V4", "M5.5 4.5h11l-2.5 4 2.5 4h-11"],
   edit: ["M4 20h4L19 9l-4-4L4 16z", "M13.5 6.5l4 4"],
   history: ["M3.5 12a8.5 8.5 0 1 0 2.5-6", "M3.5 4v4.5H8", "M12 7.5V12l3 2"],
 };
@@ -829,8 +832,9 @@ function tagList(tags, link = false) {
 // loadNotebooks reads the notebooks and the tags, which change together with
 // the notes.
 async function loadNotebooks() {
-  const [notebooks, tags, trashed] = await Promise.all([api("/notebooks"), api("/tags"), api("/trash/notebooks")]);
+  const [notebooks, tags, trashed, marks] = await Promise.all([api("/notebooks"), api("/tags"), api("/trash/notebooks"), api("/marks").catch(() => [])]);
   state.notebooks = notebooks;
+  state.marks = marks;
   state.tags = tags;
   state.trashed = trashed;
   notebookTags = { notebook: null, tags: [] }; // read again when offered
@@ -1739,10 +1743,15 @@ function noteRow(n, sort, reorder, list, cls) {
   const li = el("li", [cls, n.id === state.selected ? "active" : "", state.chosen.has(n.id) ? "chosen" : ""].filter(Boolean).join(" "));
   li.dataset.id = n.id;
   enableDrag(li, reorder && n.notebook !== "trash", list); // a note in the trash can be moved to a notebook
-  const head = el("div", "title-row", el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
+  const head = el("div", "title-row", ...noteMarks(n), el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
   const mark = aiMark(n);
   if (mark) head.append(mark);
   li.append(head);
+  li.addEventListener("contextmenu", (e) => {
+    if (n.notebook === "trash") return;
+    e.preventDefault();
+    openMarkMenu(n, li, e);
+  });
   // The time shown follows the sort: creation for the creation order (and
   // the manual order, which starts as it), update otherwise.
   const created = !state.query && (sort === "created" || sort === "order");
@@ -1944,6 +1953,11 @@ async function loadNote() {
   const mark = aiMark(n, t("createdByAI"));
   if (mark) meta.append(mark);
   const actions = el("div", "actions", iconButton("find", t("findTitle"), () => (find.open ? closeFind() : openFind())), iconButton("document", t("copyTitle"), copyNote));
+  if (n.notebook !== "trash") {
+    const markButton = iconButton("flag", t("markTitle"), () => openMarkMenu(n, markButton));
+    markButton.id = "mark-open";
+    actions.prepend(markButton);
+  }
   if (n.notebook === "trash") {
     actions.append(
       button(t("restore"), restoreNote, { title: t("restoreTitle") }),
@@ -1957,7 +1971,7 @@ async function loadNote() {
   }
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
-  const title = el("h2", "", highlighted(n.title || t("untitled"), n.title_highlights));
+  const title = el("h2", "", ...noteMarks(n), highlighted(n.title || t("untitled"), n.title_highlights));
   if (n.title) {
     const copy = button(kindSVG("copy"), copyTitle, { title: t("copyNoteTitle"), cls: "title-copy" });
     copy.setAttribute("aria-label", t("copyNoteTitle"));
@@ -1986,6 +2000,128 @@ async function loadNote() {
   }
   pv.scrollTop = keepScroll;
   if (find.open) runFind(false);
+}
+
+// Marks: a note has one at most for now, a color drawn as a dot or a symbol
+// drawn as an emoji, to tell it at a glance. Their names, which say what they
+// mean, are in the settings of the notes (PUT /marks), so that every machine
+// shows the same. Set with the flag of the preview, a right click on a note in
+// the list, or M.
+
+const MARK_EMOJI = { star: "⭐", important: "❗", question: "❓", done: "✅", pin: "📌", urgent: "🔥", idea: "💡" };
+
+// markLabel returns what mark id is called: its name, else what it looks like.
+function markLabel(id) {
+  return state.marks.find((m) => m.id === id)?.name || t("mark_" + id);
+}
+
+// markBadge returns the drawing of mark id, named for the tooltip and screen
+// readers.
+function markBadge(id) {
+  const b = MARK_EMOJI[id] ? el("span", "mark-badge mark-symbol", MARK_EMOJI[id]) : el("span", `mark-badge mark-dot mark-${id}`);
+  b.title = markLabel(id);
+  b.setAttribute("role", "img");
+  b.setAttribute("aria-label", t("markOf", { name: markLabel(id) }));
+  return b;
+}
+
+// noteMarks returns the badges of the marks of note n that this page knows.
+function noteMarks(n) {
+  return (n.marks || []).filter((id) => state.marks.some((m) => m.id === id)).map(markBadge);
+}
+
+// openMarkMenu opens the menu of the marks for note n, beside the element at,
+// or at the pointer for a right click.
+function openMarkMenu(n, at, e) {
+  const m = $("mark-menu");
+  const cur = (n.marks || [])[0] ?? null;
+  const pick = (id) => {
+    closeMarkMenu();
+    setMarks(n, id ? [id] : []);
+  };
+  const grid = (kind) => el("div", "mark-grid", ...state.marks.filter((mk) => mk.kind === kind).map((mk) => {
+    const b = button(markBadge(mk.id), () => pick(mk.id === cur ? null : mk.id), { title: markLabel(mk.id), cls: mk.id === cur ? "active" : "" });
+    b.setAttribute("role", "menuitemradio");
+    b.setAttribute("aria-checked", String(mk.id === cur));
+    b.setAttribute("aria-label", markLabel(mk.id));
+    return b;
+  }));
+  const none = button(t("markNone"), () => pick(null), { cls: "mark-none" });
+  none.setAttribute("role", "menuitem");
+  m.replaceChildren(el("div", "menu-label", t("markMenu")), grid("color"), grid("symbol"), none);
+  m.hidden = false;
+  const r = at.getBoundingClientRect();
+  const x = e ? e.clientX : r.right - m.offsetWidth;
+  const y = e ? e.clientY : r.bottom + 4;
+  m.style.left = Math.max(8, Math.min(x, innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top = Math.min(y, innerHeight - m.offsetHeight - 8) + "px";
+  (m.querySelector("button.active") || m.querySelector("button")).focus();
+}
+
+function closeMarkMenu() {
+  $("mark-menu").hidden = true;
+}
+
+document.addEventListener("click", (e) => {
+  if (!$("mark-menu").hidden && !e.target.closest("#mark-menu, #mark-open")) closeMarkMenu();
+});
+window.addEventListener("resize", closeMarkMenu);
+$("mark-menu").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    closeMarkMenu();
+  }
+});
+
+// setMarks sets the marks of note n, keeping its update time.
+async function setMarks(n, marks) {
+  try {
+    await api(`${noteURL(n.id)}/marks`, { method: "PUT", body: { marks } });
+  } catch (e) {
+    alert(t("markFailed", { error: e.message }));
+    return;
+  }
+  await loadNotes();
+  if (state.selected === n.id && !state.editing) loadNote();
+}
+
+// openMarkNames opens the dialog to name the marks, which says what they mean.
+function openMarkNames() {
+  const d = $("mark-names");
+  const inputs = {};
+  const rows = state.marks.map((mk) => {
+    const input = el("input");
+    input.value = mk.name || "";
+    input.placeholder = t("mark_" + mk.id);
+    input.maxLength = 40;
+    input.setAttribute("aria-label", t("mark_" + mk.id));
+    inputs[mk.id] = input;
+    return el("label", "mark-name-row", markBadge(mk.id), input);
+  });
+  const msg = el("p", "error");
+  msg.hidden = true;
+  const save = button(t("save"), async () => {
+    const names = Object.fromEntries(Object.entries(inputs).map(([id, i]) => [id, i.value.trim()]));
+    try {
+      state.marks = await api("/marks", { method: "PUT", body: { names } });
+    } catch (e) {
+      msg.textContent = t("markFailed", { error: e.message });
+      msg.hidden = false;
+      return;
+    }
+    d.close();
+    renderNotes();
+    loadNote();
+  }, { cls: "primary" });
+  d.replaceChildren(
+    el("div", "files-head", el("h2", "", t("markNames")), button("×", () => d.close(), { title: t("closeTitle") })),
+    el("p", "hint", t("markNamesHint")),
+    el("div", "mark-names-list", ...rows),
+    msg,
+    el("div", "files-actions", button(t("cancel"), () => d.close()), save));
+  d.showModal();
+  rows[0]?.querySelector("input").focus();
 }
 
 // Find in the note: a bar in the head of the preview, opened with f or its
@@ -3443,6 +3579,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
   }
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
+$("mark-names-open").addEventListener("click", () => openMarkNames());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
 // Theme: auto (the system's), light or dark, chosen in the settings menu and
@@ -3724,7 +3861,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("preview-style").open) return;
+  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("preview-style").open || $("mark-names").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();
@@ -3773,6 +3910,7 @@ document.addEventListener("keydown", (e) => {
     case "n": if (find.open && find.marks.length) jumpFind(1); else jumpMark(1); break;
     case "N": if (find.open && find.marks.length) jumpFind(-1); else jumpMark(-1); break;
     case "f": if (state.note && !state.editing) { e.preventDefault(); openFind(); } break;
+    case "M": if (state.note && state.note.notebook !== "trash" && !state.editing && $("mark-open")) { e.preventDefault(); openMarkMenu(state.note, $("mark-open")); } break;
     case "J": e.preventDefault(); moveSelected(1); break;
     case "K": e.preventDefault(); moveSelected(-1); break;
     case "s": e.preventDefault(); if (!state.query) cycleSort(); break;

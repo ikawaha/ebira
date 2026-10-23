@@ -28,6 +28,9 @@ type Client struct {
 	MoveEndpoint                  goa.Endpoint
 	NotebooksEndpoint             goa.Endpoint
 	TagsEndpoint                  goa.Endpoint
+	MarksEndpoint                 goa.Endpoint
+	SetMarksEndpoint              goa.Endpoint
+	SaveMarkNamesEndpoint         goa.Endpoint
 	CreateNotebookEndpoint        goa.Endpoint
 	SaveNotebookEndpoint          goa.Endpoint
 	MoveNotebookEndpoint          goa.Endpoint
@@ -60,7 +63,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -74,6 +77,9 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		MoveEndpoint:                  move,
 		NotebooksEndpoint:             notebooks,
 		TagsEndpoint:                  tags,
+		MarksEndpoint:                 marks,
+		SetMarksEndpoint:              setMarks,
+		SaveMarkNamesEndpoint:         saveMarkNames,
 		CreateNotebookEndpoint:        createNotebook,
 		SaveNotebookEndpoint:          saveNotebook,
 		MoveNotebookEndpoint:          moveNotebook,
@@ -280,6 +286,50 @@ func (c *Client) Tags(ctx context.Context, p *TagsPayload) (res []*TagCount, err
 		return
 	}
 	return ires.([]*TagCount), nil
+}
+
+// Marks calls the "marks" endpoint of the "notes" service.
+// Marks may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) Marks(ctx context.Context, p *MarksPayload) (res []*MarkInfo, err error) {
+	var ires any
+	ires, err = c.MarksEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.([]*MarkInfo), nil
+}
+
+// SetMarks calls the "set_marks" endpoint of the "notes" service.
+// SetMarks may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist
+//   - "bad_request" (type *goa.ServiceError): The note is in the trash
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) SetMarks(ctx context.Context, p *SetMarksPayload) (res *Note, err error) {
+	var ires any
+	ires, err = c.SetMarksEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Note), nil
+}
+
+// SaveMarkNames calls the "save_mark_names" endpoint of the "notes" service.
+// SaveMarkNames may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) SaveMarkNames(ctx context.Context, p *SaveMarkNamesPayload) (res []*MarkInfo, err error) {
+	var ires any
+	ires, err = c.SaveMarkNamesEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.([]*MarkInfo), nil
 }
 
 // CreateNotebook calls the "create_notebook" endpoint of the "notes" service.

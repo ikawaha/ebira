@@ -991,6 +991,14 @@ func TestPeopleOnly(t *testing.T) {
 			_, err := svc.Import(ctx, &gennotes.ImportPayload{Notebook: &diary.ID, Name: "x.md", Content: "x"})
 			return err
 		},
+		"set_marks": func(ctx context.Context) error {
+			_, err := svc.SetMarks(ctx, &gennotes.SetMarksPayload{ID: n.ID, Marks: []string{"red"}})
+			return err
+		},
+		"save_mark_names": func(ctx context.Context) error {
+			_, err := svc.SaveMarkNames(ctx, &gennotes.SaveMarkNamesPayload{Names: map[string]string{"red": "x"}})
+			return err
+		},
 		"preview_style": func(ctx context.Context) error {
 			_, err := svc.PreviewStyle(ctx, nil)
 			return err

@@ -65,10 +65,10 @@ type ContentIcon struct {
 	// URI of the icon; decoding does not fetch it
 	Src string
 	// Optional image MIME type
-	MimeType *string
+	MIMEType *string
 	// Suggested dimensions or any for scalable icons
 	Sizes []string
-	// Optional light or dark theme
+	// Optional light or dark display theme
 	Theme *string
 }
 
@@ -136,16 +136,20 @@ type ElicitationCapabilities struct {
 
 type ElicitationFormParams struct {
 	// Non-sensitive information requested from the user
-	Message string
+	Message string `json:"message,case:strict"`
 	// The flat form schema generated from accepted answer content
-	RequestedSchema json.RawMessage
+	RequestedSchema json.RawMessage `json:"requestedSchema,case:strict"`
+	// Additional protocol members preserved as JSON values
+	Extensions map[string]json.RawMessage `json:",embed"`
 }
 
 type ElicitationURLParams struct {
 	// The external interaction the user is asked to approve
-	Message string
+	Message string `json:"message,case:strict"`
 	// Absolute URL opened by the consenting host
-	URL string
+	URL string `json:"url,case:strict"`
+	// Additional protocol members preserved as JSON values
+	Extensions map[string]json.RawMessage `json:",embed"`
 }
 
 type InputRequest struct {
@@ -432,10 +436,10 @@ type jsonContentIconTransport struct {
 	// URI of the icon; decoding does not fetch it
 	Src *string `json:"src"`
 	// Optional image MIME type
-	MimeType *string `json:"mimeType,omitempty"`
+	MIMEType *string `json:"mimeType,omitempty"`
 	// Suggested dimensions or any for scalable icons
 	Sizes []string `json:"sizes,omitempty"`
-	// Optional light or dark theme
+	// Optional light or dark display theme
 	Theme *string `json:"theme,omitempty"`
 }
 
@@ -625,9 +629,11 @@ func validatejsonElicitationCapabilitiesTransport(value *jsonElicitationCapabili
 // jsonElicitationFormParamsTransport stores JSON fields until they have been validated.
 type jsonElicitationFormParamsTransport struct {
 	// Non-sensitive information requested from the user
-	Message *string `json:"message"`
+	Message *string `json:"message,case:strict"`
 	// The flat form schema generated from accepted answer content
-	RequestedSchema json.RawMessage `json:"requestedSchema"`
+	RequestedSchema json.RawMessage `json:"requestedSchema,case:strict"`
+	// Additional protocol members preserved as JSON values
+	Extensions map[string]json.RawMessage `json:",embed"`
 }
 
 // validatejsonElicitationFormParamsTransport checks decoded JSON before it becomes a service value.
@@ -647,9 +653,11 @@ func validatejsonElicitationFormParamsTransport(value *jsonElicitationFormParams
 // jsonElicitationURLParamsTransport stores JSON fields until they have been validated.
 type jsonElicitationURLParamsTransport struct {
 	// The external interaction the user is asked to approve
-	Message *string `json:"message"`
+	Message *string `json:"message,case:strict"`
 	// Absolute URL opened by the consenting host
-	URL *string `json:"url"`
+	URL *string `json:"url,case:strict"`
+	// Additional protocol members preserved as JSON values
+	Extensions map[string]json.RawMessage `json:",embed"`
 }
 
 // validatejsonElicitationURLParamsTransport checks decoded JSON before it becomes a service value.
@@ -1227,7 +1235,7 @@ func validateContentItemOriginal(value *ContentItem) (err error) {
 			err = goa.MergeErrors(err, goa.MissingFieldError("value.icons", "[*]"))
 		}
 		if e != nil {
-			if err2 := validateContentIconOriginal2(e); err2 != nil {
+			if err2 := validateContentIconOriginal(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -1238,19 +1246,8 @@ func validateContentItemOriginal(value *ContentItem) (err error) {
 		}
 	}
 	if value.Annotations != nil {
-		if err2 := validateContentAnnotationsOriginal2(value.Annotations); err2 != nil {
+		if err2 := validateContentAnnotationsOriginal(value.Annotations); err2 != nil {
 			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return err
-}
-
-// validateContentIconOriginal2 checks the original typed value before JSON conversion.
-func validateContentIconOriginal2(value *ContentIcon) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.src", value.Src, goa.FormatURI))
-	if value.Theme != nil {
-		if !(*value.Theme == "light" || *value.Theme == "dark") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.theme", *value.Theme, []any{"light", "dark"}))
 		}
 	}
 	return err
@@ -1259,24 +1256,6 @@ func validateContentIconOriginal2(value *ContentIcon) (err error) {
 // validateResourceContentOriginal checks the original typed value before JSON conversion.
 func validateResourceContentOriginal(value *ResourceContent) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.uri", value.URI, goa.FormatURI))
-	return err
-}
-
-// validateContentAnnotationsOriginal2 checks the original typed value before JSON conversion.
-func validateContentAnnotationsOriginal2(value *ContentAnnotations) (err error) {
-	for _, e := range value.Audience {
-		if !(e == "user" || e == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.audience[*]", e, []any{"user", "assistant"}))
-		}
-	}
-	if value.Priority != nil {
-		if *value.Priority < 0 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.priority", *value.Priority, 0, true))
-		}
-		if *value.Priority > 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.priority", *value.Priority, 1, false))
-		}
-	}
 	return err
 }
 
@@ -1334,33 +1313,19 @@ func validateInputRequestOriginal(value *InputRequest) (err error) {
 	case "form":
 		actual, _ := value.Params.AsForm()
 		if actual != nil {
-			if err2 := validateElicitationFormParamsOriginal2(actual); err2 != nil {
+			if err2 := validateElicitationFormParamsOriginal(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	case "url":
 		actual, _ := value.Params.AsURL()
 		if actual != nil {
-			if err2 := validateElicitationURLParamsOriginal2(actual); err2 != nil {
+			if err2 := validateElicitationURLParamsOriginal(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	}
 
-	return err
-}
-
-// validateElicitationFormParamsOriginal2 checks the original typed value before JSON conversion.
-func validateElicitationFormParamsOriginal2(value *ElicitationFormParams) (err error) {
-	if value.RequestedSchema == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("requestedSchema", "value"))
-	}
-	return err
-}
-
-// validateElicitationURLParamsOriginal2 checks the original typed value before JSON conversion.
-func validateElicitationURLParamsOriginal2(value *ElicitationURLParams) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.url", value.URL, goa.FormatURI))
 	return err
 }
 
@@ -1368,53 +1333,11 @@ func validateElicitationURLParamsOriginal2(value *ElicitationURLParams) (err err
 func validateInputRequiredResultOriginal(value *InputRequiredResult) (err error) {
 	for _, v := range value.InputRequests {
 		if v != nil {
-			if err2 := validateInputRequestOriginal2(v); err2 != nil {
+			if err2 := validateInputRequestOriginal(v); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	}
-	return err
-}
-
-// validateInputRequestOriginal2 checks the original typed value before JSON conversion.
-func validateInputRequestOriginal2(value *InputRequest) (err error) {
-	if value.Params.Kind() == "" {
-		err = goa.MergeErrors(err, goa.MissingFieldError("params", "value"))
-	}
-	if !(value.Method == "elicitation/create") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.method", value.Method, []any{"elicitation/create"}))
-	}
-	switch string(value.Params.Kind()) {
-	case "form":
-		actual, _ := value.Params.AsForm()
-		if actual != nil {
-			if err2 := validateElicitationFormParamsOriginal3(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	case "url":
-		actual, _ := value.Params.AsURL()
-		if actual != nil {
-			if err2 := validateElicitationURLParamsOriginal3(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-
-	return err
-}
-
-// validateElicitationFormParamsOriginal3 checks the original typed value before JSON conversion.
-func validateElicitationFormParamsOriginal3(value *ElicitationFormParams) (err error) {
-	if value.RequestedSchema == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("requestedSchema", "value"))
-	}
-	return err
-}
-
-// validateElicitationURLParamsOriginal3 checks the original typed value before JSON conversion.
-func validateElicitationURLParamsOriginal3(value *ElicitationURLParams) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.url", value.URL, goa.FormatURI))
 	return err
 }
 
@@ -1423,12 +1346,6 @@ func validateMissingClientCapabilityErrorOriginal(value *MissingClientCapability
 	if value.RequiredCapabilities == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("requiredCapabilities", "value"))
 	}
-	return err
-}
-
-// validateResourceContentOriginal2 checks the original typed value before JSON conversion.
-func validateResourceContentOriginal2(value *ResourceContent) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.uri", value.URI, goa.FormatURI))
 	return err
 }
 
@@ -1458,80 +1375,9 @@ func validateToolsCallCompleteResultOriginal(value *ToolsCallCompleteResult) (er
 			err = goa.MergeErrors(err, goa.MissingFieldError("value.content", "[*]"))
 		}
 		if e != nil {
-			if err2 := validateContentItemOriginal2(e); err2 != nil {
+			if err2 := validateContentItemOriginal(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
-		}
-	}
-	return err
-}
-
-// validateContentItemOriginal2 checks the original typed value before JSON conversion.
-func validateContentItemOriginal2(value *ContentItem) (err error) {
-	if !(value.Type == "text" || value.Type == "image" || value.Type == "audio" || value.Type == "resource_link" || value.Type == "resource") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", value.Type, []any{"text", "image", "audio", "resource_link", "resource"}))
-	}
-	if value.URI != nil {
-		err = goa.MergeErrors(err, goa.ValidateFormat("value.uri", *value.URI, goa.FormatURI))
-	}
-	if value.Size != nil {
-		if *value.Size < 0 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.size", *value.Size, 0, true))
-		}
-	}
-	for _, e := range value.Icons {
-		if e == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("value.icons", "[*]"))
-		}
-		if e != nil {
-			if err2 := validateContentIconOriginal3(e); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	if value.Resource != nil {
-		if err2 := validateResourceContentOriginal3(value.Resource); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	if value.Annotations != nil {
-		if err2 := validateContentAnnotationsOriginal3(value.Annotations); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return err
-}
-
-// validateContentIconOriginal3 checks the original typed value before JSON conversion.
-func validateContentIconOriginal3(value *ContentIcon) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.src", value.Src, goa.FormatURI))
-	if value.Theme != nil {
-		if !(*value.Theme == "light" || *value.Theme == "dark") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.theme", *value.Theme, []any{"light", "dark"}))
-		}
-	}
-	return err
-}
-
-// validateResourceContentOriginal3 checks the original typed value before JSON conversion.
-func validateResourceContentOriginal3(value *ResourceContent) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.uri", value.URI, goa.FormatURI))
-	return err
-}
-
-// validateContentAnnotationsOriginal3 checks the original typed value before JSON conversion.
-func validateContentAnnotationsOriginal3(value *ContentAnnotations) (err error) {
-	for _, e := range value.Audience {
-		if !(e == "user" || e == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.audience[*]", e, []any{"user", "assistant"}))
-		}
-	}
-	if value.Priority != nil {
-		if *value.Priority < 0 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.priority", *value.Priority, 0, true))
-		}
-		if *value.Priority > 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.priority", *value.Priority, 1, false))
 		}
 	}
 	return err
@@ -1546,177 +1392,26 @@ func validateToolsCallResultOriginal(value *ToolsCallResult) (err error) {
 	case "complete":
 		actual, _ := value.Outcome.AsComplete()
 		if actual != nil {
-			if err2 := validateToolsCallCompleteResultOriginal2(actual); err2 != nil {
+			if err2 := validateToolsCallCompleteResultOriginal(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	case "input_required":
 		actual, _ := value.Outcome.AsInputRequired()
 		if actual != nil {
-			if err2 := validateInputRequiredResultOriginal2(actual); err2 != nil {
+			if err2 := validateInputRequiredResultOriginal(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	case "task":
 		actual, _ := value.Outcome.AsTask()
 		if actual != nil {
-			if err2 := validateTaskCreatedOriginal2(actual); err2 != nil {
+			if err2 := validateTaskCreatedOriginal(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	}
 
-	return err
-}
-
-// validateToolsCallCompleteResultOriginal2 checks the original typed value before JSON conversion.
-func validateToolsCallCompleteResultOriginal2(value *ToolsCallCompleteResult) (err error) {
-	if value.Content == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("content", "value"))
-	}
-	for _, e := range value.Content {
-		if e == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("value.content", "[*]"))
-		}
-		if e != nil {
-			if err2 := validateContentItemOriginal3(e); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	return err
-}
-
-// validateContentItemOriginal3 checks the original typed value before JSON conversion.
-func validateContentItemOriginal3(value *ContentItem) (err error) {
-	if !(value.Type == "text" || value.Type == "image" || value.Type == "audio" || value.Type == "resource_link" || value.Type == "resource") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", value.Type, []any{"text", "image", "audio", "resource_link", "resource"}))
-	}
-	if value.URI != nil {
-		err = goa.MergeErrors(err, goa.ValidateFormat("value.uri", *value.URI, goa.FormatURI))
-	}
-	if value.Size != nil {
-		if *value.Size < 0 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.size", *value.Size, 0, true))
-		}
-	}
-	for _, e := range value.Icons {
-		if e == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError("value.icons", "[*]"))
-		}
-		if e != nil {
-			if err2 := validateContentIconOriginal4(e); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	if value.Resource != nil {
-		if err2 := validateResourceContentOriginal4(value.Resource); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	if value.Annotations != nil {
-		if err2 := validateContentAnnotationsOriginal4(value.Annotations); err2 != nil {
-			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return err
-}
-
-// validateContentIconOriginal4 checks the original typed value before JSON conversion.
-func validateContentIconOriginal4(value *ContentIcon) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.src", value.Src, goa.FormatURI))
-	if value.Theme != nil {
-		if !(*value.Theme == "light" || *value.Theme == "dark") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.theme", *value.Theme, []any{"light", "dark"}))
-		}
-	}
-	return err
-}
-
-// validateResourceContentOriginal4 checks the original typed value before JSON conversion.
-func validateResourceContentOriginal4(value *ResourceContent) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.uri", value.URI, goa.FormatURI))
-	return err
-}
-
-// validateContentAnnotationsOriginal4 checks the original typed value before JSON conversion.
-func validateContentAnnotationsOriginal4(value *ContentAnnotations) (err error) {
-	for _, e := range value.Audience {
-		if !(e == "user" || e == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.audience[*]", e, []any{"user", "assistant"}))
-		}
-	}
-	if value.Priority != nil {
-		if *value.Priority < 0 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.priority", *value.Priority, 0, true))
-		}
-		if *value.Priority > 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("value.priority", *value.Priority, 1, false))
-		}
-	}
-	return err
-}
-
-// validateInputRequiredResultOriginal2 checks the original typed value before JSON conversion.
-func validateInputRequiredResultOriginal2(value *InputRequiredResult) (err error) {
-	for _, v := range value.InputRequests {
-		if v != nil {
-			if err2 := validateInputRequestOriginal3(v); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	return err
-}
-
-// validateInputRequestOriginal3 checks the original typed value before JSON conversion.
-func validateInputRequestOriginal3(value *InputRequest) (err error) {
-	if value.Params.Kind() == "" {
-		err = goa.MergeErrors(err, goa.MissingFieldError("params", "value"))
-	}
-	if !(value.Method == "elicitation/create") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.method", value.Method, []any{"elicitation/create"}))
-	}
-	switch string(value.Params.Kind()) {
-	case "form":
-		actual, _ := value.Params.AsForm()
-		if actual != nil {
-			if err2 := validateElicitationFormParamsOriginal4(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	case "url":
-		actual, _ := value.Params.AsURL()
-		if actual != nil {
-			if err2 := validateElicitationURLParamsOriginal4(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-
-	return err
-}
-
-// validateElicitationFormParamsOriginal4 checks the original typed value before JSON conversion.
-func validateElicitationFormParamsOriginal4(value *ElicitationFormParams) (err error) {
-	if value.RequestedSchema == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("requestedSchema", "value"))
-	}
-	return err
-}
-
-// validateElicitationURLParamsOriginal4 checks the original typed value before JSON conversion.
-func validateElicitationURLParamsOriginal4(value *ElicitationURLParams) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("value.url", value.URL, goa.FormatURI))
-	return err
-}
-
-// validateTaskCreatedOriginal2 checks the original typed value before JSON conversion.
-func validateTaskCreatedOriginal2(value *TaskCreated) (err error) {
-	if !(value.Status == "working" || value.Status == "input_required" || value.Status == "completed" || value.Status == "failed" || value.Status == "cancelled") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.status", value.Status, []any{"working", "input_required", "completed", "failed", "cancelled"}))
-	}
 	return err
 }
 
@@ -1738,7 +1433,7 @@ func validateToolsListResultOriginal(value *ToolsListResult) (err error) {
 			err = goa.MergeErrors(err, goa.MissingFieldError("value.tools", "[*]"))
 		}
 		if e != nil {
-			if err2 := validateToolInfoOriginal2(e); err2 != nil {
+			if err2 := validateToolInfoOriginal(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -1751,14 +1446,6 @@ func validateToolsListResultOriginal(value *ToolsListResult) (err error) {
 	}
 	if !(value.CacheScope == "public" || value.CacheScope == "private") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.cacheScope", value.CacheScope, []any{"public", "private"}))
-	}
-	return err
-}
-
-// validateToolInfoOriginal2 checks the original typed value before JSON conversion.
-func validateToolInfoOriginal2(value *ToolInfo) (err error) {
-	if value.InputSchema == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("inputSchema", "value"))
 	}
 	return err
 }
@@ -2261,7 +1948,7 @@ func EncodeContentIcon(in *ContentIcon) ([]byte, error) {
 	{
 		body = &jsonContentIconTransport{
 			Src:      &in.Src,
-			MimeType: in.MimeType,
+			MIMEType: in.MIMEType,
 			Theme:    in.Theme,
 		}
 		if in.Sizes != nil {
@@ -2308,7 +1995,7 @@ func DecodeContentIcon(data []byte) (out *ContentIcon, err error) {
 	{
 		out = &ContentIcon{
 			Src:      *body.Src,
-			MimeType: body.MimeType,
+			MIMEType: body.MIMEType,
 			Theme:    body.Theme,
 		}
 		if body.Sizes != nil {
@@ -2635,6 +2322,14 @@ func EncodeElicitationFormParams(in *ElicitationFormParams) ([]byte, error) {
 			Message:         &in.Message,
 			RequestedSchema: in.RequestedSchema,
 		}
+		if in.Extensions != nil {
+			body.Extensions = make(map[string]json.RawMessage, len(in.Extensions))
+			for key, val := range in.Extensions {
+				tk := key
+				tv := val
+				body.Extensions[tk] = tv
+			}
+		}
 	}
 	if err := validatejsonElicitationFormParamsTransport(body); err != nil {
 		return nil, fmt.Errorf("validate ElicitationFormParams JSON: %w", err)
@@ -2675,6 +2370,14 @@ func DecodeElicitationFormParams(data []byte) (out *ElicitationFormParams, err e
 			Message:         *body.Message,
 			RequestedSchema: body.RequestedSchema,
 		}
+		if body.Extensions != nil {
+			out.Extensions = make(map[string]json.RawMessage, len(body.Extensions))
+			for key, val := range body.Extensions {
+				tk := key
+				tv := val
+				out.Extensions[tk] = tv
+			}
+		}
 	}
 	return out, nil
 }
@@ -2692,6 +2395,14 @@ func EncodeElicitationURLParams(in *ElicitationURLParams) ([]byte, error) {
 		body = &jsonElicitationURLParamsTransport{
 			Message: &in.Message,
 			URL:     &in.URL,
+		}
+		if in.Extensions != nil {
+			body.Extensions = make(map[string]json.RawMessage, len(in.Extensions))
+			for key, val := range in.Extensions {
+				tk := key
+				tv := val
+				body.Extensions[tk] = tv
+			}
 		}
 	}
 	if err := validatejsonElicitationURLParamsTransport(body); err != nil {
@@ -2732,6 +2443,14 @@ func DecodeElicitationURLParams(data []byte) (out *ElicitationURLParams, err err
 		out = &ElicitationURLParams{
 			Message: *body.Message,
 			URL:     *body.URL,
+		}
+		if body.Extensions != nil {
+			out.Extensions = make(map[string]json.RawMessage, len(body.Extensions))
+			for key, val := range body.Extensions {
+				tk := key
+				tv := val
+				out.Extensions[tk] = tv
+			}
 		}
 	}
 	return out, nil
@@ -2996,7 +2715,7 @@ func DecodePromptsCapability(data []byte) (out *PromptsCapability, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode PromptsCapability JSON: %w", err)
 	}
-	if err := validatePromptsCapabilityJSONValue("", root, ""); err != nil {
+	if err := validateDiscoverResultJSONValue3("", root, ""); err != nil {
 		return out, fmt.Errorf("decode PromptsCapability JSON: %w", err)
 	}
 	var body *jsonPromptsCapabilityTransport
@@ -3031,7 +2750,7 @@ func EncodeRequiredClientCapabilities(in *RequiredClientCapabilities) ([]byte, e
 	{
 		body = &jsonRequiredClientCapabilitiesTransport{}
 		if in.Elicitation != nil {
-			body.Elicitation = encodeElicitationCapabilitiesToElicitationCapabilitiesTransport2(in.Elicitation)
+			body.Elicitation = encodeElicitationCapabilitiesToElicitationCapabilitiesTransport(in.Elicitation)
 		}
 		if in.Extensions != nil {
 			body.Extensions = make(map[string]*jsonRequiredExtensionTransport, len(in.Extensions))
@@ -3041,7 +2760,7 @@ func EncodeRequiredClientCapabilities(in *RequiredClientCapabilities) ([]byte, e
 					body.Extensions[tk] = nil
 					continue
 				}
-				body.Extensions[tk] = encodeRequiredExtensionToRequiredExtensionTransport2(val)
+				body.Extensions[tk] = encodeRequiredExtensionToRequiredExtensionTransport(val)
 			}
 		}
 	}
@@ -3061,7 +2780,7 @@ func DecodeRequiredClientCapabilities(data []byte) (out *RequiredClientCapabilit
 	if err != nil {
 		return out, fmt.Errorf("decode RequiredClientCapabilities JSON: %w", err)
 	}
-	if err := validateRequiredClientCapabilitiesJSONValue("", root, ""); err != nil {
+	if err := validateMissingClientCapabilityErrorJSONValue2("", root, ""); err != nil {
 		return out, fmt.Errorf("decode RequiredClientCapabilities JSON: %w", err)
 	}
 	var body *jsonRequiredClientCapabilitiesTransport
@@ -3082,7 +2801,7 @@ func DecodeRequiredClientCapabilities(data []byte) (out *RequiredClientCapabilit
 	{
 		out = &RequiredClientCapabilities{}
 		if body.Elicitation != nil {
-			out.Elicitation = decodeElicitationCapabilitiesTransportToElicitationCapabilities2(body.Elicitation)
+			out.Elicitation = decodeElicitationCapabilitiesTransportToElicitationCapabilities(body.Elicitation)
 		}
 		if body.Extensions != nil {
 			out.Extensions = make(map[string]*RequiredExtension, len(body.Extensions))
@@ -3092,7 +2811,7 @@ func DecodeRequiredClientCapabilities(data []byte) (out *RequiredClientCapabilit
 					out.Extensions[tk] = nil
 					continue
 				}
-				out.Extensions[tk] = decodeRequiredExtensionTransportToRequiredExtension2(val)
+				out.Extensions[tk] = decodeRequiredExtensionTransportToRequiredExtension(val)
 			}
 		}
 	}
@@ -3124,7 +2843,7 @@ func DecodeRequiredExtension(data []byte) (out *RequiredExtension, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode RequiredExtension JSON: %w", err)
 	}
-	if err := validateRequiredExtensionJSONValue("", root, ""); err != nil {
+	if err := validateMissingClientCapabilityErrorJSONValue4("", root, ""); err != nil {
 		return out, fmt.Errorf("decode RequiredExtension JSON: %w", err)
 	}
 	var body *jsonRequiredExtensionTransport
@@ -3153,7 +2872,7 @@ func EncodeResourceContent(in *ResourceContent) ([]byte, error) {
 	if err := checkResourceContentValue(in); err != nil {
 		return nil, fmt.Errorf("encode ResourceContent JSON: %w", err)
 	}
-	if err := validateResourceContentOriginal2(in); err != nil {
+	if err := validateResourceContentOriginal(in); err != nil {
 		return nil, fmt.Errorf("validate ResourceContent value: %w", err)
 	}
 	var body *jsonResourceContentTransport
@@ -3182,7 +2901,7 @@ func DecodeResourceContent(data []byte) (out *ResourceContent, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode ResourceContent JSON: %w", err)
 	}
-	if err := validateResourceContentJSONValue("", root, ""); err != nil {
+	if err := validateContentItemJSONValue4("", root, ""); err != nil {
 		return out, fmt.Errorf("decode ResourceContent JSON: %w", err)
 	}
 	var body *jsonResourceContentTransport
@@ -3240,7 +2959,7 @@ func DecodeResourcesCapability(data []byte) (out *ResourcesCapability, err error
 	if err != nil {
 		return out, fmt.Errorf("decode ResourcesCapability JSON: %w", err)
 	}
-	if err := validateResourcesCapabilityJSONValue("", root, ""); err != nil {
+	if err := validateDiscoverResultJSONValue5("", root, ""); err != nil {
 		return out, fmt.Errorf("decode ResourcesCapability JSON: %w", err)
 	}
 	var body *jsonResourcesCapabilityTransport
@@ -3278,16 +2997,16 @@ func EncodeServerCapabilities(in *ServerCapabilities) ([]byte, error) {
 			Extensions: in.Extensions,
 		}
 		if in.Completions != nil {
-			body.Completions = encodeCompletionsCapabilityToCompletionsCapabilityTransport2(in.Completions)
+			body.Completions = encodeCompletionsCapabilityToCompletionsCapabilityTransport(in.Completions)
 		}
 		if in.Tools != nil {
-			body.Tools = encodeToolsCapabilityToToolsCapabilityTransport2(in.Tools)
+			body.Tools = encodeToolsCapabilityToToolsCapabilityTransport(in.Tools)
 		}
 		if in.Resources != nil {
-			body.Resources = encodeResourcesCapabilityToResourcesCapabilityTransport2(in.Resources)
+			body.Resources = encodeResourcesCapabilityToResourcesCapabilityTransport(in.Resources)
 		}
 		if in.Prompts != nil {
-			body.Prompts = encodePromptsCapabilityToPromptsCapabilityTransport2(in.Prompts)
+			body.Prompts = encodePromptsCapabilityToPromptsCapabilityTransport(in.Prompts)
 		}
 	}
 	if err := validatejsonServerCapabilitiesTransport(body); err != nil {
@@ -3306,7 +3025,7 @@ func DecodeServerCapabilities(data []byte) (out *ServerCapabilities, err error) 
 	if err != nil {
 		return out, fmt.Errorf("decode ServerCapabilities JSON: %w", err)
 	}
-	if err := validateServerCapabilitiesJSONValue("", root, ""); err != nil {
+	if err := validateDiscoverResultJSONValue2("", root, ""); err != nil {
 		return out, fmt.Errorf("decode ServerCapabilities JSON: %w", err)
 	}
 	var body *jsonServerCapabilitiesTransport
@@ -3329,16 +3048,16 @@ func DecodeServerCapabilities(data []byte) (out *ServerCapabilities, err error) 
 			Extensions: body.Extensions,
 		}
 		if body.Completions != nil {
-			out.Completions = decodeCompletionsCapabilityTransportToCompletionsCapability2(body.Completions)
+			out.Completions = decodeCompletionsCapabilityTransportToCompletionsCapability(body.Completions)
 		}
 		if body.Tools != nil {
-			out.Tools = decodeToolsCapabilityTransportToToolsCapability2(body.Tools)
+			out.Tools = decodeToolsCapabilityTransportToToolsCapability(body.Tools)
 		}
 		if body.Resources != nil {
-			out.Resources = decodeResourcesCapabilityTransportToResourcesCapability2(body.Resources)
+			out.Resources = decodeResourcesCapabilityTransportToResourcesCapability(body.Resources)
 		}
 		if body.Prompts != nil {
-			out.Prompts = decodePromptsCapabilityTransportToPromptsCapability2(body.Prompts)
+			out.Prompts = decodePromptsCapabilityTransportToPromptsCapability(body.Prompts)
 		}
 	}
 	return out, nil
@@ -3772,7 +3491,7 @@ func DecodeToolsCapability(data []byte) (out *ToolsCapability, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode ToolsCapability JSON: %w", err)
 	}
-	if err := validateToolsCapabilityJSONValue("", root, ""); err != nil {
+	if err := validateDiscoverResultJSONValue6("", root, ""); err != nil {
 		return out, fmt.Errorf("decode ToolsCapability JSON: %w", err)
 	}
 	var body *jsonToolsCapabilityTransport
@@ -3943,43 +3662,7 @@ func decodeCompletionsCapabilityTransportToCompletionsCapability(v *jsonCompleti
 	return res
 }
 
-func decodeCompletionsCapabilityTransportToCompletionsCapability2(v *jsonCompletionsCapabilityTransport) *CompletionsCapability {
-	res := &CompletionsCapability{}
-
-	return res
-}
-
 func decodeContentAnnotationsTransportToContentAnnotations(v *jsonContentAnnotationsTransport) *ContentAnnotations {
-	res := &ContentAnnotations{
-		Priority:     v.Priority,
-		LastModified: v.LastModified,
-	}
-	if v.Audience != nil {
-		res.Audience = make([]string, len(v.Audience))
-		for i, val := range v.Audience {
-			res.Audience[i] = val
-		}
-	}
-
-	return res
-}
-
-func decodeContentAnnotationsTransportToContentAnnotations2(v *jsonContentAnnotationsTransport) *ContentAnnotations {
-	res := &ContentAnnotations{
-		Priority:     v.Priority,
-		LastModified: v.LastModified,
-	}
-	if v.Audience != nil {
-		res.Audience = make([]string, len(v.Audience))
-		for i, val := range v.Audience {
-			res.Audience[i] = val
-		}
-	}
-
-	return res
-}
-
-func decodeContentAnnotationsTransportToContentAnnotations3(v *jsonContentAnnotationsTransport) *ContentAnnotations {
 	res := &ContentAnnotations{
 		Priority:     v.Priority,
 		LastModified: v.LastModified,
@@ -3997,39 +3680,7 @@ func decodeContentAnnotationsTransportToContentAnnotations3(v *jsonContentAnnota
 func decodeContentIconTransportToContentIcon(v *jsonContentIconTransport) *ContentIcon {
 	res := &ContentIcon{
 		Src:      *v.Src,
-		MimeType: v.MimeType,
-		Theme:    v.Theme,
-	}
-	if v.Sizes != nil {
-		res.Sizes = make([]string, len(v.Sizes))
-		for i, val := range v.Sizes {
-			res.Sizes[i] = val
-		}
-	}
-
-	return res
-}
-
-func decodeContentIconTransportToContentIcon2(v *jsonContentIconTransport) *ContentIcon {
-	res := &ContentIcon{
-		Src:      *v.Src,
-		MimeType: v.MimeType,
-		Theme:    v.Theme,
-	}
-	if v.Sizes != nil {
-		res.Sizes = make([]string, len(v.Sizes))
-		for i, val := range v.Sizes {
-			res.Sizes[i] = val
-		}
-	}
-
-	return res
-}
-
-func decodeContentIconTransportToContentIcon3(v *jsonContentIconTransport) *ContentIcon {
-	res := &ContentIcon{
-		Src:      *v.Src,
-		MimeType: v.MimeType,
+		MIMEType: v.MIMEType,
 		Theme:    v.Theme,
 	}
 	if v.Sizes != nil {
@@ -4062,47 +3713,14 @@ func decodeContentItemTransportToContentItem(v *jsonContentItemTransport) *Conte
 				res.Icons[i] = nil
 				continue
 			}
-			res.Icons[i] = decodeContentIconTransportToContentIcon2(val)
+			res.Icons[i] = decodeContentIconTransportToContentIcon(val)
 		}
 	}
 	if v.Resource != nil {
-		res.Resource = decodeResourceContentTransportToResourceContent2(v.Resource)
+		res.Resource = decodeResourceContentTransportToResourceContent(v.Resource)
 	}
 	if v.Annotations != nil {
-		res.Annotations = decodeContentAnnotationsTransportToContentAnnotations2(v.Annotations)
-	}
-
-	return res
-}
-
-func decodeContentItemTransportToContentItem2(v *jsonContentItemTransport) *ContentItem {
-	res := &ContentItem{
-		Type:        *v.Type,
-		Text:        v.Text,
-		Data:        v.Data,
-		MimeType:    v.MimeType,
-		Name:        v.Name,
-		URI:         v.URI,
-		Title:       v.Title,
-		Description: v.Description,
-		Size:        v.Size,
-		Meta:        v.Meta,
-	}
-	if v.Icons != nil {
-		res.Icons = make([]*ContentIcon, len(v.Icons))
-		for i, val := range v.Icons {
-			if val == nil {
-				res.Icons[i] = nil
-				continue
-			}
-			res.Icons[i] = decodeContentIconTransportToContentIcon3(val)
-		}
-	}
-	if v.Resource != nil {
-		res.Resource = decodeResourceContentTransportToResourceContent3(v.Resource)
-	}
-	if v.Annotations != nil {
-		res.Annotations = decodeContentAnnotationsTransportToContentAnnotations3(v.Annotations)
+		res.Annotations = decodeContentAnnotationsTransportToContentAnnotations(v.Annotations)
 	}
 
 	return res
@@ -4122,42 +3740,18 @@ func decodeElicitationCapabilitiesTransportToElicitationCapabilities(v *jsonElic
 	return res
 }
 
-func decodeElicitationCapabilitiesTransportToElicitationCapabilities2(v *jsonElicitationCapabilitiesTransport) *ElicitationCapabilities {
-	res := &ElicitationCapabilities{}
-	if v.Form != nil {
-		res.Form = &struct {
-		}{}
-	}
-	if v.URL != nil {
-		res.URL = &struct {
-		}{}
-	}
-
-	return res
-}
-
 func decodeElicitationFormParamsTransportToElicitationFormParams(v *jsonElicitationFormParamsTransport) *ElicitationFormParams {
 	res := &ElicitationFormParams{
 		Message:         *v.Message,
 		RequestedSchema: v.RequestedSchema,
 	}
-
-	return res
-}
-
-func decodeElicitationFormParamsTransportToElicitationFormParams2(v *jsonElicitationFormParamsTransport) *ElicitationFormParams {
-	res := &ElicitationFormParams{
-		Message:         *v.Message,
-		RequestedSchema: v.RequestedSchema,
-	}
-
-	return res
-}
-
-func decodeElicitationFormParamsTransportToElicitationFormParams3(v *jsonElicitationFormParamsTransport) *ElicitationFormParams {
-	res := &ElicitationFormParams{
-		Message:         *v.Message,
-		RequestedSchema: v.RequestedSchema,
+	if v.Extensions != nil {
+		res.Extensions = make(map[string]json.RawMessage, len(v.Extensions))
+		for key, val := range v.Extensions {
+			tk := key
+			tv := val
+			res.Extensions[tk] = tv
+		}
 	}
 
 	return res
@@ -4168,23 +3762,13 @@ func decodeElicitationURLParamsTransportToElicitationURLParams(v *jsonElicitatio
 		Message: *v.Message,
 		URL:     *v.URL,
 	}
-
-	return res
-}
-
-func decodeElicitationURLParamsTransportToElicitationURLParams2(v *jsonElicitationURLParamsTransport) *ElicitationURLParams {
-	res := &ElicitationURLParams{
-		Message: *v.Message,
-		URL:     *v.URL,
-	}
-
-	return res
-}
-
-func decodeElicitationURLParamsTransportToElicitationURLParams3(v *jsonElicitationURLParamsTransport) *ElicitationURLParams {
-	res := &ElicitationURLParams{
-		Message: *v.Message,
-		URL:     *v.URL,
+	if v.Extensions != nil {
+		res.Extensions = make(map[string]json.RawMessage, len(v.Extensions))
+		for key, val := range v.Extensions {
+			tk := key
+			tv := val
+			res.Extensions[tk] = tv
+		}
 	}
 
 	return res
@@ -4199,7 +3783,7 @@ func decodeInputRequestTransportToInputRequest(v *jsonInputRequestTransport) *In
 		actual, _ := v.Params.AsForm()
 		var obj *ElicitationFormParams
 		if actual != nil {
-			obj = decodeElicitationFormParamsTransportToElicitationFormParams2(actual)
+			obj = decodeElicitationFormParamsTransportToElicitationFormParams(actual)
 		}
 		u := res.Params
 		u.SetForm((*ElicitationFormParams)(obj))
@@ -4208,35 +3792,7 @@ func decodeInputRequestTransportToInputRequest(v *jsonInputRequestTransport) *In
 		actual, _ := v.Params.AsURL()
 		var obj *ElicitationURLParams
 		if actual != nil {
-			obj = decodeElicitationURLParamsTransportToElicitationURLParams2(actual)
-		}
-		u := res.Params
-		u.SetURL((*ElicitationURLParams)(obj))
-		res.Params = u
-	}
-
-	return res
-}
-
-func decodeInputRequestTransportToInputRequest2(v *jsonInputRequestTransport) *InputRequest {
-	res := &InputRequest{
-		Method: *v.Method,
-	}
-	switch string(v.Params.Kind()) {
-	case "form":
-		actual, _ := v.Params.AsForm()
-		var obj *ElicitationFormParams
-		if actual != nil {
-			obj = decodeElicitationFormParamsTransportToElicitationFormParams3(actual)
-		}
-		u := res.Params
-		u.SetForm((*ElicitationFormParams)(obj))
-		res.Params = u
-	case "url":
-		actual, _ := v.Params.AsURL()
-		var obj *ElicitationURLParams
-		if actual != nil {
-			obj = decodeElicitationURLParamsTransportToElicitationURLParams3(actual)
+			obj = decodeElicitationURLParamsTransportToElicitationURLParams(actual)
 		}
 		u := res.Params
 		u.SetURL((*ElicitationURLParams)(obj))
@@ -4259,7 +3815,7 @@ func decodeInputRequiredResultTransportToInputRequiredResult(v *jsonInputRequire
 				res.InputRequests[tk] = nil
 				continue
 			}
-			res.InputRequests[tk] = decodeInputRequestTransportToInputRequest2(val)
+			res.InputRequests[tk] = decodeInputRequestTransportToInputRequest(val)
 		}
 	}
 
@@ -4267,14 +3823,6 @@ func decodeInputRequiredResultTransportToInputRequiredResult(v *jsonInputRequire
 }
 
 func decodePromptsCapabilityTransportToPromptsCapability(v *jsonPromptsCapabilityTransport) *PromptsCapability {
-	res := &PromptsCapability{
-		ListChanged: v.ListChanged,
-	}
-
-	return res
-}
-
-func decodePromptsCapabilityTransportToPromptsCapability2(v *jsonPromptsCapabilityTransport) *PromptsCapability {
 	res := &PromptsCapability{
 		ListChanged: v.ListChanged,
 	}
@@ -4308,12 +3856,6 @@ func decodeRequiredExtensionTransportToRequiredExtension(v *jsonRequiredExtensio
 	return res
 }
 
-func decodeRequiredExtensionTransportToRequiredExtension2(v *jsonRequiredExtensionTransport) *RequiredExtension {
-	res := &RequiredExtension{}
-
-	return res
-}
-
 func decodeResourceContentTransportToResourceContent(v *jsonResourceContentTransport) *ResourceContent {
 	res := &ResourceContent{
 		URI:      *v.URI,
@@ -4326,40 +3868,7 @@ func decodeResourceContentTransportToResourceContent(v *jsonResourceContentTrans
 	return res
 }
 
-func decodeResourceContentTransportToResourceContent2(v *jsonResourceContentTransport) *ResourceContent {
-	res := &ResourceContent{
-		URI:      *v.URI,
-		MimeType: v.MimeType,
-		Text:     v.Text,
-		Blob:     v.Blob,
-		Meta:     v.Meta,
-	}
-
-	return res
-}
-
-func decodeResourceContentTransportToResourceContent3(v *jsonResourceContentTransport) *ResourceContent {
-	res := &ResourceContent{
-		URI:      *v.URI,
-		MimeType: v.MimeType,
-		Text:     v.Text,
-		Blob:     v.Blob,
-		Meta:     v.Meta,
-	}
-
-	return res
-}
-
 func decodeResourcesCapabilityTransportToResourcesCapability(v *jsonResourcesCapabilityTransport) *ResourcesCapability {
-	res := &ResourcesCapability{
-		ListChanged: v.ListChanged,
-		Subscribe:   v.Subscribe,
-	}
-
-	return res
-}
-
-func decodeResourcesCapabilityTransportToResourcesCapability2(v *jsonResourcesCapabilityTransport) *ResourcesCapability {
 	res := &ResourcesCapability{
 		ListChanged: v.ListChanged,
 		Subscribe:   v.Subscribe,
@@ -4421,18 +3930,6 @@ func decodeToolAnnotationsTransportToToolAnnotations(v *jsonToolAnnotationsTrans
 	return res
 }
 
-func decodeToolAnnotationsTransportToToolAnnotations2(v *jsonToolAnnotationsTransport) *ToolAnnotations {
-	res := &ToolAnnotations{
-		Title:           v.Title,
-		ReadOnlyHint:    v.ReadOnlyHint,
-		DestructiveHint: v.DestructiveHint,
-		IdempotentHint:  v.IdempotentHint,
-		OpenWorldHint:   v.OpenWorldHint,
-	}
-
-	return res
-}
-
 func decodeToolInfoTransportToToolInfo(v *jsonToolInfoTransport) *ToolInfo {
 	res := &ToolInfo{
 		Name:         *v.Name,
@@ -4442,7 +3939,7 @@ func decodeToolInfoTransportToToolInfo(v *jsonToolInfoTransport) *ToolInfo {
 		OutputSchema: v.OutputSchema,
 	}
 	if v.Annotations != nil {
-		res.Annotations = decodeToolAnnotationsTransportToToolAnnotations2(v.Annotations)
+		res.Annotations = decodeToolAnnotationsTransportToToolAnnotations(v.Annotations)
 	}
 
 	return res
@@ -4460,7 +3957,7 @@ func decodeToolsCallCompleteResultTransportToToolsCallCompleteResult(v *jsonTool
 			res.Content[i] = nil
 			continue
 		}
-		res.Content[i] = decodeContentItemTransportToContentItem2(val)
+		res.Content[i] = decodeContentItemTransportToContentItem(val)
 	}
 
 	return res
@@ -4474,21 +3971,7 @@ func decodeToolsCapabilityTransportToToolsCapability(v *jsonToolsCapabilityTrans
 	return res
 }
 
-func decodeToolsCapabilityTransportToToolsCapability2(v *jsonToolsCapabilityTransport) *ToolsCapability {
-	res := &ToolsCapability{
-		ListChanged: v.ListChanged,
-	}
-
-	return res
-}
-
 func encodeCompletionsCapabilityToCompletionsCapabilityTransport(v *CompletionsCapability) *jsonCompletionsCapabilityTransport {
-	res := &jsonCompletionsCapabilityTransport{}
-
-	return res
-}
-
-func encodeCompletionsCapabilityToCompletionsCapabilityTransport2(v *CompletionsCapability) *jsonCompletionsCapabilityTransport {
 	res := &jsonCompletionsCapabilityTransport{}
 
 	return res
@@ -4509,72 +3992,10 @@ func encodeContentAnnotationsToContentAnnotationsTransport(v *ContentAnnotations
 	return res
 }
 
-func encodeContentAnnotationsToContentAnnotationsTransport2(v *ContentAnnotations) *jsonContentAnnotationsTransport {
-	res := &jsonContentAnnotationsTransport{
-		Priority:     v.Priority,
-		LastModified: v.LastModified,
-	}
-	if v.Audience != nil {
-		res.Audience = make([]string, len(v.Audience))
-		for i, val := range v.Audience {
-			res.Audience[i] = val
-		}
-	}
-
-	return res
-}
-
-func encodeContentAnnotationsToContentAnnotationsTransport3(v *ContentAnnotations) *jsonContentAnnotationsTransport {
-	res := &jsonContentAnnotationsTransport{
-		Priority:     v.Priority,
-		LastModified: v.LastModified,
-	}
-	if v.Audience != nil {
-		res.Audience = make([]string, len(v.Audience))
-		for i, val := range v.Audience {
-			res.Audience[i] = val
-		}
-	}
-
-	return res
-}
-
 func encodeContentIconToContentIconTransport(v *ContentIcon) *jsonContentIconTransport {
 	res := &jsonContentIconTransport{
 		Src:      &v.Src,
-		MimeType: v.MimeType,
-		Theme:    v.Theme,
-	}
-	if v.Sizes != nil {
-		res.Sizes = make([]string, len(v.Sizes))
-		for i, val := range v.Sizes {
-			res.Sizes[i] = val
-		}
-	}
-
-	return res
-}
-
-func encodeContentIconToContentIconTransport2(v *ContentIcon) *jsonContentIconTransport {
-	res := &jsonContentIconTransport{
-		Src:      &v.Src,
-		MimeType: v.MimeType,
-		Theme:    v.Theme,
-	}
-	if v.Sizes != nil {
-		res.Sizes = make([]string, len(v.Sizes))
-		for i, val := range v.Sizes {
-			res.Sizes[i] = val
-		}
-	}
-
-	return res
-}
-
-func encodeContentIconToContentIconTransport3(v *ContentIcon) *jsonContentIconTransport {
-	res := &jsonContentIconTransport{
-		Src:      &v.Src,
-		MimeType: v.MimeType,
+		MIMEType: v.MIMEType,
 		Theme:    v.Theme,
 	}
 	if v.Sizes != nil {
@@ -4607,47 +4028,14 @@ func encodeContentItemToContentItemTransport(v *ContentItem) *jsonContentItemTra
 				res.Icons[i] = nil
 				continue
 			}
-			res.Icons[i] = encodeContentIconToContentIconTransport2(val)
+			res.Icons[i] = encodeContentIconToContentIconTransport(val)
 		}
 	}
 	if v.Resource != nil {
-		res.Resource = encodeResourceContentToResourceContentTransport2(v.Resource)
+		res.Resource = encodeResourceContentToResourceContentTransport(v.Resource)
 	}
 	if v.Annotations != nil {
-		res.Annotations = encodeContentAnnotationsToContentAnnotationsTransport2(v.Annotations)
-	}
-
-	return res
-}
-
-func encodeContentItemToContentItemTransport2(v *ContentItem) *jsonContentItemTransport {
-	res := &jsonContentItemTransport{
-		Type:        &v.Type,
-		Text:        v.Text,
-		Data:        v.Data,
-		MimeType:    v.MimeType,
-		Name:        v.Name,
-		URI:         v.URI,
-		Title:       v.Title,
-		Description: v.Description,
-		Size:        v.Size,
-		Meta:        v.Meta,
-	}
-	if v.Icons != nil {
-		res.Icons = make([]*jsonContentIconTransport, len(v.Icons))
-		for i, val := range v.Icons {
-			if val == nil {
-				res.Icons[i] = nil
-				continue
-			}
-			res.Icons[i] = encodeContentIconToContentIconTransport3(val)
-		}
-	}
-	if v.Resource != nil {
-		res.Resource = encodeResourceContentToResourceContentTransport3(v.Resource)
-	}
-	if v.Annotations != nil {
-		res.Annotations = encodeContentAnnotationsToContentAnnotationsTransport3(v.Annotations)
+		res.Annotations = encodeContentAnnotationsToContentAnnotationsTransport(v.Annotations)
 	}
 
 	return res
@@ -4667,42 +4055,18 @@ func encodeElicitationCapabilitiesToElicitationCapabilitiesTransport(v *Elicitat
 	return res
 }
 
-func encodeElicitationCapabilitiesToElicitationCapabilitiesTransport2(v *ElicitationCapabilities) *jsonElicitationCapabilitiesTransport {
-	res := &jsonElicitationCapabilitiesTransport{}
-	if v.Form != nil {
-		res.Form = &struct {
-		}{}
-	}
-	if v.URL != nil {
-		res.URL = &struct {
-		}{}
-	}
-
-	return res
-}
-
 func encodeElicitationFormParamsToElicitationFormParamsTransport(v *ElicitationFormParams) *jsonElicitationFormParamsTransport {
 	res := &jsonElicitationFormParamsTransport{
 		Message:         &v.Message,
 		RequestedSchema: v.RequestedSchema,
 	}
-
-	return res
-}
-
-func encodeElicitationFormParamsToElicitationFormParamsTransport2(v *ElicitationFormParams) *jsonElicitationFormParamsTransport {
-	res := &jsonElicitationFormParamsTransport{
-		Message:         &v.Message,
-		RequestedSchema: v.RequestedSchema,
-	}
-
-	return res
-}
-
-func encodeElicitationFormParamsToElicitationFormParamsTransport3(v *ElicitationFormParams) *jsonElicitationFormParamsTransport {
-	res := &jsonElicitationFormParamsTransport{
-		Message:         &v.Message,
-		RequestedSchema: v.RequestedSchema,
+	if v.Extensions != nil {
+		res.Extensions = make(map[string]json.RawMessage, len(v.Extensions))
+		for key, val := range v.Extensions {
+			tk := key
+			tv := val
+			res.Extensions[tk] = tv
+		}
 	}
 
 	return res
@@ -4713,23 +4077,13 @@ func encodeElicitationURLParamsToElicitationURLParamsTransport(v *ElicitationURL
 		Message: &v.Message,
 		URL:     &v.URL,
 	}
-
-	return res
-}
-
-func encodeElicitationURLParamsToElicitationURLParamsTransport2(v *ElicitationURLParams) *jsonElicitationURLParamsTransport {
-	res := &jsonElicitationURLParamsTransport{
-		Message: &v.Message,
-		URL:     &v.URL,
-	}
-
-	return res
-}
-
-func encodeElicitationURLParamsToElicitationURLParamsTransport3(v *ElicitationURLParams) *jsonElicitationURLParamsTransport {
-	res := &jsonElicitationURLParamsTransport{
-		Message: &v.Message,
-		URL:     &v.URL,
+	if v.Extensions != nil {
+		res.Extensions = make(map[string]json.RawMessage, len(v.Extensions))
+		for key, val := range v.Extensions {
+			tk := key
+			tv := val
+			res.Extensions[tk] = tv
+		}
 	}
 
 	return res
@@ -4745,7 +4099,7 @@ func encodeInputRequestToInputRequestTransport(v *InputRequest) *jsonInputReques
 		actual, _ := v.Params.AsForm()
 		var obj *jsonElicitationFormParamsTransport
 		if actual != nil {
-			obj = encodeElicitationFormParamsToElicitationFormParamsTransport2(actual)
+			obj = encodeElicitationFormParamsToElicitationFormParamsTransport(actual)
 		}
 		u := paramsValue
 		u.SetForm((*jsonElicitationFormParamsTransport)(obj))
@@ -4754,37 +4108,7 @@ func encodeInputRequestToInputRequestTransport(v *InputRequest) *jsonInputReques
 		actual, _ := v.Params.AsURL()
 		var obj *jsonElicitationURLParamsTransport
 		if actual != nil {
-			obj = encodeElicitationURLParamsToElicitationURLParamsTransport2(actual)
-		}
-		u := paramsValue
-		u.SetURL((*jsonElicitationURLParamsTransport)(obj))
-		paramsValue = u
-	}
-	res.Params = &paramsValue
-
-	return res
-}
-
-func encodeInputRequestToInputRequestTransport2(v *InputRequest) *jsonInputRequestTransport {
-	res := &jsonInputRequestTransport{
-		Method: &v.Method,
-	}
-	var paramsValue jsonElicitationParamsTransport
-	switch string(v.Params.Kind()) {
-	case "form":
-		actual, _ := v.Params.AsForm()
-		var obj *jsonElicitationFormParamsTransport
-		if actual != nil {
-			obj = encodeElicitationFormParamsToElicitationFormParamsTransport3(actual)
-		}
-		u := paramsValue
-		u.SetForm((*jsonElicitationFormParamsTransport)(obj))
-		paramsValue = u
-	case "url":
-		actual, _ := v.Params.AsURL()
-		var obj *jsonElicitationURLParamsTransport
-		if actual != nil {
-			obj = encodeElicitationURLParamsToElicitationURLParamsTransport3(actual)
+			obj = encodeElicitationURLParamsToElicitationURLParamsTransport(actual)
 		}
 		u := paramsValue
 		u.SetURL((*jsonElicitationURLParamsTransport)(obj))
@@ -4808,7 +4132,7 @@ func encodeInputRequiredResultToInputRequiredResultTransport(v *InputRequiredRes
 				res.InputRequests[tk] = nil
 				continue
 			}
-			res.InputRequests[tk] = encodeInputRequestToInputRequestTransport2(val)
+			res.InputRequests[tk] = encodeInputRequestToInputRequestTransport(val)
 		}
 	}
 
@@ -4816,14 +4140,6 @@ func encodeInputRequiredResultToInputRequiredResultTransport(v *InputRequiredRes
 }
 
 func encodePromptsCapabilityToPromptsCapabilityTransport(v *PromptsCapability) *jsonPromptsCapabilityTransport {
-	res := &jsonPromptsCapabilityTransport{
-		ListChanged: v.ListChanged,
-	}
-
-	return res
-}
-
-func encodePromptsCapabilityToPromptsCapabilityTransport2(v *PromptsCapability) *jsonPromptsCapabilityTransport {
 	res := &jsonPromptsCapabilityTransport{
 		ListChanged: v.ListChanged,
 	}
@@ -4857,12 +4173,6 @@ func encodeRequiredExtensionToRequiredExtensionTransport(v *RequiredExtension) *
 	return res
 }
 
-func encodeRequiredExtensionToRequiredExtensionTransport2(v *RequiredExtension) *jsonRequiredExtensionTransport {
-	res := &jsonRequiredExtensionTransport{}
-
-	return res
-}
-
 func encodeResourceContentToResourceContentTransport(v *ResourceContent) *jsonResourceContentTransport {
 	res := &jsonResourceContentTransport{
 		URI:      &v.URI,
@@ -4875,40 +4185,7 @@ func encodeResourceContentToResourceContentTransport(v *ResourceContent) *jsonRe
 	return res
 }
 
-func encodeResourceContentToResourceContentTransport2(v *ResourceContent) *jsonResourceContentTransport {
-	res := &jsonResourceContentTransport{
-		URI:      &v.URI,
-		MimeType: v.MimeType,
-		Text:     v.Text,
-		Blob:     v.Blob,
-		Meta:     v.Meta,
-	}
-
-	return res
-}
-
-func encodeResourceContentToResourceContentTransport3(v *ResourceContent) *jsonResourceContentTransport {
-	res := &jsonResourceContentTransport{
-		URI:      &v.URI,
-		MimeType: v.MimeType,
-		Text:     v.Text,
-		Blob:     v.Blob,
-		Meta:     v.Meta,
-	}
-
-	return res
-}
-
 func encodeResourcesCapabilityToResourcesCapabilityTransport(v *ResourcesCapability) *jsonResourcesCapabilityTransport {
-	res := &jsonResourcesCapabilityTransport{
-		ListChanged: v.ListChanged,
-		Subscribe:   v.Subscribe,
-	}
-
-	return res
-}
-
-func encodeResourcesCapabilityToResourcesCapabilityTransport2(v *ResourcesCapability) *jsonResourcesCapabilityTransport {
 	res := &jsonResourcesCapabilityTransport{
 		ListChanged: v.ListChanged,
 		Subscribe:   v.Subscribe,
@@ -4970,18 +4247,6 @@ func encodeToolAnnotationsToToolAnnotationsTransport(v *ToolAnnotations) *jsonTo
 	return res
 }
 
-func encodeToolAnnotationsToToolAnnotationsTransport2(v *ToolAnnotations) *jsonToolAnnotationsTransport {
-	res := &jsonToolAnnotationsTransport{
-		Title:           v.Title,
-		ReadOnlyHint:    v.ReadOnlyHint,
-		DestructiveHint: v.DestructiveHint,
-		IdempotentHint:  v.IdempotentHint,
-		OpenWorldHint:   v.OpenWorldHint,
-	}
-
-	return res
-}
-
 func encodeToolInfoToToolInfoTransport(v *ToolInfo) *jsonToolInfoTransport {
 	res := &jsonToolInfoTransport{
 		Name:         &v.Name,
@@ -4991,7 +4256,7 @@ func encodeToolInfoToToolInfoTransport(v *ToolInfo) *jsonToolInfoTransport {
 		OutputSchema: v.OutputSchema,
 	}
 	if v.Annotations != nil {
-		res.Annotations = encodeToolAnnotationsToToolAnnotationsTransport2(v.Annotations)
+		res.Annotations = encodeToolAnnotationsToToolAnnotationsTransport(v.Annotations)
 	}
 
 	return res
@@ -5009,21 +4274,13 @@ func encodeToolsCallCompleteResultToToolsCallCompleteResultTransport(v *ToolsCal
 			res.Content[i] = nil
 			continue
 		}
-		res.Content[i] = encodeContentItemToContentItemTransport2(val)
+		res.Content[i] = encodeContentItemToContentItemTransport(val)
 	}
 
 	return res
 }
 
 func encodeToolsCapabilityToToolsCapabilityTransport(v *ToolsCapability) *jsonToolsCapabilityTransport {
-	res := &jsonToolsCapabilityTransport{
-		ListChanged: v.ListChanged,
-	}
-
-	return res
-}
-
-func encodeToolsCapabilityToToolsCapabilityTransport2(v *ToolsCapability) *jsonToolsCapabilityTransport {
 	res := &jsonToolsCapabilityTransport{
 		ListChanged: v.ListChanged,
 	}
@@ -5086,14 +4343,14 @@ func validateContentAnnotationsJSONValue(path string, value any, description str
 				return err
 			}
 		case "lastModified":
-			if err := validateContentAnnotationsJSONValue4(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Time this content last changed",
 			); err != nil {
 				return err
 			}
 		case "priority":
-			if err := validateContentAnnotationsJSONValue5(
+			if err := validateContentAnnotationsJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Importance from zero through one, inclusive, for this content item",
 			); err != nil {
@@ -5157,22 +4414,6 @@ func validateContentAnnotationsJSONValue4(path string, value any, description st
 		field = "$payload"
 	}
 	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentAnnotationsJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentAnnotationsJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
 		return invalidGeneratedFieldTypeError(field, "number", "null", description)
 	}
 	_, ok := value.(json.Number)
@@ -5203,30 +4444,30 @@ func validateContentIconJSONValue(path string, value any, description string) er
 	for _, key := range keys {
 		switch key {
 		case "mimeType":
-			if err := validateContentIconJSONValue2(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional image MIME type",
 			); err != nil {
 				return err
 			}
 		case "sizes":
-			if err := validateContentIconJSONValue3(
+			if err := validateContentIconJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Suggested dimensions or any for scalable icons",
 			); err != nil {
 				return err
 			}
 		case "src":
-			if err := validateContentIconJSONValue5(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "URI of the icon; decoding does not fetch it",
 			); err != nil {
 				return err
 			}
 		case "theme":
-			if err := validateContentIconJSONValue6(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional light or dark theme",
+				typed[key], "Optional light or dark display theme",
 			); err != nil {
 				return err
 			}
@@ -5249,22 +4490,6 @@ func validateContentIconJSONValue2(path string, value any, description string) e
 		field = "$payload"
 	}
 	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentIconJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentIconJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
 		return invalidGeneratedFieldTypeError(field, "array", "null", description)
 	}
 	typed, ok := value.([]any)
@@ -5272,60 +4497,12 @@ func validateContentIconJSONValue3(path string, value any, description string) e
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateContentIconJSONValue4(
+		if err := validateContentAnnotationsJSONValue3(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// validateContentIconJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentIconJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentIconJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentIconJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentIconJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentIconJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -5358,84 +4535,84 @@ func validateContentItemJSONValue(path string, value any, description string) er
 				return err
 			}
 		case "annotations":
-			if err := validateContentItemJSONValue13(
+			if err := validateContentAnnotationsJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional audience and importance for this content",
 			); err != nil {
 				return err
 			}
 		case "data":
-			if err := validateContentItemJSONValue27(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Base64 bytes for image and audio variants",
 			); err != nil {
 				return err
 			}
 		case "description":
-			if err := validateContentItemJSONValue28(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional resource link description",
 			); err != nil {
 				return err
 			}
 		case "icons":
-			if err := validateContentItemJSONValue29(
+			if err := validateContentItemJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional resource link icons",
 			); err != nil {
 				return err
 			}
 		case "mimeType":
-			if err := validateContentItemJSONValue9(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Required format for image or audio; optional format for resource links",
 			); err != nil {
 				return err
 			}
 		case "name":
-			if err := validateContentItemJSONValue10(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Required identifier for resource links",
 			); err != nil {
 				return err
 			}
 		case "resource":
-			if err := validateContentItemJSONValue11(
+			if err := validateContentItemJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Required text or binary contents for embedded resources",
 			); err != nil {
 				return err
 			}
 		case "size":
-			if err := validateContentItemJSONValue18(
+			if err := validateContentAnnotationsJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Raw bytes in the linked resource before base64 encoding",
 			); err != nil {
 				return err
 			}
 		case "text":
-			if err := validateContentItemJSONValue19(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Text for the text variant, including an empty string",
 			); err != nil {
 				return err
 			}
 		case "title":
-			if err := validateContentItemJSONValue20(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional resource link display name",
 			); err != nil {
 				return err
 			}
 		case "type":
-			if err := validateContentItemJSONValue21(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Selects the required content fields",
 			); err != nil {
 				return err
 			}
 		case "uri":
-			if err := validateContentItemJSONValue22(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Required address for resource links",
 			); err != nil {
@@ -5467,186 +4644,6 @@ func validateContentItemJSONValue2(path string, value any, description string) e
 	return nil
 }
 
-// validateContentItemJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue13(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "audience":
-			if err := validateContentItemJSONValue23(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Roles that should see this content",
-			); err != nil {
-				return err
-			}
-		case "lastModified":
-			if err := validateContentItemJSONValue25(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Time this content last changed",
-			); err != nil {
-				return err
-			}
-		case "priority":
-			if err := validateContentItemJSONValue26(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Importance from zero through one, inclusive, for this content item",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"audience",
-				"lastModified",
-				"priority",
-			})
-		}
-	}
-	return nil
-}
-
-// validateContentItemJSONValue23 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue23(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateContentItemJSONValue24(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateContentItemJSONValue24 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue24(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue25 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue25(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue26 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue26(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "number", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "number", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue27 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue27(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue28 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue28(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue29 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue29(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateContentItemJSONValue3(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // validateContentItemJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateContentItemJSONValue3(path string, value any, description string) error {
 	field := path
@@ -5654,82 +4651,6 @@ func validateContentItemJSONValue3(path string, value any, description string) e
 		field = "$payload"
 	}
 	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "mimeType":
-			if err := validateContentItemJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional image MIME type",
-			); err != nil {
-				return err
-			}
-		case "sizes":
-			if err := validateContentItemJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Suggested dimensions or any for scalable icons",
-			); err != nil {
-				return err
-			}
-		case "src":
-			if err := validateContentItemJSONValue7(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "URI of the icon; decoding does not fetch it",
-			); err != nil {
-				return err
-			}
-		case "theme":
-			if err := validateContentItemJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional light or dark theme",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"mimeType",
-				"sizes",
-				"src",
-				"theme",
-			})
-		}
-	}
-	return nil
-}
-
-// validateContentItemJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
 		return invalidGeneratedFieldTypeError(field, "array", "null", description)
 	}
 	typed, ok := value.([]any)
@@ -5737,7 +4658,7 @@ func validateContentItemJSONValue5(path string, value any, description string) e
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateContentItemJSONValue6(
+		if err := validateContentIconJSONValue(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -5747,88 +4668,8 @@ func validateContentItemJSONValue5(path string, value any, description string) e
 	return nil
 }
 
-// validateContentItemJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue11(path string, value any, description string) error {
+// validateContentItemJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateContentItemJSONValue4(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -5848,35 +4689,35 @@ func validateContentItemJSONValue11(path string, value any, description string) 
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateContentItemJSONValue12(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced extension metadata retained without interpreting its fields",
 			); err != nil {
 				return err
 			}
 		case "blob":
-			if err := validateContentItemJSONValue14(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Base64 binary content; present only when text is absent",
 			); err != nil {
 				return err
 			}
 		case "mimeType":
-			if err := validateContentItemJSONValue15(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Content MIME type",
 			); err != nil {
 				return err
 			}
 		case "text":
-			if err := validateContentItemJSONValue16(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Text content; present only when blob is absent",
 			); err != nil {
 				return err
 			}
 		case "uri":
-			if err := validateContentItemJSONValue17(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Resource URI",
 			); err != nil {
@@ -5891,155 +4732,6 @@ func validateContentItemJSONValue11(path string, value any, description string) 
 				"uri",
 			})
 		}
-	}
-	return nil
-}
-
-// validateContentItemJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue12(path string, value any, description string) error {
-	return nil
-}
-
-// validateContentItemJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue14(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue15(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue16 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue16(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue17 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue17(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue18 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue18(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "number", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "number", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue19 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue19(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue20 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue20(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue21 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue21(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateContentItemJSONValue22 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateContentItemJSONValue22(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -6065,7 +4757,7 @@ func validateDiscoverPayloadJSONValue(path string, value any, description string
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateDiscoverPayloadJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
@@ -6077,11 +4769,6 @@ func validateDiscoverPayloadJSONValue(path string, value any, description string
 			})
 		}
 	}
-	return nil
-}
-
-// validateDiscoverPayloadJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverPayloadJSONValue2(path string, value any, description string) error {
 	return nil
 }
 
@@ -6106,28 +4793,28 @@ func validateDiscoverResultJSONValue(path string, value any, description string)
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateDiscoverResultJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
 				return err
 			}
 		case "cacheScope":
-			if err := validateDiscoverResultJSONValue10(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether this response may be reused across authorization contexts",
 			); err != nil {
 				return err
 			}
 		case "capabilities":
-			if err := validateDiscoverResultJSONValue11(
+			if err := validateDiscoverResultJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Operations declared by this service",
 			); err != nil {
 				return err
 			}
 		case "resultType":
-			if err := validateDiscoverResultJSONValue6(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "This response contains a finished result",
 			); err != nil {
@@ -6141,7 +4828,7 @@ func validateDiscoverResultJSONValue(path string, value any, description string)
 				return err
 			}
 		case "ttlMs":
-			if err := validateDiscoverResultJSONValue9(
+			if err := validateDiscoverResultJSONValue8(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Milliseconds this one response may be cached",
 			); err != nil {
@@ -6163,27 +4850,6 @@ func validateDiscoverResultJSONValue(path string, value any, description string)
 
 // validateDiscoverResultJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateDiscoverResultJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateDiscoverResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue11(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6203,35 +4869,35 @@ func validateDiscoverResultJSONValue11(path string, value any, description strin
 	for _, key := range keys {
 		switch key {
 		case "completions":
-			if err := validateDiscoverResultJSONValue12(
+			if err := validateCompletionsCapabilityJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Declared argument suggestion providers",
 			); err != nil {
 				return err
 			}
 		case "extensions":
-			if err := validateDiscoverResultJSONValue13(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Declared extension identifiers and their open settings objects",
 			); err != nil {
 				return err
 			}
 		case "prompts":
-			if err := validateDiscoverResultJSONValue14(
+			if err := validateDiscoverResultJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Prompt capabilities",
 			); err != nil {
 				return err
 			}
 		case "resources":
-			if err := validateDiscoverResultJSONValue16(
+			if err := validateDiscoverResultJSONValue5(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Resource capabilities",
 			); err != nil {
 				return err
 			}
 		case "tools":
-			if err := validateDiscoverResultJSONValue4(
+			if err := validateDiscoverResultJSONValue6(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tool capabilities",
 			); err != nil {
@@ -6250,40 +4916,8 @@ func validateDiscoverResultJSONValue11(path string, value any, description strin
 	return nil
 }
 
-// validateDiscoverResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue12(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue13(path string, value any, description string) error {
-	return nil
-}
-
-// validateDiscoverResultJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue14(path string, value any, description string) error {
+// validateDiscoverResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateDiscoverResultJSONValue3(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6303,7 +4937,7 @@ func validateDiscoverResultJSONValue14(path string, value any, description strin
 	for _, key := range keys {
 		switch key {
 		case "listChanged":
-			if err := validateDiscoverResultJSONValue15(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Send authorized prompt catalog changes through subscriptions/listen",
 			); err != nil {
@@ -6318,8 +4952,8 @@ func validateDiscoverResultJSONValue14(path string, value any, description strin
 	return nil
 }
 
-// validateDiscoverResultJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue15(path string, value any, description string) error {
+// validateDiscoverResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateDiscoverResultJSONValue4(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6334,8 +4968,8 @@ func validateDiscoverResultJSONValue15(path string, value any, description strin
 	return nil
 }
 
-// validateDiscoverResultJSONValue16 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue16(path string, value any, description string) error {
+// validateDiscoverResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateDiscoverResultJSONValue5(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6355,14 +4989,14 @@ func validateDiscoverResultJSONValue16(path string, value any, description strin
 	for _, key := range keys {
 		switch key {
 		case "listChanged":
-			if err := validateDiscoverResultJSONValue17(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Send authorized resource catalog changes through subscriptions/listen",
 			); err != nil {
 				return err
 			}
 		case "subscribe":
-			if err := validateDiscoverResultJSONValue3(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Accept resource update subscriptions through subscriptions/listen",
 			); err != nil {
@@ -6378,40 +5012,8 @@ func validateDiscoverResultJSONValue16(path string, value any, description strin
 	return nil
 }
 
-// validateDiscoverResultJSONValue17 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue17(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue4(path string, value any, description string) error {
+// validateDiscoverResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateDiscoverResultJSONValue6(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6431,7 +5033,7 @@ func validateDiscoverResultJSONValue4(path string, value any, description string
 	for _, key := range keys {
 		switch key {
 		case "listChanged":
-			if err := validateDiscoverResultJSONValue5(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Send authorized tool catalog changes through subscriptions/listen",
 			); err != nil {
@@ -6442,38 +5044,6 @@ func validateDiscoverResultJSONValue4(path string, value any, description string
 				"listChanged",
 			})
 		}
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -6492,7 +5062,7 @@ func validateDiscoverResultJSONValue7(path string, value any, description string
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateDiscoverResultJSONValue8(
+		if err := validateContentAnnotationsJSONValue3(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -6504,22 +5074,6 @@ func validateDiscoverResultJSONValue7(path string, value any, description string
 
 // validateDiscoverResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateDiscoverResultJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateDiscoverResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateDiscoverResultJSONValue9(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6653,47 +5207,28 @@ func validateElicitationFormParamsJSONValue(path string, value any, description 
 	for _, key := range keys {
 		switch key {
 		case "message":
-			if err := validateElicitationFormParamsJSONValue2(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Non-sensitive information requested from the user",
 			); err != nil {
 				return err
 			}
 		case "requestedSchema":
-			if err := validateElicitationFormParamsJSONValue3(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The flat form schema generated from accepted answer content",
 			); err != nil {
 				return err
 			}
 		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"requestedSchema",
-			})
+			if typed[key] == nil {
+				continue
+			}
+			if err := validateContentItemJSONValue2(generatedJSONChildPath(path, key, true), typed[key], ""); err != nil {
+				return err
+			}
 		}
 	}
-	return nil
-}
-
-// validateElicitationFormParamsJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateElicitationFormParamsJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateElicitationFormParamsJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateElicitationFormParamsJSONValue3(path string, value any, description string) error {
 	return nil
 }
 
@@ -6718,57 +5253,27 @@ func validateElicitationURLParamsJSONValue(path string, value any, description s
 	for _, key := range keys {
 		switch key {
 		case "message":
-			if err := validateElicitationURLParamsJSONValue2(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The external interaction the user is asked to approve",
 			); err != nil {
 				return err
 			}
 		case "url":
-			if err := validateElicitationURLParamsJSONValue3(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Absolute URL opened by the consenting host",
 			); err != nil {
 				return err
 			}
 		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"url",
-			})
+			if typed[key] == nil {
+				continue
+			}
+			if err := validateContentItemJSONValue2(generatedJSONChildPath(path, key, true), typed[key], ""); err != nil {
+				return err
+			}
 		}
-	}
-	return nil
-}
-
-// validateElicitationURLParamsJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateElicitationURLParamsJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateElicitationURLParamsJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateElicitationURLParamsJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -6794,14 +5299,14 @@ func validateInputRequestJSONValue(path string, value any, description string) e
 	for _, key := range keys {
 		switch key {
 		case "method":
-			if err := validateInputRequestJSONValue2(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Client operation requested to complete this input round",
 			); err != nil {
 				return err
 			}
 		case "params":
-			if err := validateInputRequestJSONValue3(
+			if err := validateInputRequestJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "A typed form request or URL-consent request",
 			); err != nil {
@@ -6819,22 +5324,6 @@ func validateInputRequestJSONValue(path string, value any, description string) e
 
 // validateInputRequestJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateInputRequestJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequestJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue3(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -6858,153 +5347,12 @@ func validateInputRequestJSONValue3(path string, value any, description string) 
 	}
 	switch discriminator {
 	case "form":
-		return validateInputRequestJSONValue4(path, branch, "")
+		return validateElicitationFormParamsJSONValue(path, branch, "")
 	case "url":
-		return validateInputRequestJSONValue7(path, branch, "")
+		return validateElicitationURLParamsJSONValue(path, branch, "")
 	default:
 		return fmt.Errorf("%s: unknown union discriminator %q", field, discriminator)
 	}
-}
-
-// validateInputRequestJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "message":
-			if err := validateInputRequestJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Non-sensitive information requested from the user",
-			); err != nil {
-				return err
-			}
-		case "requestedSchema":
-			if err := validateInputRequestJSONValue6(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "The flat form schema generated from accepted answer content",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"requestedSchema",
-			})
-		}
-	}
-	return nil
-}
-
-// validateInputRequestJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequestJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue6(path string, value any, description string) error {
-	return nil
-}
-
-// validateInputRequestJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "message":
-			if err := validateInputRequestJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "The external interaction the user is asked to approve",
-			); err != nil {
-				return err
-			}
-		case "url":
-			if err := validateInputRequestJSONValue9(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Absolute URL opened by the consenting host",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"url",
-			})
-		}
-	}
-	return nil
-}
-
-// validateInputRequestJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequestJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequestJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
 }
 
 // validateInputRequiredResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
@@ -7028,21 +5376,21 @@ func validateInputRequiredResultJSONValue(path string, value any, description st
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateInputRequiredResultJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
 				return err
 			}
 		case "inputRequests":
-			if err := validateInputRequiredResultJSONValue6(
+			if err := validateInputRequiredResultJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Questions indexed by service-assigned identifiers within this input round",
 			); err != nil {
 				return err
 			}
 		case "requestState":
-			if err := validateInputRequiredResultJSONValue5(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Opaque service-owned operation state echoed exactly on continuation",
 			); err != nil {
@@ -7061,11 +5409,6 @@ func validateInputRequiredResultJSONValue(path string, value any, description st
 
 // validateInputRequiredResultJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateInputRequiredResultJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateInputRequiredResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue6(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -7086,262 +5429,12 @@ func validateInputRequiredResultJSONValue6(path string, value any, description s
 		if typed[key] == nil {
 			continue
 		}
-		if err := validateInputRequiredResultJSONValue7(
+		if err := validateInputRequestJSONValue(
 			generatedJSONChildPath(path, key, true),
 			typed[key], description,
 		); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "method":
-			if err := validateInputRequiredResultJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Client operation requested to complete this input round",
-			); err != nil {
-				return err
-			}
-		case "params":
-			if err := validateInputRequiredResultJSONValue9(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "A typed form request or URL-consent request",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"method",
-				"params",
-			})
-		}
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	discriminator, ok := typed["mode"].(string)
-	if !ok {
-		return fmt.Errorf("%s: missing or invalid union discriminator", field)
-	}
-	branch := make(map[string]any, len(typed)-1)
-	for key, item := range typed {
-		if key != "mode" {
-			branch[key] = item
-		}
-	}
-	switch discriminator {
-	case "form":
-		return validateInputRequiredResultJSONValue10(path, branch, "")
-	case "url":
-		return validateInputRequiredResultJSONValue13(path, branch, "")
-	default:
-		return fmt.Errorf("%s: unknown union discriminator %q", field, discriminator)
-	}
-}
-
-// validateInputRequiredResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "message":
-			if err := validateInputRequiredResultJSONValue11(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Non-sensitive information requested from the user",
-			); err != nil {
-				return err
-			}
-		case "requestedSchema":
-			if err := validateInputRequiredResultJSONValue12(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "The flat form schema generated from accepted answer content",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"requestedSchema",
-			})
-		}
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue11(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue12(path string, value any, description string) error {
-	return nil
-}
-
-// validateInputRequiredResultJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue13(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "message":
-			if err := validateInputRequiredResultJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "The external interaction the user is asked to approve",
-			); err != nil {
-				return err
-			}
-		case "url":
-			if err := validateInputRequiredResultJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Absolute URL opened by the consenting host",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"url",
-			})
-		}
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateInputRequiredResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateInputRequiredResultJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -7403,14 +5496,14 @@ func validateMissingClientCapabilityErrorJSONValue2(path string, value any, desc
 	for _, key := range keys {
 		switch key {
 		case "elicitation":
-			if err := validateMissingClientCapabilityErrorJSONValue3(
+			if err := validateElicitationCapabilitiesJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Required forms of user input",
 			); err != nil {
 				return err
 			}
 		case "extensions":
-			if err := validateMissingClientCapabilityErrorJSONValue6(
+			if err := validateMissingClientCapabilityErrorJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Extensions required to fulfill the operation",
 			); err != nil {
@@ -7445,26 +5538,14 @@ func validateMissingClientCapabilityErrorJSONValue3(path string, value any, desc
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		switch key {
-		case "form":
-			if err := validateMissingClientCapabilityErrorJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Support for non-sensitive form input",
-			); err != nil {
-				return err
-			}
-		case "url":
-			if err := validateMissingClientCapabilityErrorJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Support for external URL consent",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"form",
-				"url",
-			})
+		if typed[key] == nil {
+			continue
+		}
+		if err := validateMissingClientCapabilityErrorJSONValue4(
+			generatedJSONChildPath(path, key, true),
+			typed[key], description,
+		); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -7497,865 +5578,6 @@ func validateMissingClientCapabilityErrorJSONValue4(path string, value any, desc
 	return nil
 }
 
-// validateMissingClientCapabilityErrorJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateMissingClientCapabilityErrorJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateMissingClientCapabilityErrorJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateMissingClientCapabilityErrorJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		if typed[key] == nil {
-			continue
-		}
-		if err := validateMissingClientCapabilityErrorJSONValue7(
-			generatedJSONChildPath(path, key, true),
-			typed[key], description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateMissingClientCapabilityErrorJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateMissingClientCapabilityErrorJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validatePromptsCapabilityJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validatePromptsCapabilityJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "listChanged":
-			if err := validatePromptsCapabilityJSONValue2(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Send authorized prompt catalog changes through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"listChanged",
-			})
-		}
-	}
-	return nil
-}
-
-// validatePromptsCapabilityJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validatePromptsCapabilityJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateRequiredClientCapabilitiesJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredClientCapabilitiesJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "elicitation":
-			if err := validateRequiredClientCapabilitiesJSONValue2(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required forms of user input",
-			); err != nil {
-				return err
-			}
-		case "extensions":
-			if err := validateRequiredClientCapabilitiesJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Extensions required to fulfill the operation",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"elicitation",
-				"extensions",
-			})
-		}
-	}
-	return nil
-}
-
-// validateRequiredClientCapabilitiesJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredClientCapabilitiesJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "form":
-			if err := validateRequiredClientCapabilitiesJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Support for non-sensitive form input",
-			); err != nil {
-				return err
-			}
-		case "url":
-			if err := validateRequiredClientCapabilitiesJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Support for external URL consent",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"form",
-				"url",
-			})
-		}
-	}
-	return nil
-}
-
-// validateRequiredClientCapabilitiesJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredClientCapabilitiesJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateRequiredClientCapabilitiesJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredClientCapabilitiesJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateRequiredClientCapabilitiesJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredClientCapabilitiesJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		if typed[key] == nil {
-			continue
-		}
-		if err := validateRequiredClientCapabilitiesJSONValue6(
-			generatedJSONChildPath(path, key, true),
-			typed[key], description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateRequiredClientCapabilitiesJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredClientCapabilitiesJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateRequiredExtensionJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateRequiredExtensionJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateResourceContentJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourceContentJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateResourceContentJSONValue2(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced extension metadata retained without interpreting its fields",
-			); err != nil {
-				return err
-			}
-		case "blob":
-			if err := validateResourceContentJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Base64 binary content; present only when text is absent",
-			); err != nil {
-				return err
-			}
-		case "mimeType":
-			if err := validateResourceContentJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Content MIME type",
-			); err != nil {
-				return err
-			}
-		case "text":
-			if err := validateResourceContentJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Text content; present only when blob is absent",
-			); err != nil {
-				return err
-			}
-		case "uri":
-			if err := validateResourceContentJSONValue6(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Resource URI",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"blob",
-				"mimeType",
-				"text",
-				"uri",
-			})
-		}
-	}
-	return nil
-}
-
-// validateResourceContentJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourceContentJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateResourceContentJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourceContentJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateResourceContentJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourceContentJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateResourceContentJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourceContentJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateResourceContentJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourceContentJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateResourcesCapabilityJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourcesCapabilityJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "listChanged":
-			if err := validateResourcesCapabilityJSONValue2(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Send authorized resource catalog changes through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		case "subscribe":
-			if err := validateResourcesCapabilityJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Accept resource update subscriptions through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"listChanged",
-				"subscribe",
-			})
-		}
-	}
-	return nil
-}
-
-// validateResourcesCapabilityJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourcesCapabilityJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateResourcesCapabilityJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateResourcesCapabilityJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "completions":
-			if err := validateServerCapabilitiesJSONValue2(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Declared argument suggestion providers",
-			); err != nil {
-				return err
-			}
-		case "extensions":
-			if err := validateServerCapabilitiesJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Declared extension identifiers and their open settings objects",
-			); err != nil {
-				return err
-			}
-		case "prompts":
-			if err := validateServerCapabilitiesJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Prompt capabilities",
-			); err != nil {
-				return err
-			}
-		case "resources":
-			if err := validateServerCapabilitiesJSONValue6(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Resource capabilities",
-			); err != nil {
-				return err
-			}
-		case "tools":
-			if err := validateServerCapabilitiesJSONValue9(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Tool capabilities",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"completions",
-				"extensions",
-				"prompts",
-				"resources",
-				"tools",
-			})
-		}
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		default:
-			return unknownJSONFieldError(path, key, []string{})
-		}
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue3(path string, value any, description string) error {
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "listChanged":
-			if err := validateServerCapabilitiesJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Send authorized prompt catalog changes through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"listChanged",
-			})
-		}
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "listChanged":
-			if err := validateServerCapabilitiesJSONValue7(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Send authorized resource catalog changes through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		case "subscribe":
-			if err := validateServerCapabilitiesJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Accept resource update subscriptions through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"listChanged",
-				"subscribe",
-			})
-		}
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "listChanged":
-			if err := validateServerCapabilitiesJSONValue10(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Send authorized tool catalog changes through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"listChanged",
-			})
-		}
-	}
-	return nil
-}
-
-// validateServerCapabilitiesJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateServerCapabilitiesJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
 // validateTaskCreatedJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateTaskCreatedJSONValue(path string, value any, description string) error {
 	field := path
@@ -8377,56 +5599,56 @@ func validateTaskCreatedJSONValue(path string, value any, description string) er
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateTaskCreatedJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
 				return err
 			}
 		case "createdAt":
-			if err := validateTaskCreatedJSONValue3(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Creation time reported by the service",
 			); err != nil {
 				return err
 			}
 		case "lastUpdatedAt":
-			if err := validateTaskCreatedJSONValue4(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Time of this task observation reported by the service",
 			); err != nil {
 				return err
 			}
 		case "pollIntervalMs":
-			if err := validateTaskCreatedJSONValue5(
+			if err := validateDiscoverResultJSONValue8(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Suggested interval before the next read in integer milliseconds",
 			); err != nil {
 				return err
 			}
 		case "status":
-			if err := validateTaskCreatedJSONValue6(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Current state derived from the service's observation",
 			); err != nil {
 				return err
 			}
 		case "statusMessage":
-			if err := validateTaskCreatedJSONValue7(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional explanation of this task state",
 			); err != nil {
 				return err
 			}
 		case "taskId":
-			if err := validateTaskCreatedJSONValue8(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Opaque identifier used for later requests to this task",
 			); err != nil {
 				return err
 			}
 		case "ttlMs":
-			if err := validateTaskCreatedJSONValue9(
+			if err := validateDiscoverResultJSONValue8(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Retention from creation in integer milliseconds, or null for unlimited retention",
 			); err != nil {
@@ -8444,123 +5666,6 @@ func validateTaskCreatedJSONValue(path string, value any, description string) er
 				"ttlMs",
 			})
 		}
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateTaskCreatedJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateTaskCreatedJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateTaskCreatedJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -8586,35 +5691,35 @@ func validateToolAnnotationsJSONValue(path string, value any, description string
 	for _, key := range keys {
 		switch key {
 		case "destructiveHint":
-			if err := validateToolAnnotationsJSONValue2(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the tool may remove or replace data; absent means true",
 			); err != nil {
 				return err
 			}
 		case "idempotentHint":
-			if err := validateToolAnnotationsJSONValue3(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether repeating arguments has no additional effects; absent means false",
 			); err != nil {
 				return err
 			}
 		case "openWorldHint":
-			if err := validateToolAnnotationsJSONValue4(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the tool interacts with external entities; absent means true",
 			); err != nil {
 				return err
 			}
 		case "readOnlyHint":
-			if err := validateToolAnnotationsJSONValue5(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the tool leaves its environment unchanged; absent means false",
 			); err != nil {
 				return err
 			}
 		case "title":
-			if err := validateToolAnnotationsJSONValue6(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Human-readable tool display name",
 			); err != nil {
@@ -8629,86 +5734,6 @@ func validateToolAnnotationsJSONValue(path string, value any, description string
 				"title",
 			})
 		}
-	}
-	return nil
-}
-
-// validateToolAnnotationsJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolAnnotationsJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolAnnotationsJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolAnnotationsJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolAnnotationsJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolAnnotationsJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolAnnotationsJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolAnnotationsJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolAnnotationsJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolAnnotationsJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -8734,42 +5759,42 @@ func validateToolInfoJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateToolInfoJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced extension metadata retained without interpreting its fields",
 			); err != nil {
 				return err
 			}
 		case "annotations":
-			if err := validateToolInfoJSONValue5(
+			if err := validateToolAnnotationsJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Optional behavior hints; clients must trust the server before acting on them",
 			); err != nil {
 				return err
 			}
 		case "description":
-			if err := validateToolInfoJSONValue11(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tool description",
 			); err != nil {
 				return err
 			}
 		case "inputSchema":
-			if err := validateToolInfoJSONValue12(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "JSON Schema for tool input",
 			); err != nil {
 				return err
 			}
 		case "name":
-			if err := validateToolInfoJSONValue3(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tool name",
 			); err != nil {
 				return err
 			}
 		case "outputSchema":
-			if err := validateToolInfoJSONValue4(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "JSON Schema for structured tool output",
 			); err != nil {
@@ -8786,201 +5811,6 @@ func validateToolInfoJSONValue(path string, value any, description string) error
 			})
 		}
 	}
-	return nil
-}
-
-// validateToolInfoJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolInfoJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "destructiveHint":
-			if err := validateToolInfoJSONValue6(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool may remove or replace data; absent means true",
-			); err != nil {
-				return err
-			}
-		case "idempotentHint":
-			if err := validateToolInfoJSONValue7(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether repeating arguments has no additional effects; absent means false",
-			); err != nil {
-				return err
-			}
-		case "openWorldHint":
-			if err := validateToolInfoJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool interacts with external entities; absent means true",
-			); err != nil {
-				return err
-			}
-		case "readOnlyHint":
-			if err := validateToolInfoJSONValue9(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool leaves its environment unchanged; absent means false",
-			); err != nil {
-				return err
-			}
-		case "title":
-			if err := validateToolInfoJSONValue10(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Human-readable tool display name",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"destructiveHint",
-				"idempotentHint",
-				"openWorldHint",
-				"readOnlyHint",
-				"title",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue11(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue12(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolInfoJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolInfoJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolInfoJSONValue4(path string, value any, description string) error {
 	return nil
 }
 
@@ -9005,28 +5835,28 @@ func validateToolsCallCompleteResultJSONValue(path string, value any, descriptio
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateToolsCallCompleteResultJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
 				return err
 			}
 		case "content":
-			if err := validateToolsCallCompleteResultJSONValue13(
+			if err := validateToolsCallCompleteResultJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tool execution results",
 			); err != nil {
 				return err
 			}
 		case "isError":
-			if err := validateToolsCallCompleteResultJSONValue27(
+			if err := validateDiscoverResultJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the tool encountered an error",
 			); err != nil {
 				return err
 			}
 		case "structuredContent":
-			if err := validateToolsCallCompleteResultJSONValue28(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Structured tool result",
 			); err != nil {
@@ -9046,11 +5876,6 @@ func validateToolsCallCompleteResultJSONValue(path string, value any, descriptio
 
 // validateToolsCallCompleteResultJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateToolsCallCompleteResultJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue13(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -9063,748 +5888,13 @@ func validateToolsCallCompleteResultJSONValue13(path string, value any, descript
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateToolsCallCompleteResultJSONValue24(
+		if err := validateContentItemJSONValue(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
 			return err
 		}
 	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue24 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue24(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallCompleteResultJSONValue29(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced extension metadata retained without interpreting its fields",
-			); err != nil {
-				return err
-			}
-		case "annotations":
-			if err := validateToolsCallCompleteResultJSONValue30(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional audience and importance for this content",
-			); err != nil {
-				return err
-			}
-		case "data":
-			if err := validateToolsCallCompleteResultJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Base64 bytes for image and audio variants",
-			); err != nil {
-				return err
-			}
-		case "description":
-			if err := validateToolsCallCompleteResultJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional resource link description",
-			); err != nil {
-				return err
-			}
-		case "icons":
-			if err := validateToolsCallCompleteResultJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional resource link icons",
-			); err != nil {
-				return err
-			}
-		case "mimeType":
-			if err := validateToolsCallCompleteResultJSONValue12(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required format for image or audio; optional format for resource links",
-			); err != nil {
-				return err
-			}
-		case "name":
-			if err := validateToolsCallCompleteResultJSONValue14(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required identifier for resource links",
-			); err != nil {
-				return err
-			}
-		case "resource":
-			if err := validateToolsCallCompleteResultJSONValue15(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required text or binary contents for embedded resources",
-			); err != nil {
-				return err
-			}
-		case "size":
-			if err := validateToolsCallCompleteResultJSONValue21(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Raw bytes in the linked resource before base64 encoding",
-			); err != nil {
-				return err
-			}
-		case "text":
-			if err := validateToolsCallCompleteResultJSONValue22(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Text for the text variant, including an empty string",
-			); err != nil {
-				return err
-			}
-		case "title":
-			if err := validateToolsCallCompleteResultJSONValue23(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional resource link display name",
-			); err != nil {
-				return err
-			}
-		case "type":
-			if err := validateToolsCallCompleteResultJSONValue25(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Selects the required content fields",
-			); err != nil {
-				return err
-			}
-		case "uri":
-			if err := validateToolsCallCompleteResultJSONValue26(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required address for resource links",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"annotations",
-				"data",
-				"description",
-				"icons",
-				"mimeType",
-				"name",
-				"resource",
-				"size",
-				"text",
-				"title",
-				"type",
-				"uri",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue29 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue29(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue30 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue30(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "audience":
-			if err := validateToolsCallCompleteResultJSONValue31(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Roles that should see this content",
-			); err != nil {
-				return err
-			}
-		case "lastModified":
-			if err := validateToolsCallCompleteResultJSONValue33(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Time this content last changed",
-			); err != nil {
-				return err
-			}
-		case "priority":
-			if err := validateToolsCallCompleteResultJSONValue34(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Importance from zero through one, inclusive, for this content item",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"audience",
-				"lastModified",
-				"priority",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue31 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue31(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallCompleteResultJSONValue32(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue32 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue32(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue33 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue33(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue34 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue34(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "number", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "number", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallCompleteResultJSONValue6(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "mimeType":
-			if err := validateToolsCallCompleteResultJSONValue7(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional image MIME type",
-			); err != nil {
-				return err
-			}
-		case "sizes":
-			if err := validateToolsCallCompleteResultJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Suggested dimensions or any for scalable icons",
-			); err != nil {
-				return err
-			}
-		case "src":
-			if err := validateToolsCallCompleteResultJSONValue10(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "URI of the icon; decoding does not fetch it",
-			); err != nil {
-				return err
-			}
-		case "theme":
-			if err := validateToolsCallCompleteResultJSONValue11(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional light or dark theme",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"mimeType",
-				"sizes",
-				"src",
-				"theme",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallCompleteResultJSONValue9(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue11(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue12(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue14(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue15(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallCompleteResultJSONValue16(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced extension metadata retained without interpreting its fields",
-			); err != nil {
-				return err
-			}
-		case "blob":
-			if err := validateToolsCallCompleteResultJSONValue17(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Base64 binary content; present only when text is absent",
-			); err != nil {
-				return err
-			}
-		case "mimeType":
-			if err := validateToolsCallCompleteResultJSONValue18(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Content MIME type",
-			); err != nil {
-				return err
-			}
-		case "text":
-			if err := validateToolsCallCompleteResultJSONValue19(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Text content; present only when blob is absent",
-			); err != nil {
-				return err
-			}
-		case "uri":
-			if err := validateToolsCallCompleteResultJSONValue20(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Resource URI",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"blob",
-				"mimeType",
-				"text",
-				"uri",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue16 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue16(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue17 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue17(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue18 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue18(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue19 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue19(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue20 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue20(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue21 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue21(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "number", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "number", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue22 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue22(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue23 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue23(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue25 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue25(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue26 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue26(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue27 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue27(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallCompleteResultJSONValue28 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallCompleteResultJSONValue28(path string, value any, description string) error {
 	return nil
 }
 
@@ -9869,1438 +5959,14 @@ func validateToolsCallResultJSONValue2(path string, value any, description strin
 	}
 	switch discriminator {
 	case "complete":
-		return validateToolsCallResultJSONValue13(path, branch, "")
+		return validateToolsCallCompleteResultJSONValue(path, branch, "")
 	case "input_required":
-		return validateToolsCallResultJSONValue31(path, branch, "")
+		return validateInputRequiredResultJSONValue(path, branch, "")
 	case "task":
-		return validateToolsCallResultJSONValue45(path, branch, "")
+		return validateTaskCreatedJSONValue(path, branch, "")
 	default:
 		return fmt.Errorf("%s: unknown union discriminator %q", field, discriminator)
 	}
-}
-
-// validateToolsCallResultJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue13(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallResultJSONValue24(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced protocol metadata and extension values",
-			); err != nil {
-				return err
-			}
-		case "content":
-			if err := validateToolsCallResultJSONValue35(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Tool execution results",
-			); err != nil {
-				return err
-			}
-		case "isError":
-			if err := validateToolsCallResultJSONValue29(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool encountered an error",
-			); err != nil {
-				return err
-			}
-		case "structuredContent":
-			if err := validateToolsCallResultJSONValue30(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Structured tool result",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"content",
-				"isError",
-				"structuredContent",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue24 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue24(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue35 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue35(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallResultJSONValue46(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue46 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue46(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallResultJSONValue55(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced extension metadata retained without interpreting its fields",
-			); err != nil {
-				return err
-			}
-		case "annotations":
-			if err := validateToolsCallResultJSONValue56(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional audience and importance for this content",
-			); err != nil {
-				return err
-			}
-		case "data":
-			if err := validateToolsCallResultJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Base64 bytes for image and audio variants",
-			); err != nil {
-				return err
-			}
-		case "description":
-			if err := validateToolsCallResultJSONValue6(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional resource link description",
-			); err != nil {
-				return err
-			}
-		case "icons":
-			if err := validateToolsCallResultJSONValue7(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional resource link icons",
-			); err != nil {
-				return err
-			}
-		case "mimeType":
-			if err := validateToolsCallResultJSONValue15(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required format for image or audio; optional format for resource links",
-			); err != nil {
-				return err
-			}
-		case "name":
-			if err := validateToolsCallResultJSONValue16(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required identifier for resource links",
-			); err != nil {
-				return err
-			}
-		case "resource":
-			if err := validateToolsCallResultJSONValue17(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required text or binary contents for embedded resources",
-			); err != nil {
-				return err
-			}
-		case "size":
-			if err := validateToolsCallResultJSONValue23(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Raw bytes in the linked resource before base64 encoding",
-			); err != nil {
-				return err
-			}
-		case "text":
-			if err := validateToolsCallResultJSONValue25(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Text for the text variant, including an empty string",
-			); err != nil {
-				return err
-			}
-		case "title":
-			if err := validateToolsCallResultJSONValue26(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional resource link display name",
-			); err != nil {
-				return err
-			}
-		case "type":
-			if err := validateToolsCallResultJSONValue27(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Selects the required content fields",
-			); err != nil {
-				return err
-			}
-		case "uri":
-			if err := validateToolsCallResultJSONValue28(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Required address for resource links",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"annotations",
-				"data",
-				"description",
-				"icons",
-				"mimeType",
-				"name",
-				"resource",
-				"size",
-				"text",
-				"title",
-				"type",
-				"uri",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue55 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue55(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue56 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue56(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "audience":
-			if err := validateToolsCallResultJSONValue57(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Roles that should see this content",
-			); err != nil {
-				return err
-			}
-		case "lastModified":
-			if err := validateToolsCallResultJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Time this content last changed",
-			); err != nil {
-				return err
-			}
-		case "priority":
-			if err := validateToolsCallResultJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Importance from zero through one, inclusive, for this content item",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"audience",
-				"lastModified",
-				"priority",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue57 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue57(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallResultJSONValue58(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue58 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue58(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "number", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "number", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallResultJSONValue8(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue8(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "mimeType":
-			if err := validateToolsCallResultJSONValue9(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional image MIME type",
-			); err != nil {
-				return err
-			}
-		case "sizes":
-			if err := validateToolsCallResultJSONValue10(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Suggested dimensions or any for scalable icons",
-			); err != nil {
-				return err
-			}
-		case "src":
-			if err := validateToolsCallResultJSONValue12(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "URI of the icon; decoding does not fetch it",
-			); err != nil {
-				return err
-			}
-		case "theme":
-			if err := validateToolsCallResultJSONValue14(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional light or dark theme",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"mimeType",
-				"sizes",
-				"src",
-				"theme",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue10(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateToolsCallResultJSONValue11(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue11(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue12(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue14(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue15(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue16 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue16(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue17 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue17(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallResultJSONValue18(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced extension metadata retained without interpreting its fields",
-			); err != nil {
-				return err
-			}
-		case "blob":
-			if err := validateToolsCallResultJSONValue19(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Base64 binary content; present only when text is absent",
-			); err != nil {
-				return err
-			}
-		case "mimeType":
-			if err := validateToolsCallResultJSONValue20(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Content MIME type",
-			); err != nil {
-				return err
-			}
-		case "text":
-			if err := validateToolsCallResultJSONValue21(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Text content; present only when blob is absent",
-			); err != nil {
-				return err
-			}
-		case "uri":
-			if err := validateToolsCallResultJSONValue22(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Resource URI",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"blob",
-				"mimeType",
-				"text",
-				"uri",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue18 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue18(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue19 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue19(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue20 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue20(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue21 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue21(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue22 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue22(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue23 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue23(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "number", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "number", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue25 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue25(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue26 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue26(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue27 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue27(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue28 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue28(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue29 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue29(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue30 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue30(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue31 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue31(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallResultJSONValue32(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced protocol metadata and extension values",
-			); err != nil {
-				return err
-			}
-		case "inputRequests":
-			if err := validateToolsCallResultJSONValue33(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Questions indexed by service-assigned identifiers within this input round",
-			); err != nil {
-				return err
-			}
-		case "requestState":
-			if err := validateToolsCallResultJSONValue44(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Opaque service-owned operation state echoed exactly on continuation",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"inputRequests",
-				"requestState",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue32 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue32(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue33 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue33(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		if typed[key] == nil {
-			continue
-		}
-		if err := validateToolsCallResultJSONValue34(
-			generatedJSONChildPath(path, key, true),
-			typed[key], description,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue34 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue34(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "method":
-			if err := validateToolsCallResultJSONValue36(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Client operation requested to complete this input round",
-			); err != nil {
-				return err
-			}
-		case "params":
-			if err := validateToolsCallResultJSONValue37(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "A typed form request or URL-consent request",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"method",
-				"params",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue36 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue36(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue37 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue37(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	discriminator, ok := typed["mode"].(string)
-	if !ok {
-		return fmt.Errorf("%s: missing or invalid union discriminator", field)
-	}
-	branch := make(map[string]any, len(typed)-1)
-	for key, item := range typed {
-		if key != "mode" {
-			branch[key] = item
-		}
-	}
-	switch discriminator {
-	case "form":
-		return validateToolsCallResultJSONValue38(path, branch, "")
-	case "url":
-		return validateToolsCallResultJSONValue41(path, branch, "")
-	default:
-		return fmt.Errorf("%s: unknown union discriminator %q", field, discriminator)
-	}
-}
-
-// validateToolsCallResultJSONValue38 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue38(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "message":
-			if err := validateToolsCallResultJSONValue39(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Non-sensitive information requested from the user",
-			); err != nil {
-				return err
-			}
-		case "requestedSchema":
-			if err := validateToolsCallResultJSONValue40(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "The flat form schema generated from accepted answer content",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"requestedSchema",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue39 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue39(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue40 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue40(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue41 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue41(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "message":
-			if err := validateToolsCallResultJSONValue42(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "The external interaction the user is asked to approve",
-			); err != nil {
-				return err
-			}
-		case "url":
-			if err := validateToolsCallResultJSONValue43(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Absolute URL opened by the consenting host",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"message",
-				"url",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue42 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue42(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue43 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue43(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue44 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue44(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue45 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue45(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsCallResultJSONValue47(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced protocol metadata and extension values",
-			); err != nil {
-				return err
-			}
-		case "createdAt":
-			if err := validateToolsCallResultJSONValue48(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Creation time reported by the service",
-			); err != nil {
-				return err
-			}
-		case "lastUpdatedAt":
-			if err := validateToolsCallResultJSONValue49(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Time of this task observation reported by the service",
-			); err != nil {
-				return err
-			}
-		case "pollIntervalMs":
-			if err := validateToolsCallResultJSONValue50(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Suggested interval before the next read in integer milliseconds",
-			); err != nil {
-				return err
-			}
-		case "status":
-			if err := validateToolsCallResultJSONValue51(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Current state derived from the service's observation",
-			); err != nil {
-				return err
-			}
-		case "statusMessage":
-			if err := validateToolsCallResultJSONValue52(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional explanation of this task state",
-			); err != nil {
-				return err
-			}
-		case "taskId":
-			if err := validateToolsCallResultJSONValue53(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Opaque identifier used for later requests to this task",
-			); err != nil {
-				return err
-			}
-		case "ttlMs":
-			if err := validateToolsCallResultJSONValue54(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Retention from creation in integer milliseconds, or null for unlimited retention",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"createdAt",
-				"lastUpdatedAt",
-				"pollIntervalMs",
-				"status",
-				"statusMessage",
-				"taskId",
-				"ttlMs",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue47 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue47(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsCallResultJSONValue48 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue48(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue49 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue49(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue50 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue50(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue51 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue51(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue52 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue52(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue53 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue53(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCallResultJSONValue54 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCallResultJSONValue54(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsCapabilityJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCapabilityJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "listChanged":
-			if err := validateToolsCapabilityJSONValue2(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Send authorized tool catalog changes through subscriptions/listen",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"listChanged",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsCapabilityJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsCapabilityJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
 }
 
 // validateToolsListPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
@@ -11324,14 +5990,14 @@ func validateToolsListPayloadJSONValue(path string, value any, description strin
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateToolsListPayloadJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
 				return err
 			}
 		case "cursor":
-			if err := validateToolsListPayloadJSONValue3(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Opaque cursor from a prior catalog page",
 			); err != nil {
@@ -11343,27 +6009,6 @@ func validateToolsListPayloadJSONValue(path string, value any, description strin
 				"cursor",
 			})
 		}
-	}
-	return nil
-}
-
-// validateToolsListPayloadJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListPayloadJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsListPayloadJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListPayloadJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -11389,42 +6034,42 @@ func validateToolsListResultJSONValue(path string, value any, description string
 	for _, key := range keys {
 		switch key {
 		case "_meta":
-			if err := validateToolsListResultJSONValue2(
+			if err := validateContentItemJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Namespaced protocol metadata and extension values",
 			); err != nil {
 				return err
 			}
 		case "cacheScope":
-			if err := validateToolsListResultJSONValue12(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether this response may be reused across authorization contexts",
 			); err != nil {
 				return err
 			}
 		case "nextCursor":
-			if err := validateToolsListResultJSONValue13(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Cursor for the next page",
 			); err != nil {
 				return err
 			}
 		case "resultType":
-			if err := validateToolsListResultJSONValue14(
+			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "This response contains a finished result",
 			); err != nil {
 				return err
 			}
 		case "tools":
-			if err := validateToolsListResultJSONValue15(
+			if err := validateToolsListResultJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "List of available tools",
 			); err != nil {
 				return err
 			}
 		case "ttlMs":
-			if err := validateToolsListResultJSONValue11(
+			if err := validateDiscoverResultJSONValue8(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Milliseconds this one response may be cached",
 			); err != nil {
@@ -11446,59 +6091,6 @@ func validateToolsListResultJSONValue(path string, value any, description string
 
 // validateToolsListResultJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateToolsListResultJSONValue2(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsListResultJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue12(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue13 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue13(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue14 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue14(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue15 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue15(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -11511,7 +6103,7 @@ func validateToolsListResultJSONValue15(path string, value any, description stri
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateToolsListResultJSONValue16(
+		if err := validateToolInfoJSONValue(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -11521,300 +6113,22 @@ func validateToolsListResultJSONValue15(path string, value any, description stri
 	return nil
 }
 
-// validateToolsListResultJSONValue16 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue16(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "_meta":
-			if err := validateToolsListResultJSONValue17(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Namespaced extension metadata retained without interpreting its fields",
-			); err != nil {
-				return err
-			}
-		case "annotations":
-			if err := validateToolsListResultJSONValue18(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Optional behavior hints; clients must trust the server before acting on them",
-			); err != nil {
-				return err
-			}
-		case "description":
-			if err := validateToolsListResultJSONValue7(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Tool description",
-			); err != nil {
-				return err
-			}
-		case "inputSchema":
-			if err := validateToolsListResultJSONValue8(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "JSON Schema for tool input",
-			); err != nil {
-				return err
-			}
-		case "name":
-			if err := validateToolsListResultJSONValue9(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Tool name",
-			); err != nil {
-				return err
-			}
-		case "outputSchema":
-			if err := validateToolsListResultJSONValue10(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "JSON Schema for structured tool output",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"_meta",
-				"annotations",
-				"description",
-				"inputSchema",
-				"name",
-				"outputSchema",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue17 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue17(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsListResultJSONValue18 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue18(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "object", "null", description)
-	}
-	typed, ok := value.(map[string]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
-	}
-	keys := make([]string, 0, len(typed))
-	for key := range typed {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		switch key {
-		case "destructiveHint":
-			if err := validateToolsListResultJSONValue19(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool may remove or replace data; absent means true",
-			); err != nil {
-				return err
-			}
-		case "idempotentHint":
-			if err := validateToolsListResultJSONValue3(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether repeating arguments has no additional effects; absent means false",
-			); err != nil {
-				return err
-			}
-		case "openWorldHint":
-			if err := validateToolsListResultJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool interacts with external entities; absent means true",
-			); err != nil {
-				return err
-			}
-		case "readOnlyHint":
-			if err := validateToolsListResultJSONValue5(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the tool leaves its environment unchanged; absent means false",
-			); err != nil {
-				return err
-			}
-		case "title":
-			if err := validateToolsListResultJSONValue6(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Human-readable tool display name",
-			); err != nil {
-				return err
-			}
-		default:
-			return unknownJSONFieldError(path, key, []string{
-				"destructiveHint",
-				"idempotentHint",
-				"openWorldHint",
-				"readOnlyHint",
-				"title",
-			})
-		}
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue19 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue19(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue3(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue4(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue7(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue8(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsListResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue9(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateToolsListResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue10(path string, value any, description string) error {
-	return nil
-}
-
-// validateToolsListResultJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateToolsListResultJSONValue11(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// readStrictJSON checks syntax and nesting before walking for duplicate keys,
-// and preserves integer text for the generated type checks.
+// readStrictJSON checks the complete JSON document for malformed text and
+// duplicate members, then returns values with their original number text.
 func readStrictJSON(data []byte) (any, error) {
 	if err := validateJSONText(data); err != nil {
 		return nil, err
 	}
 	if !json.Valid(data) {
+		// When two complete JSON values arrive, keep the caller's distinct
+		// multiple-document error instead of reporting malformed syntax.
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		var document json.RawMessage
+		if err := decoder.Decode(&document); err == nil {
+			if err := decoder.Decode(&document); err == nil {
+				return nil, fmt.Errorf("multiple JSON documents")
+			}
+		}
 		return nil, fmt.Errorf("invalid JSON syntax or nesting")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -11822,7 +6136,8 @@ func readStrictJSON(data []byte) (any, error) {
 	return readJSONValue(decoder)
 }
 
-// readJSONValue checks duplicate decoded keys before storing any object member.
+// readJSONValue reads one JSON value and rejects repeated object member
+// names, returning the value without replacing earlier members.
 func readJSONValue(decoder *json.Decoder) (any, error) {
 	token, err := decoder.Token()
 	if err != nil {
@@ -11874,8 +6189,8 @@ func readJSONValue(decoder *json.Decoder) (any, error) {
 	}
 }
 
-// validateJSONText rejects invalid UTF-8 and unpaired UTF-16 escapes before
-// encoding/json can silently replace them. JSON grammar remains decoder-owned.
+// validateJSONText checks JSON bytes for invalid text and unpaired Unicode
+// escapes, returning an error before encoding/json can replace those characters.
 func validateJSONText(data []byte) error {
 	if !utf8.Valid(data) {
 		return fmt.Errorf("invalid UTF-8 in JSON")
@@ -12047,8 +6362,8 @@ func checkContentIconContentIconValue(in *ContentIcon, field string, active map[
 		if !utf8.ValidString(string(in.Src)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "src", false))
 		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
+		if in.MIMEType != nil {
+			if !utf8.ValidString(string(*in.MIMEType)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
 			}
 		}
@@ -12132,54 +6447,19 @@ func checkContentItemContentItemValue(in *ContentItem, field string, active map[
 		for index1, item1 := range in.Icons {
 			_ = index1
 			_ = item1
-			if err := checkContentItemContentIconValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "icons", false), strconv.Itoa(index1), true), active); err != nil {
+			if err := checkContentIconContentIconValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "icons", false), strconv.Itoa(index1), true), active); err != nil {
 				return err
 			}
 		}
 		if err := checkContentItemResourceContentValue(in.Resource, generatedJSONChildPath(field, "resource", false), active); err != nil {
 			return err
 		}
-		if err := checkContentItemContentAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
+		if err := checkContentAnnotationsContentAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
 			return err
 		}
 		if len(in.Meta) != 0 {
 			if _, err := readStrictJSON(in.Meta); err != nil {
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkContentItemContentIconValue checks one generated value on the active path.
-func checkContentItemContentIconValue(in *ContentIcon, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Src)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "src", false))
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		for index1, item1 := range in.Sizes {
-			_ = index1
-			_ = item1
-			if !utf8.ValidString(string(item1)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "sizes", false), strconv.Itoa(index1), true))
-			}
-		}
-		if in.Theme != nil {
-			if !utf8.ValidString(string(*in.Theme)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "theme", false))
 			}
 		}
 	}
@@ -12218,33 +6498,6 @@ func checkContentItemResourceContentValue(in *ResourceContent, field string, act
 		if len(in.Meta) != 0 {
 			if _, err := readStrictJSON(in.Meta); err != nil {
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkContentItemContentAnnotationsValue checks one generated value on the active path.
-func checkContentItemContentAnnotationsValue(in *ContentAnnotations, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		for index1, item1 := range in.Audience {
-			_ = index1
-			_ = item1
-			if !utf8.ValidString(string(item1)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "audience", false), strconv.Itoa(index1), true))
-			}
-		}
-		if in.LastModified != nil {
-			if !utf8.ValidString(string(*in.LastModified)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "lastModified", false))
 			}
 		}
 	}
@@ -12347,7 +6600,7 @@ func checkDiscoverResultServerCapabilitiesValue(in *ServerCapabilities, field st
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "extensions", false), err)
 			}
 		}
-		if err := checkDiscoverResultCompletionsCapabilityValue(in.Completions, generatedJSONChildPath(field, "completions", false), active); err != nil {
+		if err := checkCompletionsCapabilityCompletionsCapabilityValue(in.Completions, generatedJSONChildPath(field, "completions", false), active); err != nil {
 			return err
 		}
 		if err := checkDiscoverResultToolsCapabilityValue(in.Tools, generatedJSONChildPath(field, "tools", false), active); err != nil {
@@ -12359,21 +6612,6 @@ func checkDiscoverResultServerCapabilitiesValue(in *ServerCapabilities, field st
 		if err := checkDiscoverResultPromptsCapabilityValue(in.Prompts, generatedJSONChildPath(field, "prompts", false), active); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// checkDiscoverResultCompletionsCapabilityValue checks one generated value on the active path.
-func checkDiscoverResultCompletionsCapabilityValue(in *CompletionsCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -12477,12 +6715,29 @@ func checkElicitationFormParamsElicitationFormParamsValue(in *ElicitationFormPar
 	active[in] = true
 	defer delete(active, in)
 	if in != nil {
+		if _, exists := in.Extensions["message"]; exists {
+			return fmt.Errorf("%s: extra JSON member %q conflicts with a declared member", field, "message")
+		}
+		if _, exists := in.Extensions["requestedSchema"]; exists {
+			return fmt.Errorf("%s: extra JSON member %q conflicts with a declared member", field, "requestedSchema")
+		}
 		if !utf8.ValidString(string(in.Message)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
 		}
 		if len(in.RequestedSchema) != 0 {
 			if _, err := readStrictJSON(in.RequestedSchema); err != nil {
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "requestedSchema", false), err)
+			}
+		}
+		for key1, item1 := range in.Extensions {
+			_ = item1
+			if !utf8.ValidString(string(key1)) {
+				return fmt.Errorf("%s: invalid UTF-8 map key", generatedJSONChildPath(field, "extensions", false))
+			}
+			if len(item1) != 0 {
+				if _, err := readStrictJSON(item1); err != nil {
+					return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(generatedJSONChildPath(field, "extensions", false), string(key1), true), err)
+				}
 			}
 		}
 	}
@@ -12512,11 +6767,28 @@ func checkElicitationURLParamsElicitationURLParamsValue(in *ElicitationURLParams
 	active[in] = true
 	defer delete(active, in)
 	if in != nil {
+		if _, exists := in.Extensions["message"]; exists {
+			return fmt.Errorf("%s: extra JSON member %q conflicts with a declared member", field, "message")
+		}
+		if _, exists := in.Extensions["url"]; exists {
+			return fmt.Errorf("%s: extra JSON member %q conflicts with a declared member", field, "url")
+		}
 		if !utf8.ValidString(string(in.Message)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
 		}
 		if !utf8.ValidString(string(in.URL)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
+		}
+		for key1, item1 := range in.Extensions {
+			_ = item1
+			if !utf8.ValidString(string(key1)) {
+				return fmt.Errorf("%s: invalid UTF-8 map key", generatedJSONChildPath(field, "extensions", false))
+			}
+			if len(item1) != 0 {
+				if _, err := readStrictJSON(item1); err != nil {
+					return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(generatedJSONChildPath(field, "extensions", false), string(key1), true), err)
+				}
+			}
 		}
 	}
 	return nil
@@ -12550,59 +6822,25 @@ func checkInputRequestInputRequestValue(in *InputRequest, field string, active m
 		}
 		if branch1, ok := in.Params.AsForm(); ok {
 			_ = branch1
-			if err := checkInputRequestElicitationFormParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
+			if branch1 != nil {
+				if _, exists := branch1.Extensions["mode"]; exists {
+					return fmt.Errorf("%s: extra JSON member %q conflicts with a declared member", generatedJSONChildPath(field, "params", false), "mode")
+				}
+			}
+			if err := checkElicitationFormParamsElicitationFormParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
 				return err
 			}
 		}
 		if branch1, ok := in.Params.AsURL(); ok {
 			_ = branch1
-			if err := checkInputRequestElicitationURLParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
+			if branch1 != nil {
+				if _, exists := branch1.Extensions["mode"]; exists {
+					return fmt.Errorf("%s: extra JSON member %q conflicts with a declared member", generatedJSONChildPath(field, "params", false), "mode")
+				}
+			}
+			if err := checkElicitationURLParamsElicitationURLParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
 				return err
 			}
-		}
-	}
-	return nil
-}
-
-// checkInputRequestElicitationFormParamsValue checks one generated value on the active path.
-func checkInputRequestElicitationFormParamsValue(in *ElicitationFormParams, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Message)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
-		}
-		if len(in.RequestedSchema) != 0 {
-			if _, err := readStrictJSON(in.RequestedSchema); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "requestedSchema", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkInputRequestElicitationURLParamsValue checks one generated value on the active path.
-func checkInputRequestElicitationURLParamsValue(in *ElicitationURLParams, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Message)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
-		}
-		if !utf8.ValidString(string(in.URL)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
 		}
 	}
 	return nil
@@ -12636,7 +6874,7 @@ func checkInputRequiredResultInputRequiredResultValue(in *InputRequiredResult, f
 			if !utf8.ValidString(string(key1)) {
 				return fmt.Errorf("%s: invalid UTF-8 map key", generatedJSONChildPath(field, "inputRequests", false))
 			}
-			if err := checkInputRequiredResultInputRequestValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "inputRequests", false), string(key1), true), active); err != nil {
+			if err := checkInputRequestInputRequestValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "inputRequests", false), string(key1), true), active); err != nil {
 				return err
 			}
 		}
@@ -12649,80 +6887,6 @@ func checkInputRequiredResultInputRequiredResultValue(in *InputRequiredResult, f
 			if _, err := readStrictJSON(in.Meta); err != nil {
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
 			}
-		}
-	}
-	return nil
-}
-
-// checkInputRequiredResultInputRequestValue checks one generated value on the active path.
-func checkInputRequiredResultInputRequestValue(in *InputRequest, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Method)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "method", false))
-		}
-		if branch1, ok := in.Params.AsForm(); ok {
-			_ = branch1
-			if err := checkInputRequiredResultElicitationFormParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
-				return err
-			}
-		}
-		if branch1, ok := in.Params.AsURL(); ok {
-			_ = branch1
-			if err := checkInputRequiredResultElicitationURLParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// checkInputRequiredResultElicitationFormParamsValue checks one generated value on the active path.
-func checkInputRequiredResultElicitationFormParamsValue(in *ElicitationFormParams, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Message)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
-		}
-		if len(in.RequestedSchema) != 0 {
-			if _, err := readStrictJSON(in.RequestedSchema); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "requestedSchema", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkInputRequiredResultElicitationURLParamsValue checks one generated value on the active path.
-func checkInputRequiredResultElicitationURLParamsValue(in *ElicitationURLParams, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Message)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
-		}
-		if !utf8.ValidString(string(in.URL)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
 		}
 	}
 	return nil
@@ -12769,7 +6933,7 @@ func checkMissingClientCapabilityErrorRequiredClientCapabilitiesValue(in *Requir
 	active[in] = true
 	defer delete(active, in)
 	if in != nil {
-		if err := checkMissingClientCapabilityErrorElicitationCapabilitiesValue(in.Elicitation, generatedJSONChildPath(field, "elicitation", false), active); err != nil {
+		if err := checkElicitationCapabilitiesElicitationCapabilitiesValue(in.Elicitation, generatedJSONChildPath(field, "elicitation", false), active); err != nil {
 			return err
 		}
 		for key1, item1 := range in.Extensions {
@@ -12780,25 +6944,6 @@ func checkMissingClientCapabilityErrorRequiredClientCapabilitiesValue(in *Requir
 			if err := checkMissingClientCapabilityErrorRequiredExtensionValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "extensions", false), string(key1), true), active); err != nil {
 				return err
 			}
-		}
-	}
-	return nil
-}
-
-// checkMissingClientCapabilityErrorElicitationCapabilitiesValue checks one generated value on the active path.
-func checkMissingClientCapabilityErrorElicitationCapabilitiesValue(in *ElicitationCapabilities, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if in.Form != nil {
-		}
-		if in.URL != nil {
 		}
 	}
 	return nil
@@ -12825,23 +6970,8 @@ func checkPromptsCapabilityValue(in *PromptsCapability) error {
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkPromptsCapabilityPromptsCapabilityValue(in, "$", active); err != nil {
+	if err := checkDiscoverResultPromptsCapabilityValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkPromptsCapabilityPromptsCapabilityValue checks one generated value on the active path.
-func checkPromptsCapabilityPromptsCapabilityValue(in *PromptsCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -12852,69 +6982,8 @@ func checkRequiredClientCapabilitiesValue(in *RequiredClientCapabilities) error 
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkRequiredClientCapabilitiesRequiredClientCapabilitiesValue(in, "$", active); err != nil {
+	if err := checkMissingClientCapabilityErrorRequiredClientCapabilitiesValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkRequiredClientCapabilitiesRequiredClientCapabilitiesValue checks one generated value on the active path.
-func checkRequiredClientCapabilitiesRequiredClientCapabilitiesValue(in *RequiredClientCapabilities, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if err := checkRequiredClientCapabilitiesElicitationCapabilitiesValue(in.Elicitation, generatedJSONChildPath(field, "elicitation", false), active); err != nil {
-			return err
-		}
-		for key1, item1 := range in.Extensions {
-			_ = item1
-			if !utf8.ValidString(string(key1)) {
-				return fmt.Errorf("%s: invalid UTF-8 map key", generatedJSONChildPath(field, "extensions", false))
-			}
-			if err := checkRequiredClientCapabilitiesRequiredExtensionValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "extensions", false), string(key1), true), active); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// checkRequiredClientCapabilitiesElicitationCapabilitiesValue checks one generated value on the active path.
-func checkRequiredClientCapabilitiesElicitationCapabilitiesValue(in *ElicitationCapabilities, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if in.Form != nil {
-		}
-		if in.URL != nil {
-		}
-	}
-	return nil
-}
-
-// checkRequiredClientCapabilitiesRequiredExtensionValue checks one generated value on the active path.
-func checkRequiredClientCapabilitiesRequiredExtensionValue(in *RequiredExtension, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -12925,23 +6994,8 @@ func checkRequiredExtensionValue(in *RequiredExtension) error {
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkRequiredExtensionRequiredExtensionValue(in, "$", active); err != nil {
+	if err := checkMissingClientCapabilityErrorRequiredExtensionValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkRequiredExtensionRequiredExtensionValue checks one generated value on the active path.
-func checkRequiredExtensionRequiredExtensionValue(in *RequiredExtension, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -12952,46 +7006,8 @@ func checkResourceContentValue(in *ResourceContent) error {
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkResourceContentResourceContentValue(in, "$", active); err != nil {
+	if err := checkContentItemResourceContentValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkResourceContentResourceContentValue checks one generated value on the active path.
-func checkResourceContentResourceContentValue(in *ResourceContent, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.URI)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "uri", false))
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		if in.Text != nil {
-			if !utf8.ValidString(string(*in.Text)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
-			}
-		}
-		if in.Blob != nil {
-			if !utf8.ValidString(string(*in.Blob)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "blob", false))
-			}
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
 	}
 	return nil
 }
@@ -13002,23 +7018,8 @@ func checkResourcesCapabilityValue(in *ResourcesCapability) error {
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkResourcesCapabilityResourcesCapabilityValue(in, "$", active); err != nil {
+	if err := checkDiscoverResultResourcesCapabilityValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkResourcesCapabilityResourcesCapabilityValue checks one generated value on the active path.
-func checkResourcesCapabilityResourcesCapabilityValue(in *ResourcesCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -13029,100 +7030,8 @@ func checkServerCapabilitiesValue(in *ServerCapabilities) error {
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkServerCapabilitiesServerCapabilitiesValue(in, "$", active); err != nil {
+	if err := checkDiscoverResultServerCapabilitiesValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkServerCapabilitiesServerCapabilitiesValue checks one generated value on the active path.
-func checkServerCapabilitiesServerCapabilitiesValue(in *ServerCapabilities, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if len(in.Extensions) != 0 {
-			if _, err := readStrictJSON(in.Extensions); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "extensions", false), err)
-			}
-		}
-		if err := checkServerCapabilitiesCompletionsCapabilityValue(in.Completions, generatedJSONChildPath(field, "completions", false), active); err != nil {
-			return err
-		}
-		if err := checkServerCapabilitiesToolsCapabilityValue(in.Tools, generatedJSONChildPath(field, "tools", false), active); err != nil {
-			return err
-		}
-		if err := checkServerCapabilitiesResourcesCapabilityValue(in.Resources, generatedJSONChildPath(field, "resources", false), active); err != nil {
-			return err
-		}
-		if err := checkServerCapabilitiesPromptsCapabilityValue(in.Prompts, generatedJSONChildPath(field, "prompts", false), active); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// checkServerCapabilitiesCompletionsCapabilityValue checks one generated value on the active path.
-func checkServerCapabilitiesCompletionsCapabilityValue(in *CompletionsCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-	}
-	return nil
-}
-
-// checkServerCapabilitiesToolsCapabilityValue checks one generated value on the active path.
-func checkServerCapabilitiesToolsCapabilityValue(in *ToolsCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-	}
-	return nil
-}
-
-// checkServerCapabilitiesResourcesCapabilityValue checks one generated value on the active path.
-func checkServerCapabilitiesResourcesCapabilityValue(in *ResourcesCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-	}
-	return nil
-}
-
-// checkServerCapabilitiesPromptsCapabilityValue checks one generated value on the active path.
-func checkServerCapabilitiesPromptsCapabilityValue(in *PromptsCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -13244,7 +7153,7 @@ func checkToolInfoToolInfoValue(in *ToolInfo, field string, active map[any]bool)
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
 			}
 		}
-		if err := checkToolInfoToolAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
+		if err := checkToolAnnotationsToolAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
 			return err
 		}
 		if len(in.InputSchema) != 0 {
@@ -13255,26 +7164,6 @@ func checkToolInfoToolInfoValue(in *ToolInfo, field string, active map[any]bool)
 		if len(in.OutputSchema) != 0 {
 			if _, err := readStrictJSON(in.OutputSchema); err != nil {
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "outputSchema", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolInfoToolAnnotationsValue checks one generated value on the active path.
-func checkToolInfoToolAnnotationsValue(in *ToolAnnotations, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if in.Title != nil {
-			if !utf8.ValidString(string(*in.Title)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
 			}
 		}
 	}
@@ -13307,7 +7196,7 @@ func checkToolsCallCompleteResultToolsCallCompleteResultValue(in *ToolsCallCompl
 		for index1, item1 := range in.Content {
 			_ = index1
 			_ = item1
-			if err := checkToolsCallCompleteResultContentItemValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "content", false), strconv.Itoa(index1), true), active); err != nil {
+			if err := checkContentItemContentItemValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "content", false), strconv.Itoa(index1), true), active); err != nil {
 				return err
 			}
 		}
@@ -13319,177 +7208,6 @@ func checkToolsCallCompleteResultToolsCallCompleteResultValue(in *ToolsCallCompl
 		if len(in.Meta) != 0 {
 			if _, err := readStrictJSON(in.Meta); err != nil {
 				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallCompleteResultContentItemValue checks one generated value on the active path.
-func checkToolsCallCompleteResultContentItemValue(in *ContentItem, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Type)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "type", false))
-		}
-		if in.Text != nil {
-			if !utf8.ValidString(string(*in.Text)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
-			}
-		}
-		if in.Data != nil {
-			if !utf8.ValidString(string(*in.Data)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "data", false))
-			}
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		if in.Name != nil {
-			if !utf8.ValidString(string(*in.Name)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
-			}
-		}
-		if in.URI != nil {
-			if !utf8.ValidString(string(*in.URI)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "uri", false))
-			}
-		}
-		if in.Title != nil {
-			if !utf8.ValidString(string(*in.Title)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
-			}
-		}
-		if in.Description != nil {
-			if !utf8.ValidString(string(*in.Description)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "description", false))
-			}
-		}
-		for index1, item1 := range in.Icons {
-			_ = index1
-			_ = item1
-			if err := checkToolsCallCompleteResultContentIconValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "icons", false), strconv.Itoa(index1), true), active); err != nil {
-				return err
-			}
-		}
-		if err := checkToolsCallCompleteResultResourceContentValue(in.Resource, generatedJSONChildPath(field, "resource", false), active); err != nil {
-			return err
-		}
-		if err := checkToolsCallCompleteResultContentAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
-			return err
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallCompleteResultContentIconValue checks one generated value on the active path.
-func checkToolsCallCompleteResultContentIconValue(in *ContentIcon, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Src)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "src", false))
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		for index1, item1 := range in.Sizes {
-			_ = index1
-			_ = item1
-			if !utf8.ValidString(string(item1)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "sizes", false), strconv.Itoa(index1), true))
-			}
-		}
-		if in.Theme != nil {
-			if !utf8.ValidString(string(*in.Theme)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "theme", false))
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallCompleteResultResourceContentValue checks one generated value on the active path.
-func checkToolsCallCompleteResultResourceContentValue(in *ResourceContent, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.URI)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "uri", false))
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		if in.Text != nil {
-			if !utf8.ValidString(string(*in.Text)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
-			}
-		}
-		if in.Blob != nil {
-			if !utf8.ValidString(string(*in.Blob)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "blob", false))
-			}
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallCompleteResultContentAnnotationsValue checks one generated value on the active path.
-func checkToolsCallCompleteResultContentAnnotationsValue(in *ContentAnnotations, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		for index1, item1 := range in.Audience {
-			_ = index1
-			_ = item1
-			if !utf8.ValidString(string(item1)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "audience", false), strconv.Itoa(index1), true))
-			}
-		}
-		if in.LastModified != nil {
-			if !utf8.ValidString(string(*in.LastModified)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "lastModified", false))
 			}
 		}
 	}
@@ -13521,368 +7239,26 @@ func checkToolsCallResultToolsCallResultValue(in *ToolsCallResult, field string,
 	if in != nil {
 		if branch1, ok := in.Outcome.AsComplete(); ok {
 			_ = branch1
-			if err := checkToolsCallResultToolsCallCompleteResultValue(branch1, generatedJSONChildPath(field, "outcome", false), active); err != nil {
+			if branch1 != nil {
+			}
+			if err := checkToolsCallCompleteResultToolsCallCompleteResultValue(branch1, generatedJSONChildPath(field, "outcome", false), active); err != nil {
 				return err
 			}
 		}
 		if branch1, ok := in.Outcome.AsInputRequired(); ok {
 			_ = branch1
-			if err := checkToolsCallResultInputRequiredResultValue(branch1, generatedJSONChildPath(field, "outcome", false), active); err != nil {
+			if branch1 != nil {
+			}
+			if err := checkInputRequiredResultInputRequiredResultValue(branch1, generatedJSONChildPath(field, "outcome", false), active); err != nil {
 				return err
 			}
 		}
 		if branch1, ok := in.Outcome.AsTask(); ok {
 			_ = branch1
-			if err := checkToolsCallResultTaskCreatedValue(branch1, generatedJSONChildPath(field, "outcome", false), active); err != nil {
+			if branch1 != nil {
+			}
+			if err := checkTaskCreatedTaskCreatedValue(branch1, generatedJSONChildPath(field, "outcome", false), active); err != nil {
 				return err
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultToolsCallCompleteResultValue checks one generated value on the active path.
-func checkToolsCallResultToolsCallCompleteResultValue(in *ToolsCallCompleteResult, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		for index1, item1 := range in.Content {
-			_ = index1
-			_ = item1
-			if err := checkToolsCallResultContentItemValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "content", false), strconv.Itoa(index1), true), active); err != nil {
-				return err
-			}
-		}
-		if len(in.StructuredContent) != 0 {
-			if _, err := readStrictJSON(in.StructuredContent); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "structuredContent", false), err)
-			}
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultContentItemValue checks one generated value on the active path.
-func checkToolsCallResultContentItemValue(in *ContentItem, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Type)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "type", false))
-		}
-		if in.Text != nil {
-			if !utf8.ValidString(string(*in.Text)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
-			}
-		}
-		if in.Data != nil {
-			if !utf8.ValidString(string(*in.Data)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "data", false))
-			}
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		if in.Name != nil {
-			if !utf8.ValidString(string(*in.Name)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
-			}
-		}
-		if in.URI != nil {
-			if !utf8.ValidString(string(*in.URI)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "uri", false))
-			}
-		}
-		if in.Title != nil {
-			if !utf8.ValidString(string(*in.Title)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
-			}
-		}
-		if in.Description != nil {
-			if !utf8.ValidString(string(*in.Description)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "description", false))
-			}
-		}
-		for index1, item1 := range in.Icons {
-			_ = index1
-			_ = item1
-			if err := checkToolsCallResultContentIconValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "icons", false), strconv.Itoa(index1), true), active); err != nil {
-				return err
-			}
-		}
-		if err := checkToolsCallResultResourceContentValue(in.Resource, generatedJSONChildPath(field, "resource", false), active); err != nil {
-			return err
-		}
-		if err := checkToolsCallResultContentAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
-			return err
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultContentIconValue checks one generated value on the active path.
-func checkToolsCallResultContentIconValue(in *ContentIcon, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Src)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "src", false))
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		for index1, item1 := range in.Sizes {
-			_ = index1
-			_ = item1
-			if !utf8.ValidString(string(item1)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "sizes", false), strconv.Itoa(index1), true))
-			}
-		}
-		if in.Theme != nil {
-			if !utf8.ValidString(string(*in.Theme)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "theme", false))
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultResourceContentValue checks one generated value on the active path.
-func checkToolsCallResultResourceContentValue(in *ResourceContent, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.URI)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "uri", false))
-		}
-		if in.MimeType != nil {
-			if !utf8.ValidString(string(*in.MimeType)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "mimeType", false))
-			}
-		}
-		if in.Text != nil {
-			if !utf8.ValidString(string(*in.Text)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
-			}
-		}
-		if in.Blob != nil {
-			if !utf8.ValidString(string(*in.Blob)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "blob", false))
-			}
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultContentAnnotationsValue checks one generated value on the active path.
-func checkToolsCallResultContentAnnotationsValue(in *ContentAnnotations, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		for index1, item1 := range in.Audience {
-			_ = index1
-			_ = item1
-			if !utf8.ValidString(string(item1)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "audience", false), strconv.Itoa(index1), true))
-			}
-		}
-		if in.LastModified != nil {
-			if !utf8.ValidString(string(*in.LastModified)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "lastModified", false))
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultInputRequiredResultValue checks one generated value on the active path.
-func checkToolsCallResultInputRequiredResultValue(in *InputRequiredResult, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		for key1, item1 := range in.InputRequests {
-			_ = item1
-			if !utf8.ValidString(string(key1)) {
-				return fmt.Errorf("%s: invalid UTF-8 map key", generatedJSONChildPath(field, "inputRequests", false))
-			}
-			if err := checkToolsCallResultInputRequestValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "inputRequests", false), string(key1), true), active); err != nil {
-				return err
-			}
-		}
-		if in.RequestState != nil {
-			if !utf8.ValidString(string(*in.RequestState)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "requestState", false))
-			}
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultInputRequestValue checks one generated value on the active path.
-func checkToolsCallResultInputRequestValue(in *InputRequest, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Method)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "method", false))
-		}
-		if branch1, ok := in.Params.AsForm(); ok {
-			_ = branch1
-			if err := checkToolsCallResultElicitationFormParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
-				return err
-			}
-		}
-		if branch1, ok := in.Params.AsURL(); ok {
-			_ = branch1
-			if err := checkToolsCallResultElicitationURLParamsValue(branch1, generatedJSONChildPath(field, "params", false), active); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultElicitationFormParamsValue checks one generated value on the active path.
-func checkToolsCallResultElicitationFormParamsValue(in *ElicitationFormParams, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Message)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
-		}
-		if len(in.RequestedSchema) != 0 {
-			if _, err := readStrictJSON(in.RequestedSchema); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "requestedSchema", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultElicitationURLParamsValue checks one generated value on the active path.
-func checkToolsCallResultElicitationURLParamsValue(in *ElicitationURLParams, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Message)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "message", false))
-		}
-		if !utf8.ValidString(string(in.URL)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
-		}
-	}
-	return nil
-}
-
-// checkToolsCallResultTaskCreatedValue checks one generated value on the active path.
-func checkToolsCallResultTaskCreatedValue(in *TaskCreated, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.TaskID)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "taskId", false))
-		}
-		if !utf8.ValidString(string(in.CreatedAt)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "createdAt", false))
-		}
-		if !utf8.ValidString(string(in.LastUpdatedAt)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "lastUpdatedAt", false))
-		}
-		if in.StatusMessage != nil {
-			if !utf8.ValidString(string(*in.StatusMessage)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "statusMessage", false))
-			}
-		}
-		if !utf8.ValidString(string(in.Status)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "status", false))
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
 			}
 		}
 	}
@@ -13895,23 +7271,8 @@ func checkToolsCapabilityValue(in *ToolsCapability) error {
 		return fmt.Errorf("missing root value")
 	}
 	active := make(map[any]bool)
-	if err := checkToolsCapabilityToolsCapabilityValue(in, "$", active); err != nil {
+	if err := checkDiscoverResultToolsCapabilityValue(in, "$", active); err != nil {
 		return err
-	}
-	return nil
-}
-
-// checkToolsCapabilityToolsCapabilityValue checks one generated value on the active path.
-func checkToolsCapabilityToolsCapabilityValue(in *ToolsCapability, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
 	}
 	return nil
 }
@@ -13979,7 +7340,7 @@ func checkToolsListResultToolsListResultValue(in *ToolsListResult, field string,
 		for index1, item1 := range in.Tools {
 			_ = index1
 			_ = item1
-			if err := checkToolsListResultToolInfoValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "tools", false), strconv.Itoa(index1), true), active); err != nil {
+			if err := checkToolInfoToolInfoValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "tools", false), strconv.Itoa(index1), true), active); err != nil {
 				return err
 			}
 		}
@@ -13998,67 +7359,6 @@ func checkToolsListResultToolsListResultValue(in *ToolsListResult, field string,
 		}
 		if !utf8.ValidString(string(in.CacheScope)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "cacheScope", false))
-		}
-	}
-	return nil
-}
-
-// checkToolsListResultToolInfoValue checks one generated value on the active path.
-func checkToolsListResultToolInfoValue(in *ToolInfo, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if !utf8.ValidString(string(in.Name)) {
-			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
-		}
-		if in.Description != nil {
-			if !utf8.ValidString(string(*in.Description)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "description", false))
-			}
-		}
-		if len(in.Meta) != 0 {
-			if _, err := readStrictJSON(in.Meta); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
-			}
-		}
-		if err := checkToolsListResultToolAnnotationsValue(in.Annotations, generatedJSONChildPath(field, "annotations", false), active); err != nil {
-			return err
-		}
-		if len(in.InputSchema) != 0 {
-			if _, err := readStrictJSON(in.InputSchema); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "inputSchema", false), err)
-			}
-		}
-		if len(in.OutputSchema) != 0 {
-			if _, err := readStrictJSON(in.OutputSchema); err != nil {
-				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "outputSchema", false), err)
-			}
-		}
-	}
-	return nil
-}
-
-// checkToolsListResultToolAnnotationsValue checks one generated value on the active path.
-func checkToolsListResultToolAnnotationsValue(in *ToolAnnotations, field string, active map[any]bool) error {
-	if in == nil {
-		return nil
-	}
-	if active[in] {
-		return fmt.Errorf("%s: cyclic Go value", field)
-	}
-	active[in] = true
-	defer delete(active, in)
-	if in != nil {
-		if in.Title != nil {
-			if !utf8.ValidString(string(*in.Title)) {
-				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
-			}
 		}
 	}
 	return nil

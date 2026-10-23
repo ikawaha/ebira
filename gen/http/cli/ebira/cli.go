@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|notebooks|tags|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|preview-style|set-preview-style|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|preview-style|set-preview-style|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -130,6 +130,18 @@ func ParseEndpoint(
 		notesTagsFlags        = flag.NewFlagSet("tags", flag.ExitOnError)
 		notesTagsNotebookFlag = new(cliStringFlag)
 		notesTagsSessionFlag  = new(cliStringFlag)
+
+		notesMarksFlags       = flag.NewFlagSet("marks", flag.ExitOnError)
+		notesMarksSessionFlag = new(cliStringFlag)
+
+		notesSetMarksFlags       = flag.NewFlagSet("set-marks", flag.ExitOnError)
+		notesSetMarksBodyFlag    = new(cliStringFlag)
+		notesSetMarksIDFlag      = new(cliStringFlag)
+		notesSetMarksSessionFlag = new(cliStringFlag)
+
+		notesSaveMarkNamesFlags       = flag.NewFlagSet("save-mark-names", flag.ExitOnError)
+		notesSaveMarkNamesBodyFlag    = new(cliStringFlag)
+		notesSaveMarkNamesSessionFlag = new(cliStringFlag)
 
 		notesCreateNotebookFlags       = flag.NewFlagSet("create-notebook", flag.ExitOnError)
 		notesCreateNotebookBodyFlag    = new(cliStringFlag)
@@ -294,6 +306,12 @@ func ParseEndpoint(
 	notesNotebooksFlags.Var(notesNotebooksSessionFlag, "session", "")
 	notesTagsFlags.Var(notesTagsNotebookFlag, "notebook", "")
 	notesTagsFlags.Var(notesTagsSessionFlag, "session", "")
+	notesMarksFlags.Var(notesMarksSessionFlag, "session", "")
+	notesSetMarksFlags.Var(notesSetMarksBodyFlag, "body", "")
+	notesSetMarksFlags.Var(notesSetMarksIDFlag, "id", "Note ID")
+	notesSetMarksFlags.Var(notesSetMarksSessionFlag, "session", "")
+	notesSaveMarkNamesFlags.Var(notesSaveMarkNamesBodyFlag, "body", "")
+	notesSaveMarkNamesFlags.Var(notesSaveMarkNamesSessionFlag, "session", "")
 	notesCreateNotebookFlags.Var(notesCreateNotebookBodyFlag, "body", "")
 	notesCreateNotebookFlags.Var(notesCreateNotebookSessionFlag, "session", "")
 	notesSaveNotebookFlags.Var(notesSaveNotebookBodyFlag, "body", "")
@@ -363,6 +381,9 @@ func ParseEndpoint(
 	notesMoveFlags.Usage = notesMoveUsage
 	notesNotebooksFlags.Usage = notesNotebooksUsage
 	notesTagsFlags.Usage = notesTagsUsage
+	notesMarksFlags.Usage = notesMarksUsage
+	notesSetMarksFlags.Usage = notesSetMarksUsage
+	notesSaveMarkNamesFlags.Usage = notesSaveMarkNamesUsage
 	notesCreateNotebookFlags.Usage = notesCreateNotebookUsage
 	notesSaveNotebookFlags.Usage = notesSaveNotebookUsage
 	notesMoveNotebookFlags.Usage = notesMoveNotebookUsage
@@ -476,6 +497,15 @@ func ParseEndpoint(
 
 			case "tags":
 				epf = notesTagsFlags
+
+			case "marks":
+				epf = notesMarksFlags
+
+			case "set-marks":
+				epf = notesSetMarksFlags
+
+			case "save-mark-names":
+				epf = notesSaveMarkNamesFlags
 
 			case "create-notebook":
 				epf = notesCreateNotebookFlags
@@ -651,6 +681,15 @@ func ParseEndpoint(
 			case "tags":
 				endpoint = c.Tags()
 				data, err = notesc.BuildTagsPayload(notesTagsNotebookFlag.value, notesTagsSessionFlag.value)
+			case "marks":
+				endpoint = c.Marks()
+				data, err = notesc.BuildMarksPayload(notesMarksSessionFlag.value)
+			case "set-marks":
+				endpoint = c.SetMarks()
+				data, err = notesc.BuildSetMarksPayload(notesSetMarksBodyFlag.value, notesSetMarksIDFlag.value, notesSetMarksSessionFlag.value)
+			case "save-mark-names":
+				endpoint = c.SaveMarkNames()
+				data, err = notesc.BuildSaveMarkNamesPayload(notesSaveMarkNamesBodyFlag.value, notesSaveMarkNamesSessionFlag.value)
 			case "create-notebook":
 				endpoint = c.CreateNotebook()
 				data, err = notesc.BuildCreateNotebookPayload(notesCreateNotebookBodyFlag.value, notesCreateNotebookSessionFlag.value)
@@ -794,6 +833,9 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
 	fmt.Fprintln(os.Stderr, `    notebooks: List notebooks with their note counts: inbox first, then the others by order and name, trash last.`)
 	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
+	fmt.Fprintln(os.Stderr, `    marks: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.`)
+	fmt.Fprintln(os.Stderr, `    set-marks: Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.`)
+	fmt.Fprintln(os.Stderr, `    save-mark-names: Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.`)
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
 	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
 	fmt.Fprintln(os.Stderr, `    move-notebook: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
@@ -1083,6 +1125,66 @@ func notesTagsUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes tags --notebook \"inbox\" --session \"Iure tenetur possimus illo molestias quam.\"")
+}
+
+func notesMarksUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes marks", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes marks --session \"Harum quas culpa harum nostrum distinctio vel.\"")
+}
+
+func notesSetMarksUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes set-marks", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes set-marks --body '{\n      \"marks\": [\n         \"red\"\n      ]\n   }' --id \"be4c1193735ee1\" --session \"Atque ratione nulla illo est fuga.\"")
+}
+
+func notesSaveMarkNamesUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes save-mark-names", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-mark-names --body '{\n      \"names\": {\n         \"red\": \"important\",\n         \"star\": \"later\"\n      }\n   }' --session \"Dolorem temporibus officiis.\"")
 }
 
 func notesCreateNotebookUsage() {

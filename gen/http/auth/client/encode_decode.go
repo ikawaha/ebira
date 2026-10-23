@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -871,7 +872,9 @@ func (c *Client) BuildDeletePasskeyRequest(ctx context.Context, v any) (*http.Re
 		}
 		id = p.ID
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeletePasskeyAuthPath(id)}
+
+	rawPath := fmt.Sprintf("/auth/passkeys/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeletePasskeyAuthPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("DELETE", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("auth", "delete_passkey", u.String(), err)

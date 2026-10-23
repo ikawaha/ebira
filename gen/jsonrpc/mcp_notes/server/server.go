@@ -81,6 +81,7 @@ func New(
 	errhandler func(context.Context, http.ResponseWriter, error),
 	origins ...string,
 ) *Server {
+	encoder = mcpLegacyResponseEncoder(encoder)
 	s := &Server{
 		Methods: []string{
 			"server/discover",
@@ -95,7 +96,7 @@ func New(
 		errhandler:     errhandler,
 	}
 	// The MCP protocol uses one ordinary request decoder. Subscriptions and
-	// progress select their response stream inside the outer request guard.
+	// progress select their response stream after application HTTP middleware.
 	s.handler = http.HandlerFunc(s.handleHTTP)
 	s.processRequest = withMCPTransport(s, origins, s.serveHTTP)
 	return s
@@ -133,28 +134,43 @@ func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) MethodNames() []string { return mcpnotes.MethodNames[:] }
 
 // handleHTTP decodes one MCP request and dispatches its generated protocol method.
-// ServeHTTP validates metadata and headers before configured middleware calls it.
+// ServeHTTP validates authentication and protocol rules first. Application
+// middleware then chooses response headers before this handler starts streaming.
 func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	var request jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&request); err != nil {
 		s.encodeJSONRPCError(r.Context(), w, &request, jsonrpc.ParseError, "Parse error", nil)
 		return
 	}
-	switch request.Method {
-	case "server/discover":
-		if err := s.ServerDiscover(r.Context(), r, &request, w); err != nil {
-			s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "server/discover", err))
+	dispatch := func(w http.ResponseWriter, r *http.Request) {
+		switch request.Method {
+		case "initialize":
+			request.Method = "server/discover"
+			if err := s.ServerDiscover(r.Context(), r, &request, w); err != nil {
+				s.errhandler(r.Context(), w, fmt.Errorf("MCP initialize: %w", err))
+			}
+		case "ping":
+			if err := s.encoder(r.Context(), w).Encode(jsonrpc.MakeSuccessResponse(request.ID, struct{}{})); err != nil {
+				s.errhandler(r.Context(), w, fmt.Errorf("MCP ping: %w", err))
+			}
+		case "server/discover":
+			if err := s.ServerDiscover(r.Context(), r, &request, w); err != nil {
+				s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "server/discover", err))
+			}
+		case "tools/list":
+			if err := s.ToolsList(r.Context(), r, &request, w); err != nil {
+				s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "tools/list", err))
+			}
+		case "tools/call":
+			if err := s.ToolsCall(r.Context(), r, &request, w); err != nil {
+				s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "tools/call", err))
+			}
+		default:
+			s.encodeJSONRPCError(r.Context(), w, &request, jsonrpc.MethodNotFound, "Method not found", nil)
 		}
-	case "tools/list":
-		if err := s.ToolsList(r.Context(), r, &request, w); err != nil {
-			s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "tools/list", err))
-		}
-	case "tools/call":
-		if err := s.ToolsCall(r.Context(), r, &request, w); err != nil {
-			s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "tools/call", err))
-		}
-	default:
-		s.encodeJSONRPCError(r.Context(), w, &request, jsonrpc.MethodNotFound, "Method not found", nil)
+	}
+	if err := mcpruntime.ServeProgress(w, r, request.Params, dispatch); err != nil {
+		s.errhandler(r.Context(), w, err)
 	}
 }
 
@@ -170,7 +186,7 @@ func (s *Server) Mount(mux goahttp.Muxer) {
 	Mount(mux, s)
 }
 
-// mcpResponseWriter records whether the JSON-RPC handler wrote a response.
+// mcpResponseWriter records whether middleware or the JSON-RPC handler wrote a response.
 type mcpResponseWriter struct {
 	http.ResponseWriter
 	written bool
@@ -201,23 +217,71 @@ func withMCPTransport(h *Server, origins []string, next http.HandlerFunc) http.H
 			h.errhandler(r.Context(), w, fmt.Errorf("read MCP request body: %w", err))
 			return
 		}
-		r.Body = io.NopCloser(bytes.NewReader(body))
-		if failure := mcpruntime.ValidateHTTPRequest(r, body, bindings); failure != nil {
+		legacy := mcpruntime.IsLegacyHTTPRequest(r, body)
+		var request jsonrpc.RawRequest
+		var failure *mcpruntime.Error
+		if legacy {
+			decoded, invalid := mcpruntime.DecodeLegacyHTTPRequest(r, body)
+			failure = invalid
+			if invalid == nil {
+				request = *decoded
+			}
+		} else {
+			failure = mcpruntime.ValidateHTTPRequest(r, body, bindings)
+			if failure == nil {
+				if err := request.UnmarshalJSON(body); err != nil {
+					h.errhandler(r.Context(), w, err)
+					return
+				}
+			}
+		}
+		if failure != nil {
 			if err := mcpruntime.WriteProtocolError(w, body, failure); err != nil {
 				h.errhandler(r.Context(), w, err)
 			}
 			return
 		}
-		var request jsonrpc.RawRequest
-		if err := request.UnmarshalJSON(body); err != nil {
-			h.errhandler(r.Context(), w, err)
-			return
+		if legacy && request.HasID {
+			mode := mcpLegacyMode{}
+			if request.Method == "tools/call" {
+				var params struct {
+					Name string `json:"name"`
+				}
+				if err := json.Unmarshal(request.Params, &params); err != nil {
+					h.errhandler(r.Context(), w, err)
+					return
+				}
+				switch params.Name {
+				case "list_marks":
+					mode.wrapOutput = true
+				case "list_notebooks":
+					mode.wrapOutput = true
+				case "list_tags":
+					mode.wrapOutput = true
+				}
+			}
+			r = r.WithContext(context.WithValue(r.Context(), mcpLegacyModeKey{}, mode))
+			encoded, err := json.Marshal(jsonrpc.Request{JSONRPC: request.JSONRPC, Method: request.Method, Params: request.Params, ID: request.ID})
+			if err != nil {
+				h.errhandler(r.Context(), w, err)
+				return
+			}
+			body = encoded
 		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
 		if !request.HasID {
 			w.WriteHeader(http.StatusAccepted)
 			return
 		}
 		switch request.Method {
+		case "initialize", "ping":
+			if !legacy {
+				failure := &mcpruntime.Error{Code: mcpruntime.JSONRPCMethodNotFound, Message: "Method not found"}
+				if err := mcpruntime.WriteProtocolError(w, body, failure); err != nil {
+					h.errhandler(r.Context(), w, err)
+				}
+				return
+			}
 		case "server/discover":
 		case "tools/list":
 		case "tools/call":
@@ -230,9 +294,7 @@ func withMCPTransport(h *Server, origins []string, next http.HandlerFunc) http.H
 		}
 
 		response := &mcpResponseWriter{ResponseWriter: w}
-		if err := mcpruntime.ServeProgress(response, r, request.Params, next); err != nil {
-			h.errhandler(r.Context(), response, err)
-		}
+		next(response, r)
 		if !response.written {
 			w.WriteHeader(http.StatusAccepted)
 		}
@@ -479,5 +541,144 @@ func encodeJSONRPCError(ctx context.Context, w http.ResponseWriter, req *jsonrpc
 	w.WriteHeader(status)
 	if err := encoder(ctx, w).Encode(response); err != nil {
 		errhandler(ctx, w, fmt.Errorf("encode MCP protocol error: %w", err))
+	}
+}
+
+// mcpLegacyMode keeps the older response choice on this one validated request.
+// Authorization still runs before dispatch; another request can use the current protocol.
+type (
+	mcpLegacyModeKey struct{}
+	mcpLegacyMode    struct {
+		wrapOutput bool
+	}
+	mcpLegacyEncoder struct {
+		next goahttp.Encoder
+		mode mcpLegacyMode
+	}
+)
+
+// mcpLegacyResponseEncoder selects an older reply only after the request guard
+// has accepted that wire format. The application's configured encoder still
+// writes the final JSON-RPC response; no serialized response is read back.
+func mcpLegacyResponseEncoder(next func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter) goahttp.Encoder {
+	return func(ctx context.Context, w http.ResponseWriter) goahttp.Encoder {
+		encoder := next(ctx, w)
+		if mode, ok := ctx.Value(mcpLegacyModeKey{}).(mcpLegacyMode); ok {
+			return &mcpLegacyEncoder{next: encoder, mode: mode}
+		}
+		return encoder
+	}
+}
+
+// Encode receives the native Goa JSON-RPC reply, selects its older wire fields,
+// and sends it to the configured encoder with the original ID and errors.
+func (e *mcpLegacyEncoder) Encode(value any) error {
+	response, ok := value.(*jsonrpc.Response)
+	if !ok {
+		return fmt.Errorf("older MCP encoder expected a JSON-RPC response, got %T", value)
+	}
+	if response.Error != nil {
+		return e.next.Encode(response)
+	}
+	if _, ok := response.Result.(struct{}); ok {
+		return e.next.Encode(response)
+	}
+	result, err := mcpLegacyResult(response.Result, e.mode)
+	if err != nil {
+		var failure *mcpruntime.Error
+		if errors.As(err, &failure) {
+			return e.next.Encode(jsonrpc.MakeErrorResponse(response.ID, jsonrpc.Code(failure.Code), failure.Message, failure.Data))
+		}
+		return err
+	}
+	copy := *response
+	copy.Result = result
+	return e.next.Encode(&copy)
+}
+
+// mcpLegacyResult reuses each planned HTTP body. It removes modern result
+// markers and converts tool results to the older advertised object.
+func mcpLegacyResult(value any, mode mcpLegacyMode) (any, error) {
+	switch body := value.(type) {
+	case *ServerDiscoverResponseBody:
+		var meta struct {
+			ServerInfo json.RawMessage `json:"io.modelcontextprotocol/serverInfo"`
+		}
+		if err := json.Unmarshal(body.Meta, &meta); err != nil {
+			return nil, fmt.Errorf("decode MCP server identity: %w", err)
+		}
+		copy := *body
+		capabilities := *body.Capabilities
+		capabilities.Extensions = nil
+		if capabilities.Tools != nil {
+			tools := *capabilities.Tools
+			tools.ListChanged = nil
+			capabilities.Tools = &tools
+		}
+		if capabilities.Resources != nil {
+			resources := *capabilities.Resources
+			resources.ListChanged, resources.Subscribe = nil, nil
+			capabilities.Resources = &resources
+		}
+		if capabilities.Prompts != nil {
+			prompts := *capabilities.Prompts
+			prompts.ListChanged = nil
+			capabilities.Prompts = &prompts
+		}
+		copy.Capabilities = &capabilities
+		return struct {
+			*ServerDiscoverResponseBody
+			SupportedVersions []string        `json:"supportedVersions,omitempty"`
+			ResultType        *string         `json:"resultType,omitempty"`
+			TTLMs             *int64          `json:"ttlMs,omitempty"`
+			CacheScope        *string         `json:"cacheScope,omitempty"`
+			ProtocolVersion   string          `json:"protocolVersion"`
+			ServerInfo        json.RawMessage `json:"serverInfo"`
+		}{ServerDiscoverResponseBody: &copy, ProtocolVersion: mcpruntime.LegacyProtocolVersion, ServerInfo: meta.ServerInfo}, nil
+	case *ToolsListResponseBody:
+		copy := *body
+		copy.Tools = append(copy.Tools[:0:0], copy.Tools...)
+		for index, tool := range copy.Tools {
+			item := *tool
+			switch item.Name {
+			case "list_marks":
+				item.OutputSchema = json.RawMessage("{\"$defs\":{\"MarkInfo\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Mark ID\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"kind\":{\"description\":\"color, or symbol for a mark drawn as an emoji\",\"enum\":[\"color\",\"symbol\"],\"type\":\"string\"},\"name\":{\"description\":\"Name the user gave the mark, which says what it means, such as important; absent for none\",\"type\":\"string\"}},\"required\":[\"id\",\"kind\"],\"title\":\"MarkInfo\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"value\":{\"items\":{\"$ref\":\"#/$defs/MarkInfo\"},\"type\":\"array\"}},\"required\":[\"value\"],\"type\":\"object\"}")
+			case "list_notebooks":
+				item.OutputSchema = json.RawMessage("{\"$defs\":{\"Notebook\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"reserved\",\"kind\",\"sort\"],\"title\":\"Notebook\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"value\":{\"items\":{\"$ref\":\"#/$defs/Notebook\"},\"type\":\"array\"}},\"required\":[\"value\"],\"type\":\"object\"}")
+			case "list_tags":
+				item.OutputSchema = json.RawMessage("{\"$defs\":{\"TagCount\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes with the tag\",\"format\":\"int64\",\"type\":\"integer\"},\"name\":{\"description\":\"Tag\",\"type\":\"string\"}},\"required\":[\"name\",\"count\"],\"title\":\"TagCount\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"value\":{\"items\":{\"$ref\":\"#/$defs/TagCount\"},\"type\":\"array\"}},\"required\":[\"value\"],\"type\":\"object\"}")
+			}
+			copy.Tools[index] = &item
+		}
+		body = &copy
+		return struct {
+			*ToolsListResponseBody
+			ResultType *string `json:"resultType,omitempty"`
+			TTLMs      *int64  `json:"ttlMs,omitempty"`
+			CacheScope *string `json:"cacheScope,omitempty"`
+		}{ToolsListResponseBody: body}, nil
+	case *ToolsCallOutcomeResponseBody:
+		completed, ok := body.AsComplete()
+		if !ok {
+			return nil, &mcpruntime.Error{Code: mcpruntime.MissingRequiredClientCapability, Message: "Basic MCP 2025-11-25 does not support tasks or client-input exchanges"}
+		}
+		copy := *completed
+		if len(copy.StructuredContent) != 0 {
+			if mode.wrapOutput {
+				encoded, err := json.Marshal(struct {
+					Value json.RawMessage `json:"value"`
+				}{copy.StructuredContent})
+				if err != nil {
+					return nil, fmt.Errorf("encode older structured tool result: %w", err)
+				}
+				copy.StructuredContent = encoded
+			}
+			// A host that reads only text still receives the complete JSON result.
+			text := string(copy.StructuredContent)
+			copy.Content = append(append(copy.Content[:0:0], copy.Content...), &ContentItemResponse{Type: "text", Text: &text})
+		}
+		return &copy, nil
+	default:
+		return nil, fmt.Errorf("older MCP encoder received unsupported result %T", value)
 	}
 }

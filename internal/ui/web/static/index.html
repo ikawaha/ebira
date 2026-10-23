@@ -27,6 +27,7 @@
         <dt><code>"new york"</code></dt><dd data-i18n="searchHelpPhrase"></dd>
         <dt><code>tag:todo</code></dt><dd data-i18n="searchHelpTag"></dd>
         <dt><code>tag:todo tag:travel</code></dt><dd data-i18n="searchHelpTagOnly"></dd>
+        <dt><code>mark:red</code></dt><dd data-i18n="searchHelpMark"></dd>
       </dl>
       <p data-i18n="searchHelpNote"></p>
     </div>
@@ -48,6 +49,7 @@
         <button type="button" role="menuitem" id="import-open" data-i18n-title="importMarkdownTitle" data-i18n="importMarkdown"></button>
         <button type="button" role="menuitem" id="files-check-open" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
         <button type="button" role="menuitem" id="preview-style-open" data-i18n-title="previewStyleTitle" data-i18n="previewStyle"></button>
+        <button type="button" role="menuitem" id="mark-names-open" data-i18n-title="markNamesTitle" data-i18n="markNamesMenu"></button>
         <button type="button" role="menuitem" id="git-sync-open" data-i18n-title="gitSyncTitle" data-i18n="gitSync" hidden></button>
         <div class="menu-sep" role="separator"></div>
         <div class="menu-label" data-i18n="language"></div>
@@ -110,6 +112,7 @@
   </form>
 </dialog>
 <div class="menu notebook-menu" id="notebook-menu" role="menu" hidden></div>
+<div class="menu notebook-menu mark-menu" id="mark-menu" role="menu" hidden></div>
 <dialog id="notebook-new" class="notebook-new" data-i18n-aria-label="notebookNew">
   <form method="dialog" id="notebook-new-form">
     <h2 data-i18n="notebookNew"></h2>
@@ -137,5 +140,6 @@
 <dialog id="auth" class="files-check auth" data-i18n-aria-label="authTitle"></dialog>
 <dialog id="passkeys" class="files-check auth" data-i18n-aria-label="passkeysTitle"></dialog>
 <dialog id="preview-style" class="preview-style" data-i18n-aria-label="previewStyleHead"></dialog>
+<dialog id="mark-names" class="files-check mark-names" data-i18n-aria-label="markNames"></dialog>
 </body>
 </html>

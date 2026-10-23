@@ -72,6 +72,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string `json:"created_by,omitempty"`
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string `json:"marks,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -171,6 +174,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string `json:"created_by,omitempty"`
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string `json:"marks,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -213,6 +219,17 @@ type (
 		// What could not be converted as is, such as images left out
 		Warnings []string `json:"warnings"`
 	}
+	// ListMarksPayloadTransport is the internal JSON transport type for ListMarksPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ListMarksPayloadTransport struct {
+	}
+	// ListMarksResultTransport is the internal JSON transport type for ListMarksResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ListMarksResultTransport []*MarkInfoTransport
 	// ListNotebooksPayloadTransport is the internal JSON transport type for ListNotebooksPayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -313,6 +330,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string `json:"created_by,omitempty"`
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string `json:"marks,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -331,8 +351,10 @@ type (
 	SearchNotesPayloadTransport struct {
 		// Search terms separated by spaces, combined with AND. "two words" in double
 		// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
-		// for notes with the tag (case and width do not matter); a query of tags alone
-		// lists the notes with them, last updated first
+		// for notes with the tag (case and width do not matter), and mark:red, or
+		// mark:"a name", for notes with the mark, by its ID or the name the user gave
+		// it; a query of tags and marks alone lists the notes with them, last updated
+		// first
 		Q *string `json:"q"`
 		// Only notes in this notebook. Omit for all notebooks except the trash
 		Notebook *string `json:"notebook,omitempty"`
@@ -370,6 +392,9 @@ type (
 		Tags []string `json:"tags,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body,omitempty"`
+		// Marks of the note, one at most for now; an empty list takes them away. See
+		// list_marks for what each means
+		Marks []string `json:"marks,omitempty"`
 	}
 	// UpdateAiNoteResultTransport is the internal JSON transport type for UpdateAiNoteResult.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -396,6 +421,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string `json:"created_by,omitempty"`
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string `json:"marks,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -419,6 +447,19 @@ type (
 		Name *string `json:"name"`
 		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
 		Content []byte `json:"content"`
+	}
+	// MarkInfoTransport is the internal JSON transport type for MarkInfoTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	MarkInfoTransport struct {
+		// Mark ID
+		ID *string `json:"id"`
+		// color, or symbol for a mark drawn as an emoji
+		Kind *string `json:"kind"`
+		// Name the user gave the mark, which says what it means, such as important;
+		// absent for none
+		Name *string `json:"name,omitempty"`
 	}
 	// NoteSummaryTransport is the internal JSON transport type for NoteSummaryTransport.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -445,6 +486,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string `json:"created_by,omitempty"`
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string `json:"marks,omitempty"`
 		// Excerpt around the matched terms (search only)
 		Snippet *string `json:"snippet,omitempty"`
 		// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -479,6 +523,9 @@ type (
 		// Who created the note: ai for a note created by an AI client
 		// (create_ai_note); absent for people
 		CreatedBy *string `json:"created_by,omitempty"`
+		// Marks of the note, to tell it at a glance, one at most for now: a color or a
+		// symbol (see list_marks for what each means to the user); absent for none
+		Marks []string `json:"marks,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP

@@ -16,6 +16,7 @@ func TestParseQuery(t *testing.T) {
 		q     string
 		terms []string
 		tags  []string
+		marks []string
 	}{
 		{q: "東京 天気", terms: []string{"東京", "天気"}},
 		{q: `"New York" pizza`, terms: []string{"New York", "pizza"}},
@@ -26,10 +27,11 @@ func TestParseQuery(t *testing.T) {
 		{q: "tag: 雨", terms: []string{"雨"}}, // a tag being typed
 		{q: "a:b tags:x", terms: []string{"a:b", "tags:x"}},
 		{q: `say"hi"`, terms: []string{`say"hi"`}}, // quotes only start a phrase
+		{q: `mark:red Mark:"あとで" 雨 tag:x`, terms: []string{"雨"}, tags: []string{"x"}, marks: []string{"red", "あとで"}},
 	} {
 		got := ParseQuery(tt.q)
-		if !reflect.DeepEqual(got.Terms, tt.terms) || !reflect.DeepEqual(got.Tags, tt.tags) {
-			t.Errorf("ParseQuery(%q) = %q, %q; want %q, %q", tt.q, got.Terms, got.Tags, tt.terms, tt.tags)
+		if !reflect.DeepEqual(got.Terms, tt.terms) || !reflect.DeepEqual(got.Tags, tt.tags) || !reflect.DeepEqual(got.Marks, tt.marks) {
+			t.Errorf("ParseQuery(%q) = %q, %q, %q; want %q, %q, %q", tt.q, got.Terms, got.Tags, got.Marks, tt.terms, tt.tags, tt.marks)
 		}
 	}
 }

@@ -51,10 +51,14 @@ var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 
 // Note is a single note.
 type Note struct {
-	ID        string    `yaml:"-"`
-	Notebook  string    `yaml:"-"`
-	Title     string    `yaml:"title"`
-	Tags      []string  `yaml:"tags"`
+	ID       string   `yaml:"-"`
+	Notebook string   `yaml:"-"`
+	Title    string   `yaml:"title"`
+	Tags     []string `yaml:"tags"`
+	// Marks are the marks of the note, such as red or star (see MarkIDs), to
+	// tell it at a glance in a list. The UIs set one at most for now; the file
+	// and the API hold a list, so that more can be allowed later.
+	Marks     []string  `yaml:"marks,omitempty"`
 	CreatedAt time.Time `yaml:"created_at"`
 	UpdatedAt time.Time `yaml:"updated_at"`
 	// TrashedFrom is the notebook a note deleted on its own came from.
@@ -1053,6 +1057,15 @@ func encode(old []byte, n *Note) ([]byte, error) {
 	}
 	set(m, "title", str(n.Title, 0))
 	set(m, "tags", tags)
+	if len(n.Marks) > 0 {
+		marks := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq", Style: yaml.FlowStyle}
+		for _, mk := range n.Marks {
+			marks.Content = append(marks.Content, str(mk, 0))
+		}
+		setBefore(m, "marks", marks, "created_at")
+	} else {
+		unset(m, "marks")
+	}
 	set(m, "created_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: n.CreatedAt.Format(time.RFC3339)})
 	set(m, "updated_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: n.UpdatedAt.Format(time.RFC3339)})
 	if n.TrashedFrom != "" {
@@ -1135,7 +1148,7 @@ func setBefore(m *yaml.Node, key string, v *yaml.Node, next string) {
 }
 
 // noteKeys are the keys of note files that Note sets.
-var noteKeys = []string{"title", "tags", "created_at", "updated_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "body"}
+var noteKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "body"}
 
 // has reports whether the mapping node m has key.
 func has(m *yaml.Node, key string) bool {

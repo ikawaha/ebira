@@ -12,10 +12,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"sort"
 	"strconv"
 	"strings"
+	utf8 "unicode/utf8"
 
 	toolhttp "github.com/ikawaha/ebira/gen/assistant/toolsets/notes/http"
 	"goa.design/goa-ai/runtime/agent/tools"
@@ -168,6 +168,16 @@ var getResultFields = []tools.FieldMetadata{
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -235,7 +245,7 @@ var searchPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
-		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
+		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
@@ -321,6 +331,16 @@ var searchResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("created_by")},
 		JSONType:    "string",
 		Description: "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks")},
+		JSONType:    "array",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
@@ -657,6 +677,12 @@ func MarshalGetResult(v *GetResult) ([]byte, error) {
 	for i, val := range in.Tags {
 		out.Tags[i] = val
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -715,6 +741,12 @@ func UnmarshalGetResult(data []byte) (*GetResult, error) {
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
 		out.Tags[i] = val
+	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -853,14 +885,9 @@ func UnmarshalSearchResult(data []byte) (*SearchResult, error) {
 // validateSearchPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateSearchPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateSearchPayloadJSONValue("", root, "")
 }
@@ -868,14 +895,9 @@ func validateSearchPayloadJSON(data []byte) error {
 // validateSearchResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateSearchResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateSearchResultJSONValue("", root, "")
 }
@@ -883,14 +905,9 @@ func validateSearchResultJSON(data []byte) error {
 // validateGetPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateGetPayloadJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
 	}
 	return validateGetPayloadJSONValue("", root, "")
 }
@@ -898,16 +915,133 @@ func validateGetPayloadJSON(data []byte) error {
 // validateGetResultJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateGetResultJSON(data []byte) error {
-	var root any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&root); err != nil {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
 		return err
 	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("multiple JSON documents")
-	}
 	return validateGetResultJSONValue("", root, "")
+}
+
+// readStrictToolJSON checks the complete JSON document for malformed text and
+// duplicate members, then returns values with their original number text.
+func readStrictToolJSON(data []byte) (any, error) {
+	if err := validateToolJSONText(data); err != nil {
+		return nil, err
+	}
+	if !json.Valid(data) {
+		// When two complete JSON values arrive, keep the caller's distinct
+		// multiple-document error instead of reporting malformed syntax.
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		var document json.RawMessage
+		if err := decoder.Decode(&document); err == nil {
+			if err := decoder.Decode(&document); err == nil {
+				return nil, fmt.Errorf("multiple JSON documents")
+			}
+		}
+		return nil, fmt.Errorf("invalid JSON syntax or nesting")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	return readToolJSONValue(decoder)
+}
+
+// readToolJSONValue reads one JSON value and rejects repeated object member
+// names, returning the value without replacing earlier members.
+func readToolJSONValue(decoder *json.Decoder) (any, error) {
+	token, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	switch token {
+	case json.Delim('{'):
+		object := make(map[string]any)
+		for decoder.More() {
+			token, err := decoder.Token()
+			if err != nil {
+				return nil, err
+			}
+			key, ok := token.(string)
+			if !ok {
+				return nil, fmt.Errorf("object member name must be a string")
+			}
+			if _, exists := object[key]; exists {
+				return nil, fmt.Errorf("duplicate JSON member %q", key)
+			}
+			value, err := readToolJSONValue(decoder)
+			if err != nil {
+				return nil, err
+			}
+			object[key] = value
+		}
+		if _, err := decoder.Token(); err != nil {
+			return nil, err
+		}
+		return object, nil
+	case json.Delim('['):
+		array := make([]any, 0)
+		for decoder.More() {
+			value, err := readToolJSONValue(decoder)
+			if err != nil {
+				return nil, err
+			}
+			array = append(array, value)
+		}
+		if _, err := decoder.Token(); err != nil {
+			return nil, err
+		}
+		return array, nil
+	default:
+		if _, delimiter := token.(json.Delim); delimiter {
+			return nil, fmt.Errorf("unexpected JSON delimiter %v", token)
+		}
+		return token, nil
+	}
+}
+
+// validateToolJSONText checks JSON bytes for invalid text and unpaired Unicode
+// escapes, returning an error before encoding/json can replace those characters.
+func validateToolJSONText(data []byte) error {
+	if !utf8.Valid(data) {
+		return fmt.Errorf("invalid UTF-8 in JSON")
+	}
+	for i := 0; i < len(data); i++ {
+		if data[i] != '"' {
+			continue
+		}
+		i++
+		for ; i < len(data) && data[i] != '"'; i++ {
+			if data[i] != '\\' {
+				continue
+			}
+			i++
+			if i >= len(data) || data[i] != 'u' {
+				continue
+			}
+			if i+4 >= len(data) {
+				return fmt.Errorf("incomplete Unicode escape")
+			}
+			code, err := strconv.ParseUint(string(data[i+1:i+5]), 16, 16)
+			if err != nil {
+				return fmt.Errorf("invalid Unicode escape: %w", err)
+			}
+			i += 4
+			if code >= 0xdc00 && code <= 0xdfff {
+				return fmt.Errorf("unpaired low Unicode surrogate")
+			}
+			if code < 0xd800 || code > 0xdbff {
+				continue
+			}
+			if i+6 >= len(data) || data[i+1] != '\\' || data[i+2] != 'u' {
+				return fmt.Errorf("unpaired high Unicode surrogate")
+			}
+			low, err := strconv.ParseUint(string(data[i+3:i+7]), 16, 16)
+			if err != nil || low < 0xdc00 || low > 0xdfff {
+				return fmt.Errorf("unpaired high Unicode surrogate")
+			}
+			i += 6
+		}
+	}
+	return nil
 }
 
 // validateSearchPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
@@ -947,7 +1081,7 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 		case "q":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter); a query of tags alone lists the notes with them, last updated first",
+				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first",
 			); err != nil {
 				return err
 			}
@@ -1130,6 +1264,13 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 			); err != nil {
 				return err
 			}
+		case "marks":
+			if err := validateSearchResultNoteSummaryTransportMarksJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+			); err != nil {
+				return err
+			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -1152,7 +1293,7 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 				return err
 			}
 		case "tags":
-			if err := validateSearchResultNoteSummaryTransportTagsJSONValue(
+			if err := validateSearchResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tags",
 			); err != nil {
@@ -1191,6 +1332,7 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 				"created_at",
 				"created_by",
 				"id",
+				"marks",
 				"notebook",
 				"snippet",
 				"snippet_highlights",
@@ -1200,6 +1342,30 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 				"trashed_notebook",
 				"updated_at",
 			})
+		}
+	}
+	return nil
+}
+
+// validateSearchResultNoteSummaryTransportMarksJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSearchResultNoteSummaryTransportMarksJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateStringJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1268,30 +1434,6 @@ func validateSearchResultTextRangeTransportJSONValue(path string, value any, des
 				"end",
 				"start",
 			})
-		}
-	}
-	return nil
-}
-
-// validateSearchResultNoteSummaryTransportTagsJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateSearchResultNoteSummaryTransportTagsJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "array", "null", description)
-	}
-	typed, ok := value.([]any)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
-	}
-	for index, item := range typed {
-		if err := validateStringJSONValue(
-			generatedJSONChildPath(path, strconv.Itoa(index), true),
-			item, description,
-		); err != nil {
-			return err
 		}
 	}
 	return nil
@@ -1388,6 +1530,13 @@ func validateGetResultJSONValue(path string, value any, description string) erro
 			); err != nil {
 				return err
 			}
+		case "marks":
+			if err := validateSearchResultNoteSummaryTransportMarksJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+			); err != nil {
+				return err
+			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -1396,7 +1545,7 @@ func validateGetResultJSONValue(path string, value any, description string) erro
 				return err
 			}
 		case "tags":
-			if err := validateSearchResultNoteSummaryTransportTagsJSONValue(
+			if err := validateSearchResultNoteSummaryTransportMarksJSONValue(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tags",
 			); err != nil {
@@ -1451,6 +1600,7 @@ func validateGetResultJSONValue(path string, value any, description string) erro
 				"created_at",
 				"created_by",
 				"id",
+				"marks",
 				"notebook",
 				"tags",
 				"title",
@@ -1599,6 +1749,12 @@ func decodeNoteSummaryTransportToNoteSummary(v *toolhttp.NoteSummaryTransport) *
 	for i, val := range v.Tags {
 		res.Tags[i] = val
 	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -1636,6 +1792,12 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
 		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(v.TitleHighlights))

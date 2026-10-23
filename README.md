@@ -203,6 +203,10 @@ Only the notes are in the notes directory: the index and the server's state, wit
 - A **note** has `title`, `tags`, `created_at`, `updated_at` and a Markdown `body`. ebira adds `order` when you reorder notes by hand and `created_by: ai` when an AI wrote the note.
 - **Images** go in `<id>.assets/` next to the note, and the body refers to them as `![alt](<id>.assets/name.png)`.
 
+### Marks
+
+Give a note a mark to tell it at a glance in the list: a color (red, orange, yellow, green, blue, purple, gray) or a symbol (⭐ ❗ ❓ ✅ 📌 🔥 💡). In the web UI, use the flag in the preview, a right click on a note in the list, or `M`; in the TUI, press `M` and choose with the arrows. A mark is no change of the note: its update time stays. Name the marks, such as important for red, from **Names of the marks…** in the settings menu; the names are kept with the notes in `_ebira.yaml`, so every machine shows the same, and `mark:important` finds the notes with one. A note has one mark for now.
+
 ## Sync with git
 
 git is optional. Without it, ebira works the same, and the notes are plain files that you can back up or sync any way you like; the web UI shows **Sync with git** only for notes in a repository.
@@ -241,7 +245,7 @@ When a note is changed on two machines, the service keeps one version and leaves
 | `en` | Takes English words with their stems (the Snowball English stemmer), without stop words such as *the* and *of*, and Japanese as bigrams; also searches trigrams, for parts of words | Notes in English: *plan* finds *plans* and *planning*, and a word being typed is still found |
 | `like` | SQL `LIKE` | Small collections |
 
-Words are combined with AND. Put a phrase in double quotes, `"new york"`, to find its words in that order, and add `tag:todo` (or `tag:"two words"`) to narrow the search to a tag; a search of tags alone lists the notes with them. The same works for AI clients through `search_notes`. To find words within the note shown instead, press `f` or the magnifier in the preview: the matches are marked there, and Enter goes through them, leaving the list as it is.
+Words are combined with AND. Put a phrase in double quotes, `"new york"`, to find its words in that order, add `tag:todo` (or `tag:"two words"`) to narrow the search to a tag, and `mark:red` (or the name you gave the mark) to a mark; a search of tags alone lists the notes with them. The same works for AI clients through `search_notes`. To find words within the note shown instead, press `f` or the magnifier in the preview: the matches are marked there, and Enter goes through them, leaving the list as it is.
 
 Text is normalized with NFKC and lowercased, so full-width and half-width characters, and upper and lower case, match each other. Set the mode for all your machines in `_ebira.yaml` of the notes directory:
 
@@ -290,12 +294,13 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `list_notebooks` | List the notebooks, with their kinds and note counts |
 | `list_notes` | List the notes of a notebook or a tag, in pages |
 | `list_tags` | List the tags, with their note counts |
+| `list_marks` | List the marks, with the names you gave them |
 | `search_notes` | Search the notes, in Japanese or English; the results come with snippets |
 | `get_note` | Get a note, with its body and its version |
 | `create_ai_note` | Write a new note in a `collab` notebook, or drop one in a `drop` notebook |
 | `import_ai_note` | Import a Markdown file, with its front matter and the images it refers to, as a new note, the same way |
 | `add_ai_file` | Add an image to a note in a `collab` notebook, to refer to from its body |
-| `update_ai_note` | Change a note in a `collab` notebook; needs the version from `get_note` |
+| `update_ai_note` | Change a note in a `collab` notebook, or set its mark; needs the version from `get_note` |
 | `delete_ai_note` | Move a note in a `collab` notebook to the trash; needs the version from `get_note` |
 | `move_ai_note` | Reorder a note in a `collab` notebook: put it after another note, or first |
 | `create_ai_notebook` | Make a new `collab` notebook, for the AI to write in |

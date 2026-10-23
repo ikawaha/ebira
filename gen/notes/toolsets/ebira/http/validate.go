@@ -117,6 +117,14 @@ func ValidateCreateAiNoteResultTransport(body *CreateAiNoteResultTransport) (err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
 		}
 	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -266,6 +274,14 @@ func ValidateGetNoteResultTransport(body *GetNoteResultTransport) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
 		}
 	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -346,6 +362,18 @@ func ValidateImportAiNoteResultTransport(body *ImportAiNoteResultTransport) (err
 	}
 	if body.DuplicateOf != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *body.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateListMarksResultTransport runs the validations defined on ListMarksResultTransport.
+func ValidateListMarksResultTransport(body ListMarksResultTransport) (err error) {
+	for _, e := range body {
+		if e != nil {
+			if err2 := ValidateMarkInfoTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
 	}
 	return
 }
@@ -500,6 +528,14 @@ func ValidateMoveAiNoteResultTransport(body *MoveAiNoteResultTransport) (err err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
 		}
 	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -589,6 +625,14 @@ func ValidateUpdateAiNotePayloadTransport(body *UpdateAiNotePayloadTransport) (e
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 1, true))
 		}
 	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
 	return
 }
 
@@ -638,6 +682,14 @@ func ValidateUpdateAiNoteResultTransport(body *UpdateAiNoteResultTransport) (err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
 		}
 	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -675,6 +727,27 @@ func ValidateAIImportFileTransport(body *AIImportFileTransport) (err error) {
 		}
 		if utf8.RuneCountInString(*body.Name) > 255 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
+		}
+	}
+	return
+}
+
+// ValidateMarkInfoTransport runs the validations defined on MarkInfoTransport.
+func ValidateMarkInfoTransport(body *MarkInfoTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if body.ID != nil {
+		if !(*body.ID == "red" || *body.ID == "orange" || *body.ID == "yellow" || *body.ID == "green" || *body.ID == "blue" || *body.ID == "purple" || *body.ID == "gray" || *body.ID == "star" || *body.ID == "important" || *body.ID == "question" || *body.ID == "done" || *body.ID == "pin" || *body.ID == "urgent" || *body.ID == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.id", *body.ID, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		}
+	}
+	if body.Kind != nil {
+		if !(*body.Kind == "color" || *body.Kind == "symbol") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"color", "symbol"}))
 		}
 	}
 	return
@@ -718,6 +791,14 @@ func ValidateNoteSummaryTransport(body *NoteSummaryTransport) (err error) {
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	for _, e := range body.TitleHighlights {
@@ -781,6 +862,14 @@ func ValidateNoteTransport(body *NoteTransport) (err error) {
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.created_by", *body.CreatedBy, []any{"ai"}))
+		}
+	}
+	if len(body.Marks) > 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
+	}
+	for _, e := range body.Marks {
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
 		}
 	}
 	if body.TrashedFrom != nil {

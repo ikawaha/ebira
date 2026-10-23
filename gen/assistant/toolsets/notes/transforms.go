@@ -41,6 +41,12 @@ func InitGetToolResult(in *notes.Note) *GetResult {
 	} else {
 		out.Tags = []string{}
 	}
+	if in.Marks != nil {
+		out.Marks = make([]string, len(in.Marks))
+		for i, val := range in.Marks {
+			out.Marks[i] = val
+		}
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -132,6 +138,12 @@ func transformNoteSummaryToNoteSummary(v *notes.NoteSummary) *NoteSummary {
 		}
 	} else {
 		res.Tags = []string{}
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
