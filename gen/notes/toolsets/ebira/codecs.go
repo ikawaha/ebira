@@ -1734,7 +1734,32 @@ var updateAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
-		Description: "Body in Markdown",
+		Description: "Body in Markdown, replacing the whole body",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("append")},
+		JSONType:    "string",
+		Description: "Text to add at the end of the body, on a new line when the body does not end with one",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("edits")},
+		JSONType:    "array",
+		Description: "Changes of parts of the body, applied in order, all or none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("edits"), tools.DynamicField{}},
+		JSONType:    "object",
+		Description: "Changes of parts of the body, applied in order, all or none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("edits"), tools.DynamicField{}, tools.FixedField("old")},
+		JSONType:    "string",
+		Description: "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("edits"), tools.DynamicField{}, tools.FixedField("new")},
+		JSONType:    "string",
+		Description: "Text to put in its place; empty to remove it",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("marks")},
@@ -1745,6 +1770,11 @@ var updateAiNotePayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("marks"), tools.DynamicField{}},
 		JSONType:    "string",
 		Description: "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("brief")},
+		JSONType:    "boolean",
+		Description: "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back",
 	},
 }
 var updateAiNoteResultFields = []tools.FieldMetadata{
@@ -4474,11 +4504,23 @@ func MarshalUpdateAiNotePayload(v *UpdateAiNotePayload) ([]byte, error) {
 		Notebook: in.Notebook,
 		Title:    in.Title,
 		Body:     in.Body,
+		Append:   in.Append,
+		Brief:    in.Brief,
 	}
 	if in.Tags != nil {
 		out.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
 			out.Tags[i] = val
+		}
+	}
+	if in.Edits != nil {
+		out.Edits = make([]*toolhttp.NoteEditTransport, len(in.Edits))
+		for i, val := range in.Edits {
+			if val == nil {
+				out.Edits[i] = nil
+				continue
+			}
+			out.Edits[i] = encodeNoteEditToNoteEditTransport(val)
 		}
 	}
 	if in.Marks != nil {
@@ -4516,11 +4558,23 @@ func UnmarshalUpdateAiNotePayload(data []byte) (*UpdateAiNotePayload, error) {
 		Notebook: in.Notebook,
 		Title:    in.Title,
 		Body:     in.Body,
+		Append:   in.Append,
+		Brief:    in.Brief,
 	}
 	if in.Tags != nil {
 		out.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
 			out.Tags[i] = val
+		}
+	}
+	if in.Edits != nil {
+		out.Edits = make([]*NoteEdit, len(in.Edits))
+		for i, val := range in.Edits {
+			if val == nil {
+				out.Edits[i] = nil
+				continue
+			}
+			out.Edits[i] = decodeNoteEditTransportToNoteEdit(val)
 		}
 	}
 	if in.Marks != nil {
@@ -6402,10 +6456,31 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "append":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Text to add at the end of the body, on a new line when the body does not end with one",
+			); err != nil {
+				return err
+			}
 		case "body":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Body in Markdown",
+				typed[key], "Body in Markdown, replacing the whole body",
+			); err != nil {
+				return err
+			}
+		case "brief":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back",
+			); err != nil {
+				return err
+			}
+		case "edits":
+			if err := validateUpdateAiNotePayloadRootEditsJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Changes of parts of the body, applied in order, all or none",
 			); err != nil {
 				return err
 			}
@@ -6453,13 +6528,84 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"append",
 				"body",
+				"brief",
+				"edits",
 				"id",
 				"marks",
 				"notebook",
 				"tags",
 				"title",
 				"version",
+			})
+		}
+	}
+	return nil
+}
+
+// validateUpdateAiNotePayloadRootEditsJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUpdateAiNotePayloadRootEditsJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateUpdateAiNotePayloadNoteEditTransportJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateUpdateAiNotePayloadNoteEditTransportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUpdateAiNotePayloadNoteEditTransportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "new":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Text to put in its place; empty to remove it",
+			); err != nil {
+				return err
+			}
+		case "old":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"new",
+				"old",
 			})
 		}
 	}
@@ -7001,6 +7147,22 @@ func encodeTagCountToTagCountTransport(v *TagCount) *toolhttp.TagCountTransport 
 	res := &toolhttp.TagCountTransport{
 		Name:  &v.Name,
 		Count: &v.Count,
+	}
+
+	return res
+}
+func decodeNoteEditTransportToNoteEdit(v *toolhttp.NoteEditTransport) *NoteEdit {
+	res := &NoteEdit{
+		Old: *v.Old,
+		New: *v.New,
+	}
+
+	return res
+}
+func encodeNoteEditToNoteEditTransport(v *NoteEdit) *toolhttp.NoteEditTransport {
+	res := &toolhttp.NoteEditTransport{
+		Old: &v.Old,
+		New: &v.New,
 	}
 
 	return res

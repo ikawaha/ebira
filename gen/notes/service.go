@@ -143,7 +143,11 @@ type Service interface {
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
 	// people meanwhile are not overwritten. Setting notebook moves the note to
-	// another notebook of the collab kind.
+	// another notebook of the collab kind. The body is changed in one of three
+	// ways, one at a time: body replaces it as a whole, append adds text at its
+	// end, and edits replace parts of it, without sending the whole body again.
+	// The edits apply in order, all or none: each old text must appear exactly
+	// once in the body as the edits before it left it, else nothing is changed.
 	UpdateAiNote(context.Context, *UpdateAiNotePayload) (res *Note, err error)
 	// Move a note in a notebook of the collab kind to the trash, where people can
 	// restore it. The version from get_note is required.
@@ -725,6 +729,15 @@ type Note struct {
 	BodyHighlights []*TextRange
 }
 
+type NoteEdit struct {
+	// Text of the body to replace, copied exactly; it must appear exactly once in
+	// the body (as changed by the edits before it), so give enough of the text
+	// around it
+	Old string
+	// Text to put in its place; empty to remove it
+	New string
+}
+
 // NoteEvent is the result type of the notes service events method.
 type NoteEvent struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
@@ -1081,11 +1094,19 @@ type UpdateAiNotePayload struct {
 	Title *string
 	// Tags
 	Tags []string
-	// Body in Markdown
+	// Body in Markdown, replacing the whole body
 	Body *string
+	// Text to add at the end of the body, on a new line when the body does not end
+	// with one
+	Append *string
+	// Changes of parts of the body, applied in order, all or none
+	Edits []*NoteEdit
 	// Marks of the note, one at most for now; an empty list takes them away. See
 	// list_marks for what each means
 	Marks []string
+	// Leave the body out of the result (it comes back empty), as for a long note:
+	// the new version, the update time and the other attributes still come back
+	Brief *bool
 }
 
 // UpdatePayload is the payload type of the notes service update method.
@@ -1512,6 +1533,35 @@ func validatejsonMarkInfoTransport(value *jsonMarkInfoTransport) (err error) {
 	if value.Kind != nil {
 		if !(*value.Kind == "color" || *value.Kind == "symbol") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *value.Kind, []any{"color", "symbol"}))
+		}
+	}
+	return err
+}
+
+// jsonNoteEditTransport stores JSON fields until they have been validated.
+type jsonNoteEditTransport struct {
+	// Text of the body to replace, copied exactly; it must appear exactly once in
+	// the body (as changed by the edits before it), so give enough of the text
+	// around it
+	Old *string `json:"old"`
+	// Text to put in its place; empty to remove it
+	New *string `json:"new"`
+}
+
+// validatejsonNoteEditTransport checks decoded JSON before it becomes a service value.
+func validatejsonNoteEditTransport(value *jsonNoteEditTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Old == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("old", "body"))
+	}
+	if value.New == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("new", "body"))
+	}
+	if value.Old != nil {
+		if utf8.RuneCountInString(*value.Old) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.old", *value.Old, utf8.RuneCountInString(*value.Old), 1, true))
 		}
 	}
 	return err
@@ -2515,6 +2565,14 @@ func validateMarkInfoOriginal(value *MarkInfo) (err error) {
 	return err
 }
 
+// validateNoteEditOriginal checks the original typed value before JSON conversion.
+func validateNoteEditOriginal(value *NoteEdit) (err error) {
+	if utf8.RuneCountInString(value.Old) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("value.old", value.Old, utf8.RuneCountInString(value.Old), 1, true))
+	}
+	return err
+}
+
 // validateNoteEventOriginal checks the original typed value before JSON conversion.
 func validateNoteEventOriginal(value *NoteEvent) (err error) {
 	if !(value.Type == "ready" || value.Type == "created" || value.Type == "updated" || value.Type == "deleted" || value.Type == "notebooks") {
@@ -3377,6 +3435,64 @@ func DecodeNote(data []byte) (out *Note, err error) {
 				}
 				out.BodyHighlights[i] = decodeTextRangeTransportToTextRange(val)
 			}
+		}
+	}
+	return out, nil
+}
+
+// EncodeNoteEdit turns a service value into JSON using the field names in the Goa design.
+func EncodeNoteEdit(in *NoteEdit) ([]byte, error) {
+	if err := checkNoteEditValue(in); err != nil {
+		return nil, fmt.Errorf("encode NoteEdit JSON: %w", err)
+	}
+	if err := validateNoteEditOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate NoteEdit value: %w", err)
+	}
+	var body *jsonNoteEditTransport
+	{
+		body = &jsonNoteEditTransport{
+			Old: &in.Old,
+			New: &in.New,
+		}
+	}
+	if err := validatejsonNoteEditTransport(body); err != nil {
+		return nil, fmt.Errorf("validate NoteEdit JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode NoteEdit JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeNoteEdit checks JSON field names from the Goa design and returns a service value.
+func DecodeNoteEdit(data []byte) (out *NoteEdit, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode NoteEdit JSON: %w", err)
+	}
+	if err := validateNoteEditJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode NoteEdit JSON: %w", err)
+	}
+	var body *jsonNoteEditTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode NoteEdit JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode NoteEdit JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode NoteEdit JSON after first value: %w", err)
+	}
+	if err := validatejsonNoteEditTransport(body); err != nil {
+		return out, fmt.Errorf("validate NoteEdit JSON: %w", err)
+	}
+	{
+		out = &NoteEdit{
+			Old: *body.Old,
+			New: *body.New,
 		}
 	}
 	return out, nil
@@ -5691,6 +5807,50 @@ func validateMarkInfoJSONValue(path string, value any, description string) error
 	return nil
 }
 
+// validateNoteEditJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteEditJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "new":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Text to put in its place; empty to remove it",
+			); err != nil {
+				return err
+			}
+		case "old":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"new",
+				"old",
+			})
+		}
+	}
+	return nil
+}
+
 // validateNoteEventJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateNoteEventJSONValue(path string, value any, description string) error {
 	field := path
@@ -7296,6 +7456,39 @@ func checkNoteValue(in *Note) error {
 	active := make(map[any]bool)
 	if err := checkImportResultNoteValue(in, "$", active); err != nil {
 		return err
+	}
+	return nil
+}
+
+// checkNoteEditValue checks text and cycles before conversion.
+func checkNoteEditValue(in *NoteEdit) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkNoteEditNoteEditValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkNoteEditNoteEditValue checks one generated value on the active path.
+func checkNoteEditNoteEditValue(in *NoteEdit, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Old)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "old", false))
+		}
+		if !utf8.ValidString(string(in.New)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "new", false))
+		}
 	}
 	return nil
 }

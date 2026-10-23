@@ -306,7 +306,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `create_ai_note` | `collab` のノートブックに新しいノートを書く。`drop` のノートブックには置くだけ |
 | `import_ai_note` | Markdown のファイルを、front matter と参照する画像ごと、新しいノートとして同じように取り込む |
 | `add_ai_file` | `collab` のノートブックのノートに画像を足す（本文から参照する） |
-| `update_ai_note` | `collab` のノートブックのノートを書き換える、またはマークを付ける。`get_note` の版が要る |
+| `update_ai_note` | `collab` のノートブックのノートを書き換える、またはマークを付ける。`get_note` の版が要る。長い本文は一部だけ変えられる（`append` で末尾に書き足す、`edits` で本文の一部を置き換える。`brief` で結果から本文を外す） |
 | `delete_ai_note` | `collab` のノートブックのノートをゴミ箱へ移す。`get_note` の版が要る |
 | `move_ai_note` | `collab` のノートブックのノートを並べ替える（別のノートの後ろか、先頭へ） |
 | `create_ai_notebook` | AI が書くための、新しい `collab` のノートブックを作る |

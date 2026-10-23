@@ -38,6 +38,18 @@ var NoteTrait = func() {
 	Attribute("marks", ArrayOf(String), "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none", marksDSL)
 }
 
+// NoteEdit is a change of part of the body of a note: the text to replace,
+// which must appear exactly once, and the text to put in its place.
+var NoteEdit = Type("NoteEdit", func() {
+	RequiredAttribute("old", String, "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it", func() {
+		MinLength(1)
+		Example("- [ ] write the tests")
+	})
+	RequiredAttribute("new", String, "Text to put in its place; empty to remove it", func() {
+		Example("- [x] write the tests")
+	})
+})
+
 var MarkInfo = Type("MarkInfo", func() {
 	RequiredAttribute("id", String, "Mark ID", func() {
 		Enum(markIDs...)
@@ -907,7 +919,7 @@ var _ = Service("notes", func() {
 
 	Method("update_ai_note", func() {
 		NoSecurity()
-		Description("Update a note in a notebook of the collab kind. Omitted attributes are left unchanged. The version from get_note is required, so that changes made by people meanwhile are not overwritten. Setting notebook moves the note to another notebook of the collab kind.")
+		Description("Update a note in a notebook of the collab kind. Omitted attributes are left unchanged. The version from get_note is required, so that changes made by people meanwhile are not overwritten. Setting notebook moves the note to another notebook of the collab kind. The body is changed in one of three ways, one at a time: body replaces it as a whole, append adds text at its end, and edits replace parts of it, without sending the whole body again. The edits apply in order, all or none: each old text must appear exactly once in the body as the edits before it left it, else nothing is changed.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Note ID", noteIDDSL)
 			RequiredAttribute("version", String, "Version of the note as returned by get_note")
@@ -916,15 +928,22 @@ var _ = Service("notes", func() {
 				MinLength(1)
 			})
 			Attribute("tags", ArrayOf(String), "Tags")
-			Attribute("body", String, "Body in Markdown")
+			Attribute("body", String, "Body in Markdown, replacing the whole body")
+			Attribute("append", String, "Text to add at the end of the body, on a new line when the body does not end with one", func() {
+				MinLength(1)
+			})
+			Attribute("edits", ArrayOf(NoteEdit), "Changes of parts of the body, applied in order, all or none", func() {
+				MaxLength(100)
+			})
 			Attribute("marks", ArrayOf(String), "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means", marksDSL)
+			Attribute("brief", Boolean, "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back")
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid")
+		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid, more than one of body, append and edits is given, or the old text of an edit does not appear exactly once")
 		Error("forbidden", ErrorResult, "The note, or the notebook to move it to, is not of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
-		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note")
+		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) or append instead of sending the whole body, and brief to leave the body out of the result")
 	})
 
 	Method("delete_ai_note", func() {

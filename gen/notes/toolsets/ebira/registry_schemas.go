@@ -4743,33 +4743,33 @@ func (registryDeclarations) field325() *genregistry.ToolFieldMetadata {
 
 // schema326 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema326() *genregistry.ToolSchema {
-	registryText1 := "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note"
+	registryText1 := "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) or append instead of sending the whole body, and brief to leave the body out of the result"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.update_ai_note",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
 		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Update Ai Note",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 28,
-				Terms:  map[string]int{"a": 2, "ai": 3, "collab": 1, "ebira": 1, "from": 1, "get": 1, "in": 1, "its": 1, "kind": 1, "marks": 1, "note": 4, "notebook": 1, "or": 1, "pass": 1, "set": 1, "shared": 1, "the": 1, "update": 3, "version": 1, "with": 1},
+				Length: 60,
+				Terms:  map[string]int{"a": 3, "ai": 3, "and": 1, "append": 1, "body": 3, "brief": 1, "change": 1, "collab": 1, "each": 1, "ebira": 1, "edits": 1, "exactly": 1, "from": 1, "get": 1, "in": 1, "instead": 1, "its": 1, "kind": 1, "leave": 1, "long": 1, "marks": 1, "note": 4, "notebook": 1, "of": 3, "old": 1, "once": 1, "or": 2, "out": 1, "part": 1, "pass": 1, "result": 1, "sending": 1, "set": 1, "shared": 1, "text": 1, "the": 4, "to": 2, "update": 3, "use": 1, "version": 1, "whole": 1, "with": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-				Description:     "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note",
+				ExecutionSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+				Description:     "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) or append instead of sending the whole body, and brief to leave the body out of the result",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 28,
-					Terms:  map[string]int{"a": 2, "ai": 3, "collab": 1, "ebira": 1, "from": 1, "get": 1, "in": 1, "its": 1, "kind": 1, "marks": 1, "note": 4, "notebook": 1, "or": 1, "pass": 1, "set": 1, "shared": 1, "the": 1, "update": 3, "version": 1, "with": 1},
+					Length: 60,
+					Terms:  map[string]int{"a": 3, "ai": 3, "and": 1, "append": 1, "body": 3, "brief": 1, "change": 1, "collab": 1, "each": 1, "ebira": 1, "edits": 1, "exactly": 1, "from": 1, "get": 1, "in": 1, "instead": 1, "its": 1, "kind": 1, "leave": 1, "long": 1, "marks": 1, "note": 4, "notebook": 1, "of": 3, "old": 1, "once": 1, "or": 2, "out": 1, "part": 1, "pass": 1, "result": 1, "sending": 1, "set": 1, "shared": 1, "text": 1, "the": 4, "to": 2, "update": 3, "use": 1, "version": 1, "whole": 1, "with": 1},
 				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata362(),
+				PayloadSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+				Payload:       declarations.metadata368(),
 			},
 			Payload: declarations.metadata327(),
-			Result:  declarations.metadata338(),
+			Result:  declarations.metadata344(),
 		},
 	}
 }
@@ -4779,7 +4779,7 @@ func (declarations registryDeclarations) metadata327() *genregistry.ToolTypeMeta
 	registryText1 := "UpdateAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
 			declarations.field328(),
 			declarations.field329(),
@@ -4791,6 +4791,12 @@ func (declarations registryDeclarations) metadata327() *genregistry.ToolTypeMeta
 			declarations.field335(),
 			declarations.field336(),
 			declarations.field337(),
+			declarations.field338(),
+			declarations.field339(),
+			declarations.field340(),
+			declarations.field341(),
+			declarations.field342(),
+			declarations.field343(),
 		},
 	}
 }
@@ -4885,7 +4891,7 @@ func (registryDeclarations) field334() *genregistry.ToolFieldMetadata {
 // field335 constructs one generated field declaration.
 func (registryDeclarations) field335() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "Body in Markdown"
+	registryText2 := "Body in Markdown, replacing the whole body"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("body")},
@@ -4897,6 +4903,76 @@ func (registryDeclarations) field335() *genregistry.ToolFieldMetadata {
 
 // field336 constructs one generated field declaration.
 func (registryDeclarations) field336() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text to add at the end of the body, on a new line when the body does not end with one"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("append")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field337 constructs one generated field declaration.
+func (registryDeclarations) field337() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Changes of parts of the body, applied in order, all or none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field338 constructs one generated field declaration.
+func (registryDeclarations) field338() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Changes of parts of the body, applied in order, all or none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field339 constructs one generated field declaration.
+func (registryDeclarations) field339() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("old")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field340 constructs one generated field declaration.
+func (registryDeclarations) field340() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text to put in its place; empty to remove it"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("new")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field341 constructs one generated field declaration.
+func (registryDeclarations) field341() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
 	return &genregistry.ToolFieldMetadata{
@@ -4908,8 +4984,8 @@ func (registryDeclarations) field336() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field337 constructs one generated field declaration.
-func (registryDeclarations) field337() *genregistry.ToolFieldMetadata {
+// field342 constructs one generated field declaration.
+func (registryDeclarations) field342() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
 	return &genregistry.ToolFieldMetadata{
@@ -4922,19 +4998,26 @@ func (registryDeclarations) field337() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata338 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata338() *genregistry.ToolTypeMetadata {
+// field343 constructs one generated field declaration.
+func (registryDeclarations) field343() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("brief")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata344 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata344() *genregistry.ToolTypeMetadata {
 	registryText1 := "UpdateAiNoteResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field339(),
-			declarations.field340(),
-			declarations.field341(),
-			declarations.field342(),
-			declarations.field343(),
-			declarations.field344(),
 			declarations.field345(),
 			declarations.field346(),
 			declarations.field347(),
@@ -4952,20 +5035,26 @@ func (declarations registryDeclarations) metadata338() *genregistry.ToolTypeMeta
 			declarations.field359(),
 			declarations.field360(),
 			declarations.field361(),
+			declarations.field362(),
+			declarations.field363(),
+			declarations.field364(),
+			declarations.field365(),
+			declarations.field366(),
+			declarations.field367(),
 		},
 	}
 }
 
-// field339 constructs one generated field declaration.
-func (registryDeclarations) field339() *genregistry.ToolFieldMetadata {
+// field345 constructs one generated field declaration.
+func (registryDeclarations) field345() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field340 constructs one generated field declaration.
-func (registryDeclarations) field340() *genregistry.ToolFieldMetadata {
+// field346 constructs one generated field declaration.
+func (registryDeclarations) field346() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -4977,8 +5066,8 @@ func (registryDeclarations) field340() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field341 constructs one generated field declaration.
-func (registryDeclarations) field341() *genregistry.ToolFieldMetadata {
+// field347 constructs one generated field declaration.
+func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -4990,8 +5079,8 @@ func (registryDeclarations) field341() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field342 constructs one generated field declaration.
-func (registryDeclarations) field342() *genregistry.ToolFieldMetadata {
+// field348 constructs one generated field declaration.
+func (registryDeclarations) field348() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -5003,8 +5092,8 @@ func (registryDeclarations) field342() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field343 constructs one generated field declaration.
-func (registryDeclarations) field343() *genregistry.ToolFieldMetadata {
+// field349 constructs one generated field declaration.
+func (registryDeclarations) field349() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -5016,8 +5105,8 @@ func (registryDeclarations) field343() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field344 constructs one generated field declaration.
-func (registryDeclarations) field344() *genregistry.ToolFieldMetadata {
+// field350 constructs one generated field declaration.
+func (registryDeclarations) field350() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -5030,8 +5119,8 @@ func (registryDeclarations) field344() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field345 constructs one generated field declaration.
-func (registryDeclarations) field345() *genregistry.ToolFieldMetadata {
+// field351 constructs one generated field declaration.
+func (registryDeclarations) field351() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -5043,8 +5132,8 @@ func (registryDeclarations) field345() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field346 constructs one generated field declaration.
-func (registryDeclarations) field346() *genregistry.ToolFieldMetadata {
+// field352 constructs one generated field declaration.
+func (registryDeclarations) field352() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -5056,8 +5145,8 @@ func (registryDeclarations) field346() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field347 constructs one generated field declaration.
-func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
+// field353 constructs one generated field declaration.
+func (registryDeclarations) field353() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -5069,8 +5158,8 @@ func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field348 constructs one generated field declaration.
-func (registryDeclarations) field348() *genregistry.ToolFieldMetadata {
+// field354 constructs one generated field declaration.
+func (registryDeclarations) field354() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -5082,8 +5171,8 @@ func (registryDeclarations) field348() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field349 constructs one generated field declaration.
-func (registryDeclarations) field349() *genregistry.ToolFieldMetadata {
+// field355 constructs one generated field declaration.
+func (registryDeclarations) field355() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -5095,8 +5184,8 @@ func (registryDeclarations) field349() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field350 constructs one generated field declaration.
-func (registryDeclarations) field350() *genregistry.ToolFieldMetadata {
+// field356 constructs one generated field declaration.
+func (registryDeclarations) field356() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -5109,8 +5198,8 @@ func (registryDeclarations) field350() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field351 constructs one generated field declaration.
-func (registryDeclarations) field351() *genregistry.ToolFieldMetadata {
+// field357 constructs one generated field declaration.
+func (registryDeclarations) field357() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Body in Markdown"
 	return &genregistry.ToolFieldMetadata{
@@ -5122,8 +5211,8 @@ func (registryDeclarations) field351() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field352 constructs one generated field declaration.
-func (registryDeclarations) field352() *genregistry.ToolFieldMetadata {
+// field358 constructs one generated field declaration.
+func (registryDeclarations) field358() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
 	return &genregistry.ToolFieldMetadata{
@@ -5135,8 +5224,8 @@ func (registryDeclarations) field352() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field353 constructs one generated field declaration.
-func (registryDeclarations) field353() *genregistry.ToolFieldMetadata {
+// field359 constructs one generated field declaration.
+func (registryDeclarations) field359() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the note was in before it was moved to the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -5148,99 +5237,13 @@ func (registryDeclarations) field353() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field354 constructs one generated field declaration.
-func (registryDeclarations) field354() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field355 constructs one generated field declaration.
-func (registryDeclarations) field355() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field356 constructs one generated field declaration.
-func (registryDeclarations) field356() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field357 constructs one generated field declaration.
-func (registryDeclarations) field357() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field358 constructs one generated field declaration.
-func (registryDeclarations) field358() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field359 constructs one generated field declaration.
-func (registryDeclarations) field359() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
 // field360 constructs one generated field declaration.
 func (registryDeclarations) field360() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
+	registryText1 := "array"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
 		},
 		JSONType:    &registryText1,
 		Description: &registryText2,
@@ -5249,6 +5252,92 @@ func (registryDeclarations) field360() *genregistry.ToolFieldMetadata {
 
 // field361 constructs one generated field declaration.
 func (registryDeclarations) field361() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field362 constructs one generated field declaration.
+func (registryDeclarations) field362() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field363 constructs one generated field declaration.
+func (registryDeclarations) field363() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field364 constructs one generated field declaration.
+func (registryDeclarations) field364() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field365 constructs one generated field declaration.
+func (registryDeclarations) field365() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field366 constructs one generated field declaration.
+func (registryDeclarations) field366() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field367 constructs one generated field declaration.
+func (registryDeclarations) field367() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -5262,37 +5351,43 @@ func (registryDeclarations) field361() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata362 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata362() *genregistry.ToolTypeMetadata {
+// metadata368 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata368() *genregistry.ToolTypeMetadata {
 	registryText1 := "UpdateAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field363(),
-			declarations.field364(),
-			declarations.field365(),
-			declarations.field366(),
-			declarations.field367(),
-			declarations.field368(),
 			declarations.field369(),
 			declarations.field370(),
 			declarations.field371(),
 			declarations.field372(),
+			declarations.field373(),
+			declarations.field374(),
+			declarations.field375(),
+			declarations.field376(),
+			declarations.field377(),
+			declarations.field378(),
+			declarations.field379(),
+			declarations.field380(),
+			declarations.field381(),
+			declarations.field382(),
+			declarations.field383(),
+			declarations.field384(),
 		},
 	}
 }
 
-// field363 constructs one generated field declaration.
-func (registryDeclarations) field363() *genregistry.ToolFieldMetadata {
+// field369 constructs one generated field declaration.
+func (registryDeclarations) field369() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field364 constructs one generated field declaration.
-func (registryDeclarations) field364() *genregistry.ToolFieldMetadata {
+// field370 constructs one generated field declaration.
+func (registryDeclarations) field370() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID"
 	return &genregistry.ToolFieldMetadata{
@@ -5304,8 +5399,8 @@ func (registryDeclarations) field364() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field365 constructs one generated field declaration.
-func (registryDeclarations) field365() *genregistry.ToolFieldMetadata {
+// field371 constructs one generated field declaration.
+func (registryDeclarations) field371() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Version of the note as returned by get_note"
 	return &genregistry.ToolFieldMetadata{
@@ -5317,8 +5412,8 @@ func (registryDeclarations) field365() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field366 constructs one generated field declaration.
-func (registryDeclarations) field366() *genregistry.ToolFieldMetadata {
+// field372 constructs one generated field declaration.
+func (registryDeclarations) field372() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab kind to move the note to"
 	return &genregistry.ToolFieldMetadata{
@@ -5330,8 +5425,8 @@ func (registryDeclarations) field366() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field367 constructs one generated field declaration.
-func (registryDeclarations) field367() *genregistry.ToolFieldMetadata {
+// field373 constructs one generated field declaration.
+func (registryDeclarations) field373() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -5343,8 +5438,8 @@ func (registryDeclarations) field367() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field368 constructs one generated field declaration.
-func (registryDeclarations) field368() *genregistry.ToolFieldMetadata {
+// field374 constructs one generated field declaration.
+func (registryDeclarations) field374() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -5356,8 +5451,8 @@ func (registryDeclarations) field368() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field369 constructs one generated field declaration.
-func (registryDeclarations) field369() *genregistry.ToolFieldMetadata {
+// field375 constructs one generated field declaration.
+func (registryDeclarations) field375() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -5370,10 +5465,10 @@ func (registryDeclarations) field369() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field370 constructs one generated field declaration.
-func (registryDeclarations) field370() *genregistry.ToolFieldMetadata {
+// field376 constructs one generated field declaration.
+func (registryDeclarations) field376() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "Body in Markdown"
+	registryText2 := "Body in Markdown, replacing the whole body"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("body")},
@@ -5383,8 +5478,78 @@ func (registryDeclarations) field370() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field371 constructs one generated field declaration.
-func (registryDeclarations) field371() *genregistry.ToolFieldMetadata {
+// field377 constructs one generated field declaration.
+func (registryDeclarations) field377() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text to add at the end of the body, on a new line when the body does not end with one"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("append")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field378 constructs one generated field declaration.
+func (registryDeclarations) field378() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Changes of parts of the body, applied in order, all or none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field379 constructs one generated field declaration.
+func (registryDeclarations) field379() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Changes of parts of the body, applied in order, all or none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field380 constructs one generated field declaration.
+func (registryDeclarations) field380() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("old")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field381 constructs one generated field declaration.
+func (registryDeclarations) field381() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text to put in its place; empty to remove it"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("new")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field382 constructs one generated field declaration.
+func (registryDeclarations) field382() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
 	return &genregistry.ToolFieldMetadata{
@@ -5396,14 +5561,27 @@ func (registryDeclarations) field371() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field372 constructs one generated field declaration.
-func (registryDeclarations) field372() *genregistry.ToolFieldMetadata {
+// field383 constructs one generated field declaration.
+func (registryDeclarations) field383() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("marks")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field384 constructs one generated field declaration.
+func (registryDeclarations) field384() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("brief")},
 		},
 		JSONType:    &registryText1,
 		Description: &registryText2,

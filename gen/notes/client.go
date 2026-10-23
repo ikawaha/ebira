@@ -519,7 +519,7 @@ func (c *Client) AddAiFile(ctx context.Context, p *AddAiFilePayload) (res *NoteF
 // UpdateAiNote calls the "update_ai_note" endpoint of the "notes" service.
 // UpdateAiNote may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
-//   - "bad_request" (type *goa.ServiceError): The notebook to move the note to is invalid
+//   - "bad_request" (type *goa.ServiceError): The notebook to move the note to is invalid, more than one of body, append and edits is given, or the old text of an edit does not appear exactly once
 //   - "forbidden" (type *goa.ServiceError): The note, or the notebook to move it to, is not of the collab kind
 //   - "precondition_failed" (type *goa.ServiceError): The version does not match the note's current version
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again

@@ -992,9 +992,26 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 			return nil, err
 		}
 	}
+	body := p.Body
+	// An empty list of edits is none, as MCP clients may send one.
+	if p.Append != nil || len(p.Edits) > 0 {
+		if body != nil || (p.Append != nil && len(p.Edits) > 0) {
+			return nil, gennotes.MakeBadRequest(errors.New("give one of body, append and edits"))
+		}
+		// The body is changed from the version the client read, which the
+		// update checks again.
+		if !store.MatchVersion(p.Version, n.Version) {
+			return nil, gennotes.MakePreconditionFailed(errVersionMismatch)
+		}
+		b, err := changedBody(n.Body, p.Append, p.Edits)
+		if err != nil {
+			return nil, gennotes.MakeBadRequest(err)
+		}
+		body = &b
+	}
 	res := n
-	if p.Notebook != nil || p.Title != nil || p.Tags != nil || p.Body != nil {
-		if res, err = s.updateNote(ctx, &gennotes.UpdatePayload{ID: p.ID, Notebook: p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body, IfMatch: &p.Version}); err != nil {
+	if p.Notebook != nil || p.Title != nil || p.Tags != nil || body != nil {
+		if res, err = s.updateNote(ctx, &gennotes.UpdatePayload{ID: p.ID, Notebook: p.Notebook, Title: p.Title, Tags: p.Tags, Body: body, IfMatch: &p.Version}); err != nil {
 			return nil, err
 		}
 	} else if !store.MatchVersion(p.Version, n.Version) {
@@ -1003,9 +1020,37 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 	// The marks go last, as the content may have changed the version they
 	// were checked against.
 	if p.Marks != nil {
-		return s.setMarks(ctx, p.ID, p.Marks)
+		if res, err = s.setMarks(ctx, p.ID, p.Marks); err != nil {
+			return nil, err
+		}
+	}
+	if p.Brief != nil && *p.Brief {
+		res.Body = "" // the client asked to leave it out, as for a long note
 	}
 	return res, nil
+}
+
+// changedBody returns body with text appended, or with the edits applied in
+// order, all or none: the old text of each must appear exactly once in the
+// body as the edits before it left it.
+func changedBody(body string, appended *string, edits []*gennotes.NoteEdit) (string, error) {
+	if appended != nil {
+		if body != "" && !strings.HasSuffix(body, "\n") {
+			body += "\n"
+		}
+		return body + *appended, nil
+	}
+	for i, e := range edits {
+		switch c := strings.Count(body, e.Old); c {
+		case 1:
+			body = strings.Replace(body, e.Old, e.New, 1)
+		case 0:
+			return "", fmt.Errorf("edit %d: the old text does not appear in the body; nothing was changed", i+1)
+		default:
+			return "", fmt.Errorf("edit %d: the old text appears %d times in the body; give more of the text around it; nothing was changed", i+1, c)
+		}
+	}
+	return body, nil
 }
 
 // DeleteAiNote moves a note in a notebook of the collab kind to the trash for an AI

@@ -390,11 +390,19 @@ type (
 		Title *string `json:"title,omitempty"`
 		// Tags
 		Tags []string `json:"tags,omitempty"`
-		// Body in Markdown
+		// Body in Markdown, replacing the whole body
 		Body *string `json:"body,omitempty"`
+		// Text to add at the end of the body, on a new line when the body does not end
+		// with one
+		Append *string `json:"append,omitempty"`
+		// Changes of parts of the body, applied in order, all or none
+		Edits []*NoteEditTransport `json:"edits,omitempty"`
 		// Marks of the note, one at most for now; an empty list takes them away. See
 		// list_marks for what each means
 		Marks []string `json:"marks,omitempty"`
+		// Leave the body out of the result (it comes back empty), as for a long note:
+		// the new version, the update time and the other attributes still come back
+		Brief *bool `json:"brief,omitempty"`
 	}
 	// UpdateAiNoteResultTransport is the internal JSON transport type for UpdateAiNoteResult.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -460,6 +468,18 @@ type (
 		// Name the user gave the mark, which says what it means, such as important;
 		// absent for none
 		Name *string `json:"name,omitempty"`
+	}
+	// NoteEditTransport is the internal JSON transport type for NoteEditTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	NoteEditTransport struct {
+		// Text of the body to replace, copied exactly; it must appear exactly once in
+		// the body (as changed by the edits before it), so give enough of the text
+		// around it
+		Old *string `json:"old"`
+		// Text to put in its place; empty to remove it
+		New *string `json:"new"`
 	}
 	// NoteSummaryTransport is the internal JSON transport type for NoteSummaryTransport.
 	// It lives in the toolset-local http package and is used only for JSON

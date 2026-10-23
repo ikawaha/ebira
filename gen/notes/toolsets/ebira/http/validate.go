@@ -625,6 +625,21 @@ func ValidateUpdateAiNotePayloadTransport(body *UpdateAiNotePayloadTransport) (e
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 1, true))
 		}
 	}
+	if body.Append != nil {
+		if utf8.RuneCountInString(*body.Append) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.append", *body.Append, utf8.RuneCountInString(*body.Append), 1, true))
+		}
+	}
+	if len(body.Edits) > 100 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.edits", body.Edits, len(body.Edits), 100, false))
+	}
+	for _, e := range body.Edits {
+		if e != nil {
+			if err2 := ValidateNoteEditTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	if len(body.Marks) > 1 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
 	}
@@ -748,6 +763,22 @@ func ValidateMarkInfoTransport(body *MarkInfoTransport) (err error) {
 	if body.Kind != nil {
 		if !(*body.Kind == "color" || *body.Kind == "symbol") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"color", "symbol"}))
+		}
+	}
+	return
+}
+
+// ValidateNoteEditTransport runs the validations defined on NoteEditTransport.
+func ValidateNoteEditTransport(body *NoteEditTransport) (err error) {
+	if body.Old == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("old", "body"))
+	}
+	if body.New == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("new", "body"))
+	}
+	if body.Old != nil {
+		if utf8.RuneCountInString(*body.Old) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.old", *body.Old, utf8.RuneCountInString(*body.Old), 1, true))
 		}
 	}
 	return

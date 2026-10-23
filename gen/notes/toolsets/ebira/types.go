@@ -315,11 +315,19 @@ type (
 		Title *string
 		// Tags
 		Tags []string
-		// Body in Markdown
+		// Body in Markdown, replacing the whole body
 		Body *string
+		// Text to add at the end of the body, on a new line when the body does not end
+		// with one
+		Append *string
+		// Changes of parts of the body, applied in order, all or none
+		Edits []*NoteEdit
 		// Marks of the note, one at most for now; an empty list takes them away. See
 		// list_marks for what each means
 		Marks []string
+		// Leave the body out of the result (it comes back empty), as for a long note:
+		// the new version, the update time and the other attributes still come back
+		Brief *bool
 	}
 	// UpdateAiNoteResult defines the JSON result for the ebira.update_ai_note tool.
 	UpdateAiNoteResult = struct {
@@ -412,6 +420,15 @@ type (
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRange
+	}
+	// NoteEdit is a nested type used by the generated JSON contract.
+	NoteEdit = struct {
+		// Text of the body to replace, copied exactly; it must appear exactly once in
+		// the body (as changed by the edits before it), so give enough of the text
+		// around it
+		Old string
+		// Text to put in its place; empty to remove it
+		New string
 	}
 	// NoteSummary is a nested type used by the generated JSON contract.
 	NoteSummary = struct {

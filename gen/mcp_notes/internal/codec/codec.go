@@ -1842,6 +1842,35 @@ func ValidateTagsResultTransport(value TagsResultTransport) (err error) {
 	return err
 }
 
+// UpdateAiNotePayloadNoteEditTransport stores JSON fields until they have been validated.
+type UpdateAiNotePayloadNoteEditTransport struct {
+	// Text of the body to replace, copied exactly; it must appear exactly once in
+	// the body (as changed by the edits before it), so give enough of the text
+	// around it
+	Old *string `json:"old"`
+	// Text to put in its place; empty to remove it
+	New *string `json:"new"`
+}
+
+// ValidateUpdateAiNotePayloadNoteEditTransport checks decoded JSON before it becomes a service value.
+func ValidateUpdateAiNotePayloadNoteEditTransport(value *UpdateAiNotePayloadNoteEditTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Old == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("old", "body"))
+	}
+	if value.New == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("new", "body"))
+	}
+	if value.Old != nil {
+		if utf8.RuneCountInString(*value.Old) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.old", *value.Old, utf8.RuneCountInString(*value.Old), 1, true))
+		}
+	}
+	return err
+}
+
 // UpdateAiNotePayloadTransport stores JSON fields until they have been validated.
 type UpdateAiNotePayloadTransport struct {
 	// Note ID
@@ -1854,11 +1883,19 @@ type UpdateAiNotePayloadTransport struct {
 	Title *string `json:"title,omitempty"`
 	// Tags
 	Tags []string `json:"tags,omitempty"`
-	// Body in Markdown
+	// Body in Markdown, replacing the whole body
 	Body *string `json:"body,omitempty"`
+	// Text to add at the end of the body, on a new line when the body does not end
+	// with one
+	Append *string `json:"append,omitempty"`
+	// Changes of parts of the body, applied in order, all or none
+	Edits []*UpdateAiNotePayloadNoteEditTransport `json:"edits,omitempty"`
 	// Marks of the note, one at most for now; an empty list takes them away. See
 	// list_marks for what each means
 	Marks []string `json:"marks,omitempty"`
+	// Leave the body out of the result (it comes back empty), as for a long note:
+	// the new version, the update time and the other attributes still come back
+	Brief *bool `json:"brief,omitempty"`
 }
 
 // ValidateUpdateAiNotePayloadTransport checks decoded JSON before it becomes a service value.
@@ -1881,6 +1918,21 @@ func ValidateUpdateAiNotePayloadTransport(value *UpdateAiNotePayloadTransport) (
 	if value.Title != nil {
 		if utf8.RuneCountInString(*value.Title) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 1, true))
+		}
+	}
+	if value.Append != nil {
+		if utf8.RuneCountInString(*value.Append) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.append", *value.Append, utf8.RuneCountInString(*value.Append), 1, true))
+		}
+	}
+	if len(value.Edits) > 100 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.edits", value.Edits, len(value.Edits), 100, false))
+	}
+	for _, e := range value.Edits {
+		if e != nil {
+			if err2 := ValidateUpdateAiNotePayloadNoteEditTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 	if len(value.Marks) > 1 {
@@ -2914,11 +2966,23 @@ func DecodeUpdateAiNotePayload(data []byte) (out *notes.UpdateAiNotePayload, err
 			Notebook: body.Notebook,
 			Title:    body.Title,
 			Body:     body.Body,
+			Append:   body.Append,
+			Brief:    body.Brief,
 		}
 		if body.Tags != nil {
 			out.Tags = make([]string, len(body.Tags))
 			for i, val := range body.Tags {
 				out.Tags[i] = val
+			}
+		}
+		if body.Edits != nil {
+			out.Edits = make([]*notes.NoteEdit, len(body.Edits))
+			for i, val := range body.Edits {
+				if val == nil {
+					out.Edits[i] = nil
+					continue
+				}
+				out.Edits[i] = decodeUpdateAiNotePayloadNoteEditTransportToNoteEdit(val)
 			}
 		}
 		if body.Marks != nil {
@@ -2993,6 +3057,15 @@ func decodeImportAiNotePayloadAIImportFileTransportToAIImportFile(v *ImportAiNot
 		Ref:     *v.Ref,
 		Name:    *v.Name,
 		Content: v.Content,
+	}
+
+	return res
+}
+
+func decodeUpdateAiNotePayloadNoteEditTransportToNoteEdit(v *UpdateAiNotePayloadNoteEditTransport) *notes.NoteEdit {
+	res := &notes.NoteEdit{
+		Old: *v.Old,
+		New: *v.New,
 	}
 
 	return res
