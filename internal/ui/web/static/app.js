@@ -2122,7 +2122,13 @@ function bodyExtensions() {
   return [
     CM.history(),
     CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.codeLanguages }),
-    CM.keymap.of([...CM.defaultKeymap, ...CM.historyKeymap, CM.indentWithTab]),
+    // Tab takes the completion offered, before it indents.
+    CM.keymap.of([{ key: "Tab", run: CM.acceptCompletion }, ...CM.defaultKeymap, ...CM.historyKeymap, CM.indentWithTab]),
+    CM.autocompletion({
+      override: [emojiCompletion],
+      icons: false,
+      addToOptions: [{ render: (c) => el("span", "cm-emoji", c.emoji), position: 20 }],
+    }),
     CM.syntaxHighlighting(CM.classHighlighter),
     CM.syntaxHighlighting(markup),
     CM.EditorView.lineWrapping,
@@ -2150,6 +2156,62 @@ function bodyExtensions() {
       },
     }),
   ];
+}
+
+// Emoji completion: ":" and two letters or more of a name, such as :smi,
+// offer the emoji whose names (or tags, after them) start so, from the list of
+// gemoji in vendor/emoji.json, read with the first one. The emoji chosen goes
+// in as the character itself, so that notes read the same everywhere. Not in
+// code or a URL, nor after a letter, a digit, a slash or a colon, as in
+// http:// or 12:30. The emoji used most in this browser come first.
+
+let emojiList = null;
+
+function loadEmoji() {
+  emojiList ||= fetch("assets/vendor/emoji.json")
+    .then((r) => (r.ok ? r.json() : { emoji: [] }))
+    .then((d) => d.emoji || [])
+    .catch(() => []);
+  return emojiList;
+}
+
+function emojiUsed() {
+  try {
+    return JSON.parse(localStorage.getItem("ebira.emoji") || "{}") || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function countEmoji(emoji) {
+  const used = emojiUsed();
+  used[emoji] = (used[emoji] || 0) + 1;
+  try { localStorage.setItem("ebira.emoji", JSON.stringify(used)); } catch (_) { /* not kept */ }
+}
+
+async function emojiCompletion(context) {
+  const word = context.matchBefore(/:[a-z0-9_+-]{2,}/i);
+  if (!word) return null;
+  if (/[\w/:]/.test(context.state.sliceDoc(word.from - 1, word.from))) return null;
+  for (let n = CM.syntaxTree(context.state).resolveInner(context.pos, -1); n; n = n.parent) {
+    if (/Code|URL|Autolink/.test(n.name)) return null;
+  }
+  const list = await loadEmoji();
+  const used = emojiUsed();
+  const apply = (emoji) => (view, _c, from, to) => {
+    view.dispatch({ changes: { from, to, insert: emoji }, selection: { anchor: from + emoji.length } });
+    countEmoji(emoji);
+  };
+  // Among the names that match, the emoji used more come first, then the
+  // shorter names (:smile: before :smile_cat:), then the names before tags.
+  const options = [];
+  for (const [emoji, aliases, tags = []] of list) {
+    const usedBoost = Math.min(50, (used[emoji] || 0) * 10);
+    const boost = (name, tag) => usedBoost - Math.min(30, name.length) - (tag ? 15 : 0);
+    for (const a of aliases) options.push({ label: `:${a}:`, emoji, boost: boost(a, false), apply: apply(emoji) });
+    for (const tg of tags) options.push({ label: `:${tg}:`, detail: aliases[0], emoji, boost: boost(tg, true), apply: apply(emoji) });
+  }
+  return { from: word.from, options, validFor: /^:[a-z0-9_+-]*$/i };
 }
 
 // editHistories keeps, for the notes last edited, the state of the editor of

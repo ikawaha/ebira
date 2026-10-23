@@ -372,6 +372,15 @@ body.resizing { cursor: col-resize; user-select: none; }
 .editor-body[hidden] { display: none; }
 .editor-body .cm-editor { flex: 1; min-width: 0; border-radius: 6px; }
 .editor-body .cm-editor.cm-focused { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* The completions of the editor, such as of emoji, in the colors of the
+   theme. */
+.editor-body .cm-tooltip { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); overflow: hidden; }
+.editor-body .cm-tooltip-autocomplete > ul { font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; max-height: 16em; }
+.editor-body .cm-tooltip-autocomplete > ul > li { padding: 2px 8px; }
+.editor-body .cm-tooltip-autocomplete > ul > li[aria-selected] { background: var(--bg-active); color: var(--fg); }
+.editor-body .cm-completionDetail { color: var(--fg-muted); font-style: normal; margin-left: 8px; }
+.editor-body .cm-completionMatchedText { text-decoration: none; font-weight: 600; }
+.editor-body .cm-emoji { display: inline-block; width: 1.6em; }
 .editor-body .cm-scroller { font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .editor-body .cm-content { padding: 12px; caret-color: var(--fg); tab-size: 4; }
 .editor-body .cm-line { padding: 0; }
