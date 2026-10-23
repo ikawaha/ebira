@@ -300,6 +300,10 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.in-sub { padding-left: 36px; background: color-mix(in srgb, var(--sub-bg) 45%, var(--bg)); }
 .list li.in-sub:hover { background: var(--bg-hover); }
 .list li.in-sub.active, .list li.in-sub.chosen { background: var(--bg-active); }
+/* In the trash, the sub notebooks of an opened notebook, and their notes,
+   one step further in. */
+.list li.sub-notebook.nested { padding-left: 36px; }
+.list li.in-sub.deep { padding-left: 56px; }
 .list li.sub-notebook .icon svg { display: block; width: 16px; height: 16px; margin: 0 auto; color: var(--fg-muted); }
 .list li.sub-notebook .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .list li.sub-notebook.up .name { font-weight: normal; }

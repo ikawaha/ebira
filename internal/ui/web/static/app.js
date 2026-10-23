@@ -127,10 +127,21 @@ function openSubs() {
   if (state.query || state.tag || !state.notebook) return [];
   const trashed = state.notebook === "trash";
   const cur = trashed ? state.trashedNotebook : state.notebook;
-  if (!cur || parentOf(cur, trashed)) return [];
-  return (trashed ? state.trashed : state.notebooks).filter((n) => n.parent === cur)
-    .map((sub) => ({ key: subKey(sub.id, trashed), sub, trashed }))
-    .filter((x) => state.expanded.has(x.key));
+  if ((!cur && !trashed) || (cur && parentOf(cur, trashed))) return [];
+  const opened = (sub) => state.expanded.has(subKey(sub.id, trashed));
+  return childNotebooks(cur, trashed).filter(opened).flatMap((sub) => [
+    // In the trash itself, an opened notebook shows its sub notebooks in the
+    // trash, whose notes come before its own.
+    ...(trashed && !cur ? childNotebooks(sub.id, true).filter(opened) : []),
+    sub,
+  ]).map((sub) => ({ key: subKey(sub.id, trashed), sub, trashed }));
+}
+
+// childNotebooks returns the notebooks shown as rows in the note list of
+// notebook cur: its sub notebooks, or, for the trash itself (cur null in the
+// trash), the notebooks deleted as a whole.
+function childNotebooks(cur, trashed) {
+  return (trashed ? state.trashed : state.notebooks).filter((n) => (cur ? n.parent === cur : !n.parent));
 }
 
 // listedNotes returns the notes of the list in the order shown: those of the
@@ -879,10 +890,11 @@ function renderNotebooks() {
     if (svg) icon.append(svg);
     if (svg && KINDS.includes(kind) && id !== "trash") icon.title = kind;
     li.append(icon, el("span", "name", name), el("span", "count", String(count)));
-    // A sub notebook is opened from the note list; its parent stays marked.
+    // A sub notebook is opened from the note list; its parent stays marked,
+    // as the trash does for a notebook in it.
     const active = trashed
       ? state.notebook === "trash" && (state.trashedNotebook === trashed || parentOf(state.trashedNotebook, true) === trashed)
-      : state.trashedNotebook === null && (state.notebook === id || parentOf(state.notebook) === id);
+      : id === "trash" ? state.notebook === "trash" : state.trashedNotebook === null && (state.notebook === id || parentOf(state.notebook) === id);
     if (!state.tag && active) li.classList.add("active");
     li.addEventListener("click", () => selectNotebook(id, trashed));
     li.addEventListener("contextmenu", (e) => {
@@ -905,15 +917,13 @@ function renderNotebooks() {
   };
   for (const nb of state.notebooks) {
     if (nb.parent) continue; // in the note list of its parent
-    const li = item(nb.id, nb.name, nb.kind, withSubs(state.notebooks, nb), nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
+    // The notebooks in the trash are in its note list, as sub notebooks are
+    // in their parent's; the trash counts their notes too.
+    const count = nb.id === "trash" ? state.trashed.reduce((a, n) => a + n.count, nb.count) : withSubs(state.notebooks, nb);
+    const li = item(nb.id, nb.name, nb.kind, count, nb.id === "trash" || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
     if (nb.id === "trash") acceptNotebookTrash(li);
     ul.append(li);
-    if (nb.id !== "trash") continue;
-    for (const tn of state.trashed) {
-      if (tn.parent) continue; // in the note list of its parent in the trash
-      ul.append(item("trash", tn.name, tn.kind, withSubs(state.trashed, tn), "trashed", tn.id));
-    }
   }
 }
 
@@ -1123,7 +1133,7 @@ function openNotebookMenu(li, id, trashed, e) {
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
   // A sub notebook, opened under its parent, can be listed alone too.
   const sub = trashed ? state.trashed.find((x) => x.id === trashed) : state.notebooks.find((x) => x.id === id);
-  if (sub?.parent && (trashed ? state.trashedNotebook !== trashed : state.notebook !== id)) {
+  if ((sub?.parent || trashed) && (trashed ? state.trashedNotebook !== trashed : state.notebook !== id)) {
     item(t("subNotebookOpenAlone"), () => selectNotebook(id, trashed));
     sep();
   }
@@ -1671,19 +1681,25 @@ function subNotebookRows() {
   };
   const trashed = state.notebook === "trash";
   const cur = trashed ? state.trashedNotebook : state.notebook;
-  if (!cur) return [];
-  const parent = parentOf(cur, trashed);
-  if (parent) {
-    const name = trashed ? trashedName(parent) : notebookName(parent);
-    const li = row("up", "up", t("subNotebookUp", { name }), null, () => selectNotebook(trashed ? "trash" : parent, trashed ? parent : null));
+  if (!cur && !trashed) return [];
+  const up = (to, name) => {
+    const li = row("up", "up", t("subNotebookUp", { name }), null, () => selectNotebook(trashed ? "trash" : to, trashed ? to : null));
     li.title = t("subNotebookUp", { name });
-    return [li];
-  }
-  const subs = (trashed ? state.trashed : state.notebooks).filter((n) => n.parent === cur);
-  return subs.flatMap((sub) => {
+    return li;
+  };
+  const parent = cur && parentOf(cur, trashed);
+  if (parent) return [up(parent, trashed ? trashedName(parent) : notebookName(parent))];
+  // A notebook in the trash, listed alone, goes back up to the trash.
+  const head = trashed && cur ? [up(null, notebookName("trash"))] : [];
+  return [...head, ...childNotebooks(cur, trashed).flatMap((sub) => cellRows(sub, 0))];
+
+  // cellRows returns the row of notebook sub and, when it is open, the rows
+  // under it: in the trash itself, the rows of its sub notebooks in the trash
+  // (depth 1), then its notes.
+  function cellRows(sub, depth) {
     const key = subKey(sub.id, trashed);
     const open = state.expanded.has(key);
-    const li = row(open ? "open" : "", "folder", sub.name, sub.count, () => toggleSub(key));
+    const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", sub.name, withSubs(trashed ? state.trashed : state.notebooks, sub), () => toggleSub(key));
     li.prepend(el("span", "twisty", kindSVG("chevron")));
     li.setAttribute("aria-expanded", String(open));
     li.dataset.notebook = trashed ? "trash" : sub.id;
@@ -1713,19 +1729,21 @@ function subNotebookRows() {
       li.addEventListener("dragend", endNotebookDrag);
     }
     if (!open) return [li];
+    const nested = trashed && !cur && depth === 0 ? childNotebooks(sub.id, true).flatMap((c) => cellRows(c, 1)) : [];
     // Its notes, under it.
     const s = state.subNotes.get(key) ?? { notes: [], total: 0 };
     const reorder = !trashed && (sub.sort || "order") === "order";
-    const rows = s.notes.map((n) => noteRow(n, sub.sort || "order", reorder, s.notes, "in-sub"));
+    const cls = depth ? "in-sub deep" : "in-sub";
+    const rows = s.notes.map((n) => noteRow(n, sub.sort || "order", reorder, s.notes, cls));
     if (s.notes.length < s.total) {
       const more = button(t("loadMore", { rest: s.total - s.notes.length }), () => {
         s.want = s.notes.length + LIST_PAGE;
         loadNotes();
       }, { cls: "more" });
-      rows.push(el("li", "more-row in-sub", more));
+      rows.push(el("li", "more-row " + cls, more));
     }
-    return [li, ...rows];
-  });
+    return [li, ...nested, ...rows];
+  }
 }
 
 function renderNotes() {
