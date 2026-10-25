@@ -12,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
 	"github.com/ikawaha/ebira/internal/ui/tui"
 )
@@ -36,6 +37,9 @@ func runTUI(args []string) error {
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unknown command %q (see ebira help)", fs.Arg(0))
+	}
+	if p := settings.TUIPreview; p != "" && p != "rendered" && p != "source" {
+		return fmt.Errorf("unknown tui_preview %q in the settings file (rendered, source)", p)
 	}
 	if *lang != "" && !tui.ValidLang(*lang) {
 		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *lang, strings.Join(tui.Langs, ", "))
@@ -62,7 +66,15 @@ func runTUI(args []string) error {
 	if !flagSet(fs, "lang") {
 		*lang = cmp.Or(settings.Lang, setupLang) // as chosen in setup, if it ran
 	}
-	p := tea.NewProgram(tui.New(ctx, api, *light, tui.Lang(*lang)))
+	m := tui.New(ctx, api, *light, tui.Lang(*lang)).SourcePreview(settings.TUIPreview == "source", func(source bool) error {
+		v := "rendered"
+		if source {
+			v = "source"
+		}
+		_, err := config.Set("tui_preview", v)
+		return err
+	})
+	p := tea.NewProgram(m)
 	go tui.WatchEvents(ctx, api.Notes, p.Send)
 	_, err = p.Run()
 	return err

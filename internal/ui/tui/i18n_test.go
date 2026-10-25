@@ -97,7 +97,7 @@ func TestJapaneseView(t *testing.T) {
 	tm, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 20})
 	m = tm.(Model)
 	view := ansi.Strip(m.render())
-	for _, want := range []string{"ノートブック", "ノート · 手動", "プレビュー", "ノートがありません。n で作れます。", "ノートを選んでいません。", "○ 切断", "移動", "終了"} {
+	for _, want := range []string{"ノートブック", "ノート · 手動", "ドキュメント", "ノートがありません。n で作れます。", "ノートを選んでいません。", "○ 切断", "移動", "終了"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("no %q in\n%s", want, view)
 		}

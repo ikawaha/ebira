@@ -56,6 +56,7 @@ const (
 	promptMovePrivate   // confirmation to move a note of a private notebook where AI can read it
 	promptMoveNotebook  // confirmation to move a private notebook where AI can read it
 	promptMark          // mark of the note in the preview
+	promptFind          // text to find in the note of the document pane (see find.go)
 )
 
 const searchDebounce = 150 * time.Millisecond
@@ -128,15 +129,34 @@ type Model struct {
 	tr       *catalog // messages in the language of the UI
 	zoom     bool     // the preview, and the editor opened from it, take the whole width
 	live     bool
-	status   string
-	statusK  statusKind
-	prompt   promptKind
-	marks    []*gennotes.MarkInfo // the marks a note can have, with their names
-	markSel  int                  // the choice at promptMark (see markChoices)
-	toDelete *gennotes.Note
-	draft    *draft  // draft of promptConflict or promptRetry
-	edit     *editor // inline editor, while editing
-	failure  string  // reason shown with promptRetry
+	// source shows the Markdown of the note in the preview, edited there by
+	// src; saveSource keeps the mode when it is switched (see source.go).
+	source     bool
+	saveSource func(source bool) error
+	src        *editor
+	peek       bool // the pane renders the body of src for a while
+	// findIn is the find field of the note (see find.go), findQ its text and
+	// findIdx the current match: findLines holds the lines of the matches in
+	// the rendered body, findPos their lines and columns in the editor of the
+	// source mode. pvHead and pvBody are the rendered note before the marks,
+	// the body starting at line pvHeadLines.
+	findIn      textinput.Model
+	findQ       string
+	findIdx     int
+	findLines   []int
+	findPos     [][2]int
+	pvHead      string
+	pvBody      string
+	pvHeadLines int
+	status      string
+	statusK     statusKind
+	prompt      promptKind
+	marks       []*gennotes.MarkInfo // the marks a note can have, with their names
+	markSel     int                  // the choice at promptMark (see markChoices)
+	toDelete    *gennotes.Note
+	draft       *draft  // draft of promptConflict or promptRetry
+	edit        *editor // inline editor, while editing
+	failure     string  // reason shown with promptRetry
 }
 
 // New returns the UI model, in the language lang (one of Langs; see Lang).
@@ -156,9 +176,13 @@ func New(ctx context.Context, api *Clients, light bool, lang string) Model {
 	pin := textinput.New()
 	pin.Prompt = ""
 	pin.CharLimit = 100
+	fin := textinput.New()
+	fin.Prompt = ""
+	fin.CharLimit = 200
 	return Model{
 		tr:       tr,
 		promptIn: pin,
+		findIn:   fin,
 		ctx:      ctx,
 		api:      api.Notes,
 		ask:      api.Assistant,
@@ -941,14 +965,17 @@ func (m *Model) selectIndex(i int) tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	tm, cmd := m.update(msg)
-	if m, ok := tm.(Model); ok && m.zoom && m.focus != focusPreview && m.focus != focusEdit {
+	m, ok := tm.(Model)
+	if !ok {
+		return tm, cmd
+	}
+	if m.zoom && m.focus != focusPreview && m.focus != focusEdit {
 		// The zoom ends once the focus leaves the preview and the editor,
 		// so that it does not come back by surprise.
 		m.zoom = false
 		m.layout()
-		return m, cmd
 	}
-	return tm, cmd
+	return m, tea.Batch(cmd, m.syncSource())
 }
 
 func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -1037,6 +1064,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.finishEdit(msg)
 
 	case savedMsg:
+		if msg.d.source {
+			m.finishSourceSave(msg)
+		}
 		return m, m.finishSave(msg)
 
 	case deletedMsg:
@@ -1183,6 +1213,11 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.promptIn, cmd = m.promptIn.Update(msg)
 		return m, cmd
 	}
+	if m.prompt == promptFind {
+		var cmd tea.Cmd
+		m.findIn, cmd = m.findIn.Update(msg)
+		return m, cmd
+	}
 	switch m.focus {
 	case focusSearch:
 		var cmd tea.Cmd
@@ -1228,6 +1263,9 @@ func (m *Model) handleEvent(ev *gennotes.NoteEvent) tea.Cmd {
 		} else {
 			m.setStatus(statusWarn, "status.editingUpdated")
 		}
+	}
+	if e := m.src; e != nil && ev.ID != nil && e.id == *ev.ID && ev.Type == "deleted" && e.dirty() {
+		m.setStatus(statusWarn, "status.editingDeleted")
 	}
 	if ev.ID != nil && m.note != nil && m.note.ID == *ev.ID && ev.Type == "updated" {
 		if m.moving == *ev.ID {
@@ -1294,7 +1332,7 @@ func (m *Model) finishSave(msg savedMsg) tea.Cmd {
 		return nil
 	}
 	msg.d.remove()
-	if msg.d.path == "" {
+	if msg.d.path == "" && !msg.d.source {
 		m.closeEditor()
 	}
 	m.setStatus(statusInfo, "status.saved", "title", msg.note.Title)
@@ -1324,12 +1362,18 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "o":
 			m.prompt, m.draft = promptNone, nil
+			if e := m.src; d.source && e != nil && e.id == d.id {
+				e.saving = e.snapshot()
+			}
 			return m, m.save(d, true)
 		case "e":
 			m.prompt, m.draft = promptNone, nil
 			return m, m.editAgain(d)
 		case "d", "esc":
 			m.prompt, m.draft = promptNone, nil
+			if d.source {
+				return m, m.discardSource(d)
+			}
 			m.discard(d)
 			return m, m.loadNote(d.id)
 		}
@@ -1342,6 +1386,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, m.editAgain(d)
 		case "d", "esc":
 			m.prompt, m.draft = promptNone, nil
+			if d.source {
+				return m, m.discardSource(d)
+			}
 			m.discard(d)
 		}
 		return m, nil
@@ -1377,6 +1424,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case promptMark:
 		return m, m.handleMarkKey(key)
+	case promptFind:
+		return m, m.handleFindKey(msg)
 	case promptNotebookKind:
 		nb := m.selectedNotebook()
 		kind := map[string]string{"d": "default", "c": "collab", "w": "drop", "p": "private"}[key]
@@ -1450,6 +1499,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	if m.focus == focusEdit {
 		switch key {
+		case "ctrl+l":
+			m.toggleZoom()
+			return m, nil
 		case "ctrl+s":
 			return m, m.saveEditor()
 		case "esc":
@@ -1461,6 +1513,17 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.edit.update(msg)
+	}
+
+	if m.focus == focusPreview {
+		// The editor of the source mode moves among its fields with tab, as
+		// the editor of e does; esc leaves it.
+		if m.showsSource() {
+			return m, m.handleSourceKey(msg)
+		}
+		if m.peeking() && key != "tab" && key != "shift+tab" {
+			return m, m.handlePeekKey(key)
+		}
 	}
 
 	if m.focus == focusSearch {
@@ -1625,6 +1688,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.startMark()
 		}
 		return m, nil
+	case "v":
+		if m.focus == focusList || m.focus == focusPreview {
+			return m, m.toggleSource()
+		}
+		return m, nil
 	}
 	switch key {
 	case "n":
@@ -1653,17 +1721,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "ctrl+n", "ctrl+p":
-		if len(m.matches) == 0 {
-			return m, nil
-		}
-		n := len(m.matches)
-		if key == "ctrl+n" {
-			m.matchIdx = (m.matchIdx + 1) % n
-		} else {
-			m.matchIdx = (max(m.matchIdx, 0) + n - 1) % n
-		}
-		m.showMatch()
-		m.setStatus(statusInfo, "status.match", "i", m.matchIdx+1, "n", n)
+		m.nextMatch(key == "ctrl+n")
 		return m, nil
 	case "T":
 		m.toggleSide()
@@ -1716,10 +1774,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.focus == focusPreview {
 		switch key {
 		case "z":
-			if m.width >= narrowWidth {
-				m.zoom = !m.zoom
-				m.layout()
-			}
+			m.toggleZoom()
+		case "f":
+			return m, m.openFind()
 		case "esc", "h", "left":
 			if key == "esc" && m.answerOn {
 				m.closeAnswer()
@@ -1736,19 +1793,31 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.vp.ScrollDown(1)
 		case "k", "up":
 			m.vp.ScrollUp(1)
-		case "space", "pgdown", "f":
+		case "space", "pgdown":
 			m.vp.PageDown()
 		case "b", "pgup":
 			m.vp.PageUp()
-		case "g", "home":
+		case "g", "home", "<":
 			m.vp.GotoTop()
-		case "G", "end":
+		case "G", "end", ">":
 			m.vp.GotoBottom()
 		}
 		return m, nil
 	}
 
 	switch key {
+	case "p":
+		m.togglePeek()
+		return m, nil
+	case "f":
+		return m, m.openFind()
+	case "z":
+		// The note opens over the whole width.
+		if m.note != nil && m.width >= narrowWidth {
+			m.zoom, m.focus = true, focusPreview
+			m.layout()
+		}
+		return m, nil
 	case "j", "down":
 		return m, m.pickIndex(m.sel + 1)
 	case "k", "up":
@@ -1842,6 +1911,16 @@ func (m *Model) handleWheel(ms tea.Mouse) tea.Cmd {
 	if l.showList && ms.X < l.listX+l.listW {
 		return m.pickIndex(m.sel + step)
 	}
+	if m.showsSource() {
+		for range 3 {
+			if step > 0 {
+				m.src.body.CursorDown()
+			} else {
+				m.src.body.CursorUp()
+			}
+		}
+		return nil
+	}
 	if step > 0 {
 		m.vp.ScrollDown(3)
 	} else {
@@ -1885,6 +1964,9 @@ func (m *Model) saveEditor() tea.Cmd {
 // editAgain resumes editing a draft that could not be saved: the inline
 // editor still holds it, while an external draft is reopened in the editor.
 func (m *Model) editAgain(d *draft) tea.Cmd {
+	if d.source {
+		return m.editSourceAgain(d)
+	}
 	if d.path == "" && m.edit != nil {
 		m.focus = focusEdit
 		return m.edit.focus(m.edit.field)
@@ -1900,4 +1982,29 @@ func (m *Model) discard(d *draft) {
 		return
 	}
 	m.setStatus(statusInfo, "status.draftDiscarded", "path", d.path)
+}
+
+// nextMatch moves to the next match of the search in the pane, or the
+// previous one when next is false.
+func (m *Model) nextMatch(next bool) {
+	n := len(m.matches)
+	if n == 0 {
+		return
+	}
+	if next {
+		m.matchIdx = (m.matchIdx + 1) % n
+	} else {
+		m.matchIdx = (max(m.matchIdx, 0) + n - 1) % n
+	}
+	m.showMatch()
+	m.setStatus(statusInfo, "status.match", "i", m.matchIdx+1, "n", n)
+}
+
+// toggleZoom has the document pane take the whole width, or gives the other
+// panes back. A narrow terminal shows one pane anyway.
+func (m *Model) toggleZoom() {
+	if m.width >= narrowWidth {
+		m.zoom = !m.zoom
+		m.layout()
+	}
 }

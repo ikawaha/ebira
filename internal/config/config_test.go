@@ -195,3 +195,34 @@ func TestSave(t *testing.T) {
 		t.Errorf("appended: %q", b)
 	}
 }
+
+func TestSet(t *testing.T) {
+	setHome(t)
+	p, err := Set("tui_preview", "source")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); string(b) != "tui_preview: source\n" {
+		t.Errorf("new file: %q", b)
+	}
+
+	// The value is replaced in place; other lines and comments are kept.
+	if err := os.WriteFile(p, []byte("# mine\ntui_preview: source # how the TUI shows notes\nlang: ja"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Set("tui_preview", "rendered"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); string(b) != "# mine\ntui_preview: rendered # how the TUI shows notes\nlang: ja" {
+		t.Errorf("replaced: %q", b)
+	}
+	if _, err := Set("theme", "dark"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); string(b) != "# mine\ntui_preview: rendered # how the TUI shows notes\nlang: ja\ntheme: dark\n" {
+		t.Errorf("appended: %q", b)
+	}
+	if c, err := Load(); err != nil || c.TUIPreview != "rendered" || c.Theme != "dark" {
+		t.Errorf("loaded: %+v, %v", c, err)
+	}
+}

@@ -71,7 +71,7 @@ flowchart LR
   <img src="assets/screenshots/web-editor-ja.png" width="800" alt="Web UI でノートを編集しているところ: 上にタイトル・ノートブック・タグ、下に Go のコードが色付けされた Markdown の本文">
 </p>
 
-**TUI** — `ebira`。同じ 3 つの欄をターミナルで、キーボードで操作します。`/` で検索、`j`/`k` で移動、`z` でノートを全幅に広げ、`e` で TUI の中か `$EDITOR` で編集します。
+**TUI** — `ebira`。同じ 3 つの欄をターミナルで、キーボードで操作します。`/` で検索、`j`/`k` で移動、`z` でノートを全幅に広げ、`e` で TUI の中か `$EDITOR` で編集します。`v` を押すと、ドキュメントの欄に Markdown をそのまま出します。欄に移ればその場で編集でき、欄を離れると（または `ctrl+s` で）保存します。少しの間だけ整形して見るには、一覧で `p`、欄の中で `ctrl+r` を押します。編集している間は、`z` の代わりに `ctrl+l` で欄を全幅に広げます。`f`（編集している間は `ctrl+f`）で、Web UI と同じくノートの中を探します。
 
 <p align="center">
   <img src="assets/screenshots/tui-ja.png" width="800" alt="ebira の TUI: ノートブック、検索で見つかったノートと強調された一致、コードが色付けされたノート">
@@ -362,7 +362,7 @@ addr: localhost:13579
 lang: ja
 ```
 
-キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
+キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
 ### プレビューの見た目を変える
 

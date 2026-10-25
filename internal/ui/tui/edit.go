@@ -36,6 +36,9 @@ type editor struct {
 	// of a word typed in a row are undone together.
 	undo, redo []bodyState
 	typing     bool
+	// saving holds the snapshot being saved by the editor of the source
+	// mode, which becomes orig once the save succeeds.
+	saving string
 }
 
 // bodyState is the body of the editor with its cursor.
@@ -117,6 +120,53 @@ func (e *editor) resize(w, h int) {
 	e.body.SetWidth(max(10, w-2))
 	e.body.SetHeight(max(1, h-len(e.inputs)-2))
 }
+
+// newSourceEditor edits n in the document pane, in the source mode. The
+// field and the cursor of prev are kept when it is given, as when the note
+// changed outside.
+func newSourceEditor(th theme, tr *catalog, n *gennotes.Note, prev *editor) *editor {
+	e := newEditor(th, tr, n, n.Notebook)
+	if prev != nil {
+		st := prev.bodyState()
+		e.setBody(bodyState{value: n.Body, line: st.line, col: st.col})
+		e.field = prev.field
+	}
+	return e
+}
+
+// moveCursor moves the cursor of the body to line and col, in runes, and has
+// the body show it.
+func (e *editor) moveCursor(line, col int) {
+	e.body.MoveToBegin()
+	for i := 0; e.body.Line() < line && i <= len(e.body.Value()); i++ {
+		e.body.CursorDown()
+	}
+	e.body.SetCursorColumn(col)
+	e.field = fieldBody
+	e.typing = false
+}
+
+// focused reports whether a field of the editor has the focus.
+func (e *editor) focused() bool {
+	for _, in := range e.inputs {
+		if in.Focused() {
+			return true
+		}
+	}
+	return e.body.Focused()
+}
+
+// blur takes the focus away from the fields.
+func (e *editor) blur() {
+	for i := range e.inputs {
+		e.inputs[i].Blur()
+	}
+	e.body.Blur()
+}
+
+// busy reports whether the body has changes that are not saved yet, or being
+// saved.
+func (e *editor) busy() bool { return e.saving != "" || e.dirty() }
 
 // draft returns the edited values as a draft to save.
 func (e *editor) draft() (*draft, error) {

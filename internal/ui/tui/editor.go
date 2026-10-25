@@ -21,6 +21,7 @@ type draft struct {
 	notebook string // notebook the note is in, or the default for a new note
 	version  string // version the edit is based on
 	path     string // temporary file
+	source   bool   // from the source editor of the preview (see source.go)
 	orig     []byte // file content before editing
 
 	newID       string // ID written in the front matter

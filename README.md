@@ -71,7 +71,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
   <img src="assets/screenshots/web-editor.png" width="800" alt="Editing a note in the web UI: the title, notebook and tags above, and the Markdown body with a Go code block colored">
 </p>
 
-**TUI** — `ebira`. The same three panes in the terminal, driven by the keyboard: `/` to search, `j`/`k` to move, `z` to zoom the note to the whole width, `e` to edit in the TUI or in your `$EDITOR`.
+**TUI** — `ebira`. The same three panes in the terminal, driven by the keyboard: `/` to search, `j`/`k` to move, `z` to zoom the note to the whole width, `e` to edit in the TUI or in your `$EDITOR`. Press `v` to show the Markdown itself in the document pane instead: you then edit the note right there, as soon as you move into the pane, and the changes are saved when you leave it (or with `ctrl+s`). To see it rendered for a while, press `p` in the list or `ctrl+r` in the pane. While editing, `ctrl+l` zooms the pane, as `z` does elsewhere. `f` (`ctrl+f` while editing) finds text in the note, as the web UI's find bar does.
 
 <p align="center">
   <img src="assets/screenshots/tui.png" width="800" alt="The ebira TUI: notebooks, the notes found for a search with the matches highlighted, and the note with its code colored">
@@ -362,7 +362,7 @@ addr: localhost:13579
 lang: en
 ```
 
-The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) `git_sync` and `auth` (`none` or `passkey`). API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) `git_sync`, `auth` (`none` or `passkey`) and `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes). API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
 ### Styling the preview
 

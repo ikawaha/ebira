@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -100,5 +101,76 @@ func TestZoomNarrow(t *testing.T) {
 	m, _ = press(t, m, text("z"))
 	if m.zoom {
 		t.Error("zoomed in a narrow terminal, which shows one pane anyway")
+	}
+}
+
+func TestZoomSource(t *testing.T) {
+	var kept []bool
+	n := &gennotes.Note{ID: "plan", Version: "v1", Title: "Plan", Body: "body", Notebook: "inbox", UpdatedAt: "2026-10-25T10:00:00Z"}
+	m := sourceModel(t, n, &kept)
+
+	// z in the list opens the note over the whole width.
+	m, _ = press(t, m, text("z"))
+	if !m.zoom || m.focus != focusPreview || !onlyPreview(m) || !m.showsSource() {
+		t.Fatalf("z in the list: zoom %v, focus %v", m.zoom, m.focus)
+	}
+	// While editing, z is a letter, and ctrl+l zooms.
+	m, _ = press(t, m, text("z"))
+	if !m.zoom || m.src.body.Value() != "zbody" {
+		t.Fatalf("z while editing: zoom %v, body %q", m.zoom, m.src.body.Value())
+	}
+	ctrlL := tea.KeyPressMsg{Code: 'l', Mod: tea.ModCtrl}
+	m, _ = press(t, m, ctrlL)
+	if m.zoom || onlyPreview(m) {
+		t.Fatal("ctrl+l: still zoomed")
+	}
+	m, _ = press(t, m, ctrlL)
+	if !m.zoom || !onlyPreview(m) {
+		t.Fatal("ctrl+l again: not zoomed")
+	}
+	// The peek keeps the zoom, and z there ends it.
+	m, _ = press(t, m, tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl})
+	if !m.peeking() || !m.zoom {
+		t.Fatalf("ctrl+r: peek %v, zoom %v", m.peek, m.zoom)
+	}
+	m, _ = press(t, m, text("z"), tea.KeyPressMsg{Code: tea.KeyEscape}, ctrlL)
+	if !m.showsSource() || !m.zoom {
+		t.Fatalf("back to the source: peek %v, zoom %v", m.peek, m.zoom)
+	}
+	// esc ends the zoom first, then goes back to the list.
+	m, _ = press(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.zoom || m.focus != focusPreview {
+		t.Fatalf("esc: zoom %v, focus %v", m.zoom, m.focus)
+	}
+	m, _ = press(t, m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.focus != focusList {
+		t.Errorf("second esc: focus %v", m.focus)
+	}
+}
+
+func TestTopAndBottom(t *testing.T) {
+	m := zoomModel(t, 120)
+	m.note.Body = strings.Repeat("line\n\n", 100)
+	m.renderPreview(false)
+	m, _ = press(t, m, text(">"))
+	if !m.vp.AtBottom() {
+		t.Error("> does not go to the end")
+	}
+	m, _ = press(t, m, text("<"))
+	if !m.vp.AtTop() {
+		t.Error("< does not go to the start")
+	}
+
+	// The same while peeking in the source mode.
+	var kept []bool
+	n := &gennotes.Note{ID: "plan", Version: "v1", Title: "Plan", Body: strings.Repeat("line\n\n", 100), Notebook: "inbox", UpdatedAt: "2026-10-25T10:00:00Z"}
+	m = sourceModel(t, n, &kept)
+	m, _ = press(t, m, text("p"), tea.KeyPressMsg{Code: tea.KeyEnter}, text(">"))
+	if !m.peeking() || !m.vp.AtBottom() {
+		t.Error("> does not go to the end while peeking")
+	}
+	m, _ = press(t, m, text("<"))
+	if !m.vp.AtTop() || m.src.body.Value() != n.Body {
+		t.Error("< does not go to the start while peeking")
 	}
 }

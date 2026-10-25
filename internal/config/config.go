@@ -70,6 +70,10 @@ type Config struct {
 	Auth string `yaml:"auth"`
 	// GitSync is the interval of syncing the notes with git, such as 10m.
 	GitSync string `yaml:"git_sync"`
+	// TUIPreview is how the preview of the TUI shows a note: rendered (the
+	// default) or source, the Markdown itself, which can be edited at once.
+	// The TUI writes it with Set when it is switched.
+	TUIPreview string `yaml:"tui_preview"`
 
 	// LegacyDataDir is data_dir of earlier builds, the directory above the
 	// notes directory; Load fails with it, telling what to write instead.
@@ -244,4 +248,56 @@ func homeRel(path string) string {
 		return filepath.Join("~", rel)
 	}
 	return path
+}
+
+// Set writes key: value to the settings file, replacing the value of key when
+// the file has it, else appending it, so that the rest of the file, with its
+// comments, is kept. The file is created when it does not exist.
+func Set(key, value string) (string, error) {
+	p, err := Path()
+	if err != nil {
+		return "", err
+	}
+	b, err := os.ReadFile(p)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+	v, err := yaml.Marshal(map[string]string{key: value})
+	if err != nil {
+		return "", err
+	}
+	line := strings.TrimSuffix(string(v), "\n")
+	lines := strings.Split(string(b), "\n")
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return "", fmt.Errorf("%s: %w", p, err)
+	}
+	replaced := false
+	if len(doc.Content) == 1 && doc.Content[0].Kind == yaml.MappingNode {
+		m := doc.Content[0].Content
+		for i := 0; i+1 < len(m); i += 2 {
+			k, val := m[i], m[i+1]
+			// Only a value on the line of its key is replaced; another one,
+			// such as a block, is left to the user.
+			if k.Value != key || val.Kind != yaml.ScalarNode || val.Line != k.Line {
+				continue
+			}
+			if val.LineComment != "" {
+				line += " " + val.LineComment
+			}
+			lines[k.Line-1] = line
+			replaced = true
+		}
+	}
+	out := strings.Join(lines, "\n")
+	if !replaced {
+		if out != "" && !strings.HasSuffix(out, "\n") {
+			out += "\n"
+		}
+		out += line + "\n"
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return "", err
+	}
+	return p, os.WriteFile(p, []byte(out), 0o644)
 }

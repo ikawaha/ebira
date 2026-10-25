@@ -127,6 +127,9 @@ func (m *Model) layout() {
 	if m.edit != nil {
 		m.edit.resize(max(1, l.previewW-2), max(1, l.paneH-2))
 	}
+	if m.src != nil {
+		m.src.resize(max(1, l.previewW-2), max(1, l.paneH-2))
+	}
 	m.scrollList()
 	m.renderPreview(true)
 }
@@ -160,7 +163,16 @@ func (m *Model) renderPreview(keepOffset bool) {
 		m.vp.SetContent(m.th.style(m.th.dim).Render("\n  " + m.tr.t("preview.none")))
 		return
 	}
-	key := fmt.Sprintf("%s/%d/%s", m.note.Version, width, m.noteQ)
+	raw, bodyText, bodyHL := m.source, m.note.Body, m.note.BodyHighlights
+	if m.peeking() {
+		// The body being edited, unsaved changes included; the matches of
+		// the search are those of the saved one.
+		raw, bodyText = false, m.src.body.Value()
+		if bodyText != m.note.Body {
+			bodyHL = nil
+		}
+	}
+	key := fmt.Sprintf("%s/%d/%s/%t/%t", m.note.Version, width, m.noteQ, m.source, m.peek)
 	if key == m.rendered {
 		return
 	}
@@ -190,14 +202,21 @@ func (m *Model) renderPreview(keepOffset bool) {
 	b.WriteString("  " + m.th.style(m.th.dim).Render(strings.Join(meta, " · ")) + "\n")
 	b.WriteString("  " + m.th.style(m.th.border).Render(strings.Repeat("─", max(0, width-4))) + "\n")
 	header := strings.Count(b.String(), "\n")
-	body, lines := highlightANSI(m.md.render(showImages(m.note.Body), max(20, width-2)), highlightWords(m.note.Body, m.note.BodyHighlights), on)
-	b.WriteString(body)
+	m.pvHead, m.pvHeadLines = b.String(), header
+	text := m.md.render(showImages(bodyText), max(20, width-2))
+	if raw {
+		// The Markdown itself, as the source editor shows it, of a note
+		// that cannot be edited there, such as one in the trash.
+		text = lipgloss.NewStyle().PaddingLeft(2).Width(max(20, width-1)).Render(m.note.Body)
+	}
+	body, lines := highlightANSI(text, highlightWords(bodyText, bodyHL), on)
+	m.pvBody = body
 	m.matches = m.matches[:0]
 	for _, l := range lines {
 		m.matches = append(m.matches, header+l)
 	}
 	offset := m.vp.YOffset()
-	m.vp.SetContent(b.String())
+	m.paintFind()
 	switch {
 	case keepOffset:
 		m.vp.SetYOffset(offset)
@@ -289,6 +308,18 @@ func (m Model) render() string {
 			title += "  " + m.tr.t("pane.changedOutside")
 		}
 		panes = append(panes, m.box(title, m.edit.view(m.th, l.previewW-2), l.previewW, l.paneH, true))
+	} else if l.showPreview && m.showsSource() {
+		title := m.tr.t("pane.editing", "id", m.src.id)
+		if m.src.dirty() {
+			title += "  " + m.tr.t("pane.modified")
+		}
+		if m.src.dirty() && m.src.saving == "" && m.src.version != m.note.Version {
+			title += "  " + m.tr.t("pane.changedOutside")
+		}
+		lines := m.src.view(m.th, l.previewW-2)
+		head := len(m.src.inputs) + 1 // the fields and the rule above the body
+		lines = append(lines[:head:head], m.findLinesOf(lines[head:])...)
+		panes = append(panes, m.box(title, lines, l.previewW, l.paneH, m.focus == focusPreview))
 	} else if l.showPreview {
 		title := m.tr.t("pane.preview")
 		switch {
@@ -298,6 +329,12 @@ func (m Model) render() string {
 			title = m.tr.t("pane.answer")
 		case m.note != nil:
 			title = m.note.Title
+		}
+		if m.peeking() {
+			title += "  " + m.tr.t("pane.rendered")
+			if m.src.dirty() {
+				title += "  " + m.tr.t("pane.modified")
+			}
 		}
 		lines := strings.Split(m.vp.View(), "\n")
 		if pct := m.vp.ScrollPercent(); m.vp.TotalLineCount() > m.vp.Height() {
@@ -587,6 +624,13 @@ func (m Model) renderFooter() string {
 		return m.th.style(m.th.accent).Render(" "+m.tr.t(label)+" ") + m.promptIn.View() + m.keys([][2]string{{"enter", "key.ok"}, {"esc", "key.cancel"}})
 	case promptMark:
 		return m.renderMarkPrompt()
+	case promptFind:
+		st := m.findStatus()
+		if st != "" {
+			st = " " + m.th.style(m.th.dim).Render(st)
+		}
+		return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.find")+" ") + m.findIn.View() + st +
+			m.keys([][2]string{{"enter/↓", "key.findNext"}, {"↑", "key.findPrev"}, {"esc", "key.close"}})
 	case promptNotebookKind:
 		name := ""
 		if nb := m.selectedNotebook(); nb != nil {
@@ -627,17 +671,28 @@ func (m Model) renderFooter() string {
 		hints = [][2]string{{"enter", "key.done"}, {"esc", "key.clear"}, {"↑↓", "key.move"}}
 	case focusEdit:
 		hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.cancel"}, {"tab/shift+tab", "key.field"}, {"ctrl+z/y", "key.undo"}}
+		hints = m.zoomHint(hints, "ctrl+l")
 	case focusPreview:
-		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}, {"M", "key.mark"}}
+		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"f", "key.find"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}, {"M", "key.mark"}}
 		if m.answerOn {
 			hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.closeAnswer"}, {"?", "key.askAgain"}}
 		}
-		switch {
-		case m.zoom:
-			hints = append(hints, [2]string{"z", "key.unzoom"})
-		case m.width >= narrowWidth:
-			hints = append(hints, [2]string{"z", "key.zoom"})
+		if m.showsSource() {
+			hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.back"}, {"tab/shift+tab", "key.field"}, {"ctrl+z/y", "key.undo"}, {"ctrl+f", "key.find"}, {"ctrl+r", "key.peek"}}
+			hints = m.zoomHint(hints, "ctrl+l")
+			break
 		}
+		if m.peeking() {
+			hints = m.zoomHint([][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"f", "key.find"}, {"p/ctrl+r/esc", "key.source"}}, "z")
+			if len(m.matches) > 0 {
+				hints = append(hints, [2]string{"ctrl+n/p", "key.match"})
+			}
+			break
+		}
+		if m.note != nil && !m.answerOn {
+			hints = append(hints, [2]string{"v", sourceHint(m.source)})
+		}
+		hints = m.zoomHint(hints, "z")
 		if len(m.matches) > 0 {
 			hints = append(hints, [2]string{"ctrl+n/p", "key.match"})
 		}
@@ -666,6 +721,17 @@ func (m Model) renderFooter() string {
 		if m.canReorder() {
 			hints = append(hints, [2]string{"J/K", "key.reorder"})
 		}
+		if m.hasSource() {
+			peek := "key.peek"
+			if m.peek {
+				peek = "key.source"
+			}
+			hints = append(hints, [2]string{"p", peek})
+		}
+		if m.note != nil && m.width >= narrowWidth {
+			hints = append(hints, [2]string{"z", "key.zoom"})
+		}
+		hints = append(hints, [2]string{"v", sourceHint(m.source)})
 		if m.answerOn {
 			hints = append(hints, [2]string{"esc", "key.closeAnswer"})
 		}
@@ -899,3 +965,15 @@ func wrapText(s string, w int) []string {
 
 // noLineStart are the characters that do not begin a line in Japanese text.
 const noLineStart = "、。，．,.)）」』】〉》・ー：；:;？！?!ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ"
+
+// zoomHint adds the hint of key, which zooms the document pane or ends the
+// zoom, when the terminal is wide enough for it.
+func (m Model) zoomHint(hints [][2]string, key string) [][2]string {
+	switch {
+	case m.zoom:
+		return append(hints, [2]string{key, "key.unzoom"})
+	case m.width >= narrowWidth:
+		return append(hints, [2]string{key, "key.zoom"})
+	}
+	return hints
+}
