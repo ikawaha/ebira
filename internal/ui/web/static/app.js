@@ -1059,7 +1059,7 @@ async function moveNotebookInto(nb, parent, undoing) {
     });
   }
   await loadNotebooks().catch(() => {});
-  if (shown) selectNotebook(moved.id);
+  if (shown) showNotebook(moved.id);
   else loadNotes();
 }
 
@@ -1126,6 +1126,19 @@ function selectNotebook(id, trashed = null) {
   loadNotes({ chosen: true, first: true });
 }
 
+// showNotebook shows notebook id after it was created, moved or put back: a
+// sub notebook opens in the note list of its parent, as its cell would.
+function showNotebook(id) {
+  const parent = parentOf(id);
+  if (!parent) {
+    selectNotebook(id);
+    return;
+  }
+  state.expanded.add(subKey(id, false));
+  saveExpanded();
+  if (state.tag || state.notebook !== parent || state.trashedNotebook) selectNotebook(parent);
+  else loadNotes();
+}
 
 // Notebook actions: the menu of a notebook row, opened with its "…" button or
 // a right click. The kinds follow the rules of the TUI: inbox cannot be
@@ -1341,7 +1354,7 @@ async function trashNotebook(nb) {
   offerUndo(t("toastNotebookTrashed", { name: nb.name }), async () => {
     await api(`/trash/notebooks/restore/${nbPath(id)}`, { method: "POST" });
     await loadNotebooks().catch(() => {});
-    selectNotebook(nb.id);
+    showNotebook(nb.id);
   });
   const shown = state.notebook === nb.id || parentOf(state.notebook) === nb.id;
   const inParent = state.notebook !== nb.id && shown ? state.notebook.slice(nb.id.length + 1) : null;
@@ -1375,7 +1388,7 @@ async function restoreNotebook(id) {
     return;
   }
   await loadNotebooks().catch(() => {});
-  selectNotebook(nb.id);
+  showNotebook(nb.id);
 }
 
 async function purgeNotebook(id) {
@@ -1439,7 +1452,7 @@ $("notebook-new-form").addEventListener("submit", async (e) => {
   $("notebook-new").close();
   if (state.side !== "notebooks") setSide("notebooks");
   await loadNotebooks().catch(() => {});
-  selectNotebook(nb.id);
+  showNotebook(nb.id);
 });
 
 // selectTag lists the notes with tag in all notebooks but the trash, as
