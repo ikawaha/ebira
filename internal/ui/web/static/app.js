@@ -757,6 +757,21 @@ function kindSVG(kind) {
   return svg;
 }
 
+// folderSVG returns the drawing of a folder with the drawing of a notebook
+// kind drawn small inside it.
+function folderSVG(kind) {
+  const svg = kindSVG("folder");
+  const mark = kindSVG(kind);
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  // The kind drawing, 24 units wide, scaled into the body of the folder
+  // (7.5 to 19 high), with its strokes kept as thick as they look elsewhere.
+  g.setAttribute("transform", "translate(7.2 8.4) scale(.4)");
+  g.setAttribute("stroke-width", "3.6");
+  g.append(...mark.childNodes);
+  svg.append(g);
+  return svg;
+}
+
 // aiMark returns the mark of a note created by an AI client, which goes at the
 // end of a row rather than right after the title: sparkles, as apps mark what
 // AI made.
@@ -1020,7 +1035,9 @@ function endNotebookDrag() {
 // kind is.
 async function moveNotebookInto(nb, parent, undoing) {
   if (!nb) return;
-  const kind = parent ? state.notebooks.find((n) => n.id === parent)?.kind : nb.kind;
+  // A notebook moved into another keeps its kind as its own; a sub notebook
+  // without one takes that of its new parent.
+  const kind = parent ? subKind(nb.parent ? nb.own_kind : nb.kind, parent) : nb.kind;
   if (!undoing && nb.kind === "private" && kind !== "private" && !confirm(t("confirmUnprivate", { name: nb.name }))) return;
   const shown = state.notebook === nb.id;
   let moved;
@@ -1152,26 +1169,27 @@ function openNotebookMenu(li, id, trashed, e) {
       m.append(el("div", "menu-label", t("notebookMoveInto")));
       for (const p of parents) item(p.name, () => moveNotebookInto(nb, p.id));
     }
-    if (nb.parent) {
-      // A sub notebook takes the kind of its parent.
-      sep();
-      m.append(el("div", "menu-label", t("kindInherited", { kind: nb.kind, name: notebookName(nb.parent) })));
-    } else if (id !== "trash") {
+    if (id !== "trash") {
+      // A sub notebook takes the kind of its parent unless it sets its own.
+      const cur = nb.parent ? nb.own_kind || "inherit" : nb.kind;
+      const parentKind = nb.parent && state.notebooks.find((n) => n.id === nb.parent)?.kind;
       sep();
       m.append(el("div", "menu-label", t("notebookKind")));
-      for (const k of KINDS) {
+      for (const k of nb.parent ? ["inherit", ...KINDS] : KINDS) {
         if (id === "inbox" && k === "collab") continue;
-        const b = button(k, () => {
+        const inherit = k === "inherit";
+        const b = button(inherit ? t("kindInherit", { kind: parentKind || "default", name: notebookName(nb.parent) }) : k, () => {
           closeNotebookMenu();
-          if (k !== nb.kind) setNotebookKind(nb, k);
+          if (k !== cur) setNotebookKind(nb, k);
         });
-        const svg = kindSVG(k);
+        const svg = kindSVG(inherit ? parentKind : k);
         if (svg) b.append(el("span", "kind-icon", svg));
-        b.title = t(KIND_LABEL[k]);
+        if (!inherit) b.title = t(KIND_LABEL[k]);
         b.setAttribute("role", "menuitemradio");
-        b.setAttribute("aria-checked", String(k === nb.kind));
+        b.setAttribute("aria-checked", String(k === cur));
         m.append(b);
       }
+      if (parentKind === "private") m.append(el("div", "menu-label", t("kindInPrivate", { name: notebookName(nb.parent) })));
     }
     if (!nb.reserved) {
       sep();
@@ -1282,7 +1300,8 @@ function renameNotebook(id) {
 }
 
 async function setNotebookKind(nb, kind, undoing) {
-  if (nb.kind === "private" && (kind === "default" || kind === "collab") && !confirm(t("confirmUnprivate", { name: nb.name }))) return;
+  const after = nb.parent ? subKind(kind === "inherit" ? undefined : kind, nb.parent) : kind;
+  if (nb.kind === "private" && (after === "default" || after === "collab") && !confirm(t("confirmUnprivate", { name: nb.name }))) return;
   try {
     await api(`/notebooks/${nbPath(nb.id)}`, { method: "PUT", body: { kind } });
   } catch (e) {
@@ -1291,10 +1310,19 @@ async function setNotebookKind(nb, kind, undoing) {
     return;
   }
   if (!undoing) {
-    const old = nb.kind;
-    offerUndo(t("toastKind", { name: nb.name, kind }), () => setNotebookKind({ ...nb, kind }, old, true));
+    const old = nb.parent ? nb.own_kind || "inherit" : nb.kind;
+    const now = { ...nb, kind: after, own_kind: kind === "inherit" ? undefined : kind };
+    offerUndo(t("toastKind", { name: nb.name, kind: after }), () => setNotebookKind(now, old, true));
   }
   await loadNotebooks().catch(() => {});
+}
+
+// subKind returns the kind in effect of a sub notebook of parent with its own
+// kind own (undefined for none): private in a private parent, else its own,
+// else that of the parent, as the server decides.
+function subKind(own, parent) {
+  const p = state.notebooks.find((n) => n.id === parent)?.kind || "default";
+  return p === "private" ? "private" : own || p;
 }
 
 // trashNotebook moves a notebook with its notes to the trash, where it is
@@ -1370,7 +1398,8 @@ async function purgeNotebook(id) {
 
 // The dialog of a new notebook: its name and kind. The ID, the name of its
 // folder, is made from the name by the server.
-// With parent, the new notebook is a sub notebook of it, which takes its kind.
+// With parent, the new notebook is a sub notebook of it, which takes its kind
+// until its menu sets one.
 function openNewNotebook(parent = null) {
   const d = $("notebook-new");
   $("notebook-new-form").reset();
@@ -1701,6 +1730,12 @@ function subNotebookRows() {
     const open = state.expanded.has(key);
     const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", sub.name, withSubs(trashed ? state.trashed : state.notebooks, sub), () => toggleSub(key));
     li.prepend(el("span", "twisty", kindSVG("chevron")));
+    // The folder holds the mark of the kind in effect.
+    if (KIND_SVG[sub.kind]) {
+      const icon = li.querySelector(".icon");
+      icon.replaceChildren(folderSVG(sub.kind));
+      icon.title = sub.kind + ": " + t("kind" + sub.kind[0].toUpperCase() + sub.kind.slice(1));
+    }
     li.setAttribute("aria-expanded", String(open));
     li.dataset.notebook = trashed ? "trash" : sub.id;
     li.title = t(open ? "subNotebookCollapse" : "subNotebookExpand", { name: sub.name });

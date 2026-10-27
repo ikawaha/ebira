@@ -352,7 +352,7 @@ func (c *Client) CreateNotebook(ctx context.Context, p *CreateNotebookPayload) (
 // SaveNotebook calls the "save_notebook" endpoint of the "notes" service.
 // SaveNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist
-//   - "bad_request" (type *goa.ServiceError): The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook
+//   - "bad_request" (type *goa.ServiceError): The change is not allowed for the notebook, such as an order for inbox or trash, or inherit for a notebook that is not a sub notebook
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -568,8 +568,10 @@ func (c *Client) MoveAiNote(ctx context.Context, p *MoveAiNotePayload) (res *Not
 // CreateAiNotebook calls the "create_ai_notebook" endpoint of the "notes"
 // service.
 // CreateAiNotebook may return the following errors:
-//   - "bad_request" (type *goa.ServiceError): The name is empty
-//   - "already_exists" (type *goa.ServiceError): A notebook with the name exists
+//   - "bad_request" (type *goa.ServiceError): The name is empty, or the parent is a sub notebook
+//   - "not_found" (type *goa.ServiceError): The parent does not exist, or is not in the notebook list of the client
+//   - "forbidden" (type *goa.ServiceError): The parent is not of the collab kind
+//   - "already_exists" (type *goa.ServiceError): A notebook with the name exists (in the parent, for a sub notebook)
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -586,7 +588,7 @@ func (c *Client) CreateAiNotebook(ctx context.Context, p *CreateAiNotebookPayloa
 // "notes" service.
 // MakeNotebookPrivate may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist, or is not in the notebook list of the client
-//   - "bad_request" (type *goa.ServiceError): The notebook is the trash, or a sub notebook, which takes the kind of its parent
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error

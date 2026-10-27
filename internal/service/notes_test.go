@@ -42,8 +42,6 @@ func errorName(err error) string {
 	return ""
 }
 
-func ptr[T any](v T) *T { return &v }
-
 func TestIfMatch(t *testing.T) {
 	ctx := AsPerson(context.Background())
 	svc, _ := newTestService(t)
@@ -1057,7 +1055,14 @@ func TestVerification(t *testing.T) {
 	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("a"), Notebook: &work.ID, Title: "a"}); err != nil {
 		t.Fatal(err)
 	}
-	vault, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "vault", Kind: "private"})
+	// A sub notebook of a private notebook, without a kind of its own, takes
+	// that of the notebook it moves into. Its parent is not diary, which a
+	// call below may make visible first.
+	safe, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "safe", Kind: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vault, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "vault", Parent: &safe.ID})
 	if err != nil {
 		t.Fatal(err)
 	}

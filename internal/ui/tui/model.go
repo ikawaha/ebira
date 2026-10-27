@@ -1429,11 +1429,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case promptNotebookKind:
 		nb := m.selectedNotebook()
 		kind := map[string]string{"d": "default", "c": "collab", "w": "drop", "p": "private"}[key]
-		switch {
+		if key == "i" && nb != nil && nb.Parent != nil {
+			kind = "inherit" // a sub notebook takes the kind of its parent again
+		}
+		switch after := m.kindAfter(nb, kind); {
 		case key == "esc" || nb == nil:
 			m.prompt = promptNone
 		case kind == "":
-		case nb.Kind == "private" && (kind == "default" || kind == "collab"):
+		case nb.Kind == "private" && (after == "default" || after == "collab"):
 			m.prompt, m.newKind = promptUnprivate, kind // AI will see it
 		default:
 			m.prompt = promptNone

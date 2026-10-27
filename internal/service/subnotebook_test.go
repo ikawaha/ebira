@@ -58,13 +58,6 @@ func TestSubNotebooks(t *testing.T) {
 		t.Errorf("notebooks = %v, want %v", ids, want)
 	}
 
-	// The kind of a sub notebook is that of its parent.
-	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: design.ID, Kind: ptr("default")}); errorName(err) != "bad_request" {
-		t.Errorf("kind of a sub notebook = %v, want bad_request", err)
-	}
-	if err := svc.MakeNotebookPrivate(ai, &gennotes.MakeNotebookPrivatePayload{ID: design.ID}); errorName(err) != "bad_request" {
-		t.Errorf("make_notebook_private of a sub notebook = %v, want bad_request", err)
-	}
 	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: design.ID, Name: ptr("Design 2")}); err != nil {
 		t.Errorf("name of a sub notebook: %v", err)
 	}
@@ -228,22 +221,23 @@ func TestMoveNotebook(t *testing.T) {
 		}
 	}
 
-	// Into a notebook: the ID, the kind and the notes follow.
+	// Into a notebook: the ID and the notes follow, and the kind stays as
+	// its own.
 	nb, err := move(work.ID, &dev.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if nb.ID != "dev/work" || deref(nb.Parent) != "dev" || nb.Kind != "collab" || nb.Name != "Work" || nb.Count != 1 {
+	if nb.ID != "dev/work" || deref(nb.Parent) != "dev" || nb.Kind != "private" || deref(nb.OwnKind) != "private" || nb.Name != "Work" || nb.Count != 1 {
 		t.Errorf("moved notebook = %+v", nb)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "dev", "work", store.NotebookFile)); strings.Contains(string(b), "kind") {
-		t.Errorf("the sub notebook keeps a kind:\n%s", b)
+	if b, _ := os.ReadFile(filepath.Join(dir, "dev", "work", store.NotebookFile)); !strings.Contains(string(b), "kind: private") {
+		t.Errorf("the sub notebook loses its kind:\n%s", b)
 	}
 	if n, err := svc.Get(person, &gennotes.GetPayload{ID: "w"}); err != nil || n.Notebook != "dev/work" {
 		t.Errorf("note after the move = %+v, %v", n, err)
 	}
-	if ls, err := svc.List(ai, &gennotes.ListPayload{Notebook: ptr("dev/work"), Limit: 50}); err != nil || len(ls.Notes) != 1 {
-		t.Errorf("notes of dev/work for AI = %+v, %v, want the note, now in a collab notebook", ls, err)
+	if ls, err := svc.List(ai, &gennotes.ListPayload{Notebook: ptr("dev/work"), Limit: 50}); err != nil || len(ls.Notes) != 0 {
+		t.Errorf("notes of dev/work for AI = %+v, %v, want none, as it stays private", ls, err)
 	}
 
 	// A name taken among the new siblings is refused.
@@ -259,15 +253,153 @@ func TestMoveNotebook(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if nb.ID != "work" || nb.Parent != nil || nb.Kind != "collab" {
+	if nb.ID != "work" || nb.Parent != nil || nb.Kind != "private" || nb.OwnKind != nil {
 		t.Errorf("notebook moved to the top = %+v", nb)
 	}
-	// From one parent into another.
+	// From one parent into another: without a kind of its own, it takes that
+	// of the new parent.
+	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: "work", Kind: ptr("default")}); err != nil {
+		t.Fatal(err)
+	}
 	nb, err = move("dev/design", ptr("work"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if nb.ID != "work/design" || nb.Kind != "collab" {
+	if nb.ID != "work/design" || nb.Kind != "default" || nb.OwnKind != nil {
 		t.Errorf("sub notebook moved into another notebook = %+v", nb)
+	}
+}
+
+// TestSubNotebookKinds checks the kinds of sub notebooks: one takes the kind
+// of its parent unless it sets its own, and is private in a private parent;
+// AI clients create sub notebooks in collab notebooks, and make sub notebooks
+// private, but nothing more.
+func TestSubNotebookKinds(t *testing.T) {
+	ai := context.Background()
+	person := AsPerson(ai)
+	svc, dir := newTestService(t)
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Docs"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Dev", Kind: "collab"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Diary", Kind: "private"}); err != nil {
+		t.Fatal(err)
+	}
+	kind := func(id string) (string, string) {
+		t.Helper()
+		nbs, err := svc.Notebooks(person, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, nb := range nbs {
+			if nb.ID == id {
+				return nb.Kind, deref(nb.OwnKind)
+			}
+		}
+		t.Fatalf("notebook %s not found", id)
+		return "", ""
+	}
+	save := func(id, k string) error {
+		_, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: id, Kind: &k})
+		return err
+	}
+
+	// A collab sub notebook in a notebook AI clients only read.
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Shared", Parent: ptr("docs")}); err != nil {
+		t.Fatal(err)
+	}
+	if k, own := kind("docs/shared"); k != "default" || own != "" {
+		t.Errorf("new sub notebook = %s (own %q), want default without its own", k, own)
+	}
+	if err := save("docs/shared", "collab"); err != nil {
+		t.Fatal(err)
+	}
+	if k, own := kind("docs/shared"); k != "collab" || own != "collab" {
+		t.Errorf("sub notebook made collab = %s (own %q)", k, own)
+	}
+	if _, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{Notebook: "docs/shared", Title: "A"}); err != nil {
+		t.Errorf("AI note in a collab sub notebook: %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "docs", "shared", store.NotebookFile)); !strings.Contains(string(b), "kind: collab") {
+		t.Errorf("settings of the sub notebook:\n%s", b)
+	}
+	// A private sub notebook in a collab notebook.
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Secret", Parent: ptr("dev")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := save("dev/secret", "private"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := svc.visible(ai, "dev/secret"); err != nil || ok {
+		t.Errorf("private sub notebook visible to AI = %v, %v", ok, err)
+	}
+	if ok, err := svc.visible(ai, "dev"); err != nil || !ok {
+		t.Errorf("its collab parent visible to AI = %v, %v", ok, err)
+	}
+	// Back to the kind of the parent; inherit is for sub notebooks only.
+	if err := save("dev/secret", "inherit"); err != nil {
+		t.Fatal(err)
+	}
+	if k, own := kind("dev/secret"); k != "collab" || own != "" {
+		t.Errorf("sub notebook back to its parent = %s (own %q)", k, own)
+	}
+	if err := save("dev", "inherit"); errorName(err) != "bad_request" {
+		t.Errorf("inherit for a notebook at the top = %v, want bad_request", err)
+	}
+	// In a private parent, a sub notebook is private whatever its own kind.
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Open", Parent: ptr("diary")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := save("diary/open", "collab"); err != nil {
+		t.Fatal(err)
+	}
+	if k, own := kind("diary/open"); k != "private" || own != "collab" {
+		t.Errorf("collab sub notebook of a private notebook = %s (own %q), want private", k, own)
+	}
+	if _, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{Notebook: "diary/open", Title: "B"}); errorName(err) != "forbidden" {
+		t.Errorf("AI note in a sub notebook of a private notebook = %v, want forbidden", err)
+	}
+	// Making a notebook private hides its sub notebooks, whatever their kinds.
+	if err := svc.MakeNotebookPrivate(ai, &gennotes.MakeNotebookPrivatePayload{ID: "docs"}); err != nil {
+		t.Fatal(err)
+	}
+	if k, _ := kind("docs/shared"); k != "private" {
+		t.Errorf("collab sub notebook of a notebook made private = %s, want private", k)
+	}
+
+	// AI clients make sub notebooks private, and create them in collab
+	// notebooks only.
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Log", Parent: ptr("dev")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.MakeNotebookPrivate(ai, &gennotes.MakeNotebookPrivatePayload{ID: "dev/log"}); err != nil {
+		t.Errorf("make_notebook_private of a sub notebook: %v", err)
+	}
+	if k, own := kind("dev/log"); k != "private" || own != "private" {
+		t.Errorf("sub notebook made private by AI = %s (own %q)", k, own)
+	}
+	nb, err := svc.CreateAiNotebook(ai, &gennotes.CreateAiNotebookPayload{Name: "Notes", Parent: ptr("dev")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nb.ID != "dev/notes" || nb.Kind != "collab" || nb.OwnKind != nil {
+		t.Errorf("sub notebook created by AI = %+v, want dev/notes taking the collab kind", nb)
+	}
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Read", Kind: "default"}); err != nil {
+		t.Fatal(err)
+	}
+	for parent, want := range map[string]string{
+		"read":      "forbidden", // AI clients only read it
+		"diary":     "not_found", // hidden from them
+		"dev/log":   "not_found", // a private sub notebook
+		"nothing":   "not_found",
+		"dev/notes": "bad_request", // one level deep
+		store.Inbox: "forbidden",
+	} {
+		if _, err := svc.CreateAiNotebook(ai, &gennotes.CreateAiNotebookPayload{Name: "X", Parent: ptr(parent)}); errorName(err) != want {
+			t.Errorf("AI sub notebook in %s = %v, want %s", parent, err, want)
+		}
 	}
 }

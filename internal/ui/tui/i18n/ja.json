@@ -122,6 +122,7 @@
   "kind.collab": "collab（AI も書く）",
   "kind.drop": "drop（AI は置くだけ）",
   "kind.private": "private（AI から隠す）",
+  "kind.inherit": "親に従う",
 
   "key.add": "追加",
   "key.addAI": "AI 用を追加",

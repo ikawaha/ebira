@@ -158,6 +158,9 @@ func ValidateCreateAiNotebookPayloadTransport(body *CreateAiNotebookPayloadTrans
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 100, false))
 		}
 	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
 	return
 }
 
@@ -193,6 +196,11 @@ func ValidateCreateAiNotebookResultTransport(body *CreateAiNotebookResultTranspo
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
 	if body.Sort != nil {
@@ -955,6 +963,11 @@ func ValidateNotebookTransport(body *NotebookTransport) (err error) {
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
 	if body.Sort != nil {

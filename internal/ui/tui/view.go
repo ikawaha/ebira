@@ -464,13 +464,13 @@ func (m Model) renderNotebooks(w, h int) string {
 		if tid, ok := trashedID(r.id); ok {
 			nest, name = "↳ ", strings.TrimPrefix(name, "↳ ")
 			if nb := m.trashedNotebook(tid); nb != nil && nb.Parent != nil {
-				// A sub notebook deleted with its parent, under it; it takes
-				// the kind of its parent.
-				nest, icon, name = "  ↳ ", "", nb.Name
+				// A sub notebook deleted with its parent, under it.
+				nest, name = "  ↳ ", nb.Name
 			}
 		} else if nb := m.notebookOf(r.id); nb != nil && nb.Parent != nil {
-			// A sub notebook, under its parent, whose kind it takes.
-			nest, icon, name = "↳ ", "", nb.Name
+			// A sub notebook, under its parent, with the icon of the kind
+			// in effect.
+			nest, name = "↳ ", nb.Name
 		}
 		label := " " + nest + pad(icon, iconWidth) + " " + name
 		count := fmt.Sprintf(" %d ", r.count) // the space keeps a long name apart
@@ -552,6 +552,23 @@ func (m Model) notebookName(id string) string {
 		return nb.Name
 	}
 	return id
+}
+
+// kindAfter returns the kind in effect that notebook nb gets with kind, as
+// the server decides: a sub notebook is private in a private parent, and
+// takes the kind of its parent with inherit.
+func (m Model) kindAfter(nb *gennotes.Notebook, kind string) string {
+	if nb == nil || nb.Parent == nil {
+		return kind
+	}
+	parent := "default"
+	if p := m.notebookOf(*nb.Parent); p != nil {
+		parent = p.Kind
+	}
+	if parent == "private" || kind == "inherit" {
+		return parent
+	}
+	return kind
 }
 
 // notebookOf returns notebook id, or nil.
@@ -636,8 +653,11 @@ func (m Model) renderFooter() string {
 		if nb := m.selectedNotebook(); nb != nil {
 			name = nb.Name
 		}
-		return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.kind", "name", name)) +
-			m.keys([][2]string{{"d", "kind.default"}, {"c", "kind.collab"}, {"w", "kind.drop"}, {"p", "kind.private"}, {"esc", "key.cancel"}})
+		keys := [][2]string{{"d", "kind.default"}, {"c", "kind.collab"}, {"w", "kind.drop"}, {"p", "kind.private"}}
+		if nb := m.selectedNotebook(); nb != nil && nb.Parent != nil {
+			keys = append(keys, [2]string{"i", "kind.inherit"})
+		}
+		return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.kind", "name", name)) + m.keys(append(keys, [2]string{"esc", "key.cancel"}))
 	case promptUnprivate, promptMoveNotebook:
 		return m.th.style(m.th.warn).Render(" " + m.tr.t("prompt.unprivate"))
 	case promptMovePrivate:

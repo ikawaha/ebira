@@ -95,12 +95,15 @@ var NoteSummary = Type("NoteSummary", func() {
 // sub notebooks, one level deep, as directories in it.
 var Notebook = Type("Notebook", func() {
 	RequiredAttribute("id", String, "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead", notebookIDDSL)
-	Attribute("parent", String, "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent", notebookIDDSL)
+	Attribute("parent", String, "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent", notebookIDDSL)
 	RequiredAttribute("name", String, "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)")
 	RequiredAttribute("order", Int, "Sort key among the notebooks other than inbox and trash; lower comes first")
 	RequiredAttribute("count", Int, "Number of notes")
 	RequiredAttribute("reserved", Boolean, "Whether this is a system notebook (inbox or trash)")
 	RequiredAttribute("kind", String, "Kind of the notebook. "+kindDescription, func() {
+		Enum(notebookKinds...)
+	})
+	Attribute("own_kind", String, "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent", func() {
 		Enum(notebookKinds...)
 	})
 	RequiredAttribute("sort", String, sortDescription, func() {
@@ -703,7 +706,7 @@ var _ = Service("notes", func() {
 				MaxLength(100)
 			})
 			Attribute("order", Int, "Sort key; lower comes first. Omit to put the notebook after the others")
-			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Ignored for a sub notebook, which takes the kind of its parent", func() {
+			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Ignored for a sub notebook, which takes the kind of its parent until save_notebook sets one", func() {
 				Enum(notebookKinds...)
 				Default("default")
 			})
@@ -729,8 +732,8 @@ var _ = Service("notes", func() {
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 			Attribute("name", String, "Display name; empty to reset it to the default")
 			Attribute("order", Int, "Sort key; lower comes first")
-			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Inbox cannot be collab, the trash keeps the default kind (it is hidden from AI clients anyway), and a sub notebook takes the kind of its parent", func() {
-				Enum(notebookKinds...)
+			Attribute("kind", String, "Kind of the notebook. "+kindDescription+". Inbox cannot be collab, and the trash keeps the default kind (it is hidden from AI clients anyway). A sub notebook takes the kind of its parent unless it sets its own, and is private in a private parent whatever its own kind; inherit, for a sub notebook only, makes it take the kind of its parent again", func() {
+				Enum(append(notebookKinds, "inherit")...)
 			})
 			Attribute("sort", String, "Default order of the note list. "+sortDescription, func() {
 				Enum(sortKeys...)
@@ -738,7 +741,7 @@ var _ = Service("notes", func() {
 		})
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook does not exist")
-		Error("bad_request", ErrorResult, "The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook")
+		Error("bad_request", ErrorResult, "The change is not allowed for the notebook, such as an order for inbox or trash, or inherit for a notebook that is not a sub notebook")
 		HTTP(func() {
 			PUT("/notebooks/{*id}")
 			Response(StatusOK)
@@ -748,7 +751,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("move_notebook", func() {
-		Description("Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.")
+		Description("Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A notebook moved into another keeps its kind as its own; a sub notebook keeps its own kind, or takes that of its new parent without one, and one moved to the top keeps the kind it had. In a private parent, it is private. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
@@ -976,27 +979,30 @@ var _ = Service("notes", func() {
 
 	Method("create_ai_notebook", func() {
 		NoSecurity()
-		Description("Create a new notebook of the collab kind, where AI clients may write notes. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that. The ID of the notebook is derived from the name: a name with characters other than ASCII gives an ID that starts with xn-- (Punycode), which is expected.")
+		Description("Create a new notebook of the collab kind, where AI clients may write notes, or a sub notebook in a notebook of the collab kind, which takes the kind of its parent. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that. The ID of the notebook is derived from the name: a name with characters other than ASCII gives an ID that starts with xn-- (Punycode), which is expected.")
 		Payload(func() {
 			RequiredAttribute("name", String, "Display name, in any language; the ID is derived from it", func() {
 				MinLength(1)
 				MaxLength(100)
 			})
+			Attribute("parent", String, "Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top", notebookIDDSL)
 		})
 		Result(Notebook)
-		Error("bad_request", ErrorResult, "The name is empty")
-		Error("already_exists", ErrorResult, "A notebook with the name exists")
-		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes. Its ID is derived from the name; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people")
+		Error("bad_request", ErrorResult, "The name is empty, or the parent is a sub notebook")
+		Error("not_found", ErrorResult, "The parent does not exist, or is not in the notebook list of the client")
+		Error("forbidden", ErrorResult, "The parent is not of the collab kind")
+		Error("already_exists", ErrorResult, "A notebook with the name exists (in the parent, for a sub notebook)")
+		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people")
 	})
 
 	Method("make_notebook_private", func() {
 		NoSecurity()
-		Description("Make a notebook private, so that AI clients can no longer see it or its notes. Only people can undo this.")
+		Description("Make a notebook private, so that AI clients can no longer see it or its notes, nor its sub notebooks. A sub notebook can be made private on its own. Only people can undo this.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 		})
 		Error("not_found", ErrorResult, "The notebook does not exist, or is not in the notebook list of the client")
-		Error("bad_request", ErrorResult, "The notebook is the trash, or a sub notebook, which takes the kind of its parent")
+		Error("bad_request", ErrorResult, "The notebook is the trash")
 		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this")
 	})
 

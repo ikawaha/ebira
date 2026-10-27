@@ -516,14 +516,38 @@ func (s *Notes) SaveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayloa
 		return nil, err
 	}
 	// Making a private notebook visible to AI is an important operation.
-	if p.Kind != nil && storeKind(*p.Kind) != store.KindPrivate {
-		if m, err := s.store.NotebookMeta(p.ID); err == nil && m.Kind == store.KindPrivate {
+	if p.Kind != nil {
+		if m, err := s.store.NotebookMeta(p.ID); err == nil && m.Kind == store.KindPrivate && s.kindAfter(p.ID, *p.Kind) != store.KindPrivate {
 			if err := requireVerified(ctx); err != nil {
 				return nil, err
 			}
 		}
 	}
 	return s.saveNotebook(ctx, p)
+}
+
+// kindAfter returns the kind in effect that notebook nb gets with kind, as
+// save_notebook takes it.
+func (s *Notes) kindAfter(nb, kind string) string {
+	parent, sub := store.SplitNotebook(nb)
+	if sub == "" {
+		return storeKind(kind)
+	}
+	pm, err := s.store.NotebookMeta(parent)
+	if err != nil {
+		return store.KindPrivate // unknown: as if it stayed hidden
+	}
+	return store.SubKind(ownKind(kind), pm.Kind)
+}
+
+// ownKind returns the own kind of a sub notebook for kind as save_notebook
+// takes it: nil for inherit.
+func ownKind(kind string) *string {
+	if kind == kindInherit {
+		return nil
+	}
+	k := storeKind(kind)
+	return &k
 }
 
 // saveNotebook saves the settings of a notebook, for people and for AI clients after their checks.
@@ -550,13 +574,16 @@ func (s *Notes) saveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayloa
 	if p.Kind != nil {
 		switch _, sub := store.SplitNotebook(p.ID); {
 		case sub != "":
-			return nil, gennotes.MakeBadRequest(errors.New("a sub notebook takes the kind of its notebook; change the kind of that notebook instead"))
+			m.OwnKind = ownKind(*p.Kind)
+		case *p.Kind == kindInherit:
+			return nil, gennotes.MakeBadRequest(errors.New("only a sub notebook can take the kind of its parent"))
 		case reserved && *p.Kind == store.KindCollab:
 			return nil, gennotes.MakeBadRequest(errors.New("inbox and trash cannot be of the collab kind"))
 		case p.ID == store.Trash && (*p.Kind == store.KindPrivate || *p.Kind == store.KindDrop):
 			return nil, gennotes.MakeBadRequest(errors.New("the trash keeps the default kind; it is hidden from AI clients anyway"))
+		default:
+			m.Kind = storeKind(*p.Kind)
 		}
-		m.Kind = storeKind(*p.Kind)
 	}
 	if err := s.store.SaveNotebookMeta(p.ID, m); err != nil {
 		return nil, mapErr(err)
@@ -653,8 +680,8 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 
 // MoveNotebook moves a notebook into another notebook, as a sub notebook, or
 // a sub notebook to the top or into another notebook. It goes after the
-// notebooks already there. As a sub notebook takes the kind of its parent,
-// moving a private notebook into one of another kind makes it visible to AI,
+// notebooks already there. A sub notebook without a kind of its own takes the
+// kind of its parent, so moving a private notebook may make it visible to AI,
 // which is an important operation, as with SaveNotebook.
 func (s *Notes) MoveNotebook(ctx context.Context, p *gennotes.MoveNotebookPayload) (*gennotes.Notebook, error) {
 	if err := peopleOnly(ctx); err != nil {
@@ -690,7 +717,14 @@ func (s *Notes) MoveNotebook(ctx context.Context, p *gennotes.MoveNotebookPayloa
 		if pn.Reserved || pn.Parent != nil || pn.ID == cur.ID {
 			return nil, gennotes.MakeBadRequest(fmt.Errorf("notebook %s cannot hold sub notebooks: only notebooks other than the inbox and the trash can, one level deep", parent))
 		}
-		kind = pn.Kind
+		switch {
+		case cur.Parent == nil:
+			kind = store.SubKind(&cur.Kind, pn.Kind) // it keeps its kind as its own
+		case cur.OwnKind != nil:
+			kind = store.SubKind(ptr(storeKind(*cur.OwnKind)), pn.Kind)
+		default:
+			kind = pn.Kind
+		}
 	}
 	to := store.MovedNotebook(cur.ID, parent)
 	if to == cur.ID {
@@ -869,7 +903,7 @@ func (s *Notes) ensureNotebookFromTrash(id string) error {
 			if err != nil {
 				return err
 			}
-			if pm.Kind != trashed.Kind {
+			if store.SubKind(trashed.OwnKind, pm.Kind) != trashed.Kind {
 				return gennotes.MakeBadRequest(fmt.Errorf("notebook %s has the kind %s, but the note comes from a sub notebook of the kind %s; change the kind back before restoring the note", parent, apiKind(pm.Kind), apiKind(trashed.Kind)))
 			}
 		}
@@ -886,7 +920,11 @@ func (s *Notes) ensureNotebookFromTrash(id string) error {
 }
 
 // Notebook kinds in the API; store.NotebookMeta keeps "" for the default.
-const kindDefault = "default"
+// kindInherit makes a sub notebook take the kind of its parent again.
+const (
+	kindDefault = "default"
+	kindInherit = "inherit"
+)
 
 func storeKind(kind string) string {
 	switch kind {
@@ -904,10 +942,26 @@ func apiKind(kind string) string {
 	return kindDefault
 }
 
-// CreateAiNotebook creates a new notebook of the collab kind for an AI client. AI
-// clients cannot turn existing notebooks into collab notebooks.
+// CreateAiNotebook creates a new notebook of the collab kind for an AI client,
+// or a sub notebook in one, which takes its kind. AI clients cannot turn
+// existing notebooks into collab notebooks.
 func (s *Notes) CreateAiNotebook(ctx context.Context, p *gennotes.CreateAiNotebookPayload) (*gennotes.Notebook, error) {
-	return s.createNotebook(ctx, &gennotes.CreateNotebookPayload{Name: p.Name, Kind: store.KindCollab})
+	if p.Parent != nil {
+		if ok, err := s.listed(ctx, *p.Parent); err != nil {
+			return nil, err
+		} else if all, err := s.store.Notebooks(); err != nil {
+			return nil, err
+		} else if !ok || !slices.Contains(all, *p.Parent) {
+			return nil, gennotes.MakeNotFound(fmt.Errorf("notebook %s not found", *p.Parent))
+		}
+		if _, sub := store.SplitNotebook(*p.Parent); sub != "" {
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("notebook %s is a sub notebook, which cannot hold sub notebooks", *p.Parent))
+		}
+		if err := s.requireAINotebook(*p.Parent); err != nil {
+			return nil, err
+		}
+	}
+	return s.createNotebook(ctx, &gennotes.CreateNotebookPayload{Name: p.Name, Kind: store.KindCollab, Parent: p.Parent})
 }
 
 // MakeNotebookPrivate hides a notebook from AI clients. They may do it to any
@@ -927,9 +981,6 @@ func (s *Notes) MakeNotebookPrivate(ctx context.Context, p *gennotes.MakeNoteboo
 	}
 	if p.ID == store.Trash {
 		return gennotes.MakeBadRequest(errors.New("the trash keeps the default kind; it is hidden from AI clients anyway"))
-	}
-	if parent, sub := store.SplitNotebook(p.ID); sub != "" {
-		return gennotes.MakeBadRequest(fmt.Errorf("a sub notebook takes the kind of its notebook; make %s private instead", parent))
 	}
 	kind := store.KindPrivate
 	_, err = s.saveNotebook(ctx, &gennotes.SaveNotebookPayload{ID: p.ID, Kind: &kind})
@@ -1105,6 +1156,9 @@ func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 		nb := &gennotes.Notebook{ID: id, Name: m.Name, Order: m.Order, Count: counts[id], Kind: apiKind(m.Kind), Sort: cmp.Or(m.Sort, store.SortOrder)}
 		if parent, sub := store.SplitNotebook(id); sub != "" {
 			nb.Parent = &parent
+			if m.OwnKind != nil {
+				nb.OwnKind = ptr(apiKind(*m.OwnKind))
+			}
 			if nb.Name == "" {
 				nb.Name = store.NotebookName(id)
 			}
@@ -1339,6 +1393,8 @@ func tags(t []string) []string {
 	}
 	return t
 }
+
+func ptr[T any](v T) *T { return &v }
 
 func deref(p *string) string {
 	if p == nil {

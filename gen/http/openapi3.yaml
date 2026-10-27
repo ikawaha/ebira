@@ -1070,6 +1070,7 @@ paths:
                                       kind: private
                                       name: Aut sed quidem commodi dolore cumque.
                                       order: 5084316890005250992
+                                      own_kind: default
                                       parent: inbox
                                       reserved: false
                                       sort: created
@@ -1078,6 +1079,7 @@ paths:
                                       kind: private
                                       name: Aut sed quidem commodi dolore cumque.
                                       order: 5084316890005250992
+                                      own_kind: default
                                       parent: inbox
                                       reserved: false
                                       sort: created
@@ -1086,6 +1088,7 @@ paths:
                                       kind: private
                                       name: Aut sed quidem commodi dolore cumque.
                                       order: 5084316890005250992
+                                      own_kind: default
                                       parent: inbox
                                       reserved: false
                                       sort: created
@@ -1095,6 +1098,7 @@ paths:
                                   kind: private
                                   name: Aut sed quidem commodi dolore cumque.
                                   order: 5084316890005250992
+                                  own_kind: default
                                   parent: inbox
                                   reserved: false
                                   sort: created
@@ -1103,6 +1107,7 @@ paths:
                                   kind: private
                                   name: Aut sed quidem commodi dolore cumque.
                                   order: 5084316890005250992
+                                  own_kind: default
                                   parent: inbox
                                   reserved: false
                                   sort: created
@@ -1111,6 +1116,7 @@ paths:
                                   kind: private
                                   name: Aut sed quidem commodi dolore cumque.
                                   order: 5084316890005250992
+                                  own_kind: default
                                   parent: inbox
                                   reserved: false
                                   sort: created
@@ -1173,6 +1179,7 @@ paths:
                                 kind: private
                                 name: Facilis tenetur mollitia eligendi iusto ipsam.
                                 order: 853687201135527360
+                                own_kind: default
                                 parent: inbox
                                 reserved: false
                                 sort: order
@@ -1356,7 +1363,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/SaveNotebookRequestBody'
                         example:
-                            kind: collab
+                            kind: inherit
                             name: Commodi vel.
                             order: 6133899287636492423
                             sort: updated
@@ -1373,11 +1380,12 @@ paths:
                                 kind: default
                                 name: Est est omnis at sit.
                                 order: 2140168914686218780
+                                own_kind: drop
                                 parent: inbox
                                 reserved: false
                                 sort: updated
                 "400":
-                    description: 'bad_request: The change is not allowed for the notebook, such as an order for inbox or trash, or a kind for a sub notebook'
+                    description: 'bad_request: The change is not allowed for the notebook, such as an order for inbox or trash, or inherit for a notebook that is not a sub notebook'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -1435,7 +1443,7 @@ paths:
             tags:
                 - notes
             summary: move_notebook notes
-            description: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.
+            description: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A notebook moved into another keeps its kind as its own; a sub notebook keeps its own kind, or takes that of its new parent without one, and one moved to the top keeps the kind it had. In a private parent, it is private. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.
             operationId: notes#move_notebook
             parameters:
                 - name: id
@@ -1470,6 +1478,7 @@ paths:
                                 kind: default
                                 name: Beatae tenetur pariatur quos in molestiae.
                                 order: 1341267414672515602
+                                own_kind: collab
                                 parent: inbox
                                 reserved: true
                                 sort: created
@@ -3808,6 +3817,7 @@ paths:
                                 kind: default
                                 name: Omnis exercitationem.
                                 order: 4934471302444942324
+                                own_kind: default
                                 parent: inbox
                                 reserved: false
                                 sort: created
@@ -4041,7 +4051,7 @@ components:
             properties:
                 kind:
                     type: string
-                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Ignored for a sub notebook, which takes the kind of its parent
+                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Ignored for a sub notebook, which takes the kind of its parent until save_notebook sets one
                     default: default
                     example: private
                     enum:
@@ -5440,9 +5450,18 @@ components:
                     description: Sort key among the notebooks other than inbox and trash; lower comes first
                     example: 5084316890005250992
                     format: int64
+                own_kind:
+                    type: string
+                    description: 'For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent'
+                    example: default
+                    enum:
+                        - default
+                        - collab
+                        - drop
+                        - private
                 parent:
                     type: string
-                    description: 'For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent'
+                    description: 'For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent'
                     example: inbox
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 reserved:
@@ -5464,6 +5483,7 @@ components:
                 kind: private
                 name: Aut sed quidem commodi dolore cumque.
                 order: 5084316890005250992
+                own_kind: default
                 parent: inbox
                 reserved: false
                 sort: created
@@ -5568,13 +5588,14 @@ components:
             properties:
                 kind:
                     type: string
-                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Inbox cannot be collab, the trash keeps the default kind (it is hidden from AI clients anyway), and a sub notebook takes the kind of its parent
-                    example: collab
+                    description: Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop. Inbox cannot be collab, and the trash keeps the default kind (it is hidden from AI clients anyway). A sub notebook takes the kind of its parent unless it sets its own, and is private in a private parent whatever its own kind; inherit, for a sub notebook only, makes it take the kind of its parent again
+                    example: inherit
                     enum:
                         - default
                         - collab
                         - drop
                         - private
+                        - inherit
                 name:
                     type: string
                     description: Display name; empty to reset it to the default
@@ -5595,7 +5616,7 @@ components:
                         - title
             description: Request body for save_notebook.
             example:
-                kind: collab
+                kind: inherit
                 name: Commodi vel.
                 order: 6133899287636492423
                 sort: updated

@@ -764,6 +764,11 @@ var createAiNotebookPayloadFields = []tools.FieldMetadata{
 		JSONType:    "string",
 		Description: "Display name, in any language; the ID is derived from it",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("parent")},
+		JSONType:    "string",
+		Description: "Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top",
+	},
 }
 var createAiNotebookResultFields = []tools.FieldMetadata{
 	{
@@ -777,7 +782,7 @@ var createAiNotebookResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("parent")},
 		JSONType:    "string",
-		Description: "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
+		Description: "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
@@ -803,6 +808,11 @@ var createAiNotebookResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("kind")},
 		JSONType:    "string",
 		Description: "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("own_kind")},
+		JSONType:    "string",
+		Description: "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("sort")},
@@ -1190,7 +1200,7 @@ var listNotebooksResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("parent")},
 		JSONType:    "string",
-		Description: "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
+		Description: "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("name")},
@@ -1216,6 +1226,11 @@ var listNotebooksResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("kind")},
 		JSONType:    "string",
 		Description: "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("own_kind")},
+		JSONType:    "string",
+		Description: "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("sort")},
@@ -3410,7 +3425,8 @@ func MarshalCreateAiNotebookPayload(v *CreateAiNotebookPayload) ([]byte, error) 
 	_ = in
 	var out *toolhttp.CreateAiNotebookPayloadTransport
 	out = &toolhttp.CreateAiNotebookPayloadTransport{
-		Name: &in.Name,
+		Name:   &in.Name,
+		Parent: in.Parent,
 	}
 	return json.Marshal(out)
 }
@@ -3436,7 +3452,8 @@ func UnmarshalCreateAiNotebookPayload(data []byte) (*CreateAiNotebookPayload, er
 	_ = in
 	var out *CreateAiNotebookPayload
 	out = &CreateAiNotebookPayload{
-		Name: *in.Name,
+		Name:   *in.Name,
+		Parent: in.Parent,
 	}
 	return out, nil
 }
@@ -3457,6 +3474,7 @@ func MarshalCreateAiNotebookResult(v *CreateAiNotebookResult) ([]byte, error) {
 		Count:    &in.Count,
 		Reserved: &in.Reserved,
 		Kind:     &in.Kind,
+		OwnKind:  in.OwnKind,
 		Sort:     &in.Sort,
 	}
 	return json.Marshal(out)
@@ -3490,6 +3508,7 @@ func UnmarshalCreateAiNotebookResult(data []byte) (*CreateAiNotebookResult, erro
 		Count:    *in.Count,
 		Reserved: *in.Reserved,
 		Kind:     *in.Kind,
+		OwnKind:  in.OwnKind,
 		Sort:     *in.Sort,
 	}
 	return out, nil
@@ -5843,10 +5862,17 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 			); err != nil {
 				return err
 			}
+		case "own_kind":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent",
+			); err != nil {
+				return err
+			}
 		case "parent":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "For a sub notebook: the notebook it is in, whose kind it takes. The notes of a sub notebook are not among those of its parent",
+				typed[key], "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent",
 			); err != nil {
 				return err
 			}
@@ -5871,6 +5897,7 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 				"kind",
 				"name",
 				"order",
+				"own_kind",
 				"parent",
 				"reserved",
 				"sort",
@@ -6727,9 +6754,17 @@ func validateCreateAiNotebookPayloadJSONValue(path string, value any, descriptio
 			); err != nil {
 				return err
 			}
+		case "parent":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"name",
+				"parent",
 			})
 		}
 	}
@@ -7028,6 +7063,7 @@ func decodeNotebookTransportToNotebook(v *toolhttp.NotebookTransport) *Notebook 
 		Count:    *v.Count,
 		Reserved: *v.Reserved,
 		Kind:     *v.Kind,
+		OwnKind:  v.OwnKind,
 		Sort:     *v.Sort,
 	}
 
@@ -7042,6 +7078,7 @@ func encodeNotebookToNotebookTransport(v *Notebook) *toolhttp.NotebookTransport 
 		Count:    &v.Count,
 		Reserved: &v.Reserved,
 		Kind:     &v.Kind,
+		OwnKind:  v.OwnKind,
 		Sort:     &v.Sort,
 	}
 

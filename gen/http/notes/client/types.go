@@ -93,7 +93,7 @@ type CreateNotebookRequestBody struct {
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
 	// is default, except the inbox, which is drop. Ignored for a sub notebook,
-	// which takes the kind of its parent
+	// which takes the kind of its parent until save_notebook sets one
 	Kind string `form:"kind" json:"kind" xml:"kind"`
 	// Notebook to create the notebook in, as a sub notebook, one level deep: not a
 	// sub notebook, the inbox or the trash
@@ -112,9 +112,11 @@ type SaveNotebookRequestBody struct {
 	// share with AI, may only add notes to drop notebooks, whose notes they cannot
 	// see, and cannot see private notebooks at all. In the notebook list, AI
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
-	// is default, except the inbox, which is drop. Inbox cannot be collab, the
-	// trash keeps the default kind (it is hidden from AI clients anyway), and a
-	// sub notebook takes the kind of its parent
+	// is default, except the inbox, which is drop. Inbox cannot be collab, and the
+	// trash keeps the default kind (it is hidden from AI clients anyway). A sub
+	// notebook takes the kind of its parent unless it sets its own, and is private
+	// in a private parent whatever its own kind; inherit, for a sub notebook only,
+	// makes it take the kind of its parent again
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// Default order of the note list. Order of the note list: order is the manual
 	// order (notes not moved with move come by creation time, newest first),
@@ -416,8 +418,8 @@ type CreateNotebookResponseBody struct {
 	// in internationalized domain names. Pass the ID as is wherever a notebook is
 	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-	// a sub notebook are not among those of its parent
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -434,6 +436,10 @@ type CreateNotebookResponseBody struct {
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
 	// is default, except the inbox, which is drop
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
 	// Order of the note list: order is the manual order (notes not moved with move
 	// come by creation time, newest first), created and updated are newest first,
 	// and title is by code point, ignoring case and width
@@ -450,8 +456,8 @@ type SaveNotebookResponseBody struct {
 	// in internationalized domain names. Pass the ID as is wherever a notebook is
 	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-	// a sub notebook are not among those of its parent
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -468,6 +474,10 @@ type SaveNotebookResponseBody struct {
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
 	// is default, except the inbox, which is drop
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
 	// Order of the note list: order is the manual order (notes not moved with move
 	// come by creation time, newest first), created and updated are newest first,
 	// and title is by code point, ignoring case and width
@@ -484,8 +494,8 @@ type MoveNotebookResponseBody struct {
 	// in internationalized domain names. Pass the ID as is wherever a notebook is
 	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-	// a sub notebook are not among those of its parent
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -502,6 +512,10 @@ type MoveNotebookResponseBody struct {
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
 	// is default, except the inbox, which is drop
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
 	// Order of the note list: order is the manual order (notes not moved with move
 	// come by creation time, newest first), created and updated are newest first,
 	// and title is by code point, ignoring case and width
@@ -518,8 +532,8 @@ type RestoreNotebookResponseBody struct {
 	// in internationalized domain names. Pass the ID as is wherever a notebook is
 	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-	// a sub notebook are not among those of its parent
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -536,6 +550,10 @@ type RestoreNotebookResponseBody struct {
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
 	// is default, except the inbox, which is drop
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
 	// Order of the note list: order is the manual order (notes not moved with move
 	// come by creation time, newest first), created and updated are newest first,
 	// and title is by code point, ignoring case and width
@@ -2986,8 +3004,8 @@ type NotebookResponse struct {
 	// in internationalized domain names. Pass the ID as is wherever a notebook is
 	// asked for, and show people the name instead
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-	// a sub notebook are not among those of its parent
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -3004,6 +3022,10 @@ type NotebookResponse struct {
 	// clients see drop notebooks with a count of 0. A notebook without a kind set
 	// is default, except the inbox, which is drop
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
 	// Order of the note list: order is the manual order (notes not moved with move
 	// come by creation time, newest first), created and updated are newest first,
 	// and title is by code point, ignoring case and width
@@ -4499,6 +4521,7 @@ func NewCreateNotebookNotebookCreated(body *CreateNotebookResponseBody) *notes.N
 		Count:    *body.Count,
 		Reserved: *body.Reserved,
 		Kind:     *body.Kind,
+		OwnKind:  body.OwnKind,
 		Sort:     *body.Sort,
 	}
 
@@ -4591,6 +4614,7 @@ func NewSaveNotebookNotebookOK(body *SaveNotebookResponseBody) *notes.Notebook {
 		Count:    *body.Count,
 		Reserved: *body.Reserved,
 		Kind:     *body.Kind,
+		OwnKind:  body.OwnKind,
 		Sort:     *body.Sort,
 	}
 
@@ -4668,6 +4692,7 @@ func NewMoveNotebookNotebookOK(body *MoveNotebookResponseBody) *notes.Notebook {
 		Count:    *body.Count,
 		Reserved: *body.Reserved,
 		Kind:     *body.Kind,
+		OwnKind:  body.OwnKind,
 		Sort:     *body.Sort,
 	}
 
@@ -4880,6 +4905,7 @@ func NewRestoreNotebookNotebookOK(body *RestoreNotebookResponseBody) *notes.Note
 		Count:    *body.Count,
 		Reserved: *body.Reserved,
 		Kind:     *body.Kind,
+		OwnKind:  body.OwnKind,
 		Sort:     *body.Sort,
 	}
 
@@ -6339,6 +6365,11 @@ func ValidateCreateNotebookResponseBody(body *CreateNotebookResponseBody) (err e
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
 	if body.Sort != nil {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
@@ -6380,6 +6411,11 @@ func ValidateSaveNotebookResponseBody(body *SaveNotebookResponseBody) (err error
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
 	if body.Sort != nil {
@@ -6425,6 +6461,11 @@ func ValidateMoveNotebookResponseBody(body *MoveNotebookResponseBody) (err error
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
 	if body.Sort != nil {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
@@ -6466,6 +6507,11 @@ func ValidateRestoreNotebookResponseBody(body *RestoreNotebookResponseBody) (err
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
 	if body.Sort != nil {
@@ -9845,6 +9891,11 @@ func ValidateNotebookResponse(body *NotebookResponse) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
 	if body.Sort != nil {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
@@ -9886,6 +9937,11 @@ func validateNotebookResponse(body *NotebookResponse, path string) (err error) {
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
 		}
 	}
 	if body.Sort != nil {

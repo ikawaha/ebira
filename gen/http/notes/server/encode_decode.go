@@ -4088,6 +4088,7 @@ func marshalNotesNotebookToNotebookResponse(v *notes.Notebook) *NotebookResponse
 		Count:    v.Count,
 		Reserved: v.Reserved,
 		Kind:     v.Kind,
+		OwnKind:  v.OwnKind,
 		Sort:     v.Sort,
 	}
 

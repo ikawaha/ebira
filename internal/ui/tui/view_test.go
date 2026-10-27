@@ -120,8 +120,10 @@ func TestSubNotebookRows(t *testing.T) {
 	if got := col("Sub"); got != want+4 {
 		t.Errorf("Sub starts at %d, want %d\n%s", got, want+4, strings.Join(lines, "\n"))
 	}
-	if strings.Contains(strings.Join(lines, "\n"), "👥 Design") {
-		t.Errorf("a sub notebook has the icon of its kind\n%s", strings.Join(lines, "\n"))
+	for _, row := range []string{"👥 Design", "🔒 Sub"} {
+		if !strings.Contains(strings.Join(lines, "\n"), row) {
+			t.Errorf("no icon of the kind in the row %q\n%s", row, strings.Join(lines, "\n"))
+		}
 	}
 	if got := m.notebookName("dev/design"); got != "Dev / Design" {
 		t.Errorf("notebookName(dev/design) = %q", got)

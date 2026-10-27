@@ -78,6 +78,9 @@ type (
 	CreateAiNotebookPayload = struct {
 		// Display name, in any language; the ID is derived from it
 		Name string
+		// Notebook of the collab kind to create the notebook in, as a sub notebook,
+		// one level deep: not a sub notebook. Omit for a notebook at the top
+		Parent *string
 	}
 	// CreateAiNotebookResult defines the JSON result for the ebira.create_ai_notebook tool.
 	CreateAiNotebookResult = struct {
@@ -88,8 +91,8 @@ type (
 		// in internationalized domain names. Pass the ID as is wherever a notebook is
 		// asked for, and show people the name instead
 		ID string
-		// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-		// a sub notebook are not among those of its parent
+		// For a sub notebook: the notebook it is in, whose kind it takes unless it
+		// sets its own. The notes of a sub notebook are not among those of its parent
 		Parent *string
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name string
@@ -106,6 +109,10 @@ type (
 		// clients see drop notebooks with a count of 0. A notebook without a kind set
 		// is default, except the inbox, which is drop
 		Kind string
+		// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+		// in effect, which is private in a private parent whatever the own kind.
+		// Absent when it takes the kind of its parent
+		OwnKind *string
 		// Order of the note list: order is the manual order (notes not moved with move
 		// come by creation time, newest first), created and updated are newest first,
 		// and title is by code point, ignoring case and width
@@ -473,8 +480,8 @@ type (
 		// in internationalized domain names. Pass the ID as is wherever a notebook is
 		// asked for, and show people the name instead
 		ID string
-		// For a sub notebook: the notebook it is in, whose kind it takes. The notes of
-		// a sub notebook are not among those of its parent
+		// For a sub notebook: the notebook it is in, whose kind it takes unless it
+		// sets its own. The notes of a sub notebook are not among those of its parent
 		Parent *string
 		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
 		Name string
@@ -491,6 +498,10 @@ type (
 		// clients see drop notebooks with a count of 0. A notebook without a kind set
 		// is default, except the inbox, which is drop
 		Kind string
+		// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+		// in effect, which is private in a private parent whatever the own kind.
+		// Absent when it takes the kind of its parent
+		OwnKind *string
 		// Order of the note list: order is the manual order (notes not moved with move
 		// come by creation time, newest first), created and updated are newest first,
 		// and title is by code point, ignoring case and width

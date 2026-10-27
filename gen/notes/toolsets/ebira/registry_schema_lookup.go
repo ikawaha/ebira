@@ -24,27 +24,27 @@ func ToolSchema(name tools.Ident) (*genregistry.ToolSchema, bool) {
 	case "ebira.create_ai_notebook":
 		return declarations.schema57(), true
 	case "ebira.delete_ai_note":
-		return declarations.schema74(), true
+		return declarations.schema77(), true
 	case "ebira.get_note":
-		return declarations.schema83(), true
+		return declarations.schema86(), true
 	case "ebira.import_ai_note":
-		return declarations.schema116(), true
+		return declarations.schema119(), true
 	case "ebira.list_marks":
-		return declarations.schema166(), true
+		return declarations.schema169(), true
 	case "ebira.list_notebooks":
-		return declarations.schema177(), true
+		return declarations.schema180(), true
 	case "ebira.list_notes":
-		return declarations.schema193(), true
+		return declarations.schema197(), true
 	case "ebira.list_tags":
-		return declarations.schema235(), true
+		return declarations.schema239(), true
 	case "ebira.make_notebook_private":
-		return declarations.schema247(), true
+		return declarations.schema251(), true
 	case "ebira.move_ai_note":
-		return declarations.schema254(), true
+		return declarations.schema258(), true
 	case "ebira.search_notes":
-		return declarations.schema287(), true
+		return declarations.schema291(), true
 	case "ebira.update_ai_note":
-		return declarations.schema326(), true
+		return declarations.schema330(), true
 	default:
 		return nil, false
 	}

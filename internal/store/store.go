@@ -142,7 +142,8 @@ func (s *Store) places() ([]string, error) {
 
 // Sub notebooks: a notebook may hold notebooks of its own, one level deep,
 // as directories in it: <parent>/<sub>, which is also the ID of the sub
-// notebook. A sub notebook takes the kind of its parent. The inbox and the
+// notebook. A sub notebook takes the kind of its parent unless it sets its
+// own, and is private in a private parent (SubKind). The inbox and the
 // trash have none (the directories in the trash are notebooks in the trash).
 //
 // In the trash, a notebook deleted as a whole keeps its sub notebooks, as
@@ -572,8 +573,13 @@ type NotebookMeta struct {
 	// clients may write, KindDrop for one they may only add notes to, or
 	// KindPrivate for one hidden from them. Empty for the default kind,
 	// read-only for them. A notebook without a kind in its file has
-	// DefaultKind.
+	// DefaultKind. For a sub notebook, it is the kind in effect: its own
+	// kind (OwnKind), or that of its parent without one, and private in a
+	// private parent whatever its own kind.
 	Kind string `yaml:"kind,omitempty"`
+	// OwnKind is the kind a sub notebook sets for itself, "" for the default;
+	// nil when it takes the kind of its parent. Top notebooks do not use it.
+	OwnKind *string `yaml:"-"`
 	// Sort is the default order of the note list (one of Sorts); empty for
 	// SortOrder.
 	Sort string `yaml:"sort,omitempty"`
@@ -612,7 +618,7 @@ func DefaultKind(nb string) string {
 }
 
 // NotebookMeta reads the settings of the notebook. A missing file gives the
-// defaults. A sub notebook has the kind of its parent.
+// defaults. A sub notebook has the kind of SubKind.
 func (s *Store) NotebookMeta(nb string) (NotebookMeta, error) {
 	if !ValidNotebook(nb) {
 		return NotebookMeta{}, ErrInvalidNotebook
@@ -620,9 +626,23 @@ func (s *Store) NotebookMeta(nb string) (NotebookMeta, error) {
 	m, err := s.readNotebookMeta(filepath.Join(s.dir, filepath.FromSlash(nb), NotebookFile), nb)
 	if parent, sub := SplitNotebook(nb); sub != "" && err == nil {
 		pm, perr := s.NotebookMeta(parent)
-		m.Kind, err = pm.Kind, perr
+		m.Kind, err = SubKind(m.OwnKind, pm.Kind), perr
 	}
 	return m, err
+}
+
+// SubKind returns the kind in effect of a sub notebook with its own kind own
+// (nil for none) in a parent of kind parent: private in a private parent, so
+// that making a notebook private hides all of it, else its own kind, else
+// that of the parent.
+func SubKind(own *string, parent string) string {
+	switch {
+	case parent == KindPrivate:
+		return KindPrivate
+	case own != nil:
+		return *own
+	}
+	return parent
 }
 
 // readNotebookMeta reads the settings file p of notebook nb.
@@ -639,6 +659,16 @@ func (s *Store) readNotebookMeta(p, nb string) (NotebookMeta, error) {
 		return m, fmt.Errorf("%s: %w", p, err)
 	}
 	m.Name = strings.TrimSpace(m.Name)
+	var own struct {
+		Kind *string `yaml:"kind"`
+	}
+	if _, sub := SplitNotebook(nb); sub != "" && yaml.Unmarshal(b, &own) == nil && own.Kind != nil {
+		k := ""
+		if *own.Kind == KindCollab || *own.Kind == KindDrop || *own.Kind == KindPrivate {
+			k = *own.Kind // an unknown kind falls back to the default
+		}
+		m.OwnKind = &k
+	}
 	switch {
 	case m.Kind == kindDefault:
 		m.Kind = ""
@@ -654,8 +684,9 @@ func (s *Store) readNotebookMeta(p, nb string) (NotebookMeta, error) {
 }
 
 // SaveNotebookMeta writes the settings of the notebook, creating the notebook
-// if needed. Comments and unknown keys in an existing file are kept. The kind
-// of a sub notebook is not written, as it takes the kind of its parent.
+// if needed. Comments and unknown keys in an existing file are kept. A sub
+// notebook keeps its own kind (OwnKind), and none when it takes the kind of
+// its parent; its Kind is not written.
 func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 	if !ValidNotebook(nb) {
 		return ErrInvalidNotebook
@@ -691,7 +722,13 @@ func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 		unset(root, "order")
 	}
 	switch {
-	case sub != "", m.Kind == DefaultKind(nb):
+	case sub != "" && m.OwnKind == nil:
+		unset(root, "kind")
+	case sub != "" && *m.OwnKind == "":
+		set(root, "kind", str(kindDefault, 0))
+	case sub != "":
+		set(root, "kind", str(*m.OwnKind, 0))
+	case m.Kind == DefaultKind(nb):
 		unset(root, "kind")
 	case m.Kind == "":
 		set(root, "kind", str(kindDefault, 0))
@@ -801,7 +838,7 @@ func (s *Store) TrashedNotebooks() ([]string, error) {
 }
 
 // ErrNoParent is returned for a sub notebook put back from the trash while
-// its parent is not there: the kind of the sub notebook is that of its
+// its parent is not there: the kind of the sub notebook depends on its
 // parent, which is not known then.
 var ErrNoParent = errors.New("the notebook of the sub notebook does not exist; restore it first")
 
@@ -865,11 +902,13 @@ func MovedNotebook(nb, parent string) string {
 
 // MoveNotebook moves notebook nb with its notes and settings into parent, as
 // a sub notebook, or to the top with an empty parent, and returns its new ID.
-// The settings keep its name, order and sort; a sub notebook loses its own
-// kind, as it takes the kind of its parent, and one moved to the top gets the
-// kind it had in its parent, so that its notes stay as visible to AI as they
-// were. It fails with ErrHasSubs for a notebook with sub notebooks moved
-// into another, and with ErrNotebookExists when the new ID is taken.
+// The settings keep its name, order and sort. A notebook moved into another
+// keeps its kind as its own; a sub notebook moved into another parent keeps
+// its own kind, or takes that of the new parent without one; and one moved
+// to the top gets the kind it had in its parent, so that its notes stay as
+// visible to AI as they were. It fails with ErrHasSubs for a notebook with
+// sub notebooks moved into another, and with ErrNotebookExists when the new
+// ID is taken.
 func (s *Store) MoveNotebook(nb, parent string) (string, error) {
 	if !ValidNotebook(nb) || (parent != "" && !ValidNotebook(parent+"/x")) {
 		return "", ErrInvalidNotebook
@@ -908,6 +947,9 @@ func (s *Store) MoveNotebook(nb, parent string) (string, error) {
 	m, err := s.NotebookMeta(nb) // with the kind it has now
 	if err != nil {
 		return "", err
+	}
+	if _, sub := SplitNotebook(nb); sub == "" {
+		m.OwnKind = &m.Kind
 	}
 	if err := os.Rename(from, filepath.Join(s.dir, filepath.FromSlash(to))); err != nil {
 		return "", err
@@ -984,8 +1026,9 @@ func (s *Store) EmptyTrash() error {
 }
 
 // TrashedNotebookMeta reads the settings of notebook nb in the trash. A sub
-// notebook has the kind of its parent: the parent in the trash for one
-// deleted with it, else the parent out of the trash, the default if none.
+// notebook has the kind of SubKind with its parent: the parent in the trash
+// for one deleted with it, else the parent out of the trash, the default if
+// none.
 func (s *Store) TrashedNotebookMeta(nb string) (NotebookMeta, error) {
 	if !validTrashed(nb) {
 		return NotebookMeta{}, ErrInvalidNotebook
@@ -996,14 +1039,15 @@ func (s *Store) TrashedNotebookMeta(nb string) (NotebookMeta, error) {
 	}
 	if parent, sub := SplitNotebook(nb); sub != "" {
 		pm, err := s.TrashedNotebookMeta(parent)
-		m.Kind = pm.Kind
+		m.Kind = SubKind(m.OwnKind, pm.Kind)
 		return m, err
 	}
 	if parent, _, ok := trashedSub(nb); ok {
-		m.Kind = ""
-		if pm, err := s.NotebookMeta(parent); err == nil {
-			m.Kind = pm.Kind
+		pm, err := s.NotebookMeta(parent)
+		if err != nil {
+			pm.Kind = ""
 		}
+		m.Kind = SubKind(m.OwnKind, pm.Kind)
 	}
 	return m, nil
 }

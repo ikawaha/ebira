@@ -5335,6 +5335,7 @@ func unmarshalNotebookResponseToNotesNotebook(v *NotebookResponse) *notes.Notebo
 		Count:    *v.Count,
 		Reserved: *v.Reserved,
 		Kind:     *v.Kind,
+		OwnKind:  v.OwnKind,
 		Sort:     *v.Sort,
 	}
 

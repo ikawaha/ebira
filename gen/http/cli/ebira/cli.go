@@ -838,7 +838,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    save-mark-names: Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.`)
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
 	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
-	fmt.Fprintln(os.Stderr, `    move-notebook: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
+	fmt.Fprintln(os.Stderr, `    move-notebook: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A notebook moved into another keeps its kind as its own; a sub notebook keeps its own kind, or takes that of its new parent without one, and one moved to the top keeps the kind it had. In a private parent, it is private. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
 	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
 	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.`)
@@ -1226,7 +1226,7 @@ func notesSaveNotebookUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"kind\": \"collab\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\" --session \"Saepe qui enim id qui ex quis.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"kind\": \"inherit\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\" --session \"Saepe qui enim id qui ex quis.\"")
 }
 
 func notesMoveNotebookUsage() {
@@ -1239,7 +1239,7 @@ func notesMoveNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A sub notebook takes the kind of its parent; one moved to the top keeps the kind it had. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
+	fmt.Fprintln(os.Stderr, `Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A notebook moved into another keeps its kind as its own; a sub notebook keeps its own kind, or takes that of its new parent without one, and one moved to the top keeps the kind it had. In a private parent, it is private. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)

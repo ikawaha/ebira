@@ -122,6 +122,7 @@
   "kind.collab": "collab (AI writes)",
   "kind.drop": "drop (AI only adds)",
   "kind.private": "private (hidden from AI)",
+  "kind.inherit": "same as the parent",
 
   "key.add": "add",
   "key.addAI": "add AI",

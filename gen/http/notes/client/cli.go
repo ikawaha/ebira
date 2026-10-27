@@ -755,11 +755,11 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 		}
 		err = json.Unmarshal([]byte(*notesSaveNotebookBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"kind\": \"collab\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"kind\": \"inherit\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }'")
 		}
 		if body.Kind != nil {
-			if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+			if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private" || *body.Kind == "inherit") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private", "inherit"}))
 			}
 		}
 		if body.Sort != nil {

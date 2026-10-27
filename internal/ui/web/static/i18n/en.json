@@ -173,6 +173,8 @@
   "toastNotebookMoved": "Moved the notebook {name} to {where}.",
   "subNotebookNewIn": "New sub notebook in {name}",
   "kindInherited": "Kind: {kind}, as {name}",
+  "kindInherit": "Same as {name} ({kind})",
+  "kindInPrivate": "{name} is private, so AI clients cannot see this one either",
   "subNotebookUp": "Back to {name}",
   "subNotebookExpand": "Show the notes of {name} here",
   "subNotebookCollapse": "Fold the notes of {name}",
