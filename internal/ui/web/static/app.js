@@ -2493,7 +2493,7 @@ function bodyExtensions() {
     }),
     CM.syntaxHighlighting(CM.classHighlighter),
     CM.syntaxHighlighting(markup),
-    CM.EditorView.lineWrapping,
+    // Long lines are not wrapped: the editor scrolls sideways instead.
     CM.placeholder(t("bodyPlaceholder")),
     CM.EditorView.contentAttributes.of({ spellcheck: "false", "aria-label": t("bodyPlaceholder") }),
     CM.EditorView.domEventHandlers({
