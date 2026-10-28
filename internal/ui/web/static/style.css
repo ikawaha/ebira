@@ -378,6 +378,8 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .body code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .body pre { background: var(--code-bg); padding: 12px; border-radius: 6px; overflow-x: auto; }
 .body pre code { padding: 0; background: none; }
+/* In a heading, code is sized after the heading, not after the body text. */
+.body :is(h1, h2, h3, h4, h5, h6) code { font-size: .9em; line-height: inherit; }
 /* Quotes and tables keep their own space above and below, so that two of
    them in a row stay apart whatever their padding, as a style may give. */
 .body blockquote { margin: 1em 0; padding-left: 12px; border-left: 3px solid var(--border); color: var(--fg-muted); }
