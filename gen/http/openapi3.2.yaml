@@ -1976,11 +1976,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2080,11 +2080,11 @@ paths:
                   example: Magni consequatur iste quisquam qui.
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2199,11 +2199,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2362,11 +2362,11 @@ paths:
                   example: Screen Shot.png
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2457,11 +2457,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2540,11 +2540,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2645,11 +2645,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2752,11 +2752,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2850,11 +2850,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -2965,11 +2965,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -3094,11 +3094,11 @@ paths:
             parameters:
                 - name: id
                   in: path
-                  description: Note ID
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                   required: true
                   schema:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                   example: be4c1193735ee1
@@ -3344,11 +3344,11 @@ paths:
                   example: k
                 - name: notebook
                   in: query
-                  description: Only notes in this notebook. Omit for all notebooks except the trash
+                  description: Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash
                   allowEmptyValue: true
                   schema:
                     type: string
-                    description: Only notes in this notebook. Omit for all notebooks except the trash
+                    description: Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash
                     example: inbox
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
@@ -3554,11 +3554,11 @@ paths:
             parameters:
                 - name: notebook
                   in: query
-                  description: Only notes in this notebook. Omit for all notebooks except the trash
+                  description: Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash
                   allowEmptyValue: true
                   schema:
                     type: string
-                    description: Only notes in this notebook. Omit for all notebooks except the trash
+                    description: Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash
                     example: inbox
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
@@ -4108,7 +4108,7 @@ components:
                     example: Quaerat nisi.
                 id:
                     type: string
-                    description: Note ID
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                 notebook:

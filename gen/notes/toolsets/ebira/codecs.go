@@ -577,7 +577,7 @@ var addAiFilePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Note ID",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
@@ -827,7 +827,7 @@ var deleteAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Note ID",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("version")},
@@ -842,7 +842,7 @@ var getNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Note ID",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
@@ -1400,7 +1400,7 @@ var listTagsPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
 		JSONType:    "string",
-		Description: "Only notes in this notebook. Omit for all notebooks except the trash",
+		Description: "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
 	},
 }
 var listTagsResultFields = []tools.FieldMetadata{
@@ -1439,7 +1439,7 @@ var moveAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Note ID",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("after")},
@@ -1574,7 +1574,7 @@ var searchNotesPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
 		JSONType:    "string",
-		Description: "Only notes in this notebook. Omit for all notebooks except the trash",
+		Description: "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("tag")},
@@ -1719,7 +1719,7 @@ var updateAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
 		JSONType:    "string",
-		Description: "Note ID",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("version")},
@@ -5483,7 +5483,7 @@ func validateGetNotePayloadJSONValue(path string, value any, description string)
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID",
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 			); err != nil {
 				return err
 			}
@@ -5674,7 +5674,7 @@ func validateSearchNotesPayloadJSONValue(path string, value any, description str
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Only notes in this notebook. Omit for all notebooks except the trash",
+				typed[key], "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
 			); err != nil {
 				return err
 			}
@@ -5946,7 +5946,7 @@ func validateListTagsPayloadJSONValue(path string, value any, description string
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Only notes in this notebook. Omit for all notebooks except the trash",
+				typed[key], "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
 			); err != nil {
 				return err
 			}
@@ -6397,7 +6397,7 @@ func validateAddAiFilePayloadJSONValue(path string, value any, description strin
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID",
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 			); err != nil {
 				return err
 			}
@@ -6514,7 +6514,7 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID",
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 			); err != nil {
 				return err
 			}
@@ -6662,7 +6662,7 @@ func validateDeleteAiNotePayloadJSONValue(path string, value any, description st
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID",
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 			); err != nil {
 				return err
 			}
@@ -6713,7 +6713,7 @@ func validateMoveAiNotePayloadJSONValue(path string, value any, description stri
 		case "id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID",
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
 			); err != nil {
 				return err
 			}

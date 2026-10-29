@@ -56,6 +56,7 @@ const (
 	promptMovePrivate   // confirmation to move a note of a private notebook where AI can read it
 	promptMoveNotebook  // confirmation to move a private notebook where AI can read it
 	promptMark          // mark of the note in the preview
+	promptLink          // which link to the note in the preview to copy
 	promptFind          // text to find in the note of the document pane (see find.go)
 )
 
@@ -1160,10 +1161,10 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case copiedMsg:
 		if msg.text != "" {
 			// No clipboard command here: ask the terminal (OSC 52).
-			m.setStatus(statusInfo, "status.copiedTerminal")
+			m.setStatus(statusInfo, msg.status+"Terminal")
 			return m, tea.SetClipboard(msg.text)
 		}
-		m.setStatus(statusInfo, "status.copied")
+		m.setStatus(statusInfo, msg.status)
 		return m, nil
 
 	case eventMsg:
@@ -1424,6 +1425,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case promptMark:
 		return m, m.handleMarkKey(key)
+	case promptLink:
+		m.prompt = promptNone
+		if m.note == nil || (key != "u" && key != "m") {
+			return m, nil
+		}
+		return m, copyLink(m.web, m.note, key == "m")
 	case promptFind:
 		return m, m.handleFindKey(msg)
 	case promptNotebookKind:
@@ -1684,6 +1691,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		// The note in the preview, as Markdown with its title.
 		if m.note != nil && (m.focus == focusList || m.focus == focusPreview) {
 			return m, copyNote(m.note)
+		}
+		return m, nil
+	case "Y":
+		// A link to the note in the preview: its URL or a Markdown link.
+		if m.note != nil && (m.focus == focusList || m.focus == focusPreview) {
+			m.prompt = promptLink
 		}
 		return m, nil
 	case "M":

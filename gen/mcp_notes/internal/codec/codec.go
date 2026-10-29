@@ -21,7 +21,9 @@ import (
 
 // AddAiFilePayloadTransport stores JSON fields until they have been validated.
 type AddAiFilePayloadTransport struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `json:"id"`
 	// File name
 	Name *string `json:"name"`
@@ -375,7 +377,9 @@ func ValidateCreateAiNotebookResultTransport(value *CreateAiNotebookResultTransp
 
 // DeleteAiNotePayloadTransport stores JSON fields until they have been validated.
 type DeleteAiNotePayloadTransport struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `json:"id"`
 	// Version of the note as returned by get_note
 	Version *string `json:"version"`
@@ -402,7 +406,9 @@ func ValidateDeleteAiNotePayloadTransport(value *DeleteAiNotePayloadTransport) (
 type GetInputTransport struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string `json:"session,omitempty"`
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `json:"id"`
 	// Search query to highlight, as search takes it; its tags are not highlighted
 	Q *string `json:"q,omitempty"`
@@ -424,7 +430,9 @@ func ValidateGetInputTransport(value *GetInputTransport) (err error) {
 
 // GetPayloadTransport stores JSON fields until they have been validated.
 type GetPayloadTransport struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `json:"id"`
 	// Search query to highlight, as search takes it; its tags are not highlighted
 	Q *string `json:"q,omitempty"`
@@ -1229,7 +1237,9 @@ func ValidateMarksResultTransport(value MarksResultTransport) (err error) {
 
 // MoveAiNotePayloadTransport stores JSON fields until they have been validated.
 type MoveAiNotePayloadTransport struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `json:"id"`
 	// ID of the note of the same notebook to put the note after; omit to put it
 	// first
@@ -1530,7 +1540,8 @@ type SearchInputTransport struct {
 	// it; a query of tags and marks alone lists the notes with them, last updated
 	// first
 	Q *string `json:"q"`
-	// Only notes in this notebook. Omit for all notebooks except the trash
+	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+	// except the trash
 	Notebook *string `json:"notebook,omitempty"`
 	// Only notes with this tag
 	Tag *string `json:"tag,omitempty"`
@@ -1594,7 +1605,8 @@ type SearchPayloadTransport struct {
 	// it; a query of tags and marks alone lists the notes with them, last updated
 	// first
 	Q *string `json:"q"`
-	// Only notes in this notebook. Omit for all notebooks except the trash
+	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+	// except the trash
 	Notebook *string `json:"notebook,omitempty"`
 	// Only notes with this tag
 	Tag *string `json:"tag,omitempty"`
@@ -1797,7 +1809,8 @@ func ValidateSearchResultTransport(value *SearchResultTransport) (err error) {
 type TagsInputTransport struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string `json:"session,omitempty"`
-	// Only notes in this notebook. Omit for all notebooks except the trash
+	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+	// except the trash
 	Notebook *string `json:"notebook,omitempty"`
 }
 
@@ -1814,7 +1827,8 @@ func ValidateTagsInputTransport(value *TagsInputTransport) (err error) {
 
 // TagsPayloadTransport stores JSON fields until they have been validated.
 type TagsPayloadTransport struct {
-	// Only notes in this notebook. Omit for all notebooks except the trash
+	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+	// except the trash
 	Notebook *string `json:"notebook,omitempty"`
 }
 
@@ -1897,7 +1911,9 @@ func ValidateUpdateAiNotePayloadNoteEditTransport(value *UpdateAiNotePayloadNote
 
 // UpdateAiNotePayloadTransport stores JSON fields until they have been validated.
 type UpdateAiNotePayloadTransport struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `json:"id"`
 	// Version of the note as returned by get_note
 	Version *string `json:"version"`

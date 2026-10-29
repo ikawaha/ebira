@@ -513,6 +513,24 @@ func notebookCond(notebook string, exclude []string) (string, []any) {
 	return `n.notebook NOT IN (?` + strings.Repeat(", ?", len(args)-1) + `)`, args
 }
 
+// notebookTreeCond is notebookCond for notebook and its sub notebooks, but
+// those in exclude, as searches and tags take them in.
+func notebookTreeCond(notebook string, exclude []string) (string, []any) {
+	if notebook == "" || notebook == store.Trash || strings.Contains(notebook, "/") {
+		return notebookCond(notebook, exclude)
+	}
+	// substr, not LIKE: IDs have underscores, which LIKE takes as wildcards.
+	cond := `(n.notebook = ? OR substr(n.notebook, 1, ?) = ?)`
+	args := []any{notebook, len(notebook) + 1, notebook + "/"}
+	if len(exclude) > 0 {
+		cond += ` AND n.notebook NOT IN (?` + strings.Repeat(", ?", len(exclude)-1) + `)`
+		for _, nb := range exclude {
+			args = append(args, nb)
+		}
+	}
+	return cond, args
+}
+
 // ImportedNote returns the ID of a note imported from a file with the hash,
 // outside the notebooks in exclude, and whether there is one. The trash
 // counts unless excluded, so that a file is not imported again after its
@@ -583,10 +601,11 @@ type TagCount struct {
 	Count int
 }
 
-// Tags returns the tags of the notes in notebook (all but the trash and
-// exclude if empty) with their note counts, sorted by name as titles are.
+// Tags returns the tags of the notes in notebook and its sub notebooks (all
+// but the trash if empty), but those in exclude, with their note counts,
+// sorted by name as titles are.
 func (ix *Index) Tags(ctx context.Context, notebook string, exclude ...string) ([]TagCount, error) {
-	cond, args := notebookCond(notebook, exclude)
+	cond, args := notebookTreeCond(notebook, exclude)
 	rows, err := ix.db.QueryContext(ctx, `SELECT t.tag, count(*) FROM note_tags t JOIN notes n ON n.id = t.id WHERE `+cond+` GROUP BY t.tag`, args...)
 	if err != nil {
 		return nil, err
@@ -711,7 +730,8 @@ func (ix *Index) TrashedNotebookCounts(ctx context.Context) (map[string]int, err
 	return counts, rows.Err()
 }
 
-// Search finds notes in notebook (all but the trash and exclude if empty) matching q
+// Search finds notes in notebook and its sub notebooks (all but the trash if
+// empty), but those in exclude, matching q
 // (see ParseQuery), whose terms and tags are combined with AND, and with tag
 // if not empty. total is the number of matched notes. In the ja and en
 // modes, notes found only by bigrams (substrings that morphemes or words
@@ -795,7 +815,7 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, note
 		args = append(args, strings.Join(match, " AND "))
 		order = `bm25(` + t.name + `, 0.0, 5.0, 1.0)` // weight title matches higher
 	}
-	nbCond, nbArgs := notebookCond(notebook, exclude)
+	nbCond, nbArgs := notebookTreeCond(notebook, exclude)
 	where = append(where, nbCond)
 	args = append(args, nbArgs...)
 	if tagWhere != "" {

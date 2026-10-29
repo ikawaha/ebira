@@ -330,6 +330,12 @@ var notebookFilter = func() {
 	Attribute("notebook", String, "Only notes in this notebook. Omit for all notebooks except the trash", notebookIDDSL)
 }
 
+// notebookTreeFilter is notebookFilter for searches and tags, which take in
+// the sub notebooks too, as the notes of a notebook are shown with theirs.
+var notebookTreeFilter = func() {
+	Attribute("notebook", String, "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash", notebookIDDSL)
+}
+
 var _ = Service("notes", func() {
 	Description("CRUD and search for notes.")
 
@@ -415,7 +421,7 @@ var _ = Service("notes", func() {
 		Description("Get a note. With q, the result also has the ranges of the title and body matched by the query, as search matches them.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("q", String, "Search query to highlight, as search takes it; its tags are not highlighted")
 		})
 		Result(Note)
@@ -437,7 +443,7 @@ var _ = Service("notes", func() {
 		Description("Create a note. A random ID is assigned when id is omitted, and the note goes to the inbox when notebook is omitted. A new notebook is created on demand.")
 		Payload(func() {
 			sessionDSL()
-			Attribute("id", String, "Note ID", noteIDDSL)
+			Attribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("notebook", String, "Notebook to put the note in (default inbox; not trash)", notebookIDDSL)
 			RequiredAttribute("title", String, "Title", func() {
 				MinLength(1)
@@ -460,7 +466,7 @@ var _ = Service("notes", func() {
 		Description("Update a note. Omitted attributes are left unchanged. Setting notebook moves the note; use delete to move it to the trash.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("notebook", String, "Notebook to move the note to (not trash)", notebookIDDSL)
 			Attribute("title", String, "Title", func() {
 				MinLength(1)
@@ -487,7 +493,7 @@ var _ = Service("notes", func() {
 		Description("Move a note to the trash, or delete it permanently if it is already in the trash.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("if_match", String, "Delete only if the note's current version matches. Omit to delete unconditionally")
 		})
 		Error("not_found", ErrorResult, "The note does not exist")
@@ -551,7 +557,7 @@ var _ = Service("notes", func() {
 			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first", func() {
 				MinLength(1)
 			})
-			notebookFilter()
+			notebookTreeFilter()
 			Attribute("tag", String, "Only notes with this tag")
 			Attribute("limit", Int, "Maximum number of notes", func() {
 				Default(20)
@@ -576,7 +582,7 @@ var _ = Service("notes", func() {
 		Description("Move a note from the trash back to the notebook it was in.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("if_match", String, "Restore only if the note's current version matches")
 		})
 		Result(Note)
@@ -599,7 +605,7 @@ var _ = Service("notes", func() {
 		Description("Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("after", String, "ID of the note of the same notebook to put the note after; omit to put it first", noteIDDSL)
 		})
 		Result(Note)
@@ -629,7 +635,7 @@ var _ = Service("notes", func() {
 		Description("List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).")
 		Payload(func() {
 			sessionDSL()
-			notebookFilter()
+			notebookTreeFilter()
 		})
 		Result(ArrayOf(TagCount))
 		HTTP(func() {
@@ -659,7 +665,7 @@ var _ = Service("notes", func() {
 		Description("Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("marks", ArrayOf(String), "Marks of the note", marksDSL)
 		})
 		Result(Note)
@@ -904,7 +910,7 @@ var _ = Service("notes", func() {
 		NoSecurity()
 		Description("Add an image to a note in a notebook of the collab kind: a PNG, JPEG, GIF or WebP image of at most 5 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path, with update_ai_note. Notes in other notebooks are read-only for AI clients; to add a note with images to a notebook of the drop kind, use import_ai_note.")
 		Payload(func() {
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
 				MinLength(1)
 				MaxLength(255)
@@ -924,7 +930,7 @@ var _ = Service("notes", func() {
 		NoSecurity()
 		Description("Update a note in a notebook of the collab kind. Omitted attributes are left unchanged. The version from get_note is required, so that changes made by people meanwhile are not overwritten. Setting notebook moves the note to another notebook of the collab kind. The body is changed in one of three ways, one at a time: body replaces it as a whole, append adds text at its end, and edits replace parts of it, without sending the whole body again. The edits apply in order, all or none: each old text must appear exactly once in the body as the edits before it left it, else nothing is changed.")
 		Payload(func() {
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("version", String, "Version of the note as returned by get_note")
 			Attribute("notebook", String, "ID of a notebook of the collab kind to move the note to", notebookIDDSL)
 			Attribute("title", String, "Title", func() {
@@ -953,7 +959,7 @@ var _ = Service("notes", func() {
 		NoSecurity()
 		Description("Move a note in a notebook of the collab kind to the trash, where people can restore it. The version from get_note is required.")
 		Payload(func() {
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("version", String, "Version of the note as returned by get_note")
 		})
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
@@ -967,7 +973,7 @@ var _ = Service("notes", func() {
 		NoSecurity()
 		Description("Put a note of a notebook of the collab kind right after another note of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
 		Payload(func() {
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("after", String, "ID of the note of the same notebook to put the note after; omit to put it first", noteIDDSL)
 		})
 		Result(Note)
@@ -1012,7 +1018,7 @@ var _ = Service("notes", func() {
 		Description("Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name, such as the name of the uploaded file", func() {
 				MinLength(1)
 				MaxLength(255)
@@ -1038,7 +1044,7 @@ var _ = Service("notes", func() {
 		Description("Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
 				Example("screenshot.png")
 			})
@@ -1067,7 +1073,7 @@ var _ = Service("notes", func() {
 		Description("Delete a file of a note. The body may still refer to it.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
 				Example("screenshot.png")
 			})
@@ -1090,7 +1096,7 @@ var _ = Service("notes", func() {
 		Description("List the earlier versions of a note, newest first. A version is kept on this device whenever the title, tags or body is replaced, by a save or by a change of the file found by a sync; up to 50 per note, and those older than 30 days are dropped except the 5 newest. To put a version back, update the note with its content. For people only.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 		})
 		Result(ArrayOf(NoteVersionSummary))
 		Error("not_found", ErrorResult, "The note does not exist")
@@ -1107,7 +1113,7 @@ var _ = Service("notes", func() {
 		Description("Get an earlier version of a note from its history. For people only.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("id", String, "Note ID", noteIDDSL)
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("rev", String, "ID of the version", revDSL)
 		})
 		Result(NoteVersion)

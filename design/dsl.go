@@ -13,6 +13,11 @@ func RequiredAttribute(name string, args ...any) {
 // idPattern is the pattern of note and notebook IDs.
 const idPattern = `^[a-z0-9][a-z0-9_-]{0,63}$`
 
+// noteIDDesc is the description of a note ID in a payload. People name notes
+// to AI clients by their links in the web UI, so it says how to read the ID
+// out of one.
+const noteIDDesc = "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
+
 // noteIDDSL is the pattern and an example of a note ID.
 var noteIDDSL = func() {
 	Pattern(idPattern)

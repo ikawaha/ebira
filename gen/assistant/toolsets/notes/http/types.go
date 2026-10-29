@@ -69,7 +69,8 @@ type (
 		// it; a query of tags and marks alone lists the notes with them, last updated
 		// first
 		Q *string `json:"q"`
-		// Only notes in this notebook. Omit for all notebooks except the trash
+		// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+		// except the trash
 		Notebook *string `json:"notebook,omitempty"`
 		// Only notes with this tag
 		Tag *string `json:"tag,omitempty"`

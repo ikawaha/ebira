@@ -641,6 +641,8 @@ func (m Model) renderFooter() string {
 		return m.th.style(m.th.accent).Render(" "+m.tr.t(label)+" ") + m.promptIn.View() + m.keys([][2]string{{"enter", "key.ok"}, {"esc", "key.cancel"}})
 	case promptMark:
 		return m.renderMarkPrompt()
+	case promptLink:
+		return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.copyLink")+" ") + m.keys([][2]string{{"u", "key.url"}, {"m", "key.markdownLink"}, {"esc", "key.cancel"}})
 	case promptFind:
 		st := m.findStatus()
 		if st != "" {
@@ -693,7 +695,7 @@ func (m Model) renderFooter() string {
 		hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.cancel"}, {"tab/shift+tab", "key.field"}, {"ctrl+z/y", "key.undo"}}
 		hints = m.zoomHint(hints, "ctrl+l")
 	case focusPreview:
-		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"f", "key.find"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}, {"M", "key.mark"}}
+		hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.back"}, {"f", "key.find"}, {"e", "key.edit"}, {"E", "key.editor"}, {"y", "key.copy"}, {"Y", "key.link"}, {"M", "key.mark"}}
 		if m.answerOn {
 			hints = [][2]string{{"j/k", "key.scroll"}, {"space/b", "key.page"}, {"esc", "key.closeAnswer"}, {"?", "key.askAgain"}}
 		}
@@ -733,7 +735,7 @@ func (m Model) renderFooter() string {
 			hints = [][2]string{{"j/k", "key.tag"}, {"enter", "key.notes"}, {"T", "key.notebooks"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		}
 	default:
-		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"y", "key.copy"}, {"M", "key.mark"}, {"s", "key.sort"}}
+		hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"e", "key.edit"}, {"n", "key.new"}, {"d", "key.delete"}, {"y", "key.copy"}, {"Y", "key.link"}, {"M", "key.mark"}, {"s", "key.sort"}}
 		if m.inTrashedNotebook() {
 			// The notes of a notebook in the trash are read only.
 			hints = [][2]string{{"j/k", "key.move"}, {"/", "key.search"}, {"?", "key.ask"}, {"enter", "key.open"}, {"d", "key.deletePermanently"}, {"h", "key.notebooks"}}

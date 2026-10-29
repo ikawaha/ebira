@@ -106,3 +106,64 @@ func TestSearchPhraseAndTags(t *testing.T) {
 		})
 	}
 }
+
+func TestSearchSubNotebooks(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	st, err := store.New(filepath.Join(dir, "notes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC)
+	// axb would match a_b in LIKE, where _ is a wildcard.
+	for _, n := range []*store.Note{
+		{ID: "top", Notebook: "a_b", Tags: []string{"log"}, Body: "雨"},
+		{ID: "sub", Notebook: "a_b/s", Tags: []string{"log", "done"}, Body: "雨"},
+		{ID: "hid", Notebook: "a_b/h", Tags: []string{"log", "secret"}, Body: "雨"},
+		{ID: "other", Notebook: "axb", Tags: []string{"log"}, Body: "雨"},
+	} {
+		n.CreatedAt, n.UpdatedAt = now, now
+		if err := st.Create(n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ix, err := Open(ctx, filepath.Join(dir, "index.sqlite"), Config{Mode: ModeBigram})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ix.Close()
+	if _, err := ix.Sync(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		q, notebook string
+		exclude     []string
+		want        []string
+	}{
+		{q: "tag:log", notebook: "a_b", want: []string{"hid", "sub", "top"}},
+		{q: "雨", notebook: "a_b", want: []string{"hid", "sub", "top"}},
+		{q: "tag:log", notebook: "a_b", exclude: []string{"trash", "a_b/h"}, want: []string{"sub", "top"}},
+		{q: "tag:log", notebook: "a_b/s", want: []string{"sub"}},
+	} {
+		res, total, err := ix.Search(ctx, tt.q, tt.notebook, "", 10, tt.exclude...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, s := range res {
+			got = append(got, s.ID)
+		}
+		slices.Sort(got)
+		if !slices.Equal(got, tt.want) || total != len(tt.want) {
+			t.Errorf("Search(%q, %q, exclude %v) = %v (total %d), want %v", tt.q, tt.notebook, tt.exclude, got, total, tt.want)
+		}
+	}
+	tags, err := ix.Tags(ctx, "a_b", "trash", "a_b/h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []TagCount{{"done", 1}, {"log", 2}}
+	if !slices.Equal(tags, want) {
+		t.Errorf("Tags(a_b) = %v, want %v", tags, want)
+	}
+}

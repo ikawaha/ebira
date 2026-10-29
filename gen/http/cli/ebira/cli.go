@@ -277,16 +277,16 @@ func ParseEndpoint(
 	notesListFlags.Var(notesListTrashedNotebookFlag, "trashed-notebook", "")
 	notesListFlags.Var(notesListSortFlag, "sort", "")
 	notesListFlags.Var(notesListSessionFlag, "session", "")
-	notesGetFlags.Var(notesGetIDFlag, "id", "Note ID")
+	notesGetFlags.Var(notesGetIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesGetFlags.Var(notesGetQFlag, "q", "")
 	notesGetFlags.Var(notesGetSessionFlag, "session", "")
 	notesCreateFlags.Var(notesCreateBodyFlag, "body", "")
 	notesCreateFlags.Var(notesCreateSessionFlag, "session", "")
 	notesUpdateFlags.Var(notesUpdateBodyFlag, "body", "")
-	notesUpdateFlags.Var(notesUpdateIDFlag, "id", "Note ID")
+	notesUpdateFlags.Var(notesUpdateIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesUpdateFlags.Var(notesUpdateIfMatchFlag, "if-match", "")
 	notesUpdateFlags.Var(notesUpdateSessionFlag, "session", "")
-	notesDeleteFlags.Var(notesDeleteIDFlag, "id", "Note ID")
+	notesDeleteFlags.Var(notesDeleteIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesDeleteFlags.Var(notesDeleteIfMatchFlag, "if-match", "")
 	notesDeleteFlags.Var(notesDeleteSessionFlag, "session", "")
 	notesMoveNotesFlags.Var(notesMoveNotesBodyFlag, "body", "")
@@ -297,18 +297,18 @@ func ParseEndpoint(
 	notesSearchFlags.Var(notesSearchNotebookFlag, "notebook", "")
 	notesSearchFlags.Var(notesSearchTagFlag, "tag", "")
 	notesSearchFlags.Var(notesSearchSessionFlag, "session", "")
-	notesRestoreFlags.Var(notesRestoreIDFlag, "id", "Note ID")
+	notesRestoreFlags.Var(notesRestoreIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesRestoreFlags.Var(notesRestoreIfMatchFlag, "if-match", "")
 	notesRestoreFlags.Var(notesRestoreSessionFlag, "session", "")
 	notesMoveFlags.Var(notesMoveBodyFlag, "body", "")
-	notesMoveFlags.Var(notesMoveIDFlag, "id", "Note ID")
+	notesMoveFlags.Var(notesMoveIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesMoveFlags.Var(notesMoveSessionFlag, "session", "")
 	notesNotebooksFlags.Var(notesNotebooksSessionFlag, "session", "")
 	notesTagsFlags.Var(notesTagsNotebookFlag, "notebook", "")
 	notesTagsFlags.Var(notesTagsSessionFlag, "session", "")
 	notesMarksFlags.Var(notesMarksSessionFlag, "session", "")
 	notesSetMarksFlags.Var(notesSetMarksBodyFlag, "body", "")
-	notesSetMarksFlags.Var(notesSetMarksIDFlag, "id", "Note ID")
+	notesSetMarksFlags.Var(notesSetMarksIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesSetMarksFlags.Var(notesSetMarksSessionFlag, "session", "")
 	notesSaveMarkNamesFlags.Var(notesSaveMarkNamesBodyFlag, "body", "")
 	notesSaveMarkNamesFlags.Var(notesSaveMarkNamesSessionFlag, "session", "")
@@ -330,19 +330,19 @@ func ParseEndpoint(
 	notesEmptyTrashFlags.Var(notesEmptyTrashSessionFlag, "session", "")
 	notesImportFlags.Var(notesImportBodyFlag, "body", "")
 	notesImportFlags.Var(notesImportSessionFlag, "session", "")
-	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID")
+	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesAddFileFlags.Var(notesAddFileNameFlag, "name", "")
 	notesAddFileFlags.Var(notesAddFileSessionFlag, "session", "")
 	notesAddFileFlags.Var(notesAddFileStreamFlag, "stream", "path to file containing the streamed request body")
-	notesGetFileFlags.Var(notesGetFileIDFlag, "id", "Note ID")
+	notesGetFileFlags.Var(notesGetFileIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesGetFileFlags.Var(notesGetFileNameFlag, "name", "File name")
 	notesGetFileFlags.Var(notesGetFileSessionFlag, "session", "")
-	notesDeleteFileFlags.Var(notesDeleteFileIDFlag, "id", "Note ID")
+	notesDeleteFileFlags.Var(notesDeleteFileIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesDeleteFileFlags.Var(notesDeleteFileNameFlag, "name", "File name")
 	notesDeleteFileFlags.Var(notesDeleteFileSessionFlag, "session", "")
-	notesHistoryFlags.Var(notesHistoryIDFlag, "id", "Note ID")
+	notesHistoryFlags.Var(notesHistoryIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesHistoryFlags.Var(notesHistorySessionFlag, "session", "")
-	notesHistoryVersionFlags.Var(notesHistoryVersionIDFlag, "id", "Note ID")
+	notesHistoryVersionFlags.Var(notesHistoryVersionIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesHistoryVersionFlags.Var(notesHistoryVersionRevFlag, "rev", "ID of the version")
 	notesHistoryVersionFlags.Var(notesHistoryVersionSessionFlag, "session", "")
 	notesCheckFilesFlags.Var(notesCheckFilesSessionFlag, "session", "")
@@ -904,7 +904,7 @@ func notesGetUsage() {
 	fmt.Fprintln(os.Stderr, `Get a note. With q, the result also has the ranges of the title and body matched by the query, as search matches them.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -q STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
@@ -948,7 +948,7 @@ func notesUpdateUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -if-match STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
@@ -970,7 +970,7 @@ func notesDeleteUsage() {
 	fmt.Fprintln(os.Stderr, `Move a note to the trash, or delete it permanently if it is already in the trash.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -if-match STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
@@ -1058,7 +1058,7 @@ func notesRestoreUsage() {
 	fmt.Fprintln(os.Stderr, `Move a note from the trash back to the notebook it was in.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -if-match STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
@@ -1081,7 +1081,7 @@ func notesMoveUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
@@ -1159,7 +1159,7 @@ func notesSetMarksUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
@@ -1381,7 +1381,7 @@ func notesAddFileUsage() {
 	fmt.Fprintln(os.Stderr, `Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -name STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 	fmt.Fprintln(os.Stderr, `    -stream STRING: path to file containing the streamed request body`)
@@ -1404,7 +1404,7 @@ func notesGetFileUsage() {
 	fmt.Fprintln(os.Stderr, `Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -name STRING: File name`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
@@ -1426,7 +1426,7 @@ func notesDeleteFileUsage() {
 	fmt.Fprintln(os.Stderr, `Delete a file of a note. The body may still refer to it.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -name STRING: File name`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
@@ -1447,7 +1447,7 @@ func notesHistoryUsage() {
 	fmt.Fprintln(os.Stderr, `List the earlier versions of a note, newest first. A version is kept on this device whenever the title, tags or body is replaced, by a save or by a change of the file found by a sync; up to 50 per note, and those older than 30 days are dropped except the 5 newest. To put a version back, update the note with its content. For people only.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
@@ -1468,7 +1468,7 @@ func notesHistoryVersionUsage() {
 	fmt.Fprintln(os.Stderr, `Get an earlier version of a note from its history. For people only.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID`)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
 	fmt.Fprintln(os.Stderr, `    -rev STRING: ID of the version`)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 

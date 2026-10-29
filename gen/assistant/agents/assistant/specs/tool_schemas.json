@@ -203,7 +203,7 @@
               "type": "integer"
             },
             "notebook": {
-              "description": "Only notes in this notebook. Omit for all notebooks except the trash",
+              "description": "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
               "example": "inbox",
               "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$",
               "type": "string"

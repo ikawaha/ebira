@@ -250,7 +250,7 @@ var searchPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
 		JSONType:    "string",
-		Description: "Only notes in this notebook. Omit for all notebooks except the trash",
+		Description: "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("tag")},
@@ -1074,7 +1074,7 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Only notes in this notebook. Omit for all notebooks except the trash",
+				typed[key], "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
 			); err != nil {
 				return err
 			}

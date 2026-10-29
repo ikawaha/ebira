@@ -17,7 +17,9 @@ import (
 // CreateRequestBody is the type of the "notes" service "create" endpoint HTTP
 // request body.
 type CreateRequestBody struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Notebook to put the note in (default inbox; not trash)
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`

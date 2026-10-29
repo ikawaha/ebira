@@ -10,7 +10,9 @@ package ebira
 type (
 	// AddAiFilePayload defines the JSON payload for the ebira.add_ai_file tool.
 	AddAiFilePayload = struct {
-		// Note ID
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
 		ID string
 		// File name
 		Name string
@@ -120,14 +122,18 @@ type (
 	}
 	// DeleteAiNotePayload defines the JSON payload for the ebira.delete_ai_note tool.
 	DeleteAiNotePayload = struct {
-		// Note ID
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
 		ID string
 		// Version of the note as returned by get_note
 		Version string
 	}
 	// GetNotePayload defines the JSON payload for the ebira.get_note tool.
 	GetNotePayload = struct {
-		// Note ID
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
 		ID string
 		// Search query to highlight, as search takes it; its tags are not highlighted
 		Q *string
@@ -231,7 +237,8 @@ type (
 	}
 	// ListTagsPayload defines the JSON payload for the ebira.list_tags tool.
 	ListTagsPayload = struct {
-		// Only notes in this notebook. Omit for all notebooks except the trash
+		// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+		// except the trash
 		Notebook *string
 	}
 	// ListTagsResult defines the JSON result for the ebira.list_tags tool.
@@ -243,7 +250,9 @@ type (
 	}
 	// MoveAiNotePayload defines the JSON payload for the ebira.move_ai_note tool.
 	MoveAiNotePayload = struct {
-		// Note ID
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
 		ID string
 		// ID of the note of the same notebook to put the note after; omit to put it
 		// first
@@ -294,7 +303,8 @@ type (
 		// it; a query of tags and marks alone lists the notes with them, last updated
 		// first
 		Q string
-		// Only notes in this notebook. Omit for all notebooks except the trash
+		// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+		// except the trash
 		Notebook *string
 		// Only notes with this tag
 		Tag *string
@@ -312,7 +322,9 @@ type (
 	}
 	// UpdateAiNotePayload defines the JSON payload for the ebira.update_ai_note tool.
 	UpdateAiNotePayload = struct {
-		// Note ID
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
 		ID string
 		// Version of the note as returned by get_note
 		Version string

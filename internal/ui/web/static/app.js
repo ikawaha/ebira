@@ -718,6 +718,8 @@ const KIND_SVG = {
   // And the buttons of the preview: copy the title (two sheets), copy the
   // note (a page with a folded corner and lines), edit (a pencil) and history
   // (a clock with an arrow turning back); the trash is the can above.
+  // Copy a link to the note: two links of a chain.
+  link: ["M10 13.5a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2", "M14 10.5a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"],
   copy: ["rect:9,9,11,11,2", "M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"],
   document: ["M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z", "M14 3v4h4", "M8.5 12h7", "M8.5 16h7"],
   // Find in the note: a magnifier.
@@ -1828,7 +1830,8 @@ function noteRow(n, sort, reorder, list, cls) {
   const created = !state.query && (sort === "created" || sort === "order");
   const time = created ? t("createdAt", { time: formatTime(n.created_at) }) : formatTime(n.updated_at);
   const meta = el("div", "meta", el("span", "", time));
-  if (!state.notebook) meta.append(el("span", "", notebookName(n.notebook)));
+  // Searches in a notebook find the notes of its sub notebooks too.
+  if (!state.notebook || n.notebook !== state.notebook) meta.append(el("span", "", notebookName(n.notebook)));
   meta.append(...tagList(n.tags));
   li.append(meta);
   if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
@@ -2048,6 +2051,10 @@ async function loadNote() {
     copy.setAttribute("aria-label", t("copyNoteTitle"));
     title.append(copy);
   }
+  const link = button(kindSVG("link"), () => openLinkMenu(link), { title: t("copyLinkTitle"), cls: "title-copy" });
+  link.id = "link-open";
+  link.setAttribute("aria-label", t("copyLinkTitle"));
+  title.append(link);
   // The find bar is drawn again with the note: the focus and the caret in it
   // stay, as the note may be drawn again while one types, such as on a change.
   const typing = document.activeElement?.id === "find-q" ? [$("find-q").selectionStart, $("find-q").selectionEnd] : null;
@@ -2059,6 +2066,7 @@ async function loadNote() {
     $("find-q").setSelectionRange(...typing);
   }
   pv.dataset.id = id;
+  showNoteHash(id);
   marks = [...pv.querySelectorAll("mark:not(.find)")];
   markIndex = -1;
   if (marks.length) {
@@ -2372,11 +2380,80 @@ async function copyTitle() {
   showToast(t("copiedTitle", { title: n.title }));
 }
 
+// notePageURL returns the URL of note id in this UI, which opens the note here
+// and which AI clients take to name the note.
+function notePageURL(id) {
+  return location.origin + "/#note/" + encodeURIComponent(id);
+}
+
+// showNoteHash shows the URL of note id in the address bar, or none, without
+// adding to the history of the tab.
+function showNoteHash(id) {
+  const hash = id ? "#note/" + encodeURIComponent(id) : "";
+  if (location.hash !== hash) history.replaceState(null, "", location.pathname + location.search + hash);
+}
+
+// copyLink copies a link to the note in the preview: its URL, or with
+// markdown, a Markdown link with the title of the note.
+async function copyLink(markdown) {
+  const n = state.note;
+  if (!n) return;
+  const title = n.title || t("untitled");
+  const text = markdown ? `[${title.replace(/[\\[\]]/g, "\\$&")}](${notePageURL(n.id)})` : notePageURL(n.id);
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(t(markdown ? "copiedMarkdownLink" : "copiedURL", { title }));
+}
+
+// openLinkMenu opens the menu of the links to copy below the button at.
+function openLinkMenu(at) {
+  const m = $("link-menu");
+  if (!m.hidden) {
+    closeLinkMenu();
+    return;
+  }
+  const item = (label, markdown) => {
+    const b = button(label, () => {
+      closeLinkMenu();
+      copyLink(markdown);
+    });
+    b.setAttribute("role", "menuitem");
+    return b;
+  };
+  m.replaceChildren(item(t("copyURL"), false), item(t("copyMarkdownLink"), true));
+  m.hidden = false;
+  const r = at.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + "px";
+  m.querySelector("button").focus();
+}
+
+function closeLinkMenu() {
+  $("link-menu").hidden = true;
+}
+
+document.addEventListener("click", (e) => {
+  if (!$("link-menu").hidden && !e.target.closest("#link-menu, #link-open")) closeLinkMenu();
+});
+window.addEventListener("resize", closeLinkMenu);
+$("link-menu").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    closeLinkMenu();
+  }
+});
+
 function showPreview(...children) {
   const pv = $("preview");
   pv.classList.remove("editing");
   pv.replaceChildren(...children);
   delete pv.dataset.id;
+  showNoteHash(null);
   marks = [];
   markIndex = -1;
 }
@@ -2692,6 +2769,7 @@ function startEdit(note) {
   pv.replaceChildren(form);
   pv.classList.add("editing");
   delete pv.dataset.id;
+  showNoteHash(note?.id);
   ed.loaded = formValues();
   (note ? ed.view : f.title).focus();
 }
@@ -3740,10 +3818,13 @@ document.addEventListener("click", (e) => {
   selectNote(id);
 });
 
+// The address bar shows the URL of the note in the preview (showNoteHash):
+// one pasted there opens its note, and the address bar shows the note in the
+// preview again until it does.
 function openLinkedNote() {
   const id = noteLink(location.href);
   if (!id) return;
-  history.replaceState(null, "", location.pathname + location.search);
+  showNoteHash(state.note?.id);
   selectNote(id);
 }
 
@@ -3981,6 +4062,7 @@ document.addEventListener("keydown", (e) => {
     case "n": if (find.open && find.marks.length) jumpFind(1); else jumpMark(1); break;
     case "N": if (find.open && find.marks.length) jumpFind(-1); else jumpMark(-1); break;
     case "f": if (state.note && !state.editing) { e.preventDefault(); openFind(); } break;
+    case "Y": if (state.note && !state.editing && $("link-open")) { e.preventDefault(); openLinkMenu($("link-open")); } break;
     case "M": if (state.note && state.note.notebook !== "trash" && !state.editing && $("mark-open")) { e.preventDefault(); openMarkMenu(state.note, $("mark-open")); } break;
     case "J": e.preventDefault(); moveSelected(1); break;
     case "K": e.preventDefault(); moveSelected(-1); break;
@@ -4334,6 +4416,9 @@ $("logout").addEventListener("click", async () => {
 // Start
 
 (async () => {
+  // The note of the URL, read before the preview shows anything else, which
+  // changes the address bar.
+  const linked = noteLink(location.href);
   await loadMessages();
   try {
     authState = await api("/auth");
@@ -4370,7 +4455,7 @@ $("logout").addEventListener("click", async () => {
     markSelected();
     loadNote();
   }
-  openLinkedNote();
+  if (linked) selectNote(linked);
   connect();
   showGitSync();
 })();

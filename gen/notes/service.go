@@ -281,7 +281,9 @@ type AIImportFile struct {
 
 // AddAiFilePayload is the payload type of the notes service add_ai_file method.
 type AddAiFilePayload struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// File name
 	Name string
@@ -293,7 +295,9 @@ type AddAiFilePayload struct {
 type AddFilePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// File name, such as the name of the uploaded file
 	Name string
@@ -366,7 +370,9 @@ type CreateNotebookPayload struct {
 type CreatePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID *string
 	// Notebook to put the note in (default inbox; not trash)
 	Notebook *string
@@ -381,7 +387,9 @@ type CreatePayload struct {
 // DeleteAiNotePayload is the payload type of the notes service delete_ai_note
 // method.
 type DeleteAiNotePayload struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Version of the note as returned by get_note
 	Version string
@@ -392,7 +400,9 @@ type DeleteAiNotePayload struct {
 type DeleteFilePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// File name
 	Name string
@@ -411,7 +421,9 @@ type DeleteNotebookPayload struct {
 type DeletePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Delete only if the note's current version matches. Omit to delete
 	// unconditionally
@@ -453,7 +465,9 @@ type FileCheck struct {
 type GetFilePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// File name
 	Name string
@@ -471,7 +485,9 @@ type GetFileResult struct {
 type GetPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Search query to highlight, as search takes it; its tags are not highlighted
 	Q *string
@@ -536,7 +552,9 @@ type GitSyncResult struct {
 type HistoryPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 }
 
@@ -545,7 +563,9 @@ type HistoryPayload struct {
 type HistoryVersionPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// ID of the version
 	Rev string
@@ -658,7 +678,9 @@ type MarksPayload struct {
 // MoveAiNotePayload is the payload type of the notes service move_ai_note
 // method.
 type MoveAiNotePayload struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// ID of the note of the same notebook to put the note after; omit to put it
 	// first
@@ -691,7 +713,9 @@ type MoveNotesPayload struct {
 type MovePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// ID of the note of the same notebook to put the note after; omit to put it
 	// first
@@ -911,7 +935,9 @@ type RestoreNotebookPayload struct {
 type RestorePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Restore only if the note's current version matches
 	IfMatch *string
@@ -966,7 +992,8 @@ type SearchPayload struct {
 	// it; a query of tags and marks alone lists the notes with them, last updated
 	// first
 	Q string
-	// Only notes in this notebook. Omit for all notebooks except the trash
+	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+	// except the trash
 	Notebook *string
 	// Only notes with this tag
 	Tag *string
@@ -988,7 +1015,9 @@ type SearchResult struct {
 type SetMarksPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Marks of the note
 	Marks []string
@@ -1032,7 +1061,8 @@ type TagCount struct {
 type TagsPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Only notes in this notebook. Omit for all notebooks except the trash
+	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
+	// except the trash
 	Notebook *string
 }
 
@@ -1096,7 +1126,9 @@ type UnusedFile struct {
 // UpdateAiNotePayload is the payload type of the notes service update_ai_note
 // method.
 type UpdateAiNotePayload struct {
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Version of the note as returned by get_note
 	Version string
@@ -1125,7 +1157,9 @@ type UpdateAiNotePayload struct {
 type UpdatePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Note ID
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
 	ID string
 	// Notebook to move the note to (not trash)
 	Notebook *string
