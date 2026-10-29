@@ -222,6 +222,11 @@ func runServe(args []string) error {
 	for _, e := range r.Errors {
 		slog.Warn("skip note", "error", e)
 	}
+	if freed, err := ix.Compact(ctx); err != nil {
+		slog.Warn("compact index failed", "error", err)
+	} else if freed > 0 {
+		slog.Info("index compacted", "freed_bytes", freed)
+	}
 	// The earlier versions past the limits of the history go now and then
 	// once a day, for a server left running.
 	go sweepHistoryEvery(ctx, svc, 24*time.Hour)
