@@ -537,6 +537,18 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 .files-meta .recent { color: var(--ng); }
 .files-list.broken code { overflow-wrap: anywhere; }
 .files-check a { color: var(--accent); }
+.server-stats .stats-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 24px; }
+.stats-list { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+.stats-list dt { color: var(--fg-muted); }
+.stats-list dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+.stats-tables { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.stats-tables th { color: var(--fg-muted); font-weight: normal; text-align: left; }
+.stats-tables th, .stats-tables td { padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.stats-tables .num { text-align: right; white-space: nowrap; }
+.stats-tables .stats-name { overflow-wrap: anywhere; }
+.stats-bar-cell { width: 30%; }
+.stats-bar { display: block; height: 8px; min-width: 1px; border-radius: 2px; background: var(--accent); }
+.stats-updated { margin-top: 8px; font-size: 12px; }
 .import-list .failed { color: var(--ng); }
 .import-list ul.warnings { margin: 4px 0 0; padding-left: 18px; color: var(--fg-muted); font-size: 12px; }
 .import-list ul.warnings li { border: none; padding: 0; }

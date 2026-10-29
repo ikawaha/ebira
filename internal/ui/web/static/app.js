@@ -3184,6 +3184,97 @@ async function deleteUnusedFiles(boxes) {
     : { text: t("filesDeleted", { n: deleted }) });
 }
 
+// Server status (GET /debug/stats): the memory of the server and the state of
+// its search index, read again every few seconds while the dialog is open.
+
+const STATS_EVERY = 5; // seconds
+let statsTimer = 0;
+
+async function openServerStats() {
+  const d = $("server-stats");
+  if (!d.open) {
+    d.replaceChildren(statsHead(d), el("p", "", t("statsLoading")));
+    d.showModal();
+  }
+  await loadServerStats(d);
+}
+
+async function loadServerStats(d) {
+  clearTimeout(statsTimer);
+  if (!d.open) return;
+  const top = d.scrollTop;
+  try {
+    renderServerStats(d, await api("/debug/stats"));
+  } catch (e) {
+    d.replaceChildren(statsHead(d), el("p", "error", t("statsFailed", { error: e.message })));
+  }
+  d.scrollTop = top;
+  if (d.open) statsTimer = setTimeout(() => loadServerStats(d), STATS_EVERY * 1000);
+}
+
+function statsHead(d) {
+  return el("div", "files-head", el("h2", "", t("serverStats")), button("×", () => d.close(), { title: t("closeTitle") }));
+}
+
+// statsList returns a list of the rows [label key, value].
+function statsList(rows) {
+  const dl = el("dl", "stats-list");
+  for (const [key, value] of rows) dl.append(el("dt", "", t(key)), el("dd", "", String(value)));
+  return dl;
+}
+
+function renderServerStats(d, s) {
+  const p = s.process;
+  const ix = s.index;
+  const num = (n) => n.toLocaleString(lang);
+  const percent = (n, of) => (of ? Math.round((n / of) * 100) : 0);
+  // cache_size is in pages when positive and in KiB when negative.
+  const cache = ix.cache_size < 0 ? -ix.cache_size * 1024 : ix.cache_size * ix.page_size;
+  const process = el("section", "", el("h3", "", t("statsProcess")), statsList([
+    ["statsUptime", s.uptime],
+    ["statsMaxRSS", p.max_rss ? formatSize(p.max_rss) : "-"],
+    ["statsHeap", formatSize(p.heap_alloc)],
+    ["statsSys", formatSize(p.sys)],
+    ["statsGoroutines", num(p.goroutines)],
+    ["statsGC", num(p.num_gc)],
+  ]), el("p", "empty", t("statsMemoryNote")));
+  const index = el("section", "", el("h3", "", t("statsIndex")), statsList([
+    ["statsMode", ix.mode],
+    ["statsNotes", num(ix.notes)],
+    ["statsFile", formatSize(ix.files.db || 0)],
+    ["statsWAL", formatSize(ix.files.wal || 0)],
+    ["statsPages", `${num(ix.pages)} × ${formatSize(ix.page_size)}`],
+    ["statsFree", `${num(ix.free_pages)} (${percent(ix.free_pages, ix.pages)}%)`],
+    ["statsCache", formatSize(cache)],
+    ["statsJournal", ix.journal_mode],
+    ["statsSchema", ix.schema_version],
+    ["statsPool", `${ix.pool.open} / ${ix.pool.in_use}`],
+    ["statsWaits", `${num(ix.pool.wait_count)} (${(ix.pool.wait_duration_ns / 1e6).toFixed(1)} ms)`],
+  ]));
+  const tables = ix.tables || [];
+  const total = tables.reduce((n, x) => n + x.bytes, 0);
+  const largest = tables.length ? tables[0].bytes : 0;
+  const tbody = el("tbody");
+  for (const x of tables) {
+    const bar = el("span", "stats-bar");
+    bar.style.width = `${percent(x.bytes, largest)}%`;
+    tbody.append(el("tr", "",
+      el("td", "stats-name", x.name),
+      el("td", "num", num(x.pages)),
+      el("td", "num", formatSize(x.bytes)),
+      el("td", "num", `${percent(x.bytes, total)}%`),
+      el("td", "stats-bar-cell", bar)));
+  }
+  const head = el("tr", "", el("th", "", t("statsTableName")), el("th", "num", t("statsTablePages")), el("th", "num", t("statsTableSize")), el("th", "num", "%"), el("th", ""));
+  const table = el("section", "", el("h3", "", t("statsTables", { n: tables.length })),
+    el("table", "stats-tables", el("thead", "", head), tbody));
+  const time = new Date().toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  d.replaceChildren(statsHead(d), el("div", "stats-cols", process, index), table,
+    el("p", "empty stats-updated", t("statsUpdated", { time, n: STATS_EVERY })));
+}
+
+$("server-stats").addEventListener("close", () => clearTimeout(statsTimer));
+
 function askConflict() {
   const d = $("conflict");
   d.returnValue = "cancel";
@@ -3728,6 +3819,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
   }
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
+$("server-stats-open").addEventListener("click", () => openServerStats());
 $("mark-names-open").addEventListener("click", () => openMarkNames());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());

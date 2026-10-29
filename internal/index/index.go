@@ -101,6 +101,7 @@ type Config struct {
 // Index is the SQLite index.
 type Index struct {
 	db   *sql.DB
+	path string
 	mode Mode
 	an   *analyzer // nil in the like mode
 	// fts lists the full-text tables: notes_fts for the search mode (none in
@@ -171,7 +172,7 @@ func Open(ctx context.Context, path string, cfg Config) (*Index, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	ix := &Index{db: db, mode: cfg.Mode, an: an}
+	ix := &Index{db: db, path: path, mode: cfg.Mode, an: an}
 	if an != nil {
 		ix.fts = append(ix.fts, ftsTable{name: "notes_fts", key: "fts", an: an})
 	}
