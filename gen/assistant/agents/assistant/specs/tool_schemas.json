@@ -105,7 +105,10 @@
                   "done",
                   "pin",
                   "urgent",
-                  "idea"
+                  "idea",
+                  "wip",
+                  "hold",
+                  "dropped"
                 ],
                 "type": "string"
               },
@@ -271,7 +274,10 @@
                       "done",
                       "pin",
                       "urgent",
-                      "idea"
+                      "idea",
+                      "wip",
+                      "hold",
+                      "dropped"
                     ],
                     "type": "string"
                   },

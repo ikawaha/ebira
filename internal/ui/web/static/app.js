@@ -2079,7 +2079,7 @@ async function loadNote() {
 // shows the same. Set with the flag of the preview, a right click on a note in
 // the list, or M.
 
-const MARK_EMOJI = { star: "⭐", important: "❗", question: "❓", done: "✅", pin: "📌", urgent: "🔥", idea: "💡" };
+const MARK_EMOJI = { star: "⭐", important: "❗", question: "❓", done: "✅", pin: "📌", urgent: "🔥", idea: "💡", wip: "🚧", hold: "⏳", dropped: "❌" };
 
 // markLabel returns what mark id is called: its name, else what it looks like.
 function markLabel(id) {

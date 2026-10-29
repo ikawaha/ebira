@@ -4184,6 +4184,9 @@ definitions:
                     - pin
                     - urgent
                     - idea
+                    - wip
+                    - hold
+                    - dropped
             kind:
                 type: string
                 description: color, or symbol for a mark drawn as an emoji
@@ -4244,7 +4247,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: done
+                    example: pin
                     enum:
                         - red
                         - orange
@@ -4260,6 +4263,9 @@ definitions:
                         - pin
                         - urgent
                         - idea
+                        - wip
+                        - hold
+                        - dropped
                 description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
                 example:
                     - red
@@ -4390,7 +4396,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: gray
+                    example: question
                     enum:
                         - red
                         - orange
@@ -4406,6 +4412,9 @@ definitions:
                         - pin
                         - urgent
                         - idea
+                        - wip
+                        - hold
+                        - dropped
                 description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
                 example:
                     - red
@@ -4741,7 +4750,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: urgent
+                    example: hold
                     enum:
                         - red
                         - orange
@@ -4757,6 +4766,9 @@ definitions:
                         - pin
                         - urgent
                         - idea
+                        - wip
+                        - hold
+                        - dropped
                 description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
                 example:
                     - red
@@ -9799,7 +9811,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: blue
+                    example: star
                     enum:
                         - red
                         - orange
@@ -9815,6 +9827,9 @@ definitions:
                         - pin
                         - urgent
                         - idea
+                        - wip
+                        - hold
+                        - dropped
                 description: Marks of the note
                 example:
                     - red

@@ -8,8 +8,8 @@ import (
 // NoteTrait is the attributes that Note and NoteSummary share.
 // markIDs are the marks a note can have, as store.MarkIDs: colors, and
 // symbols that the UIs draw as emoji (star, important, question, done, pin,
-// urgent and idea).
-var markIDs = []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}
+// urgent, idea, wip, hold and dropped).
+var markIDs = []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}
 
 // marksDSL is the list of the marks of a note, one at most for now.
 var marksDSL = func() {

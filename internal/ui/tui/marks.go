@@ -19,7 +19,7 @@ import (
 
 // markEmoji are the emoji of the marks that are symbols. They have the
 // emoji presentation, so that terminals draw them two columns wide.
-var markEmoji = map[string]string{"star": "⭐", "important": "❗", "question": "❓", "done": "✅", "pin": "📌", "urgent": "🔥", "idea": "💡"}
+var markEmoji = map[string]string{"star": "⭐", "important": "❗", "question": "❓", "done": "✅", "pin": "📌", "urgent": "🔥", "idea": "💡", "wip": "🚧", "hold": "⏳", "dropped": "❌"}
 
 // markColors are the colors of the marks that are colors, which read on dark
 // and light backgrounds alike.

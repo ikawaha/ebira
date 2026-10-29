@@ -213,5 +213,8 @@
   "mark.done": "済み",
   "mark.pin": "ピン",
   "mark.urgent": "急ぎ",
-  "mark.idea": "アイデア"
+  "mark.idea": "アイデア",
+  "mark.wip": "作業中",
+  "mark.hold": "保留",
+  "mark.dropped": "中止"
 }

@@ -6122,8 +6122,8 @@ func ValidateSetMarksRequestBody(body *SetMarksRequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", body.Marks, len(body.Marks), 1, false))
 	}
 	for _, e := range body.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	return
@@ -6136,8 +6136,8 @@ func ValidateSaveMarkNamesRequestBody(body *SaveMarkNamesRequestBody) (err error
 		err = goa.MergeErrors(err, goa.MissingFieldError("names", "body"))
 	}
 	for k, v := range body.Names {
-		if !(k == "red" || k == "orange" || k == "yellow" || k == "green" || k == "blue" || k == "purple" || k == "gray" || k == "star" || k == "important" || k == "question" || k == "done" || k == "pin" || k == "urgent" || k == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.names.key", k, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(k == "red" || k == "orange" || k == "yellow" || k == "green" || k == "blue" || k == "purple" || k == "gray" || k == "star" || k == "important" || k == "question" || k == "done" || k == "pin" || k == "urgent" || k == "idea" || k == "wip" || k == "hold" || k == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.names.key", k, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 		if utf8.RuneCountInString(v) > 40 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.names[key]", v, utf8.RuneCountInString(v), 40, false))

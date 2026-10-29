@@ -231,8 +231,8 @@ func ValidateCreateAiNoteResultTransport(value *CreateAiNoteResultTransport) (er
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -556,8 +556,8 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -764,8 +764,8 @@ func ValidateImportAiNoteResultNoteTransport(value *ImportAiNoteResultNoteTransp
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -1057,8 +1057,8 @@ func ValidateListResultNoteSummaryTransport(value *ListResultNoteSummaryTranspor
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	for _, e := range value.TitleHighlights {
@@ -1200,8 +1200,8 @@ func ValidateMarksResultMarkInfoTransport(value *MarksResultMarkInfoTransport) (
 		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
 	}
 	if value.ID != nil {
-		if !(*value.ID == "red" || *value.ID == "orange" || *value.ID == "yellow" || *value.ID == "green" || *value.ID == "blue" || *value.ID == "purple" || *value.ID == "gray" || *value.ID == "star" || *value.ID == "important" || *value.ID == "question" || *value.ID == "done" || *value.ID == "pin" || *value.ID == "urgent" || *value.ID == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.id", *value.ID, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(*value.ID == "red" || *value.ID == "orange" || *value.ID == "yellow" || *value.ID == "green" || *value.ID == "blue" || *value.ID == "purple" || *value.ID == "gray" || *value.ID == "star" || *value.ID == "important" || *value.ID == "question" || *value.ID == "done" || *value.ID == "pin" || *value.ID == "urgent" || *value.ID == "idea" || *value.ID == "wip" || *value.ID == "hold" || *value.ID == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.id", *value.ID, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	if value.Kind != nil {
@@ -1365,8 +1365,8 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -1711,8 +1711,8 @@ func ValidateSearchResultNoteSummaryTransport(value *SearchResultNoteSummaryTran
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	for _, e := range value.TitleHighlights {
@@ -1963,8 +1963,8 @@ func ValidateUpdateAiNotePayloadTransport(value *UpdateAiNotePayloadTransport) (
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	return err
@@ -2082,8 +2082,8 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.marks", value.Marks, len(value.Marks), 1, false))
 	}
 	for _, e := range value.Marks {
-		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea"}))
+		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
 	}
 	if value.TrashedFrom != nil {

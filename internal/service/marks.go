@@ -16,7 +16,7 @@ import (
 // kept, as for the manual order.
 
 // symbolMarks are the marks the UIs draw as emoji; the others are colors.
-var symbolMarks = []string{"star", "important", "question", "done", "pin", "urgent", "idea"}
+var symbolMarks = []string{"star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}
 
 // SetMarkNames sets the names of the marks, read from the settings of the
 // notes (store.Config.Marks), for the API and for searches by name. Call it

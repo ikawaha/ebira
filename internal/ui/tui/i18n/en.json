@@ -213,5 +213,8 @@
   "mark.done": "Done",
   "mark.pin": "Pin",
   "mark.urgent": "Urgent",
-  "mark.idea": "Idea"
+  "mark.idea": "Idea",
+  "mark.wip": "In progress",
+  "mark.hold": "On hold",
+  "mark.dropped": "Dropped"
 }
