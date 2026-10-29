@@ -75,6 +75,17 @@ func TestSearchPhraseAndTags(t *testing.T) {
 		{q: "tag:todo -tag:travel", want: []string{"apart"}},
 		{q: "york -tag:nothing -mark:red", want: []string{"apart", "ny"}}, // nothing to leave out
 		{q: "york -", want: []string{"apart", "ny"}},                      // a minus alone, as while typing
+		// OR joins two, closer than the AND of spaces.
+		{q: "pizza OR delhi", want: []string{"apart", "ny"}},
+		{q: `new pizza OR 東京`, want: []string{"ny"}},
+		{q: `"new york" OR 東京`, want: []string{"ja", "ny"}},
+		{q: "tag:travel OR delhi", want: []string{"apart", "ja", "ny"}},
+		{q: "tag:nothing OR mark:red OR 東京", want: []string{"ja"}},
+		{q: "york OR 京", want: []string{"apart", "ja", "ny"}}, // a term with no tokens, with LIKE
+		{q: "york OR 東京 -pizza", want: []string{"apart", "ja"}},
+		{q: "pizza OR -york", want: nil}, // not with a minus: pizza and not york
+		{q: "OR pizza OR", want: []string{"ny"}},
+		{q: "pizza or delhi", want: nil}, // or in lower case is a word
 	}
 	db := filepath.Join(dir, "index.sqlite")
 	for _, mode := range []Mode{ModeLike, ModeBigram, ModeTrigram, ModeEn, ModeJa} {
@@ -111,6 +122,11 @@ func TestSearchPhraseAndTags(t *testing.T) {
 			_, body := ix.Highlight(`"new york" tag:todo`, "", "Pizza in New York. todo")
 			if len(body) != 1 || body[0] != (Span{9, 17}) {
 				t.Errorf("Highlight = %v, want New York only", body)
+			}
+			// Either of those joined with OR is highlighted.
+			_, body = ix.Highlight("pizza OR delhi", "", "Pizza or Delhi")
+			if len(body) != 2 {
+				t.Errorf("Highlight with OR = %v, want both", body)
 			}
 		})
 	}
@@ -187,5 +203,27 @@ func TestParseQueryNot(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseQuery = %+v, want %+v", got, want)
+	}
+}
+
+func TestParseQueryOr(t *testing.T) {
+	for _, tt := range []struct {
+		q    string
+		want Query
+	}{
+		{q: `a OR "b c" OR tag:d OR mark:red e`, want: Query{
+			Terms: []string{"e"},
+			Or:    [][]Alt{{{AltTerm, "a"}, {AltTerm, "b c"}, {AltTag, "d"}, {AltMark, "red"}}},
+		}},
+		{q: "a OR b c OR d", want: Query{Or: [][]Alt{{{AltTerm, "a"}, {AltTerm, "b"}}, {{AltTerm, "c"}, {AltTerm, "d"}}}}},
+		// An OR at an end, after another or next to a minus is dropped.
+		{q: "OR a OR OR b OR", want: Query{Or: [][]Alt{{{AltTerm, "a"}, {AltTerm, "b"}}}}},
+		{q: "a OR -b OR c", want: Query{Terms: []string{"a", "c"}, NotTerms: []string{"b"}}},
+		{q: `a or b "OR" -OR`, want: Query{Terms: []string{"a", "or", "b", "OR"}, NotTerms: []string{"OR"}}},
+		{q: "a OR tag:", want: Query{Terms: []string{"a"}}}, // a tag being typed
+	} {
+		if got := ParseQuery(tt.q); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("ParseQuery(%q) = %+v, want %+v", tt.q, got, tt.want)
+		}
 	}
 }

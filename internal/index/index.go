@@ -732,8 +732,8 @@ func (ix *Index) TrashedNotebookCounts(ctx context.Context) (map[string]int, err
 
 // Search finds notes in notebook and its sub notebooks (all but the trash if
 // empty), but those in exclude, matching q
-// (see ParseQuery), whose terms and tags are combined with AND, and with tag
-// if not empty. total is the number of matched notes. In the ja and en
+// (see ParseQuery), whose terms and tags are combined with AND but for
+// those joined with OR, and with tag if not empty. total is the number of matched notes. In the ja and en
 // modes, notes found only by bigrams (substrings that morphemes or words
 // miss) follow the notes found by morphemes or words. A query of tags alone
 // lists the notes with them, last updated first.
@@ -746,7 +746,13 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	if query.empty() && tag == "" {
 		return []*Summary{}, 0, nil
 	}
-	forms, err := ix.tagForms(ctx, len(tags)+len(query.NotTags) > 0)
+	orTags := false
+	for _, g := range query.Or {
+		for _, a := range g {
+			orTags = orTags || a.Kind == AltTag
+		}
+	}
+	forms, err := ix.tagForms(ctx, len(tags)+len(query.NotTags) > 0 || orTags)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -768,12 +774,13 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	tagWhere := strings.Join(conds, " AND ")
 	var ids []string
 	seen := map[string]bool{}
+	found := query.found()
 	tables := ix.fts
-	if len(tables) == 0 || len(terms) == 0 {
+	if len(tables) == 0 || len(found) == 0 {
 		tables = []ftsTable{{}} // the like mode, or no terms to match
 	}
 	for _, t := range tables {
-		found, err := ix.searchIDs(ctx, t, terms, notebook, tagWhere, tagArgs, exclude)
+		found, err := ix.searchIDs(ctx, t, terms, query.Or, forms, notebook, tagWhere, tagArgs, exclude)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -788,7 +795,7 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	if res, err = ix.summaries(ctx, ids[:min(limit, len(ids))]); err != nil {
 		return nil, 0, err
 	}
-	h := ix.highlighter(terms)
+	h := ix.highlighter(found)
 	for _, s := range res {
 		s.TitleHighlights = h.find(s.Title)
 		s.Snippet, s.SnippetHighlights = snippet(s.Snippet, h.findInBody(s.Snippet, true))
@@ -796,10 +803,11 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	return res, total, nil
 }
 
-// searchIDs returns the IDs of the notes matching terms in the full-text
-// table t, best first, or with LIKE by update time when t has no analyzer,
-// and the condition tagWhere on the tags (see tagCond).
-func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, notebook, tagWhere string, tagArgs []any, exclude []string) ([]string, error) {
+// searchIDs returns the IDs of the notes matching terms and one of each group
+// of or in the full-text table t, best first, or with LIKE by update time
+// when t has no analyzer, and the condition tagWhere on the tags (see
+// tagCond). forms are the tags in the index by their keys (see tagForms).
+func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, or [][]Alt, forms map[string][]any, notebook, tagWhere string, tagArgs []any, exclude []string) ([]string, error) {
 	var (
 		from  = `notes n`
 		where []string
@@ -820,6 +828,19 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, note
 		where = append(where, `(n.title LIKE ? ESCAPE '\' OR n.body LIKE ? ESCAPE '\')`)
 		p := "%" + escapeLike(term) + "%"
 		args = append(args, p, p)
+	}
+	for _, g := range or {
+		if phrases := t.phrases(g); phrases != nil {
+			match = append(match, "("+strings.Join(phrases, " OR ")+")")
+			continue
+		}
+		var parts []string
+		for _, a := range g {
+			cond, condArgs := ix.altCond(t, forms, a)
+			parts = append(parts, cond)
+			args = append(args, condArgs...)
+		}
+		where = append(where, "("+strings.Join(parts, " OR ")+")")
 	}
 	if len(match) > 0 {
 		from = t.name + ` f JOIN notes n ON n.seq = f.rowid`
@@ -848,6 +869,44 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, note
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
+}
+
+// phrases returns the phrases of the terms of group to match in t, or nil if t
+// has no analyzer, or the group holds a tag, a mark or a term with no tokens.
+func (t ftsTable) phrases(group []Alt) []string {
+	if t.an == nil {
+		return nil
+	}
+	var phrases []string
+	for _, a := range group {
+		if a.Kind != AltTerm {
+			return nil
+		}
+		tokens := t.an.analyze(a.Value)
+		if tokens == "" {
+			return nil
+		}
+		phrases = append(phrases, phrase(tokens))
+	}
+	return phrases
+}
+
+// altCond returns the condition that a note has a, a term matched in t as
+// searchIDs matches terms, a tag or a mark, and its arguments.
+func (ix *Index) altCond(t ftsTable, forms map[string][]any, a Alt) (string, []any) {
+	switch a.Kind {
+	case AltTag:
+		return tagCond(forms, []string{a.Value})
+	case AltMark:
+		return ix.markCond([]string{a.Value})
+	}
+	if t.an != nil {
+		if tokens := t.an.analyze(a.Value); tokens != "" {
+			return `n.seq IN (SELECT rowid FROM ` + t.name + ` WHERE ` + t.name + ` MATCH ?)`, []any{phrase(tokens)}
+		}
+	}
+	p := "%" + escapeLike(a.Value) + "%"
+	return `(n.title LIKE ? ESCAPE '\' OR n.body LIKE ? ESCAPE '\')`, []any{p, p}
 }
 
 // SetMarkNames sets the names of the marks, by their IDs (store.Config.Marks),
@@ -1042,7 +1101,7 @@ func (ix *Index) highlighter(terms []string) highlighters {
 // Highlight returns the ranges of title and body matched by the query q, as
 // Search matches them; its tags match nothing in the text.
 func (ix *Index) Highlight(q, title, body string) (titleSpans, bodySpans []Span) {
-	h := ix.highlighter(ParseQuery(q).Terms)
+	h := ix.highlighter(ParseQuery(q).found())
 	return h.find(title), h.findInBody(body, false)
 }
 
