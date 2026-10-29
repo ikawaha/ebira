@@ -30,6 +30,9 @@ type analyzer struct {
 	// fingerprint identifies the token output. The full-text table is rebuilt
 	// when it changes.
 	fingerprint string
+	// short reports whether normalized text has a part too short for a
+	// token, which tokenize leaves out; nil for none.
+	short func(normalized string) bool
 }
 
 // token is a token of normalized text, with its range in rune offsets.
@@ -48,22 +51,47 @@ func (a *analyzer) analyze(s string) string {
 	return strings.Join(words, " ")
 }
 
+// terms returns the tokens of the search term s, or none if a part of s is
+// too short for a token (see short), so that the term is searched with LIKE
+// rather than without the part. Stop words, which tokenize also leaves out,
+// do not count.
+func (a *analyzer) terms(s string) []token {
+	n := normalize(s)
+	if a.short != nil && a.short(n) {
+		return nil
+	}
+	return a.tokenize(n)
+}
+
+// query returns the tokens of the search term s (see terms) joined by spaces.
+func (a *analyzer) query(s string) string {
+	ts := a.terms(s)
+	words := make([]string, len(ts))
+	for i, t := range ts {
+		words[i] = t.text
+	}
+	return strings.Join(words, " ")
+}
+
 func newAnalyzer(cfg Config) (*analyzer, error) {
 	switch cfg.Mode {
 	case ModeBigram:
 		return &analyzer{
 			tokenize:    bigrams,
 			fingerprint: "bigram/" + analyzerVersion,
+			short:       shortRun(isWordRune, 2),
 		}, nil
 	case ModeTrigram:
 		return &analyzer{
 			tokenize:    trigrams,
 			fingerprint: "trigram/" + analyzerVersion,
+			short:       shortRun(isWordRune, 3),
 		}, nil
 	case ModeEn:
 		return &analyzer{
 			tokenize:    enTokens,
 			fingerprint: "en/" + analyzerVersion + "/porter2",
+			short:       shortRun(isCJK, 2),
 		}, nil
 	case ModeJa:
 		return newJaAnalyzer(cfg.StopWords, cfg.StopTags)
@@ -119,6 +147,25 @@ func bigrams(s string) []token { return ngrams(s, 2) }
 // trigrams returns the overlapping three-character grams of s, as bigrams
 // does. A term of fewer than three characters has none.
 func trigrams(s string) []token { return ngrams(s, 3) }
+
+// shortRun returns a function that reports whether a string has a run of
+// runes for which in is true shorter than n, too short for an n-gram.
+func shortRun(in func(rune) bool, n int) func(string) bool {
+	return func(s string) bool {
+		run := 0
+		for _, r := range s + " " {
+			if in(r) {
+				run++
+				continue
+			}
+			if run > 0 && run < n {
+				return true
+			}
+			run = 0
+		}
+		return false
+	}
+}
 
 // ngrams returns the overlapping grams of n characters of s, skipping grams
 // containing spaces, punctuation or symbols.

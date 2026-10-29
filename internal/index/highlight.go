@@ -30,7 +30,7 @@ func newHighlighter(an *analyzer, terms []string) *highlighter {
 	for _, t := range terms {
 		var ht hlTerm
 		if an != nil {
-			for _, tok := range an.tokenize(normalize(t)) {
+			for _, tok := range an.terms(t) {
 				ht.tokens = append(ht.tokens, tok.text)
 			}
 		}

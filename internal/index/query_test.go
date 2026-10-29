@@ -132,6 +132,74 @@ func TestSearchPhraseAndTags(t *testing.T) {
 	}
 }
 
+func TestSearchShortPart(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	st, err := store.New(filepath.Join(dir, "notes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC)
+	for _, n := range []*store.Note{
+		{ID: "no", Title: "a", Body: "ノートの編集をする"},
+		{ID: "space", Title: "b", Body: "ノート 編集"},
+		{ID: "joined", Title: "c", Body: "ノート編集"},
+		{ID: "write", Title: "d", Body: "ノートを書く"},
+		{ID: "c", Title: "e", Body: "C 言語の本"},
+		{ID: "go", Title: "f", Body: "Go 言語の本"},
+	} {
+		n.Notebook, n.CreatedAt, n.UpdatedAt = store.Inbox, now, now
+		if err := st.Create(n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A phrase with a part too short for an n-gram, such as a word of two
+	// characters in the trigram mode, is searched with LIKE, not without the
+	// part. The ja mode drops particles, so it finds the phrase around them.
+	for _, tt := range []struct {
+		mode Mode
+		want map[string][]string
+	}{
+		{ModeLike, map[string][]string{`"ノート 編集"`: {"space"}, `"c 言語"`: {"c"}}},
+		{ModeBigram, map[string][]string{`"ノート 編集"`: {"space"}, `"c 言語"`: {"c"}}},
+		{ModeTrigram, map[string][]string{`"ノート 編集"`: {"space"}, `"c 言語"`: {"c"}}},
+		{ModeEn, map[string][]string{`"ノート 編集"`: {"space"}, `"c 言語"`: {"c"}, `"ノート 書"`: nil}},
+		{ModeJa, map[string][]string{`"ノート 編集"`: {"joined", "no", "space"}}},
+	} {
+		t.Run(string(tt.mode), func(t *testing.T) {
+			ix, err := Open(ctx, filepath.Join(dir, string(tt.mode)+".sqlite"), Config{Mode: tt.mode})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer ix.Close()
+			if _, err := ix.Sync(ctx, st); err != nil {
+				t.Fatal(err)
+			}
+			for q, want := range tt.want {
+				res, _, err := ix.Search(ctx, q, "", "", 10)
+				if err != nil {
+					t.Fatalf("Search(%q): %v", q, err)
+				}
+				var got []string
+				for _, s := range res {
+					got = append(got, s.ID)
+				}
+				slices.Sort(got)
+				if !slices.Equal(got, want) {
+					t.Errorf("Search(%q) = %v, want %v", q, got, want)
+				}
+			}
+			if tt.mode == ModeJa {
+				return
+			}
+			_, body := ix.Highlight(`"ノート 編集"`, "", "ノートを書く。ノート 編集")
+			if len(body) != 1 || body[0] != (Span{7, 13}) {
+				t.Errorf("Highlight = %v, want the phrase only", body)
+			}
+		})
+	}
+}
+
 func TestSearchSubNotebooks(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()

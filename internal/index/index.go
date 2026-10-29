@@ -820,7 +820,7 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, or [
 		// stop words in the ja mode, or only symbols) is searched with LIKE
 		// so that it still narrows the result.
 		if t.an != nil {
-			if tokens := t.an.analyze(term); tokens != "" {
+			if tokens := t.an.query(term); tokens != "" {
 				match = append(match, phrase(tokens))
 				continue
 			}
@@ -882,7 +882,7 @@ func (t ftsTable) phrases(group []Alt) []string {
 		if a.Kind != AltTerm {
 			return nil
 		}
-		tokens := t.an.analyze(a.Value)
+		tokens := t.an.query(a.Value)
 		if tokens == "" {
 			return nil
 		}
@@ -901,7 +901,7 @@ func (ix *Index) altCond(t ftsTable, forms map[string][]any, a Alt) (string, []a
 		return ix.markCond([]string{a.Value})
 	}
 	if t.an != nil {
-		if tokens := t.an.analyze(a.Value); tokens != "" {
+		if tokens := t.an.query(a.Value); tokens != "" {
 			return `n.seq IN (SELECT rowid FROM ` + t.name + ` WHERE ` + t.name + ` MATCH ?)`, []any{phrase(tokens)}
 		}
 	}
@@ -1038,7 +1038,7 @@ func (ix *Index) notTermCond(terms []string) (string, []any) {
 		var a []any
 		liked := false
 		for _, t := range ix.fts {
-			if tokens := t.an.analyze(terms[0]); tokens != "" {
+			if tokens := t.an.query(terms[0]); tokens != "" {
 				parts = append(parts, `n.seq IN (SELECT rowid FROM `+t.name+` WHERE `+t.name+` MATCH ?)`)
 				a = append(a, phrase(tokens))
 				continue
