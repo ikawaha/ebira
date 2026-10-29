@@ -743,17 +743,29 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	if tag != "" {
 		tags = append(tags, tag)
 	}
-	if len(terms) == 0 && len(tags) == 0 && len(query.Marks) == 0 {
+	if query.empty() && tag == "" {
 		return []*Summary{}, 0, nil
 	}
-	tagWhere, tagArgs, err := ix.tagCond(ctx, tags)
+	forms, err := ix.tagForms(ctx, len(tags)+len(query.NotTags) > 0)
 	if err != nil {
 		return nil, 0, err
 	}
-	if markWhere, markArgs := ix.markCond(query.Marks); markWhere != "" {
-		tagWhere = strings.Join(slices.DeleteFunc([]string{tagWhere, markWhere}, func(s string) bool { return s == "" }), " AND ")
-		tagArgs = append(tagArgs, markArgs...)
+	// The conditions besides the terms to find: the tags and the marks, and
+	// what to leave out.
+	var conds []string
+	var tagArgs []any
+	add := func(cond string, args []any) {
+		if cond != "" {
+			conds = append(conds, cond)
+			tagArgs = append(tagArgs, args...)
+		}
 	}
+	add(tagCond(forms, tags))
+	add(ix.markCond(query.Marks))
+	add(notTagCond(forms, query.NotTags))
+	add(ix.notMarkCond(query.NotMarks))
+	add(ix.notTermCond(query.NotTerms))
+	tagWhere := strings.Join(conds, " AND ")
 	var ids []string
 	seen := map[string]bool{}
 	tables := ix.fts
@@ -876,39 +888,115 @@ func (ix *Index) markCond(marks []string) (string, []any) {
 	return strings.Join(conds, " AND "), args
 }
 
-// tagCond returns the condition that a note has all the tags, compared by
-// tagKey, and its arguments; "" without tags.
-func (ix *Index) tagCond(ctx context.Context, tags []string) (string, []any, error) {
-	if len(tags) == 0 {
-		return "", nil, nil
+// tagForms returns the tags in the index by their keys (tagKey), as they are
+// written in the notes; none unless needed.
+func (ix *Index) tagForms(ctx context.Context, needed bool) (map[string][]any, error) {
+	if !needed {
+		return nil, nil
 	}
 	rows, err := ix.db.QueryContext(ctx, `SELECT DISTINCT tag FROM note_tags`)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	defer rows.Close()
 	byKey := map[string][]any{}
 	for rows.Next() {
 		var t string
 		if err := rows.Scan(&t); err != nil {
-			return "", nil, err
+			return nil, err
 		}
 		byKey[tagKey(t)] = append(byKey[tagKey(t)], t)
 	}
-	if err := rows.Err(); err != nil {
-		return "", nil, err
-	}
+	return byKey, rows.Err()
+}
+
+// hasTag returns the condition that a note has a tag written as one of
+// forms, and its arguments.
+func hasTag(forms []any) (string, []any) {
+	return `n.id IN (SELECT id FROM note_tags WHERE tag IN (?` + strings.Repeat(", ?", len(forms)-1) + `))`, forms
+}
+
+// tagCond returns the condition that a note has all the tags, compared by
+// tagKey with the tags in the index by their keys (see tagForms), and its
+// arguments; "" without tags.
+func tagCond(byKey map[string][]any, tags []string) (string, []any) {
 	var conds []string
 	var args []any
 	for _, t := range tags {
 		forms := byKey[tagKey(t)]
 		if len(forms) == 0 {
-			return "0", nil, nil // no note has the tag
+			return "0", nil // no note has the tag
 		}
-		conds = append(conds, `n.id IN (SELECT id FROM note_tags WHERE tag IN (?`+strings.Repeat(", ?", len(forms)-1)+`))`)
-		args = append(args, forms...)
+		cond, a := hasTag(forms)
+		conds = append(conds, cond)
+		args = append(args, a...)
 	}
-	return strings.Join(conds, " AND "), args, nil
+	return strings.Join(conds, " AND "), args
+}
+
+// notTagCond returns the condition that a note has none of the tags, as
+// tagCond compares them, and its arguments; "" without tags.
+func notTagCond(byKey map[string][]any, tags []string) (string, []any) {
+	var conds []string
+	var args []any
+	for _, t := range tags {
+		if forms := byKey[tagKey(t)]; len(forms) > 0 { // else no note has it
+			cond, a := hasTag(forms)
+			conds = append(conds, "NOT "+cond)
+			args = append(args, a...)
+		}
+	}
+	return strings.Join(conds, " AND "), args
+}
+
+// notMarkCond returns the condition that a note has none of the marks, each
+// given as markCond takes it, and its arguments; "" without marks.
+func (ix *Index) notMarkCond(marks []string) (string, []any) {
+	var conds []string
+	var args []any
+	for _, m := range marks {
+		if cond, a := ix.markCond([]string{m}); cond != "0" { // else no such mark
+			conds = append(conds, "NOT "+cond)
+			args = append(args, a...)
+		}
+	}
+	return strings.Join(conds, " AND "), args
+}
+
+// notTermCond returns the condition that a note matches none of the terms,
+// and its arguments; "" without terms. A note is left out when a search for
+// the term would find it in any of the full-text tables, or with LIKE where a
+// table finds no tokens in the term, as searchIDs matches terms.
+func (ix *Index) notTermCond(terms []string) (string, []any) {
+	var conds []string
+	var args []any
+	like := func() (string, []any) {
+		p := "%" + escapeLike(terms[0]) + "%"
+		return `n.title LIKE ? ESCAPE '\' OR n.body LIKE ? ESCAPE '\'`, []any{p, p}
+	}
+	for ; len(terms) > 0; terms = terms[1:] {
+		var parts []string
+		var a []any
+		liked := false
+		for _, t := range ix.fts {
+			if tokens := t.an.analyze(terms[0]); tokens != "" {
+				parts = append(parts, `n.seq IN (SELECT rowid FROM `+t.name+` WHERE `+t.name+` MATCH ?)`)
+				a = append(a, phrase(tokens))
+				continue
+			}
+			if !liked {
+				cond, la := like()
+				parts, a, liked = append(parts, cond), append(a, la...), true
+			}
+		}
+		if len(ix.fts) == 0 {
+			cond, la := like()
+			parts, a = append(parts, cond), append(a, la...)
+		}
+		conds = append(conds, `NOT (`+strings.Join(parts, " OR ")+`)`)
+		args = append(args, a...)
+	}
+	return strings.Join(conds, " AND "), args
 }
 
 // summaries returns the summaries of the notes ids in that order, with the

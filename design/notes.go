@@ -554,7 +554,7 @@ var _ = Service("notes", func() {
 		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it; a query of tags and marks alone lists the notes with them, last updated first", func() {
+			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first", func() {
 				MinLength(1)
 			})
 			notebookTreeFilter()
@@ -573,7 +573,7 @@ var _ = Service("notes", func() {
 			Param("tag")
 			Param("limit")
 		})
-		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks)", func() {
+		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it", func() {
 			ReadOnlyHint(true)
 		})
 	})

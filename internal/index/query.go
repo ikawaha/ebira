@@ -9,11 +9,21 @@ import (
 
 // Query is a search query, parsed: the terms to find, each a word or a phrase
 // that may hold spaces, and the tags and the marks the notes must have, each
-// mark by its ID or its name. All are combined with AND.
+// mark by its ID or its name; and the same that the notes must not have. All
+// are combined with AND.
 type Query struct {
 	Terms []string
 	Tags  []string
 	Marks []string
+
+	NotTerms []string
+	NotTags  []string
+	NotMarks []string
+}
+
+// empty reports whether q asks for nothing.
+func (q Query) empty() bool {
+	return len(q.Terms)+len(q.Tags)+len(q.Marks)+len(q.NotTerms)+len(q.NotTags)+len(q.NotMarks) == 0
 }
 
 // tagPrefix starts a tag in a query, as in tag:todo, and markPrefix a mark, as
@@ -28,7 +38,9 @@ const (
 // order; an unclosed quote runs to the end, so that a query being typed
 // still searches. tag:name, or tag:"a name" for a tag with spaces, asks for
 // notes with the tag; tag: alone is dropped, as while typing a tag. mark:red,
-// or mark:"a name", asks for notes with the mark, in the same way.
+// or mark:"a name", asks for notes with the mark, in the same way. A minus
+// before any of them, as in -word, -"a phrase", -tag:name and -mark:red, asks
+// for notes without it; a minus alone is dropped, as while typing one.
 func ParseQuery(q string) Query {
 	var res Query
 	rs := []rune(q)
@@ -45,15 +57,24 @@ func ParseQuery(q string) Query {
 			i++
 			continue
 		}
+		terms, not := &res.Terms, false
+		if rs[i] == '-' {
+			if i+1 == len(rs) || unicode.IsSpace(rs[i+1]) {
+				i++
+				continue
+			}
+			terms, not = &res.NotTerms, true
+			i++
+		}
 		if rs[i] == '"' {
 			s, next := quoted(i)
 			if s = strings.TrimSpace(s); s != "" {
-				res.Terms = append(res.Terms, s)
+				*terms = append(*terms, s)
 			}
 			i = next
 			continue
 		}
-		if prefix, list := prefixAt(rs, i, &res); prefix != "" {
+		if prefix, list := prefixAt(rs, i, &res, not); prefix != "" {
 			var value string
 			p := len([]rune(prefix))
 			next := i + p
@@ -75,19 +96,24 @@ func ParseQuery(q string) Query {
 		for j < len(rs) && !unicode.IsSpace(rs[j]) {
 			j++
 		}
-		res.Terms = append(res.Terms, string(rs[i:j]))
+		*terms = append(*terms, string(rs[i:j]))
 		i = j
 	}
 	return res
 }
 
 // prefixAt returns the prefix of a tag or a mark that starts at i, ignoring
-// case, and the list of res its value goes to; "" for neither.
-func prefixAt(rs []rune, i int, res *Query) (string, *[]string) {
+// case, and the list of res its value goes to, those to leave out with not;
+// "" for neither.
+func prefixAt(rs []rune, i int, res *Query, not bool) (string, *[]string) {
+	tags, marks := &res.Tags, &res.Marks
+	if not {
+		tags, marks = &res.NotTags, &res.NotMarks
+	}
 	for _, x := range []struct {
 		prefix string
 		list   *[]string
-	}{{tagPrefix, &res.Tags}, {markPrefix, &res.Marks}} {
+	}{{tagPrefix, tags}, {markPrefix, marks}} {
 		if p := len([]rune(x.prefix)); i+p <= len(rs) && strings.EqualFold(string(rs[i:i+p]), x.prefix) {
 			return x.prefix, x.list
 		}

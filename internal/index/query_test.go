@@ -66,6 +66,15 @@ func TestSearchPhraseAndTags(t *testing.T) {
 		{q: "tag:todo tag:travel", want: []string{"ny"}}, // tags alone, all of them
 		{q: "tag:TRAVEL", want: []string{"ja", "ny"}},    // case and width do not matter
 		{q: "tag:nothing york", want: nil},
+		// Minus leaves notes out: terms, phrases, tags and marks.
+		{q: "york -pizza", want: []string{"apart"}},
+		{q: `york -"new york"`, want: []string{"apart"}},
+		{q: "-york", want: []string{"ja"}}, // left out alone, all the others
+		{q: "-東京", want: []string{"apart", "ny"}},
+		{q: "-tag:TRAVEL", want: []string{"apart"}},
+		{q: "tag:todo -tag:travel", want: []string{"apart"}},
+		{q: "york -tag:nothing -mark:red", want: []string{"apart", "ny"}}, // nothing to leave out
+		{q: "york -", want: []string{"apart", "ny"}},                      // a minus alone, as while typing
 	}
 	db := filepath.Join(dir, "index.sqlite")
 	for _, mode := range []Mode{ModeLike, ModeBigram, ModeTrigram, ModeEn, ModeJa} {
@@ -165,5 +174,18 @@ func TestSearchSubNotebooks(t *testing.T) {
 	want := []TagCount{{"done", 1}, {"log", 2}}
 	if !slices.Equal(tags, want) {
 		t.Errorf("Tags(a_b) = %v, want %v", tags, want)
+	}
+}
+
+func TestParseQueryNot(t *testing.T) {
+	got := ParseQuery(`a -b -"c d" -tag:e -TAG:"f g" -mark:red - x-y -`)
+	want := Query{
+		Terms:    []string{"a", "x-y"},
+		NotTerms: []string{"b", "c d"},
+		NotTags:  []string{"e", "f g"},
+		NotMarks: []string{"red"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseQuery = %+v, want %+v", got, want)
 	}
 }

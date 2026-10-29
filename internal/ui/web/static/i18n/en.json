@@ -234,6 +234,7 @@
   "markNamesTitle": "Name the marks, which says what they mean; kept with the notes",
   "markNamesHint": "Say what each mark means, such as important for red. The names are kept with the notes, and mark:name finds the notes with one.",
   "searchHelpMark": "Notes with the mark, by its color or symbol (red, star…) or its name",
+  "searchHelpNot": "A minus leaves out the notes with it: a word, a \"phrase\", a tag or a mark. Alone, the notes without it, last updated first",
   "mark_red": "Red",
   "mark_orange": "Orange",
   "mark_yellow": "Yellow",

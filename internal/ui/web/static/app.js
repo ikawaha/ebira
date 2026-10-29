@@ -3886,8 +3886,9 @@ $("search-form").addEventListener("submit", (e) => e.preventDefault());
 // search until it is complete, so that the list does not empty meanwhile.
 
 // TAG_AT_CURSOR matches a tag being typed at the end of the text before the
-// cursor: tag:name, or tag:"name for one with spaces.
-const TAG_AT_CURSOR = /(^|\s)tag:(?:"([^"]*)|([^\s"]*))$/i;
+// cursor: tag:name, or tag:"name for one with spaces, after a minus to leave
+// the tag out.
+const TAG_AT_CURSOR = /(^|\s)(-?)tag:(?:"([^"]*)|([^\s"]*))$/i;
 
 // tagKey compares tags as the server does: NFKC and lower case.
 const tagKey = (s) => s.normalize("NFKC").toLowerCase();
@@ -3896,14 +3897,15 @@ let suggested = []; // the tags offered
 let suggestIndex = -1; // the one chosen with the arrows
 let notebookTags = { notebook: null, tags: [] }; // the tags of the notebook shown
 
-// typedTag returns the tag being typed at the cursor: where its word starts,
-// and the text after tag:; or null.
+// typedTag returns the tag being typed at the cursor: where its word starts
+// (at tag:, after the minus), whether a minus is before it, and the text
+// after tag:; or null.
 function typedTag() {
   const q = $("q");
   const before = q.value.slice(0, q.selectionStart ?? q.value.length);
   const m = TAG_AT_CURSOR.exec(before);
   if (!m) return null;
-  return { start: m.index + m[1].length, prefix: m[2] ?? m[3] ?? "" };
+  return { start: m.index + m[1].length + m[2].length, minus: m[2] !== "", prefix: m[3] ?? m[4] ?? "" };
 }
 
 // tagChoices returns the tags to offer: those of the notebook shown, else all.
@@ -3926,7 +3928,7 @@ function searchQuery() {
   const q = $("q").value;
   const typed = typedTag();
   if (!typed || state.tags.some((tg) => tagKey(tg.name) === tagKey(typed.prefix))) return q.trim();
-  return (q.slice(0, typed.start) + q.slice($("q").selectionStart ?? q.length)).trim();
+  return (q.slice(0, typed.start - (typed.minus ? 1 : 0)) + q.slice($("q").selectionStart ?? q.length)).trim();
 }
 
 async function suggestTags() {

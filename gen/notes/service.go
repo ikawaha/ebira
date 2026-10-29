@@ -989,8 +989,10 @@ type SearchPayload struct {
 	// quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks
 	// for notes with the tag (case and width do not matter), and mark:red, or
 	// mark:"a name", for notes with the mark, by its ID or the name the user gave
-	// it; a query of tags and marks alone lists the notes with them, last updated
-	// first
+	// it. A minus before a term, a phrase, a tag or a mark, as in -word, -"two
+	// words", -tag:name and -mark:red, leaves out the notes with it. A query of
+	// tags and marks alone, or of what to leave out alone, lists the notes found,
+	// last updated first
 	Q string
 	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
 	// except the trash
