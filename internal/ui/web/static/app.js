@@ -2812,6 +2812,36 @@ function loadEditor() {
   return editorReady;
 }
 
+// killed is what Ctrl+K last deleted, for Ctrl+Y; killedDoc is the document
+// right after it, to tell that the next Ctrl+K follows on and adds to it.
+let killed = "";
+let killedDoc = null;
+
+// killLine deletes the selection, or up to the end of the line, or the line
+// break at its end, as macOS does in a text field. The keymap of CodeMirror has
+// Ctrl+K too, but it keeps nothing for Ctrl+Y, and the browser's own Ctrl+Y
+// knows nothing of what the editor deleted.
+function killLine(view) {
+  const { state } = view;
+  const { from, to, empty } = state.selection.main;
+  const end = empty ? state.doc.lineAt(from).to : to;
+  const until = empty && end === from ? Math.min(from + 1, state.doc.length) : end;
+  if (until === from) return true;
+  const text = state.sliceDoc(from, until);
+  killed = state.doc === killedDoc ? killed + text : text;
+  view.dispatch({ changes: { from, to: until }, userEvent: "delete.cut", scrollIntoView: true });
+  killedDoc = view.state.doc;
+  return true;
+}
+
+// yank puts back what Ctrl+K deleted. With nothing deleted, it leaves the key
+// to the browser, which may hold something deleted in another field.
+function yank(view) {
+  if (!killed) return false;
+  view.dispatch(view.state.replaceSelection(killed), { userEvent: "input.paste", scrollIntoView: true });
+  return true;
+}
+
 // bodyExtensions returns the extensions of the editor of the body: Markdown
 // with its code blocks colored, Tab and Shift+Tab to indent, Enter to continue
 // a list or a quote, undo history, and images pasted or dropped.
@@ -2825,7 +2855,15 @@ function bodyExtensions() {
     CM.history(),
     CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.codeLanguages }),
     // Tab takes the completion offered, before it indents.
-    CM.keymap.of([{ key: "Tab", run: CM.acceptCompletion }, ...CM.defaultKeymap, ...CM.historyKeymap, CM.indentWithTab]),
+    CM.keymap.of([
+      { key: "Tab", run: CM.acceptCompletion },
+      // On other systems these keys mean something else: Ctrl+Y is redo.
+      { mac: "Ctrl-k", run: killLine },
+      { mac: "Ctrl-y", run: yank },
+      ...CM.defaultKeymap,
+      ...CM.historyKeymap,
+      CM.indentWithTab,
+    ]),
     CM.autocompletion({
       override: [emojiCompletion],
       icons: false,
