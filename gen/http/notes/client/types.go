@@ -63,8 +63,47 @@ type TrashNotesRequestBody struct {
 // MoveRequestBody is the type of the "notes" service "move" endpoint HTTP
 // request body.
 type MoveRequestBody struct {
-	// ID of the note of the same notebook to put the note after; omit to put it
-	// first
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string `form:"after,omitempty" json:"after,omitempty" xml:"after,omitempty"`
+}
+
+// CreateSeparatorRequestBody is the type of the "notes" service
+// "create_separator" endpoint HTTP request body.
+type CreateSeparatorRequestBody struct {
+	// Notebook to put the separator in; not the trash
+	Notebook string `form:"notebook" json:"notebook" xml:"notebook"`
+	// Heading; omit for none
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string `form:"date,omitempty" json:"date,omitempty" xml:"date,omitempty"`
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string `form:"color,omitempty" json:"color,omitempty" xml:"color,omitempty"`
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string `form:"after,omitempty" json:"after,omitempty" xml:"after,omitempty"`
+}
+
+// UpdateSeparatorRequestBody is the type of the "notes" service
+// "update_separator" endpoint HTTP request body.
+type UpdateSeparatorRequestBody struct {
+	// Notebook of the separator
+	Notebook string `form:"notebook" json:"notebook" xml:"notebook"`
+	// Heading; omit for none
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string `form:"date,omitempty" json:"date,omitempty" xml:"date,omitempty"`
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string `form:"color,omitempty" json:"color,omitempty" xml:"color,omitempty"`
+}
+
+// MoveSeparatorRequestBody is the type of the "notes" service "move_separator"
+// endpoint HTTP request body.
+type MoveSeparatorRequestBody struct {
+	// Notebook of the separator
+	Notebook string `form:"notebook" json:"notebook" xml:"notebook"`
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
 	After *string `form:"after,omitempty" json:"after,omitempty" xml:"after,omitempty"`
 }
 
@@ -179,6 +218,10 @@ type ListResponseBody struct {
 	Total *int `form:"total,omitempty" json:"total,omitempty" xml:"total,omitempty"`
 	// Notes from offset, at most limit; fewer than total when the list goes on
 	Notes []*NoteSummaryResponseBody `form:"notes,omitempty" json:"notes,omitempty" xml:"notes,omitempty"`
+	// Separators between the notes, in the manual order, each before the note
+	// named by its before: only for a notebook listed in the order sort without a
+	// tag, and then all of them, regardless of limit and offset
+	Separators []*SeparatorResponseBody `form:"separators,omitempty" json:"separators,omitempty" xml:"separators,omitempty"`
 }
 
 // GetResponseBody is the type of the "notes" service "get" endpoint HTTP
@@ -370,6 +413,60 @@ type MoveResponseBody struct {
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
 	BodyHighlights []*TextRangeResponseBody `form:"body_highlights,omitempty" json:"body_highlights,omitempty" xml:"body_highlights,omitempty"`
+}
+
+// CreateSeparatorResponseBody is the type of the "notes" service
+// "create_separator" endpoint HTTP response body.
+type CreateSeparatorResponseBody struct {
+	// Separator ID
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook the separator is in
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Heading; absent for none
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `form:"date,omitempty" json:"date,omitempty" xml:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `form:"color,omitempty" json:"color,omitempty" xml:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `form:"before,omitempty" json:"before,omitempty" xml:"before,omitempty"`
+}
+
+// UpdateSeparatorResponseBody is the type of the "notes" service
+// "update_separator" endpoint HTTP response body.
+type UpdateSeparatorResponseBody struct {
+	// Separator ID
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook the separator is in
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Heading; absent for none
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `form:"date,omitempty" json:"date,omitempty" xml:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `form:"color,omitempty" json:"color,omitempty" xml:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `form:"before,omitempty" json:"before,omitempty" xml:"before,omitempty"`
+}
+
+// MoveSeparatorResponseBody is the type of the "notes" service
+// "move_separator" endpoint HTTP response body.
+type MoveSeparatorResponseBody struct {
+	// Separator ID
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook the separator is in
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Heading; absent for none
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `form:"date,omitempty" json:"date,omitempty" xml:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `form:"color,omitempty" json:"color,omitempty" xml:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `form:"before,omitempty" json:"before,omitempty" xml:"before,omitempty"`
 }
 
 // SetMarksResponseBody is the type of the "notes" service "set_marks" endpoint
@@ -617,7 +714,7 @@ type CheckFilesResponseBody struct {
 type EventsResponseBody struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed
+	// order changed, or the separators of a notebook
 	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
 	// Note ID (absent for ready and notebooks)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
@@ -1406,6 +1503,262 @@ type MoveUnauthorizedResponseBody struct {
 // MoveVerificationRequiredResponseBody is the type of the "notes" service
 // "move" endpoint HTTP response body for the "verification_required" error.
 type MoveVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// CreateSeparatorNotFoundResponseBody is the type of the "notes" service
+// "create_separator" endpoint HTTP response body for the "not_found" error.
+type CreateSeparatorNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// CreateSeparatorBadRequestResponseBody is the type of the "notes" service
+// "create_separator" endpoint HTTP response body for the "bad_request" error.
+type CreateSeparatorBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// CreateSeparatorUnauthorizedResponseBody is the type of the "notes" service
+// "create_separator" endpoint HTTP response body for the "unauthorized" error.
+type CreateSeparatorUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// CreateSeparatorVerificationRequiredResponseBody is the type of the "notes"
+// service "create_separator" endpoint HTTP response body for the
+// "verification_required" error.
+type CreateSeparatorVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UpdateSeparatorNotFoundResponseBody is the type of the "notes" service
+// "update_separator" endpoint HTTP response body for the "not_found" error.
+type UpdateSeparatorNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UpdateSeparatorUnauthorizedResponseBody is the type of the "notes" service
+// "update_separator" endpoint HTTP response body for the "unauthorized" error.
+type UpdateSeparatorUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UpdateSeparatorVerificationRequiredResponseBody is the type of the "notes"
+// service "update_separator" endpoint HTTP response body for the
+// "verification_required" error.
+type UpdateSeparatorVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeleteSeparatorNotFoundResponseBody is the type of the "notes" service
+// "delete_separator" endpoint HTTP response body for the "not_found" error.
+type DeleteSeparatorNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeleteSeparatorUnauthorizedResponseBody is the type of the "notes" service
+// "delete_separator" endpoint HTTP response body for the "unauthorized" error.
+type DeleteSeparatorUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeleteSeparatorVerificationRequiredResponseBody is the type of the "notes"
+// service "delete_separator" endpoint HTTP response body for the
+// "verification_required" error.
+type DeleteSeparatorVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveSeparatorNotFoundResponseBody is the type of the "notes" service
+// "move_separator" endpoint HTTP response body for the "not_found" error.
+type MoveSeparatorNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveSeparatorBadRequestResponseBody is the type of the "notes" service
+// "move_separator" endpoint HTTP response body for the "bad_request" error.
+type MoveSeparatorBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveSeparatorUnauthorizedResponseBody is the type of the "notes" service
+// "move_separator" endpoint HTTP response body for the "unauthorized" error.
+type MoveSeparatorUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MoveSeparatorVerificationRequiredResponseBody is the type of the "notes"
+// service "move_separator" endpoint HTTP response body for the
+// "verification_required" error.
+type MoveSeparatorVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -2997,6 +3350,23 @@ type TextRangeResponseBody struct {
 	End *int `form:"end,omitempty" json:"end,omitempty" xml:"end,omitempty"`
 }
 
+// SeparatorResponseBody is used to define fields on response body types.
+type SeparatorResponseBody struct {
+	// Separator ID
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook the separator is in
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Heading; absent for none
+	Title *string `form:"title,omitempty" json:"title,omitempty" xml:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `form:"date,omitempty" json:"date,omitempty" xml:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `form:"color,omitempty" json:"color,omitempty" xml:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `form:"before,omitempty" json:"before,omitempty" xml:"before,omitempty"`
+}
+
 // NotebookResponse is used to define fields on response body types.
 type NotebookResponse struct {
 	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
@@ -3246,6 +3616,41 @@ func NewMoveRequestBody(p *notes.MovePayload) *MoveRequestBody {
 	return body
 }
 
+// NewCreateSeparatorRequestBody builds the HTTP request body from the payload
+// of the "create_separator" endpoint of the "notes" service.
+func NewCreateSeparatorRequestBody(p *notes.CreateSeparatorPayload) *CreateSeparatorRequestBody {
+	body := &CreateSeparatorRequestBody{
+		Notebook: p.Notebook,
+		Title:    p.Title,
+		Date:     p.Date,
+		Color:    p.Color,
+		After:    p.After,
+	}
+	return body
+}
+
+// NewUpdateSeparatorRequestBody builds the HTTP request body from the payload
+// of the "update_separator" endpoint of the "notes" service.
+func NewUpdateSeparatorRequestBody(p *notes.UpdateSeparatorPayload) *UpdateSeparatorRequestBody {
+	body := &UpdateSeparatorRequestBody{
+		Notebook: p.Notebook,
+		Title:    p.Title,
+		Date:     p.Date,
+		Color:    p.Color,
+	}
+	return body
+}
+
+// NewMoveSeparatorRequestBody builds the HTTP request body from the payload of
+// the "move_separator" endpoint of the "notes" service.
+func NewMoveSeparatorRequestBody(p *notes.MoveSeparatorPayload) *MoveSeparatorRequestBody {
+	body := &MoveSeparatorRequestBody{
+		Notebook: p.Notebook,
+		After:    p.After,
+	}
+	return body
+}
+
 // NewSetMarksRequestBody builds the HTTP request body from the payload of the
 // "set_marks" endpoint of the "notes" service.
 func NewSetMarksRequestBody(p *notes.SetMarksPayload) *SetMarksRequestBody {
@@ -3369,6 +3774,16 @@ func NewListNoteListOK(body *ListResponseBody) *notes.NoteList {
 			continue
 		}
 		v.Notes[i] = unmarshalNoteSummaryResponseBodyToNotesNoteSummary(val)
+	}
+	if body.Separators != nil {
+		v.Separators = make([]*notes.Separator, len(body.Separators))
+		for i, val := range body.Separators {
+			if val == nil {
+				v.Separators[i] = nil
+				continue
+			}
+			v.Separators[i] = unmarshalSeparatorResponseBodyToNotesSeparator(val)
+		}
 	}
 
 	return v
@@ -4212,6 +4627,261 @@ func NewMoveUnauthorized(body *MoveUnauthorizedResponseBody) *goa.ServiceError {
 // NewMoveVerificationRequired builds a notes service move endpoint
 // verification_required error.
 func NewMoveVerificationRequired(body *MoveVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewCreateSeparatorSeparatorCreated builds a "notes" service
+// "create_separator" endpoint result from a HTTP "Created" response.
+func NewCreateSeparatorSeparatorCreated(body *CreateSeparatorResponseBody) *notes.Separator {
+	v := &notes.Separator{
+		ID:       *body.ID,
+		Notebook: *body.Notebook,
+		Title:    body.Title,
+		Date:     body.Date,
+		Color:    body.Color,
+		Before:   body.Before,
+	}
+
+	return v
+}
+
+// NewCreateSeparatorNotFound builds a notes service create_separator endpoint
+// not_found error.
+func NewCreateSeparatorNotFound(body *CreateSeparatorNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewCreateSeparatorBadRequest builds a notes service create_separator
+// endpoint bad_request error.
+func NewCreateSeparatorBadRequest(body *CreateSeparatorBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewCreateSeparatorUnauthorized builds a notes service create_separator
+// endpoint unauthorized error.
+func NewCreateSeparatorUnauthorized(body *CreateSeparatorUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewCreateSeparatorVerificationRequired builds a notes service
+// create_separator endpoint verification_required error.
+func NewCreateSeparatorVerificationRequired(body *CreateSeparatorVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUpdateSeparatorSeparatorOK builds a "notes" service "update_separator"
+// endpoint result from a HTTP "OK" response.
+func NewUpdateSeparatorSeparatorOK(body *UpdateSeparatorResponseBody) *notes.Separator {
+	v := &notes.Separator{
+		ID:       *body.ID,
+		Notebook: *body.Notebook,
+		Title:    body.Title,
+		Date:     body.Date,
+		Color:    body.Color,
+		Before:   body.Before,
+	}
+
+	return v
+}
+
+// NewUpdateSeparatorNotFound builds a notes service update_separator endpoint
+// not_found error.
+func NewUpdateSeparatorNotFound(body *UpdateSeparatorNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUpdateSeparatorUnauthorized builds a notes service update_separator
+// endpoint unauthorized error.
+func NewUpdateSeparatorUnauthorized(body *UpdateSeparatorUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUpdateSeparatorVerificationRequired builds a notes service
+// update_separator endpoint verification_required error.
+func NewUpdateSeparatorVerificationRequired(body *UpdateSeparatorVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeleteSeparatorNotFound builds a notes service delete_separator endpoint
+// not_found error.
+func NewDeleteSeparatorNotFound(body *DeleteSeparatorNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeleteSeparatorUnauthorized builds a notes service delete_separator
+// endpoint unauthorized error.
+func NewDeleteSeparatorUnauthorized(body *DeleteSeparatorUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeleteSeparatorVerificationRequired builds a notes service
+// delete_separator endpoint verification_required error.
+func NewDeleteSeparatorVerificationRequired(body *DeleteSeparatorVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveSeparatorSeparatorOK builds a "notes" service "move_separator"
+// endpoint result from a HTTP "OK" response.
+func NewMoveSeparatorSeparatorOK(body *MoveSeparatorResponseBody) *notes.Separator {
+	v := &notes.Separator{
+		ID:       *body.ID,
+		Notebook: *body.Notebook,
+		Title:    body.Title,
+		Date:     body.Date,
+		Color:    body.Color,
+		Before:   body.Before,
+	}
+
+	return v
+}
+
+// NewMoveSeparatorNotFound builds a notes service move_separator endpoint
+// not_found error.
+func NewMoveSeparatorNotFound(body *MoveSeparatorNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveSeparatorBadRequest builds a notes service move_separator endpoint
+// bad_request error.
+func NewMoveSeparatorBadRequest(body *MoveSeparatorBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveSeparatorUnauthorized builds a notes service move_separator endpoint
+// unauthorized error.
+func NewMoveSeparatorUnauthorized(body *MoveSeparatorUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMoveSeparatorVerificationRequired builds a notes service move_separator
+// endpoint verification_required error.
+func NewMoveSeparatorVerificationRequired(body *MoveSeparatorVerificationRequiredResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -5872,6 +6542,13 @@ func ValidateListResponseBody(body *ListResponseBody) (err error) {
 			}
 		}
 	}
+	for _, e := range body.Separators {
+		if e != nil {
+			if err2 := validateSeparatorResponseBody(e, "body.separators[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	return
 }
 
@@ -6253,6 +6930,93 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return
+}
+
+// ValidateCreateSeparatorResponseBody runs the validations defined on
+// CreateSeparatorResponseBody
+func ValidateCreateSeparatorResponseBody(body *CreateSeparatorResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateUpdateSeparatorResponseBody runs the validations defined on
+// UpdateSeparatorResponseBody
+func ValidateUpdateSeparatorResponseBody(body *UpdateSeparatorResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateMoveSeparatorResponseBody runs the validations defined on
+// MoveSeparatorResponseBody
+func ValidateMoveSeparatorResponseBody(body *MoveSeparatorResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }
@@ -7668,6 +8432,342 @@ func ValidateMoveUnauthorizedResponseBody(body *MoveUnauthorizedResponseBody) (e
 // ValidateMoveVerificationRequiredResponseBody runs the validations defined on
 // MoveVerificationRequiredResponseBody
 func ValidateMoveVerificationRequiredResponseBody(body *MoveVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateCreateSeparatorNotFoundResponseBody runs the validations defined on
+// CreateSeparatorNotFoundResponseBody
+func ValidateCreateSeparatorNotFoundResponseBody(body *CreateSeparatorNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateCreateSeparatorBadRequestResponseBody runs the validations defined
+// on CreateSeparatorBadRequestResponseBody
+func ValidateCreateSeparatorBadRequestResponseBody(body *CreateSeparatorBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateCreateSeparatorUnauthorizedResponseBody runs the validations defined
+// on CreateSeparatorUnauthorizedResponseBody
+func ValidateCreateSeparatorUnauthorizedResponseBody(body *CreateSeparatorUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateCreateSeparatorVerificationRequiredResponseBody runs the validations
+// defined on CreateSeparatorVerificationRequiredResponseBody
+func ValidateCreateSeparatorVerificationRequiredResponseBody(body *CreateSeparatorVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUpdateSeparatorNotFoundResponseBody runs the validations defined on
+// UpdateSeparatorNotFoundResponseBody
+func ValidateUpdateSeparatorNotFoundResponseBody(body *UpdateSeparatorNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUpdateSeparatorUnauthorizedResponseBody runs the validations defined
+// on UpdateSeparatorUnauthorizedResponseBody
+func ValidateUpdateSeparatorUnauthorizedResponseBody(body *UpdateSeparatorUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUpdateSeparatorVerificationRequiredResponseBody runs the validations
+// defined on UpdateSeparatorVerificationRequiredResponseBody
+func ValidateUpdateSeparatorVerificationRequiredResponseBody(body *UpdateSeparatorVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeleteSeparatorNotFoundResponseBody runs the validations defined on
+// DeleteSeparatorNotFoundResponseBody
+func ValidateDeleteSeparatorNotFoundResponseBody(body *DeleteSeparatorNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeleteSeparatorUnauthorizedResponseBody runs the validations defined
+// on DeleteSeparatorUnauthorizedResponseBody
+func ValidateDeleteSeparatorUnauthorizedResponseBody(body *DeleteSeparatorUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeleteSeparatorVerificationRequiredResponseBody runs the validations
+// defined on DeleteSeparatorVerificationRequiredResponseBody
+func ValidateDeleteSeparatorVerificationRequiredResponseBody(body *DeleteSeparatorVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveSeparatorNotFoundResponseBody runs the validations defined on
+// MoveSeparatorNotFoundResponseBody
+func ValidateMoveSeparatorNotFoundResponseBody(body *MoveSeparatorNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveSeparatorBadRequestResponseBody runs the validations defined on
+// MoveSeparatorBadRequestResponseBody
+func ValidateMoveSeparatorBadRequestResponseBody(body *MoveSeparatorBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveSeparatorUnauthorizedResponseBody runs the validations defined
+// on MoveSeparatorUnauthorizedResponseBody
+func ValidateMoveSeparatorUnauthorizedResponseBody(body *MoveSeparatorUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMoveSeparatorVerificationRequiredResponseBody runs the validations
+// defined on MoveSeparatorVerificationRequiredResponseBody
+func ValidateMoveSeparatorVerificationRequiredResponseBody(body *MoveSeparatorVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -9855,6 +10955,63 @@ func validateTextRangeResponseBody(body *TextRangeResponseBody, path string) (er
 	}
 	if body.End == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("end", path))
+	}
+	return
+}
+
+// ValidateSeparatorResponseBody runs the validations defined on Separator
+func ValidateSeparatorResponseBody(body *SeparatorResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// validateSeparatorResponseBody checks Separator and reports errors using the
+// path supplied by its caller
+func validateSeparatorResponseBody(body *SeparatorResponseBody, path string) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", path))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", path))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }

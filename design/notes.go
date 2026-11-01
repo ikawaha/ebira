@@ -244,7 +244,50 @@ var importContent = func() {
 var NoteList = Type("NoteList", func() {
 	RequiredAttribute("total", Int, "Number of notes in the whole list, regardless of limit and offset")
 	RequiredAttribute("notes", ArrayOf(NoteSummary), "Notes from offset, at most limit; fewer than total when the list goes on")
+	Attribute("separators", ArrayOf(Separator), "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset")
 })
+
+// separatorIDDSL is the pattern and an example of a separator ID. It fits
+// the pattern of note IDs, so that after takes a note or a separator.
+var separatorIDDSL = func() {
+	Pattern(`^sep-[a-z0-9_-]{1,60}$`)
+	Example("sep-3f9a1c2b7d04")
+}
+
+// Separator is a bar between the notes of a notebook in the manual order.
+var Separator = Type("Separator", func() {
+	Description("A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.")
+	RequiredAttribute("id", String, "Separator ID", separatorIDDSL)
+	RequiredAttribute("notebook", String, "Notebook the separator is in", notebookIDDSL)
+	Attribute("title", String, "Heading; absent for none", func() {
+		Example("October")
+	})
+	Attribute("date", String, "Date to show, as YYYY-MM-DD; absent for none. It does not change the order", dateDSL)
+	Attribute("color", String, "Color of the bar, one of the color marks; absent for the plain one", separatorColorDSL)
+	Attribute("before", String, "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note", noteIDDSL)
+})
+
+// separatorTextDSL is the heading, the date and the color of a separator in a
+// payload.
+var separatorTextDSL = func() {
+	Attribute("title", String, "Heading; omit for none", func() {
+		MaxLength(200)
+		Example("October")
+	})
+	Attribute("date", String, "Date to show, as YYYY-MM-DD; omit for none", dateDSL)
+	Attribute("color", String, "Color of the bar, one of the color marks; omit for the plain one", separatorColorDSL)
+}
+
+// separatorColorDSL is the colors of a separator, as store.SeparatorColors:
+// those of the color marks.
+var separatorColorDSL = func() {
+	Enum("red", "orange", "yellow", "green", "blue", "purple", "gray")
+	Example("blue")
+}
+
+// separatorAfterDesc is the description of where a payload puts a note or a
+// separator.
+const separatorAfterDesc = "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 
 var SearchResult = Type("SearchResult", func() {
 	RequiredAttribute("mode", String, "Search mode used", func() {
@@ -256,7 +299,7 @@ var SearchResult = Type("SearchResult", func() {
 
 // NoteEvent notifies that a note was changed by the API, a file edit or a git pull.
 var NoteEvent = Type("NoteEvent", func() {
-	RequiredAttribute("type", String, "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed", func() {
+	RequiredAttribute("type", String, "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook", func() {
 		Enum("ready", "created", "updated", "deleted", "notebooks")
 	})
 	Attribute("id", String, "Note ID (absent for ready and notebooks)", noteIDDSL)
@@ -602,18 +645,89 @@ var _ = Service("notes", func() {
 	// move is for people, who arrange notes by hand; it is not an MCP tool.
 	// AI clients reorder the notes of collab notebooks only, with move_ai_note.
 	Method("move", func() {
-		Description("Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
+		Description("Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
-			Attribute("after", String, "ID of the note of the same notebook to put the note after; omit to put it first", noteIDDSL)
+			Attribute("after", String, separatorAfterDesc, noteIDDSL)
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist")
-		Error("bad_request", ErrorResult, "The note is in the trash, or after is not another note of its notebook")
+		Error("bad_request", ErrorResult, "The note is in the trash, or after is not another note or a separator of its notebook")
 		HTTP(func() {
 			POST("/notes/{id}/move")
 			Response(StatusOK, func() { Header("version:ETag") })
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	// Separators are arranged by people with these methods, and by AI
+	// clients in collab notebooks with the *_ai_separator tools.
+	Method("create_separator", func() {
+		Description("Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("notebook", String, "Notebook to put the separator in; not the trash", notebookIDDSL)
+			separatorTextDSL()
+			Attribute("after", String, separatorAfterDesc, noteIDDSL)
+		})
+		Result(Separator)
+		Error("not_found", ErrorResult, "The notebook does not exist")
+		Error("bad_request", ErrorResult, "The notebook is the trash, or after is not a note or a separator of the notebook")
+		HTTP(func() {
+			POST("/separators")
+			Response(StatusCreated)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("update_separator", func() {
+		Description("Replace the heading, the date and the color of a separator; an omitted one is taken away.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, "Separator ID", separatorIDDSL)
+			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
+			separatorTextDSL()
+		})
+		Result(Separator)
+		Error("not_found", ErrorResult, "The separator does not exist")
+		HTTP(func() {
+			PUT("/separators/{id}")
+			Response("not_found", StatusNotFound)
+		})
+	})
+
+	Method("delete_separator", func() {
+		Description("Remove a separator. It does not go to the trash.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, "Separator ID", separatorIDDSL)
+			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
+		})
+		Error("not_found", ErrorResult, "The separator does not exist")
+		HTTP(func() {
+			DELETE("/separators/{id}")
+			Param("notebook")
+			Response(StatusNoContent)
+			Response("not_found", StatusNotFound)
+		})
+	})
+
+	Method("move_separator", func() {
+		Description("Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, "Separator ID", separatorIDDSL)
+			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
+			Attribute("after", String, separatorAfterDesc, noteIDDSL)
+		})
+		Result(Separator)
+		Error("not_found", ErrorResult, "The separator does not exist")
+		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook")
+		HTTP(func() {
+			POST("/separators/{id}/move")
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
 		})
@@ -971,16 +1085,72 @@ var _ = Service("notes", func() {
 
 	Method("move_ai_note", func() {
 		NoSecurity()
-		Description("Put a note of a notebook of the collab kind right after another note of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
+		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
-			Attribute("after", String, "ID of the note of the same notebook to put the note after; omit to put it first", noteIDDSL)
+			Attribute("after", String, separatorAfterDesc, noteIDDSL)
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "after is not another note of the note's notebook")
+		Error("bad_request", ErrorResult, "after is not another note or a separator of the note's notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note of the notebook, or first")
+		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first")
+	})
+
+	Method("create_ai_separator", func() {
+		NoSecurity()
+		Description("Put a new separator between the notes of a notebook of the collab kind in the manual order (the order sort of list_notes), right after a note or a separator, or first when after is omitted. A separator is a bar with a heading, a date and a color to show, to arrange the notes; it has no body and is not a note. list_notes shows the separators of a notebook in the order sort.")
+		Payload(func() {
+			RequiredAttribute("notebook", String, "ID of a notebook of the collab kind", notebookIDDSL)
+			separatorTextDSL()
+			Attribute("after", String, separatorAfterDesc, noteIDDSL)
+		})
+		Result(Separator)
+		Error("not_found", ErrorResult, "The notebook does not exist, or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "after is not a note or a separator of the notebook")
+		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
+		Tool("create_ai_separator", "Put a separator (a bar with a heading, a date and a color, no body) between the notes of a notebook shared with AI (kind collab), after a note or a separator, or first")
+	})
+
+	Method("update_ai_separator", func() {
+		NoSecurity()
+		Description("Replace the heading, the date and the color of a separator in a notebook of the collab kind; an omitted one is taken away.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Separator ID, from list_notes", separatorIDDSL)
+			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
+			separatorTextDSL()
+		})
+		Result(Separator)
+		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
+		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
+		Tool("update_ai_separator", "Replace the heading, the date and the color of a separator in a notebook shared with AI (kind collab); an omitted one is taken away")
+	})
+
+	Method("delete_ai_separator", func() {
+		NoSecurity()
+		Description("Remove a separator of a notebook of the collab kind. It does not go to the trash.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Separator ID, from list_notes", separatorIDDSL)
+			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
+		})
+		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
+		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
+		Tool("delete_ai_separator", "Remove a separator in a notebook shared with AI (kind collab)")
+	})
+
+	Method("move_ai_separator", func() {
+		NoSecurity()
+		Description("Put a separator of a notebook of the collab kind right after a note or another separator of the notebook in the manual order, or first when after is omitted.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Separator ID, from list_notes", separatorIDDSL)
+			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
+			Attribute("after", String, separatorAfterDesc, noteIDDSL)
+		})
+		Result(Separator)
+		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook")
+		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
+		Tool("move_ai_separator", "Reorder a separator in a notebook shared with AI (kind collab): put it after a note or another separator, or first")
 	})
 
 	Method("create_ai_notebook", func() {

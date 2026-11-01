@@ -211,6 +211,61 @@ func ValidateCreateAiNotebookResultTransport(body *CreateAiNotebookResultTranspo
 	return
 }
 
+// ValidateCreateAiSeparatorPayloadTransport runs the validations defined on CreateAiSeparatorPayloadTransport.
+func ValidateCreateAiSeparatorPayloadTransport(body *CreateAiSeparatorPayloadTransport) (err error) {
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Title != nil {
+		if utf8.RuneCountInString(*body.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 200, false))
+		}
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.After != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *body.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateCreateAiSeparatorResultTransport runs the validations defined on CreateAiSeparatorResultTransport.
+func ValidateCreateAiSeparatorResultTransport(body *CreateAiSeparatorResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
 // ValidateDeleteAiNotePayloadTransport runs the validations defined on DeleteAiNotePayloadTransport.
 func ValidateDeleteAiNotePayloadTransport(body *DeleteAiNotePayloadTransport) (err error) {
 	if body.ID == nil {
@@ -221,6 +276,23 @@ func ValidateDeleteAiNotePayloadTransport(body *DeleteAiNotePayloadTransport) (e
 	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateDeleteAiSeparatorPayloadTransport runs the validations defined on DeleteAiSeparatorPayloadTransport.
+func ValidateDeleteAiSeparatorPayloadTransport(body *DeleteAiSeparatorPayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return
 }
@@ -442,6 +514,13 @@ func ValidateListNotesResultTransport(body *ListNotesResultTransport) (err error
 			}
 		}
 	}
+	for _, e := range body.Separators {
+		if e != nil {
+			if err2 := ValidateSeparatorTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	return
 }
 
@@ -560,6 +639,54 @@ func ValidateMoveAiNoteResultTransport(body *MoveAiNoteResultTransport) (err err
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return
+}
+
+// ValidateMoveAiSeparatorPayloadTransport runs the validations defined on MoveAiSeparatorPayloadTransport.
+func ValidateMoveAiSeparatorPayloadTransport(body *MoveAiSeparatorPayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.After != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *body.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateMoveAiSeparatorResultTransport runs the validations defined on MoveAiSeparatorResultTransport.
+func ValidateMoveAiSeparatorResultTransport(body *MoveAiSeparatorResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }
@@ -729,6 +856,64 @@ func ValidateUpdateAiNoteResultTransport(body *UpdateAiNoteResultTransport) (err
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return
+}
+
+// ValidateUpdateAiSeparatorPayloadTransport runs the validations defined on UpdateAiSeparatorPayloadTransport.
+func ValidateUpdateAiSeparatorPayloadTransport(body *UpdateAiSeparatorPayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Title != nil {
+		if utf8.RuneCountInString(*body.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 200, false))
+		}
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	return
+}
+
+// ValidateUpdateAiSeparatorResultTransport runs the validations defined on UpdateAiSeparatorResultTransport.
+func ValidateUpdateAiSeparatorResultTransport(body *UpdateAiSeparatorResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }
@@ -974,6 +1159,34 @@ func ValidateNotebookTransport(body *NotebookTransport) (err error) {
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
+	}
+	return
+}
+
+// ValidateSeparatorTransport runs the validations defined on SeparatorTransport.
+func ValidateSeparatorTransport(body *SeparatorTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+	}
+	if body.Color != nil {
+		if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if body.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return
 }

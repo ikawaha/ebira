@@ -543,6 +543,206 @@ func BuildMovePayload(notesMoveBody *string, notesMoveID *string, notesMoveSessi
 	return v, nil
 }
 
+// BuildCreateSeparatorPayload builds the payload for the notes
+// create_separator endpoint from CLI flags.
+func BuildCreateSeparatorPayload(notesCreateSeparatorBody *string, notesCreateSeparatorSession *string) (*notes.CreateSeparatorPayload, error) {
+	var err error
+	var body CreateSeparatorRequestBody
+	{
+		if notesCreateSeparatorBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesCreateSeparatorBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"after\": \"be4c1193735ee1\",\n      \"color\": \"blue\",\n      \"date\": \"2026-10-01\",\n      \"notebook\": \"inbox\",\n      \"title\": \"October\"\n   }'")
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		if body.Title != nil {
+			if utf8.RuneCountInString(*body.Title) > 200 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 200, false))
+			}
+		}
+		if body.Date != nil {
+			err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+		}
+		if body.Color != nil {
+			if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+			}
+		}
+		if body.After != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *body.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesCreateSeparatorSession != nil {
+			session = notesCreateSeparatorSession
+		}
+	}
+	v := &notes.CreateSeparatorPayload{
+		Notebook: body.Notebook,
+		Title:    body.Title,
+		Date:     body.Date,
+		Color:    body.Color,
+		After:    body.After,
+	}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildUpdateSeparatorPayload builds the payload for the notes
+// update_separator endpoint from CLI flags.
+func BuildUpdateSeparatorPayload(notesUpdateSeparatorBody *string, notesUpdateSeparatorID *string, notesUpdateSeparatorSession *string) (*notes.UpdateSeparatorPayload, error) {
+	var err error
+	var body UpdateSeparatorRequestBody
+	{
+		if notesUpdateSeparatorBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesUpdateSeparatorBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"color\": \"blue\",\n      \"date\": \"2026-10-01\",\n      \"notebook\": \"inbox\",\n      \"title\": \"October\"\n   }'")
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		if body.Title != nil {
+			if utf8.RuneCountInString(*body.Title) > 200 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 200, false))
+			}
+		}
+		if body.Date != nil {
+			err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *body.Date, goa.FormatDate))
+		}
+		if body.Color != nil {
+			if !(*body.Color == "red" || *body.Color == "orange" || *body.Color == "yellow" || *body.Color == "green" || *body.Color == "blue" || *body.Color == "purple" || *body.Color == "gray") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *body.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var id string
+	{
+		if notesUpdateSeparatorID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesUpdateSeparatorID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^sep-[a-z0-9_-]{1,60}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesUpdateSeparatorSession != nil {
+			session = notesUpdateSeparatorSession
+		}
+	}
+	v := &notes.UpdateSeparatorPayload{
+		Notebook: body.Notebook,
+		Title:    body.Title,
+		Date:     body.Date,
+		Color:    body.Color,
+	}
+	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildDeleteSeparatorPayload builds the payload for the notes
+// delete_separator endpoint from CLI flags.
+func BuildDeleteSeparatorPayload(notesDeleteSeparatorID *string, notesDeleteSeparatorNotebook *string, notesDeleteSeparatorSession *string) (*notes.DeleteSeparatorPayload, error) {
+	var err error
+	var id string
+	{
+		if notesDeleteSeparatorID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesDeleteSeparatorID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^sep-[a-z0-9_-]{1,60}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var notebook string
+	{
+		if notesDeleteSeparatorNotebook == nil {
+			return nil, fmt.Errorf("missing required flag --notebook")
+		}
+		notebook = *notesDeleteSeparatorNotebook
+		err = goa.MergeErrors(err, goa.ValidatePattern("notebook", notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesDeleteSeparatorSession != nil {
+			session = notesDeleteSeparatorSession
+		}
+	}
+	v := &notes.DeleteSeparatorPayload{}
+	v.ID = id
+	v.Notebook = notebook
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildMoveSeparatorPayload builds the payload for the notes move_separator
+// endpoint from CLI flags.
+func BuildMoveSeparatorPayload(notesMoveSeparatorBody *string, notesMoveSeparatorID *string, notesMoveSeparatorSession *string) (*notes.MoveSeparatorPayload, error) {
+	var err error
+	var body MoveSeparatorRequestBody
+	{
+		if notesMoveSeparatorBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesMoveSeparatorBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"after\": \"be4c1193735ee1\",\n      \"notebook\": \"inbox\"\n   }'")
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		if body.After != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *body.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var id string
+	{
+		if notesMoveSeparatorID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesMoveSeparatorID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^sep-[a-z0-9_-]{1,60}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesMoveSeparatorSession != nil {
+			session = notesMoveSeparatorSession
+		}
+	}
+	v := &notes.MoveSeparatorPayload{
+		Notebook: body.Notebook,
+		After:    body.After,
+	}
+	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildNotebooksPayload builds the payload for the notes notebooks endpoint
 // from CLI flags.
 func BuildNotebooksPayload(notesNotebooksSession *string) (*notes.NotebooksPayload, error) {

@@ -51,6 +51,12 @@ var timeDSL = func() {
 	Example("2026-10-16T09:30:00Z")
 }
 
+// dateDSL is the format and an example of a date.
+var dateDSL = func() {
+	Format(FormatDate)
+	Example("2026-10-01")
+}
+
 // sessionCookie is the name of the cookie of the session of people signed in
 // with a passkey.
 const sessionCookie = "ebira_session"

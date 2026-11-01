@@ -375,6 +375,99 @@ func ValidateCreateAiNotebookResultTransport(value *CreateAiNotebookResultTransp
 	return err
 }
 
+// CreateAiSeparatorPayloadTransport stores JSON fields until they have been validated.
+type CreateAiSeparatorPayloadTransport struct {
+	// ID of a notebook of the collab kind
+	Notebook *string `json:"notebook"`
+	// Heading; omit for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string `json:"color,omitempty"`
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string `json:"after,omitempty"`
+}
+
+// ValidateCreateAiSeparatorPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateCreateAiSeparatorPayloadTransport(value *CreateAiSeparatorPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Title != nil {
+		if utf8.RuneCountInString(*value.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 200, false))
+		}
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.After != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *value.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// CreateAiSeparatorResultTransport stores JSON fields until they have been validated.
+type CreateAiSeparatorResultTransport struct {
+	// Separator ID
+	ID *string `json:"id"`
+	// Notebook the separator is in
+	Notebook *string `json:"notebook"`
+	// Heading; absent for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `json:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `json:"before,omitempty"`
+}
+
+// ValidateCreateAiSeparatorResultTransport checks decoded JSON before it becomes a service value.
+func ValidateCreateAiSeparatorResultTransport(value *CreateAiSeparatorResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // DeleteAiNotePayloadTransport stores JSON fields until they have been validated.
 type DeleteAiNotePayloadTransport struct {
 	// Note ID. A link to a note in the web UI, such as
@@ -398,6 +491,34 @@ func ValidateDeleteAiNotePayloadTransport(value *DeleteAiNotePayloadTransport) (
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// DeleteAiSeparatorPayloadTransport stores JSON fields until they have been validated.
+type DeleteAiSeparatorPayloadTransport struct {
+	// Separator ID, from list_notes
+	ID *string `json:"id"`
+	// Notebook of the separator
+	Notebook *string `json:"notebook"`
+}
+
+// ValidateDeleteAiSeparatorPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateDeleteAiSeparatorPayloadTransport(value *DeleteAiSeparatorPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return err
 }
@@ -1086,6 +1207,54 @@ func ValidateListResultNoteSummaryTransport(value *ListResultNoteSummaryTranspor
 	return err
 }
 
+// ListResultSeparatorTransport stores JSON fields until they have been validated.
+type ListResultSeparatorTransport struct {
+	// Separator ID
+	ID *string `json:"id"`
+	// Notebook the separator is in
+	Notebook *string `json:"notebook"`
+	// Heading; absent for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `json:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `json:"before,omitempty"`
+}
+
+// ValidateListResultSeparatorTransport checks decoded JSON before it becomes a service value.
+func ValidateListResultSeparatorTransport(value *ListResultSeparatorTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // ListResultTextRangeTransport stores JSON fields until they have been validated.
 type ListResultTextRangeTransport struct {
 	// Offset of the first character
@@ -1114,6 +1283,10 @@ type ListResultTransport struct {
 	Total *int `json:"total"`
 	// Notes from offset, at most limit; fewer than total when the list goes on
 	Notes []*ListResultNoteSummaryTransport `json:"notes"`
+	// Separators between the notes, in the manual order, each before the note
+	// named by its before: only for a notebook listed in the order sort without a
+	// tag, and then all of them, regardless of limit and offset
+	Separators []*ListResultSeparatorTransport `json:"separators,omitempty"`
 }
 
 // ValidateListResultTransport checks decoded JSON before it becomes a service value.
@@ -1130,6 +1303,13 @@ func ValidateListResultTransport(value *ListResultTransport) (err error) {
 	for _, e := range value.Notes {
 		if e != nil {
 			if err2 := ValidateListResultNoteSummaryTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range value.Separators {
+		if e != nil {
+			if err2 := ValidateListResultSeparatorTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -1241,8 +1421,8 @@ type MoveAiNotePayloadTransport struct {
 	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
 	// #note/
 	ID *string `json:"id"`
-	// ID of the note of the same notebook to put the note after; omit to put it
-	// first
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
 	After *string `json:"after,omitempty"`
 }
 
@@ -1395,6 +1575,88 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return err
+}
+
+// MoveAiSeparatorPayloadTransport stores JSON fields until they have been validated.
+type MoveAiSeparatorPayloadTransport struct {
+	// Separator ID, from list_notes
+	ID *string `json:"id"`
+	// Notebook of the separator
+	Notebook *string `json:"notebook"`
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string `json:"after,omitempty"`
+}
+
+// ValidateMoveAiSeparatorPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateMoveAiSeparatorPayloadTransport(value *MoveAiSeparatorPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.After != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.after", *value.After, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// MoveAiSeparatorResultTransport stores JSON fields until they have been validated.
+type MoveAiSeparatorResultTransport struct {
+	// Separator ID
+	ID *string `json:"id"`
+	// Notebook the separator is in
+	Notebook *string `json:"notebook"`
+	// Heading; absent for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `json:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `json:"before,omitempty"`
+}
+
+// ValidateMoveAiSeparatorResultTransport checks decoded JSON before it becomes a service value.
+func ValidateMoveAiSeparatorResultTransport(value *MoveAiSeparatorResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -2130,6 +2392,101 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 	return err
 }
 
+// UpdateAiSeparatorPayloadTransport stores JSON fields until they have been validated.
+type UpdateAiSeparatorPayloadTransport struct {
+	// Separator ID, from list_notes
+	ID *string `json:"id"`
+	// Notebook of the separator
+	Notebook *string `json:"notebook"`
+	// Heading; omit for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string `json:"color,omitempty"`
+}
+
+// ValidateUpdateAiSeparatorPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateUpdateAiSeparatorPayloadTransport(value *UpdateAiSeparatorPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Title != nil {
+		if utf8.RuneCountInString(*value.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 200, false))
+		}
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	return err
+}
+
+// UpdateAiSeparatorResultTransport stores JSON fields until they have been validated.
+type UpdateAiSeparatorResultTransport struct {
+	// Separator ID
+	ID *string `json:"id"`
+	// Notebook the separator is in
+	Notebook *string `json:"notebook"`
+	// Heading; absent for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `json:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `json:"before,omitempty"`
+}
+
+// ValidateUpdateAiSeparatorResultTransport checks decoded JSON before it becomes a service value.
+func ValidateUpdateAiSeparatorResultTransport(value *UpdateAiSeparatorResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // DecodeAddAiFilePayload checks JSON field names from the Goa design and returns a service value.
 func DecodeAddAiFilePayload(data []byte) (out *notes.AddAiFilePayload, err error) {
 	var body *AddAiFilePayloadTransport
@@ -2319,6 +2676,58 @@ func EncodeCreateAiNotebookResult(in *notes.Notebook) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeCreateAiSeparatorPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeCreateAiSeparatorPayload(data []byte) (out *notes.CreateAiSeparatorPayload, err error) {
+	var body *CreateAiSeparatorPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode CreateAiSeparatorPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode CreateAiSeparatorPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode CreateAiSeparatorPayload JSON after first value: %w", err)
+	}
+	if err := ValidateCreateAiSeparatorPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate CreateAiSeparatorPayload JSON: %w", err)
+	}
+	{
+		out = &notes.CreateAiSeparatorPayload{
+			Notebook: *body.Notebook,
+			Title:    body.Title,
+			Date:     body.Date,
+			Color:    body.Color,
+			After:    body.After,
+		}
+	}
+	return out, nil
+}
+
+// EncodeCreateAiSeparatorResult turns a service value into JSON using the field names in the Goa design.
+func EncodeCreateAiSeparatorResult(in *notes.Separator) ([]byte, error) {
+	var body *CreateAiSeparatorResultTransport
+	{
+		body = &CreateAiSeparatorResultTransport{
+			ID:       &in.ID,
+			Notebook: &in.Notebook,
+			Title:    in.Title,
+			Date:     in.Date,
+			Color:    in.Color,
+			Before:   in.Before,
+		}
+	}
+	if err := ValidateCreateAiSeparatorResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate CreateAiSeparatorResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode CreateAiSeparatorResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // DecodeDeleteAiNotePayload checks JSON field names from the Goa design and returns a service value.
 func DecodeDeleteAiNotePayload(data []byte) (out *notes.DeleteAiNotePayload, err error) {
 	var body *DeleteAiNotePayloadTransport
@@ -2340,6 +2749,32 @@ func DecodeDeleteAiNotePayload(data []byte) (out *notes.DeleteAiNotePayload, err
 		out = &notes.DeleteAiNotePayload{
 			ID:      *body.ID,
 			Version: *body.Version,
+		}
+	}
+	return out, nil
+}
+
+// DecodeDeleteAiSeparatorPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeDeleteAiSeparatorPayload(data []byte) (out *notes.DeleteAiSeparatorPayload, err error) {
+	var body *DeleteAiSeparatorPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode DeleteAiSeparatorPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode DeleteAiSeparatorPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode DeleteAiSeparatorPayload JSON after first value: %w", err)
+	}
+	if err := ValidateDeleteAiSeparatorPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate DeleteAiSeparatorPayload JSON: %w", err)
+	}
+	{
+		out = &notes.DeleteAiSeparatorPayload{
+			ID:       *body.ID,
+			Notebook: *body.Notebook,
 		}
 	}
 	return out, nil
@@ -2592,6 +3027,16 @@ func EncodeListResult(in *notes.NoteList) ([]byte, error) {
 			}
 			body.Notes[i] = encodeNoteSummaryToListResultNoteSummaryTransport(val)
 		}
+		if in.Separators != nil {
+			body.Separators = make([]*ListResultSeparatorTransport, len(in.Separators))
+			for i, val := range in.Separators {
+				if val == nil {
+					body.Separators[i] = nil
+					continue
+				}
+				body.Separators[i] = encodeSeparatorToListResultSeparatorTransport(val)
+			}
+		}
 	}
 	if err := ValidateListResultTransport(body); err != nil {
 		return nil, fmt.Errorf("validate ListResult JSON: %w", err)
@@ -2772,6 +3217,56 @@ func EncodeMoveAiNoteResult(in *notes.Note) ([]byte, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("encode MoveAiNoteResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeMoveAiSeparatorPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeMoveAiSeparatorPayload(data []byte) (out *notes.MoveAiSeparatorPayload, err error) {
+	var body *MoveAiSeparatorPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode MoveAiSeparatorPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode MoveAiSeparatorPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode MoveAiSeparatorPayload JSON after first value: %w", err)
+	}
+	if err := ValidateMoveAiSeparatorPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate MoveAiSeparatorPayload JSON: %w", err)
+	}
+	{
+		out = &notes.MoveAiSeparatorPayload{
+			ID:       *body.ID,
+			Notebook: *body.Notebook,
+			After:    body.After,
+		}
+	}
+	return out, nil
+}
+
+// EncodeMoveAiSeparatorResult turns a service value into JSON using the field names in the Goa design.
+func EncodeMoveAiSeparatorResult(in *notes.Separator) ([]byte, error) {
+	var body *MoveAiSeparatorResultTransport
+	{
+		body = &MoveAiSeparatorResultTransport{
+			ID:       &in.ID,
+			Notebook: &in.Notebook,
+			Title:    in.Title,
+			Date:     in.Date,
+			Color:    in.Color,
+			Before:   in.Before,
+		}
+	}
+	if err := ValidateMoveAiSeparatorResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate MoveAiSeparatorResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode MoveAiSeparatorResult JSON: %w", err)
 	}
 	return data, nil
 }
@@ -3102,6 +3597,58 @@ func EncodeUpdateAiNoteResult(in *notes.Note) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeUpdateAiSeparatorPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeUpdateAiSeparatorPayload(data []byte) (out *notes.UpdateAiSeparatorPayload, err error) {
+	var body *UpdateAiSeparatorPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode UpdateAiSeparatorPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode UpdateAiSeparatorPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode UpdateAiSeparatorPayload JSON after first value: %w", err)
+	}
+	if err := ValidateUpdateAiSeparatorPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate UpdateAiSeparatorPayload JSON: %w", err)
+	}
+	{
+		out = &notes.UpdateAiSeparatorPayload{
+			ID:       *body.ID,
+			Notebook: *body.Notebook,
+			Title:    body.Title,
+			Date:     body.Date,
+			Color:    body.Color,
+		}
+	}
+	return out, nil
+}
+
+// EncodeUpdateAiSeparatorResult turns a service value into JSON using the field names in the Goa design.
+func EncodeUpdateAiSeparatorResult(in *notes.Separator) ([]byte, error) {
+	var body *UpdateAiSeparatorResultTransport
+	{
+		body = &UpdateAiSeparatorResultTransport{
+			ID:       &in.ID,
+			Notebook: &in.Notebook,
+			Title:    in.Title,
+			Date:     in.Date,
+			Color:    in.Color,
+			Before:   in.Before,
+		}
+	}
+	if err := ValidateUpdateAiSeparatorResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate UpdateAiSeparatorResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode UpdateAiSeparatorResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 func decodeImportAiNotePayloadAIImportFileTransportToAIImportFile(v *ImportAiNotePayloadAIImportFileTransport) *notes.AIImportFile {
 	res := &notes.AIImportFile{
 		Ref:     *v.Ref,
@@ -3279,6 +3826,19 @@ func encodeNotebookToNotebooksResultNotebookTransport(v *notes.Notebook) *Notebo
 		Kind:     &v.Kind,
 		OwnKind:  v.OwnKind,
 		Sort:     &v.Sort,
+	}
+
+	return res
+}
+
+func encodeSeparatorToListResultSeparatorTransport(v *notes.Separator) *ListResultSeparatorTransport {
+	res := &ListResultSeparatorTransport{
+		ID:       &v.ID,
+		Notebook: &v.Notebook,
+		Title:    v.Title,
+		Date:     v.Date,
+		Color:    v.Color,
+		Before:   v.Before,
 	}
 
 	return res

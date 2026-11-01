@@ -138,16 +138,71 @@ func (m *Model) visibleItems() int {
 	return max(1, (m.computeLayout().paneH-2)/itemHeight)
 }
 
+// listLine is a line of the note list: a line of the item at index note, or
+// of separator sep (note -1).
+type listLine struct {
+	note int
+	sep  *gennotes.Separator
+}
+
+// listLines lays out the note list from the item at index top in h lines:
+// each item in itemHeight lines, after the separators that come before it in
+// one line each, and the separators after the last item at the end. An item
+// that does not fit whole is left out.
+func (m *Model) listLines(top, h int) []listLine {
+	before := map[string][]*gennotes.Separator{}
+	for _, sep := range m.seps {
+		k := ""
+		if sep.Before != nil {
+			k = *sep.Before
+		}
+		before[k] = append(before[k], sep)
+	}
+	var lines []listLine
+	for i := top; i < len(m.items); i++ {
+		seps := before[m.items[i].ID]
+		if len(lines)+len(seps)+itemHeight > h {
+			return lines
+		}
+		for _, sep := range seps {
+			lines = append(lines, listLine{note: -1, sep: sep})
+		}
+		for range itemHeight {
+			lines = append(lines, listLine{note: i})
+		}
+	}
+	for _, sep := range before[""] {
+		if len(lines) < h {
+			lines = append(lines, listLine{note: -1, sep: sep})
+		}
+	}
+	return lines
+}
+
+// shownItems returns the number of items shown from the item at index top.
+func (m *Model) shownItems(top int) int {
+	n := 0
+	for _, l := range m.listLines(top, m.computeLayout().paneH-2) {
+		if l.note >= 0 {
+			n++
+		}
+	}
+	return max(1, n/itemHeight)
+}
+
 // scrollList keeps the selected item visible.
 func (m *Model) scrollList() {
-	n := m.visibleItems()
 	if m.sel < m.top {
 		m.top = m.sel
 	}
-	if m.sel >= m.top+n {
-		m.top = m.sel - n + 1
+	for m.top < m.sel && m.sel >= m.top+m.shownItems(m.top) {
+		m.top++
 	}
-	m.top = max(0, min(m.top, max(0, len(m.items)-n)))
+	// No room left below the last item.
+	for m.top > 0 && m.shownItems(m.top-1) > len(m.items)-m.top {
+		m.top--
+	}
+	m.top = max(0, min(m.top, max(0, len(m.items)-1)))
 }
 
 // renderPreview renders the current note into the viewport. keepOffset keeps
@@ -394,8 +449,16 @@ func (m Model) renderList(w, h int) string {
 		}
 		lines = append(lines, "", " "+m.th.style(m.th.dim).Render(msg))
 	}
-	n := (h - 2) / itemHeight
-	for i := m.top; i < len(m.items) && i < m.top+n; i++ {
+	layout := m.listLines(m.top, h-2)
+	for li, l := range layout {
+		if l.sep != nil {
+			lines = append(lines, m.separatorLine(l.sep, innerW))
+			continue
+		}
+		if li > 0 && layout[li-1].note == l.note {
+			continue // the second line of the item, drawn with the first
+		}
+		i := l.note
 		it := m.items[i]
 		sub := formatTime(it.UpdatedAt)
 		if len(it.Tags) > 0 {
@@ -443,6 +506,27 @@ func (m Model) renderList(w, h int) string {
 		title = fmt.Sprintf("%s  %d/%d", title, m.sel+1, len(m.items))
 	}
 	return m.box(title, lines, w, h, m.focus == focusList || m.focus == focusSearch)
+}
+
+// separatorLine draws separator sep in a line of width w: its heading, a rule
+// in its color and its date, dim, as the cursor skips it.
+func (m Model) separatorLine(sep *gennotes.Separator, w int) string {
+	left, right := " ", ""
+	if sep.Title != nil {
+		left = " " + ansi.Truncate(*sep.Title, max(1, w*2/3), "…") + " "
+	}
+	if sep.Date != nil {
+		right = " " + *sep.Date + " "
+	}
+	rule := max(1, w-ansi.StringWidth(left)-ansi.StringWidth(right))
+	st := m.th.style(m.th.dim)
+	rs := st // the rule takes the color of the separator, as a color mark
+	if sep.Color != nil {
+		if c, ok := markColors[*sep.Color]; ok {
+			rs = rs.Foreground(c)
+		}
+	}
+	return st.Bold(true).Render(left) + rs.Render(strings.Repeat("─", rule)) + st.Render(right)
 }
 
 func (m Model) renderNotebooks(w, h int) string {

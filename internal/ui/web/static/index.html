@@ -136,6 +136,18 @@
     </div>
   </form>
 </dialog>
+<dialog id="separator-edit" class="notebook-new" data-i18n-aria-label="separator">
+  <form method="dialog" id="separator-form">
+    <h2></h2>
+    <label class="field"><span data-i18n="separatorTitle"></span><input id="separator-title" maxlength="200" autocomplete="off"></label>
+    <div class="field"><label for="separator-date" data-i18n="separatorDate"></label><span class="date-row"><input id="separator-date" type="date"><button type="button" id="separator-date-clear" class="date-clear" data-i18n-title="separatorDateClear" data-i18n-aria-label="separatorDateClear">×</button></span></div>
+    <div class="field" role="radiogroup" aria-labelledby="separator-color-label"><span id="separator-color-label" data-i18n="separatorColor"></span><span class="color-row" id="separator-color"></span></div>
+    <div class="form-actions">
+      <button type="button" id="separator-cancel" data-i18n="cancel"></button>
+      <button type="submit" value="save" class="primary" data-i18n="save"></button>
+    </div>
+  </form>
+</dialog>
 <div id="toast" class="toast" role="status" hidden><span class="toast-msg"></span><button type="button" data-i18n="undo" data-i18n-title="undoTitle"></button></div>
 <dialog id="files-check" class="files-check" data-i18n-aria-label="filesCheck"></dialog>
 <dialog id="server-stats" class="files-check server-stats" data-i18n-aria-label="serverStats"></dialog>

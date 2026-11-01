@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|preview-style|set-preview-style|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|preview-style|set-preview-style|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -123,6 +123,25 @@ func ParseEndpoint(
 		notesMoveBodyFlag    = new(cliStringFlag)
 		notesMoveIDFlag      = new(cliStringFlag)
 		notesMoveSessionFlag = new(cliStringFlag)
+
+		notesCreateSeparatorFlags       = flag.NewFlagSet("create-separator", flag.ExitOnError)
+		notesCreateSeparatorBodyFlag    = new(cliStringFlag)
+		notesCreateSeparatorSessionFlag = new(cliStringFlag)
+
+		notesUpdateSeparatorFlags       = flag.NewFlagSet("update-separator", flag.ExitOnError)
+		notesUpdateSeparatorBodyFlag    = new(cliStringFlag)
+		notesUpdateSeparatorIDFlag      = new(cliStringFlag)
+		notesUpdateSeparatorSessionFlag = new(cliStringFlag)
+
+		notesDeleteSeparatorFlags        = flag.NewFlagSet("delete-separator", flag.ExitOnError)
+		notesDeleteSeparatorIDFlag       = new(cliStringFlag)
+		notesDeleteSeparatorNotebookFlag = new(cliStringFlag)
+		notesDeleteSeparatorSessionFlag  = new(cliStringFlag)
+
+		notesMoveSeparatorFlags       = flag.NewFlagSet("move-separator", flag.ExitOnError)
+		notesMoveSeparatorBodyFlag    = new(cliStringFlag)
+		notesMoveSeparatorIDFlag      = new(cliStringFlag)
+		notesMoveSeparatorSessionFlag = new(cliStringFlag)
 
 		notesNotebooksFlags       = flag.NewFlagSet("notebooks", flag.ExitOnError)
 		notesNotebooksSessionFlag = new(cliStringFlag)
@@ -303,6 +322,17 @@ func ParseEndpoint(
 	notesMoveFlags.Var(notesMoveBodyFlag, "body", "")
 	notesMoveFlags.Var(notesMoveIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesMoveFlags.Var(notesMoveSessionFlag, "session", "")
+	notesCreateSeparatorFlags.Var(notesCreateSeparatorBodyFlag, "body", "")
+	notesCreateSeparatorFlags.Var(notesCreateSeparatorSessionFlag, "session", "")
+	notesUpdateSeparatorFlags.Var(notesUpdateSeparatorBodyFlag, "body", "")
+	notesUpdateSeparatorFlags.Var(notesUpdateSeparatorIDFlag, "id", "Separator ID")
+	notesUpdateSeparatorFlags.Var(notesUpdateSeparatorSessionFlag, "session", "")
+	notesDeleteSeparatorFlags.Var(notesDeleteSeparatorIDFlag, "id", "Separator ID")
+	notesDeleteSeparatorFlags.Var(notesDeleteSeparatorNotebookFlag, "notebook", "")
+	notesDeleteSeparatorFlags.Var(notesDeleteSeparatorSessionFlag, "session", "")
+	notesMoveSeparatorFlags.Var(notesMoveSeparatorBodyFlag, "body", "")
+	notesMoveSeparatorFlags.Var(notesMoveSeparatorIDFlag, "id", "Separator ID")
+	notesMoveSeparatorFlags.Var(notesMoveSeparatorSessionFlag, "session", "")
 	notesNotebooksFlags.Var(notesNotebooksSessionFlag, "session", "")
 	notesTagsFlags.Var(notesTagsNotebookFlag, "notebook", "")
 	notesTagsFlags.Var(notesTagsSessionFlag, "session", "")
@@ -379,6 +409,10 @@ func ParseEndpoint(
 	notesSearchFlags.Usage = notesSearchUsage
 	notesRestoreFlags.Usage = notesRestoreUsage
 	notesMoveFlags.Usage = notesMoveUsage
+	notesCreateSeparatorFlags.Usage = notesCreateSeparatorUsage
+	notesUpdateSeparatorFlags.Usage = notesUpdateSeparatorUsage
+	notesDeleteSeparatorFlags.Usage = notesDeleteSeparatorUsage
+	notesMoveSeparatorFlags.Usage = notesMoveSeparatorUsage
 	notesNotebooksFlags.Usage = notesNotebooksUsage
 	notesTagsFlags.Usage = notesTagsUsage
 	notesMarksFlags.Usage = notesMarksUsage
@@ -491,6 +525,18 @@ func ParseEndpoint(
 
 			case "move":
 				epf = notesMoveFlags
+
+			case "create-separator":
+				epf = notesCreateSeparatorFlags
+
+			case "update-separator":
+				epf = notesUpdateSeparatorFlags
+
+			case "delete-separator":
+				epf = notesDeleteSeparatorFlags
+
+			case "move-separator":
+				epf = notesMoveSeparatorFlags
 
 			case "notebooks":
 				epf = notesNotebooksFlags
@@ -675,6 +721,18 @@ func ParseEndpoint(
 			case "move":
 				endpoint = c.Move()
 				data, err = notesc.BuildMovePayload(notesMoveBodyFlag.value, notesMoveIDFlag.value, notesMoveSessionFlag.value)
+			case "create-separator":
+				endpoint = c.CreateSeparator()
+				data, err = notesc.BuildCreateSeparatorPayload(notesCreateSeparatorBodyFlag.value, notesCreateSeparatorSessionFlag.value)
+			case "update-separator":
+				endpoint = c.UpdateSeparator()
+				data, err = notesc.BuildUpdateSeparatorPayload(notesUpdateSeparatorBodyFlag.value, notesUpdateSeparatorIDFlag.value, notesUpdateSeparatorSessionFlag.value)
+			case "delete-separator":
+				endpoint = c.DeleteSeparator()
+				data, err = notesc.BuildDeleteSeparatorPayload(notesDeleteSeparatorIDFlag.value, notesDeleteSeparatorNotebookFlag.value, notesDeleteSeparatorSessionFlag.value)
+			case "move-separator":
+				endpoint = c.MoveSeparator()
+				data, err = notesc.BuildMoveSeparatorPayload(notesMoveSeparatorBodyFlag.value, notesMoveSeparatorIDFlag.value, notesMoveSeparatorSessionFlag.value)
 			case "notebooks":
 				endpoint = c.Notebooks()
 				data, err = notesc.BuildNotebooksPayload(notesNotebooksSessionFlag.value)
@@ -830,7 +888,11 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    trash-notes: Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.`)
 	fmt.Fprintln(os.Stderr, `    search: Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.`)
 	fmt.Fprintln(os.Stderr, `    restore: Move a note from the trash back to the notebook it was in.`)
-	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
+	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
+	fmt.Fprintln(os.Stderr, `    create-separator: Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.`)
+	fmt.Fprintln(os.Stderr, `    update-separator: Replace the heading, the date and the color of a separator; an omitted one is taken away.`)
+	fmt.Fprintln(os.Stderr, `    delete-separator: Remove a separator. It does not go to the trash.`)
+	fmt.Fprintln(os.Stderr, `    move-separator: Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.`)
 	fmt.Fprintln(os.Stderr, `    notebooks: List notebooks with their note counts: inbox first, then the others by order and name, trash last.`)
 	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
 	fmt.Fprintln(os.Stderr, `    marks: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.`)
@@ -1077,7 +1139,7 @@ func notesMoveUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
+	fmt.Fprintln(os.Stderr, `Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
@@ -1087,6 +1149,92 @@ func notesMoveUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes move --body '{\n      \"after\": \"be4c1193735ee1\"\n   }' --id \"be4c1193735ee1\" --session \"Aut nemo.\"")
+}
+
+func notesCreateSeparatorUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes create-separator", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes create-separator --body '{\n      \"after\": \"be4c1193735ee1\",\n      \"color\": \"blue\",\n      \"date\": \"2026-10-01\",\n      \"notebook\": \"inbox\",\n      \"title\": \"October\"\n   }' --session \"Libero distinctio a maiores ab quam animi.\"")
+}
+
+func notesUpdateSeparatorUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes update-separator", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Replace the heading, the date and the color of a separator; an omitted one is taken away.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Separator ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes update-separator --body '{\n      \"color\": \"blue\",\n      \"date\": \"2026-10-01\",\n      \"notebook\": \"inbox\",\n      \"title\": \"October\"\n   }' --id \"sep-3f9a1c2b7d04\" --session \"Rerum totam earum quos et.\"")
+}
+
+func notesDeleteSeparatorUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes delete-separator", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -notebook STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Remove a separator. It does not go to the trash.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: Separator ID`)
+	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes delete-separator --id \"sep-3f9a1c2b7d04\" --notebook \"inbox\" --session \"Ipsum accusamus rerum perferendis itaque amet.\"")
+}
+
+func notesMoveSeparatorUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes move-separator", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Separator ID`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes move-separator --body '{\n      \"after\": \"be4c1193735ee1\",\n      \"notebook\": \"inbox\"\n   }' --id \"sep-3f9a1c2b7d04\" --session \"Est temporibus officiis qui ut occaecati et.\"")
 }
 
 func notesNotebooksUsage() {

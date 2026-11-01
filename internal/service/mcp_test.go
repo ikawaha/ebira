@@ -14,7 +14,7 @@ import (
 
 // TestMCPTools guards the access rules for AI clients: they read notes except
 // in private notebooks and the trash, write only notes in notebooks of the collab
-// kind (*_ai_note), may create a new collab notebook (create_ai_notebook) and may
+// kind (*_ai_note) and their separators (*_ai_separator), may create a new collab notebook (create_ai_notebook) and may
 // make a notebook private (make_notebook_private). The methods that set any
 // kind (create_notebook, save_notebook) and the create, update, delete and
 // import methods for people must never become MCP tools. A new tool fails this test on
@@ -32,8 +32,9 @@ func TestMCPTools(t *testing.T) {
 	}
 	slices.Sort(got)
 	want := []string{
-		"add_ai_file", "create_ai_note", "create_ai_notebook", "delete_ai_note", "get_note", "import_ai_note", "list_marks",
-		"list_notebooks", "list_notes", "list_tags", "make_notebook_private", "move_ai_note", "search_notes", "update_ai_note",
+		"add_ai_file", "create_ai_note", "create_ai_notebook", "create_ai_separator", "delete_ai_note", "delete_ai_separator",
+		"get_note", "import_ai_note", "list_marks", "list_notebooks", "list_notes", "list_tags", "make_notebook_private",
+		"move_ai_note", "move_ai_separator", "search_notes", "update_ai_note", "update_ai_separator",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("MCP tools = %v, want %v", got, want)

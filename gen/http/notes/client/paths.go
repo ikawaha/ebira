@@ -59,6 +59,26 @@ func MoveNotesPath(id string) string {
 	return fmt.Sprintf("/notes/%v/move", id)
 }
 
+// CreateSeparatorNotesPath returns the URL path to the notes service create_separator HTTP endpoint.
+func CreateSeparatorNotesPath() string {
+	return "/separators"
+}
+
+// UpdateSeparatorNotesPath returns the URL path to the notes service update_separator HTTP endpoint.
+func UpdateSeparatorNotesPath(id string) string {
+	return fmt.Sprintf("/separators/%v", id)
+}
+
+// DeleteSeparatorNotesPath returns the URL path to the notes service delete_separator HTTP endpoint.
+func DeleteSeparatorNotesPath(id string) string {
+	return fmt.Sprintf("/separators/%v", id)
+}
+
+// MoveSeparatorNotesPath returns the URL path to the notes service move_separator HTTP endpoint.
+func MoveSeparatorNotesPath(id string) string {
+	return fmt.Sprintf("/separators/%v/move", id)
+}
+
 // NotebooksNotesPath returns the URL path to the notes service notebooks HTTP endpoint.
 func NotebooksNotesPath() string {
 	return "/notebooks"

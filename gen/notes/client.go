@@ -26,6 +26,10 @@ type Client struct {
 	SearchEndpoint                goa.Endpoint
 	RestoreEndpoint               goa.Endpoint
 	MoveEndpoint                  goa.Endpoint
+	CreateSeparatorEndpoint       goa.Endpoint
+	UpdateSeparatorEndpoint       goa.Endpoint
+	DeleteSeparatorEndpoint       goa.Endpoint
+	MoveSeparatorEndpoint         goa.Endpoint
 	NotebooksEndpoint             goa.Endpoint
 	TagsEndpoint                  goa.Endpoint
 	MarksEndpoint                 goa.Endpoint
@@ -46,6 +50,10 @@ type Client struct {
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
 	MoveAiNoteEndpoint            goa.Endpoint
+	CreateAiSeparatorEndpoint     goa.Endpoint
+	UpdateAiSeparatorEndpoint     goa.Endpoint
+	DeleteAiSeparatorEndpoint     goa.Endpoint
+	MoveAiSeparatorEndpoint       goa.Endpoint
 	CreateAiNotebookEndpoint      goa.Endpoint
 	MakeNotebookPrivateEndpoint   goa.Endpoint
 	AddFileEndpoint               goa.Endpoint
@@ -63,7 +71,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -75,6 +83,10 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		SearchEndpoint:                search,
 		RestoreEndpoint:               restore,
 		MoveEndpoint:                  move,
+		CreateSeparatorEndpoint:       createSeparator,
+		UpdateSeparatorEndpoint:       updateSeparator,
+		DeleteSeparatorEndpoint:       deleteSeparator,
+		MoveSeparatorEndpoint:         moveSeparator,
 		NotebooksEndpoint:             notebooks,
 		TagsEndpoint:                  tags,
 		MarksEndpoint:                 marks,
@@ -95,6 +107,10 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
 		MoveAiNoteEndpoint:            moveAiNote,
+		CreateAiSeparatorEndpoint:     createAiSeparator,
+		UpdateAiSeparatorEndpoint:     updateAiSeparator,
+		DeleteAiSeparatorEndpoint:     deleteAiSeparator,
+		MoveAiSeparatorEndpoint:       moveAiSeparator,
 		CreateAiNotebookEndpoint:      createAiNotebook,
 		MakeNotebookPrivateEndpoint:   makeNotebookPrivate,
 		AddFileEndpoint:               addFile,
@@ -247,7 +263,7 @@ func (c *Client) Restore(ctx context.Context, p *RestorePayload) (res *Note, err
 // Move calls the "move" endpoint of the "notes" service.
 // Move may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist
-//   - "bad_request" (type *goa.ServiceError): The note is in the trash, or after is not another note of its notebook
+//   - "bad_request" (type *goa.ServiceError): The note is in the trash, or after is not another note or a separator of its notebook
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -258,6 +274,64 @@ func (c *Client) Move(ctx context.Context, p *MovePayload) (res *Note, err error
 		return
 	}
 	return ires.(*Note), nil
+}
+
+// CreateSeparator calls the "create_separator" endpoint of the "notes" service.
+// CreateSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The notebook does not exist
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash, or after is not a note or a separator of the notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) CreateSeparator(ctx context.Context, p *CreateSeparatorPayload) (res *Separator, err error) {
+	var ires any
+	ires, err = c.CreateSeparatorEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Separator), nil
+}
+
+// UpdateSeparator calls the "update_separator" endpoint of the "notes" service.
+// UpdateSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The separator does not exist
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) UpdateSeparator(ctx context.Context, p *UpdateSeparatorPayload) (res *Separator, err error) {
+	var ires any
+	ires, err = c.UpdateSeparatorEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Separator), nil
+}
+
+// DeleteSeparator calls the "delete_separator" endpoint of the "notes" service.
+// DeleteSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The separator does not exist
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) DeleteSeparator(ctx context.Context, p *DeleteSeparatorPayload) (err error) {
+	_, err = c.DeleteSeparatorEndpoint(ctx, p)
+	return
+}
+
+// MoveSeparator calls the "move_separator" endpoint of the "notes" service.
+// MoveSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The separator does not exist
+//   - "bad_request" (type *goa.ServiceError): after is not a note or another separator of the notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) MoveSeparator(ctx context.Context, p *MoveSeparatorPayload) (res *Separator, err error) {
+	var ires any
+	ires, err = c.MoveSeparatorEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Separator), nil
 }
 
 // Notebooks calls the "notebooks" endpoint of the "notes" service.
@@ -551,7 +625,7 @@ func (c *Client) DeleteAiNote(ctx context.Context, p *DeleteAiNotePayload) (err 
 // MoveAiNote calls the "move_ai_note" endpoint of the "notes" service.
 // MoveAiNote may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
-//   - "bad_request" (type *goa.ServiceError): after is not another note of the note's notebook
+//   - "bad_request" (type *goa.ServiceError): after is not another note or a separator of the note's notebook
 //   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
@@ -563,6 +637,72 @@ func (c *Client) MoveAiNote(ctx context.Context, p *MoveAiNotePayload) (res *Not
 		return
 	}
 	return ires.(*Note), nil
+}
+
+// CreateAiSeparator calls the "create_ai_separator" endpoint of the "notes"
+// service.
+// CreateAiSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The notebook does not exist, or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): after is not a note or a separator of the notebook
+//   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) CreateAiSeparator(ctx context.Context, p *CreateAiSeparatorPayload) (res *Separator, err error) {
+	var ires any
+	ires, err = c.CreateAiSeparatorEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Separator), nil
+}
+
+// UpdateAiSeparator calls the "update_ai_separator" endpoint of the "notes"
+// service.
+// UpdateAiSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The separator does not exist, or is hidden from AI clients
+//   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) UpdateAiSeparator(ctx context.Context, p *UpdateAiSeparatorPayload) (res *Separator, err error) {
+	var ires any
+	ires, err = c.UpdateAiSeparatorEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Separator), nil
+}
+
+// DeleteAiSeparator calls the "delete_ai_separator" endpoint of the "notes"
+// service.
+// DeleteAiSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The separator does not exist, or is hidden from AI clients
+//   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) DeleteAiSeparator(ctx context.Context, p *DeleteAiSeparatorPayload) (err error) {
+	_, err = c.DeleteAiSeparatorEndpoint(ctx, p)
+	return
+}
+
+// MoveAiSeparator calls the "move_ai_separator" endpoint of the "notes"
+// service.
+// MoveAiSeparator may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The separator does not exist, or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): after is not a note or another separator of the notebook
+//   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) MoveAiSeparator(ctx context.Context, p *MoveAiSeparatorPayload) (res *Separator, err error) {
+	var ires any
+	ires, err = c.MoveAiSeparatorEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Separator), nil
 }
 
 // CreateAiNotebook calls the "create_ai_notebook" endpoint of the "notes"

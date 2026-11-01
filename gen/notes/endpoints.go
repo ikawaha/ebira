@@ -27,6 +27,10 @@ type Endpoints struct {
 	Search                goa.Endpoint
 	Restore               goa.Endpoint
 	Move                  goa.Endpoint
+	CreateSeparator       goa.Endpoint
+	UpdateSeparator       goa.Endpoint
+	DeleteSeparator       goa.Endpoint
+	MoveSeparator         goa.Endpoint
 	Notebooks             goa.Endpoint
 	Tags                  goa.Endpoint
 	Marks                 goa.Endpoint
@@ -47,6 +51,10 @@ type Endpoints struct {
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
 	MoveAiNote            goa.Endpoint
+	CreateAiSeparator     goa.Endpoint
+	UpdateAiSeparator     goa.Endpoint
+	DeleteAiSeparator     goa.Endpoint
+	MoveAiSeparator       goa.Endpoint
 	CreateAiNotebook      goa.Endpoint
 	MakeNotebookPrivate   goa.Endpoint
 	AddFile               goa.Endpoint
@@ -105,6 +113,10 @@ func NewEndpoints(s Service) *Endpoints {
 		Search:                NewSearchEndpoint(s, a.APIKeyAuth),
 		Restore:               NewRestoreEndpoint(s, a.APIKeyAuth),
 		Move:                  NewMoveEndpoint(s, a.APIKeyAuth),
+		CreateSeparator:       NewCreateSeparatorEndpoint(s, a.APIKeyAuth),
+		UpdateSeparator:       NewUpdateSeparatorEndpoint(s, a.APIKeyAuth),
+		DeleteSeparator:       NewDeleteSeparatorEndpoint(s, a.APIKeyAuth),
+		MoveSeparator:         NewMoveSeparatorEndpoint(s, a.APIKeyAuth),
 		Notebooks:             NewNotebooksEndpoint(s, a.APIKeyAuth),
 		Tags:                  NewTagsEndpoint(s, a.APIKeyAuth),
 		Marks:                 NewMarksEndpoint(s, a.APIKeyAuth),
@@ -125,6 +137,10 @@ func NewEndpoints(s Service) *Endpoints {
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
 		MoveAiNote:            NewMoveAiNoteEndpoint(s),
+		CreateAiSeparator:     NewCreateAiSeparatorEndpoint(s),
+		UpdateAiSeparator:     NewUpdateAiSeparatorEndpoint(s),
+		DeleteAiSeparator:     NewDeleteAiSeparatorEndpoint(s),
+		MoveAiSeparator:       NewMoveAiSeparatorEndpoint(s),
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
 		MakeNotebookPrivate:   NewMakeNotebookPrivateEndpoint(s),
 		AddFile:               NewAddFileEndpoint(s, a.APIKeyAuth),
@@ -154,6 +170,10 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Search = m(e.Search)
 	e.Restore = m(e.Restore)
 	e.Move = m(e.Move)
+	e.CreateSeparator = m(e.CreateSeparator)
+	e.UpdateSeparator = m(e.UpdateSeparator)
+	e.DeleteSeparator = m(e.DeleteSeparator)
+	e.MoveSeparator = m(e.MoveSeparator)
 	e.Notebooks = m(e.Notebooks)
 	e.Tags = m(e.Tags)
 	e.Marks = m(e.Marks)
@@ -174,6 +194,10 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
 	e.MoveAiNote = m(e.MoveAiNote)
+	e.CreateAiSeparator = m(e.CreateAiSeparator)
+	e.UpdateAiSeparator = m(e.UpdateAiSeparator)
+	e.DeleteAiSeparator = m(e.DeleteAiSeparator)
+	e.MoveAiSeparator = m(e.MoveAiSeparator)
 	e.CreateAiNotebook = m(e.CreateAiNotebook)
 	e.MakeNotebookPrivate = m(e.MakeNotebookPrivate)
 	e.AddFile = m(e.AddFile)
@@ -417,6 +441,98 @@ func NewMoveEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoi
 			return nil, err
 		}
 		return s.Move(ctx, p)
+	}
+}
+
+// NewCreateSeparatorEndpoint returns an endpoint function that calls the
+// method "create_separator" of service "notes".
+func NewCreateSeparatorEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*CreateSeparatorPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.CreateSeparator(ctx, p)
+	}
+}
+
+// NewUpdateSeparatorEndpoint returns an endpoint function that calls the
+// method "update_separator" of service "notes".
+func NewUpdateSeparatorEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*UpdateSeparatorPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.UpdateSeparator(ctx, p)
+	}
+}
+
+// NewDeleteSeparatorEndpoint returns an endpoint function that calls the
+// method "delete_separator" of service "notes".
+func NewDeleteSeparatorEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*DeleteSeparatorPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.DeleteSeparator(ctx, p)
+	}
+}
+
+// NewMoveSeparatorEndpoint returns an endpoint function that calls the method
+// "move_separator" of service "notes".
+func NewMoveSeparatorEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*MoveSeparatorPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.MoveSeparator(ctx, p)
 	}
 }
 
@@ -793,6 +909,42 @@ func NewMoveAiNoteEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*MoveAiNotePayload)
 		return s.MoveAiNote(ctx, p)
+	}
+}
+
+// NewCreateAiSeparatorEndpoint returns an endpoint function that calls the
+// method "create_ai_separator" of service "notes".
+func NewCreateAiSeparatorEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*CreateAiSeparatorPayload)
+		return s.CreateAiSeparator(ctx, p)
+	}
+}
+
+// NewUpdateAiSeparatorEndpoint returns an endpoint function that calls the
+// method "update_ai_separator" of service "notes".
+func NewUpdateAiSeparatorEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*UpdateAiSeparatorPayload)
+		return s.UpdateAiSeparator(ctx, p)
+	}
+}
+
+// NewDeleteAiSeparatorEndpoint returns an endpoint function that calls the
+// method "delete_ai_separator" of service "notes".
+func NewDeleteAiSeparatorEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*DeleteAiSeparatorPayload)
+		return nil, s.DeleteAiSeparator(ctx, p)
+	}
+}
+
+// NewMoveAiSeparatorEndpoint returns an endpoint function that calls the
+// method "move_ai_separator" of service "notes".
+func NewMoveAiSeparatorEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*MoveAiSeparatorPayload)
+		return s.MoveAiSeparator(ctx, p)
 	}
 }
 

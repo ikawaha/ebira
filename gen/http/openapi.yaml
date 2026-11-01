@@ -2216,7 +2216,7 @@ paths:
             tags:
                 - notes
             summary: move notes
-            description: Put a note right after another note of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.
+            description: Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.
             operationId: notes#move
             parameters:
                 - name: id
@@ -2248,7 +2248,7 @@ paths:
                             description: Strong entity tag of the note file. Sent as the ETag header over HTTP
                             type: string
                 "400":
-                    description: 'bad_request: The note is in the trash, or after is not another note of its notebook'
+                    description: 'bad_request: The note is in the trash, or after is not another note or a separator of its notebook'
                     schema:
                         $ref: '#/definitions/NotesMoveBadRequestResponseBody'
                     examples:
@@ -2556,6 +2556,293 @@ paths:
                             id: 123abc
                             message: parameter 'p' must be an integer
                             name: verification_required
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /separators:
+        post:
+            tags:
+                - notes
+            summary: create_separator notes
+            description: Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.
+            operationId: notes#create_separator
+            parameters:
+                - name: create_separator_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesCreateSeparatorRequestBody'
+                    required:
+                        - notebook
+            responses:
+                "201":
+                    description: Created response.
+                    schema:
+                        $ref: '#/definitions/Separator'
+                        required:
+                            - id
+                            - notebook
+                "400":
+                    description: 'bad_request: The notebook is the trash, or after is not a note or a separator of the notebook'
+                    schema:
+                        $ref: '#/definitions/NotesCreateSeparatorBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCreateSeparatorUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesCreateSeparatorVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The notebook does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesCreateSeparatorNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /separators/{id}:
+        put:
+            tags:
+                - notes
+            summary: update_separator notes
+            description: Replace the heading, the date and the color of a separator; an omitted one is taken away.
+            operationId: notes#update_separator
+            parameters:
+                - name: id
+                  in: path
+                  description: Separator ID
+                  required: true
+                  type: string
+                  pattern: ^sep-[a-z0-9_-]{1,60}$
+                - name: update_separator_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesUpdateSeparatorRequestBody'
+                    required:
+                        - notebook
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Separator'
+                        required:
+                            - id
+                            - notebook
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesUpdateSeparatorUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesUpdateSeparatorVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The separator does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesUpdateSeparatorNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        delete:
+            tags:
+                - notes
+            summary: delete_separator notes
+            description: Remove a separator. It does not go to the trash.
+            operationId: notes#delete_separator
+            parameters:
+                - name: notebook
+                  in: query
+                  description: Notebook of the separator
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+                - name: id
+                  in: path
+                  description: Separator ID
+                  required: true
+                  type: string
+                  pattern: ^sep-[a-z0-9_-]{1,60}$
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteSeparatorUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteSeparatorVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The separator does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesDeleteSeparatorNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /separators/{id}/move:
+        post:
+            tags:
+                - notes
+            summary: move_separator notes
+            description: Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.
+            operationId: notes#move_separator
+            parameters:
+                - name: id
+                  in: path
+                  description: Separator ID
+                  required: true
+                  type: string
+                  pattern: ^sep-[a-z0-9_-]{1,60}$
+                - name: move_separator_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/NotesMoveSeparatorRequestBody'
+                    required:
+                        - notebook
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Separator'
+                        required:
+                            - id
+                            - notebook
+                "400":
+                    description: 'bad_request: after is not a note or another separator of the notebook'
+                    schema:
+                        $ref: '#/definitions/NotesMoveSeparatorBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveSeparatorUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesMoveSeparatorVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The separator does not exist'
+                    schema:
+                        $ref: '#/definitions/NotesMoveSeparatorNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
                             temporary: false
                             timeout: false
             schemes:
@@ -4512,7 +4799,7 @@ definitions:
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
             type:
                 type: string
-                description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed
+                description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook
                 example: updated
                 enum:
                     - ready
@@ -4634,6 +4921,24 @@ definitions:
                           start: 5812498383206549952
                       trashed_notebook: dev~design
                       updated_at: "2026-10-16T09:30:00Z"
+            separators:
+                type: array
+                items:
+                    $ref: '#/definitions/Separator'
+                description: 'Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset'
+                example:
+                    - before: be4c1193735ee1
+                      color: blue
+                      date: "2026-10-01"
+                      id: sep-3f9a1c2b7d04
+                      notebook: inbox
+                      title: October
+                    - before: be4c1193735ee1
+                      color: blue
+                      date: "2026-10-01"
+                      id: sep-3f9a1c2b7d04
+                      notebook: inbox
+                      title: October
             total:
                 type: integer
                 description: Number of notes in the whole list, regardless of limit and offset
@@ -4722,6 +5027,19 @@ definitions:
                       start: 5812498383206549952
                   trashed_notebook: dev~design
                   updated_at: "2026-10-16T09:30:00Z"
+            separators:
+                - before: be4c1193735ee1
+                  color: blue
+                  date: "2026-10-01"
+                  id: sep-3f9a1c2b7d04
+                  notebook: inbox
+                  title: October
+                - before: be4c1193735ee1
+                  color: blue
+                  date: "2026-10-01"
+                  id: sep-3f9a1c2b7d04
+                  notebook: inbox
+                  title: October
             total: 7955538707107640227
         required:
             - total
@@ -5711,6 +6029,222 @@ definitions:
             title: r1
         required:
             - title
+    NotesCreateSeparatorBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCreateSeparatorNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCreateSeparatorRequestBody:
+        title: NotesCreateSeparatorRequestBody
+        type: object
+        properties:
+            after:
+                type: string
+                description: ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            color:
+                type: string
+                description: Color of the bar, one of the color marks; omit for the plain one
+                example: blue
+                enum:
+                    - red
+                    - orange
+                    - yellow
+                    - green
+                    - blue
+                    - purple
+                    - gray
+            date:
+                type: string
+                description: Date to show, as YYYY-MM-DD; omit for none
+                example: "2026-10-01"
+                format: date
+            notebook:
+                type: string
+                description: Notebook to put the separator in; not the trash
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            title:
+                type: string
+                description: Heading; omit for none
+                example: October
+                maxLength: 200
+        example:
+            after: be4c1193735ee1
+            color: blue
+            date: "2026-10-01"
+            notebook: inbox
+            title: October
+        required:
+            - notebook
+    NotesCreateSeparatorUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesCreateSeparatorVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesCreateUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -6305,6 +6839,135 @@ definitions:
             message: parameter 'p' must be an integer
             name: bad_request
             temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteSeparatorNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteSeparatorUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesDeleteSeparatorVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
             timeout: true
         required:
             - name
@@ -8623,11 +9286,202 @@ definitions:
         properties:
             after:
                 type: string
-                description: ID of the note of the same notebook to put the note after; omit to put it first
+                description: ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
         example:
             after: be4c1193735ee1
+    NotesMoveSeparatorBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveSeparatorNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveSeparatorRequestBody:
+        title: NotesMoveSeparatorRequestBody
+        type: object
+        properties:
+            after:
+                type: string
+                description: ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            notebook:
+                type: string
+                description: Notebook of the separator
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+        example:
+            after: be4c1193735ee1
+            notebook: inbox
+        required:
+            - notebook
+    NotesMoveSeparatorUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesMoveSeparatorVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesMoveUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -10638,6 +11492,173 @@ definitions:
                 - Ab accusantium.
                 - Omnis aliquid odit exercitationem magni voluptatem iure.
             title: r3q
+    NotesUpdateSeparatorNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUpdateSeparatorRequestBody:
+        title: NotesUpdateSeparatorRequestBody
+        type: object
+        properties:
+            color:
+                type: string
+                description: Color of the bar, one of the color marks; omit for the plain one
+                example: blue
+                enum:
+                    - red
+                    - orange
+                    - yellow
+                    - green
+                    - blue
+                    - purple
+                    - gray
+            date:
+                type: string
+                description: Date to show, as YYYY-MM-DD; omit for none
+                example: "2026-10-01"
+                format: date
+            notebook:
+                type: string
+                description: Notebook of the separator
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            title:
+                type: string
+                description: Heading; omit for none
+                example: October
+                maxLength: 200
+        example:
+            color: blue
+            date: "2026-10-01"
+            notebook: inbox
+            title: October
+        required:
+            - notebook
+    NotesUpdateSeparatorUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUpdateSeparatorVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     NotesUpdateUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
@@ -10979,6 +12000,57 @@ definitions:
             - mode
             - total
             - notes
+    Separator:
+        title: Separator
+        type: object
+        properties:
+            before:
+                type: string
+                description: ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            color:
+                type: string
+                description: Color of the bar, one of the color marks; absent for the plain one
+                example: blue
+                enum:
+                    - red
+                    - orange
+                    - yellow
+                    - green
+                    - blue
+                    - purple
+                    - gray
+            date:
+                type: string
+                description: Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+                example: "2026-10-01"
+                format: date
+            id:
+                type: string
+                description: Separator ID
+                example: sep-3f9a1c2b7d04
+                pattern: ^sep-[a-z0-9_-]{1,60}$
+            notebook:
+                type: string
+                description: Notebook the separator is in
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            title:
+                type: string
+                description: Heading; absent for none
+                example: October
+        description: 'A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.'
+        example:
+            before: be4c1193735ee1
+            color: blue
+            date: "2026-10-01"
+            id: sep-3f9a1c2b7d04
+            notebook: inbox
+            title: October
+        required:
+            - id
+            - notebook
     SyncResult:
         title: SyncResult
         type: object

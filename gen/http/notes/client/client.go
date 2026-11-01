@@ -54,6 +54,22 @@ type Client struct {
 	// Move Doer is the HTTP client used to make requests to the move endpoint.
 	MoveDoer goahttp.Doer
 
+	// CreateSeparator Doer is the HTTP client used to make requests to the
+	// create_separator endpoint.
+	CreateSeparatorDoer goahttp.Doer
+
+	// UpdateSeparator Doer is the HTTP client used to make requests to the
+	// update_separator endpoint.
+	UpdateSeparatorDoer goahttp.Doer
+
+	// DeleteSeparator Doer is the HTTP client used to make requests to the
+	// delete_separator endpoint.
+	DeleteSeparatorDoer goahttp.Doer
+
+	// MoveSeparator Doer is the HTTP client used to make requests to the
+	// move_separator endpoint.
+	MoveSeparatorDoer goahttp.Doer
+
 	// Notebooks Doer is the HTTP client used to make requests to the notebooks
 	// endpoint.
 	NotebooksDoer goahttp.Doer
@@ -183,6 +199,10 @@ func NewClient(
 		SearchDoer:                doer,
 		RestoreDoer:               doer,
 		MoveDoer:                  doer,
+		CreateSeparatorDoer:       doer,
+		UpdateSeparatorDoer:       doer,
+		DeleteSeparatorDoer:       doer,
+		MoveSeparatorDoer:         doer,
 		NotebooksDoer:             doer,
 		TagsDoer:                  doer,
 		MarksDoer:                 doer,
@@ -452,6 +472,102 @@ func (c *Client) Move() goa.Endpoint {
 		resp, err := c.MoveDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "move", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// CreateSeparator returns an endpoint that makes HTTP requests to the notes
+// service create_separator server.
+func (c *Client) CreateSeparator() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeCreateSeparatorRequest(c.encoder)
+		decodeResponse = DecodeCreateSeparatorResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildCreateSeparatorRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.CreateSeparatorDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "create_separator", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// UpdateSeparator returns an endpoint that makes HTTP requests to the notes
+// service update_separator server.
+func (c *Client) UpdateSeparator() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeUpdateSeparatorRequest(c.encoder)
+		decodeResponse = DecodeUpdateSeparatorResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildUpdateSeparatorRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.UpdateSeparatorDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "update_separator", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// DeleteSeparator returns an endpoint that makes HTTP requests to the notes
+// service delete_separator server.
+func (c *Client) DeleteSeparator() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeDeleteSeparatorRequest(c.encoder)
+		decodeResponse = DecodeDeleteSeparatorResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildDeleteSeparatorRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.DeleteSeparatorDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "delete_separator", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// MoveSeparator returns an endpoint that makes HTTP requests to the notes
+// service move_separator server.
+func (c *Client) MoveSeparator() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMoveSeparatorRequest(c.encoder)
+		decodeResponse = DecodeMoveSeparatorResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildMoveSeparatorRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.MoveSeparatorDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "move_separator", err)
 		}
 		return decodeResponse(resp)
 	}

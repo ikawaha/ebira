@@ -1005,6 +1005,21 @@ func TestPeopleOnly(t *testing.T) {
 			_, err := svc.SetPreviewStyle(ctx, &gennotes.SetPreviewStylePayload{Style: "band"})
 			return err
 		},
+		"create_separator": func(ctx context.Context) error {
+			_, err := svc.CreateSeparator(ctx, &gennotes.CreateSeparatorPayload{Notebook: diary.ID})
+			return err
+		},
+		"update_separator": func(ctx context.Context) error {
+			_, err := svc.UpdateSeparator(ctx, &gennotes.UpdateSeparatorPayload{ID: "sep-x", Notebook: diary.ID})
+			return err
+		},
+		"delete_separator": func(ctx context.Context) error {
+			return svc.DeleteSeparator(ctx, &gennotes.DeleteSeparatorPayload{ID: "sep-x", Notebook: diary.ID})
+		},
+		"move_separator": func(ctx context.Context) error {
+			_, err := svc.MoveSeparator(ctx, &gennotes.MoveSeparatorPayload{ID: "sep-x", Notebook: diary.ID})
+			return err
+		},
 	}
 	for name, call := range calls {
 		if err := call(ai); errorName(err) != "unauthorized" {

@@ -16,6 +16,7 @@ const state = {
   query: "",
   notes: [],
   total: 0,
+  separators: [], // the separators of the notebook shown, in its manual order
   selected: null, // ID of the note in the preview
   chosen: new Set(), // IDs of the notes chosen together with Cmd/Ctrl or Shift; two or more replace the preview
   anchor: null, // the note a Shift-click chooses from
@@ -24,7 +25,7 @@ const state = {
   allSort: loadAllSort(), // sort of all notes; a notebook keeps its own on the server
   want: 0, // number of notes of the list to show, a page more on "load more"
   expanded: loadExpanded(), // keys of the sub notebooks opened in the note list of their parent (see subKey)
-  subNotes: new Map(), // key of an opened sub notebook: its notes {notes, total, want}
+  subNotes: new Map(), // key of an opened sub notebook: its notes {notes, total, want, separators}
 };
 
 // loadExpanded reads the sub notebooks opened in the note list, kept per
@@ -152,30 +153,55 @@ function listedNotes() {
 
 const findListed = (id) => listedNotes().find((n) => n.id === id);
 
-// listOf returns the list note id is in, with whether its notes can be moved
-// by hand: those of an opened sub notebook, or the notebook's own.
+// listOf returns the list note or separator id is in, with whether its notes
+// can be moved by hand: those of an opened sub notebook, or the notebook's
+// own. items are its rows in order (see listItems), and nb the notebook it
+// lists.
 function listOf(id) {
   for (const x of openSubs()) {
-    const notes = state.subNotes.get(x.key)?.notes ?? [];
-    if (notes.some((n) => n.id === id)) return { notes, reorder: !x.trashed && (x.sub.sort || "order") === "order" };
+    const s = state.subNotes.get(x.key) ?? { notes: [], total: 0 };
+    const items = listItems(s.notes, s.separators, s.total);
+    if (items.some((it) => it.id === id)) return { notes: s.notes, items, nb: x.sub.id, reorder: !x.trashed && (x.sub.sort || "order") === "order" };
   }
-  return { notes: state.notes, reorder: canReorder() };
+  return { notes: state.notes, items: listItems(state.notes, state.separators, state.total), nb: state.notebook, reorder: canReorder() };
+}
+
+// Separators are bars between the notes of a notebook in the manual order,
+// with a heading and a date but no body. The server gives those of a
+// notebook listed in the manual order, each with the note it comes before.
+
+// listItems returns the rows of a list in order, {id, note} or {id, sep}:
+// notes, each after the separators that come before it, and the separators
+// after the last note once all the notes are read.
+function listItems(notes, separators, total) {
+  const before = new Map();
+  for (const sep of separators ?? []) {
+    const k = sep.before ?? "";
+    before.set(k, [...(before.get(k) ?? []), sep]);
+  }
+  const items = [];
+  const seps = (k) => (before.get(k) ?? []).map((sep) => ({ id: sep.id, sep }));
+  for (const n of notes) items.push(...seps(n.id), { id: n.id, note: n });
+  if (notes.length >= total) items.push(...seps(""));
+  return items;
 }
 
 // readSubNotes reads the notes of the opened sub notebook x, in its own sort,
-// as many pages as shown before.
+// as many pages as shown before, with its separators.
 async function readSubNotes(x) {
   const want = state.subNotes.get(x.key)?.want || LIST_PAGE;
   const notes = [];
   let total = 0;
+  let separators = [];
   do {
     const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id };
     const r = await api("/notes", { params: { ...params, limit: LIST_PAGE, offset: notes.length } });
     notes.push(...r.notes);
     total = r.total;
+    separators = r.separators ?? [];
     if (!r.notes.length) break;
   } while (notes.length < Math.min(want, total));
-  return { notes, total, want };
+  return { notes, total, want, separators };
 }
 
 // toggleSub opens or folds the sub notebook key in the note list.
@@ -1495,6 +1521,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
   const info = $("list-info");
   try {
     let notes, total;
+    let separators = [];
     if (state.query) {
       const r = await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, limit: 200 } });
       notes = r.notes;
@@ -1514,6 +1541,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
         const r = await api("/notes", { params: { notebook: state.notebook, trashed_notebook: state.trashedNotebook, tag: state.tag, sort: state.notebook ? null : state.allSort, limit: LIST_PAGE, offset: notes.length } });
         notes.push(...r.notes);
         total = r.total;
+        separators = r.separators ?? [];
         if (!r.notes.length) break;
       } while (notes.length < Math.min(state.want, total));
     }
@@ -1528,6 +1556,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     if (seq !== loadSeq) return;
     state.notes = notes;
     state.total = total;
+    state.separators = separators;
     state.subNotes = subs;
     const many = state.chosen.size > 1;
     const listed = listedNotes();
@@ -1550,6 +1579,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
   } catch (e) {
     if (seq !== loadSeq) return;
     state.notes = [];
+    state.separators = [];
     info.textContent = t("loadFailed", { error: e.message });
     info.classList.add("error");
     renderNotes();
@@ -1624,10 +1654,11 @@ function cycleSort() {
 // moveNote puts note id right after the note after (null for first) in the
 // manual order.
 async function moveNote(id, after, undoing) {
-  // The note above it now, to put it back after.
-  const { notes } = listOf(id);
+  // The row above it now, to put it back after.
+  const { notes, items } = listOf(id);
   const i = notes.findIndex((n) => n.id === id);
-  const before = i > 0 ? notes[i - 1].id : null;
+  const k = items.findIndex((it) => it.id === id);
+  const before = k > 0 ? items[k - 1].id : null;
   try {
     await api(`${noteURL(id)}/move`, { method: "POST", body: after ? { after } : {} });
   } catch (e) {
@@ -1644,41 +1675,46 @@ async function moveNote(id, after, undoing) {
 }
 
 // moveSelected moves the selected note up (-1) or down (+1).
+// A separator counts as a row: the note goes past it one step at a time.
 function moveSelected(delta) {
   if (state.query || !state.selected) return;
-  const { notes, reorder } = listOf(state.selected);
+  const { items, reorder } = listOf(state.selected);
   if (!reorder) return;
-  const i = notes.findIndex((n) => n.id === state.selected);
+  const i = items.findIndex((it) => it.id === state.selected);
   const j = i + delta;
-  if (i < 0 || j < 0 || j >= notes.length) return;
-  // Down: after the next note. Up: after the note above the previous one, or
+  if (i < 0 || j < 0 || j >= items.length) return;
+  // Down: after the next row. Up: after the row above the previous one, or
   // first.
-  const after = delta > 0 ? notes[j].id : (notes[j - 1]?.id ?? null);
+  const after = delta > 0 ? items[j].id : (items[j - 1]?.id ?? null);
   moveNote(state.selected, after);
 }
 
-// Drag and drop in the manual order: dropping on the upper half of a note puts
-// the dragged note above it, on the lower half below it.
+// Drag and drop in the manual order: dropping on the upper half of a row puts
+// the dragged note or separator above it, on the lower half below it.
 let dragID = null;
+
+// rowID returns the ID of the note or the separator of row li.
+const rowID = (li) => li.dataset.id || li.dataset.sep;
 
 function dropAfter(li, e, list) {
   const r = li.getBoundingClientRect();
   const below = e.clientY > r.top + r.height / 2;
-  const others = list.filter((n) => n.id !== dragID);
-  const i = others.findIndex((n) => n.id === li.dataset.id);
+  const others = list.filter((it) => it.id !== dragID);
+  const i = others.findIndex((it) => it.id === rowID(li));
   if (below) return { after: others[i].id, below };
   return { after: i > 0 ? others[i - 1].id : null, below };
 }
 
-// enableDrag lets the note li be dragged onto a notebook, to move it there,
-// and, with reorder, within list, the notes it is shown with: those of the
-// notebook, or of an opened sub notebook.
+// enableDrag lets the row li, of a note or a separator, be dragged and, with
+// reorder, moved within list, the rows it is shown with (see listItems):
+// those of the notebook, or of an opened sub notebook. A note can be dragged
+// onto a notebook as well, to move it there.
 function enableDrag(li, reorder, list) {
   li.draggable = true;
   li.addEventListener("dragstart", (e) => {
-    dragID = li.dataset.id;
+    dragID = rowID(li);
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", draggedNotes()?.length ? t("selectionCount", { n: draggedNotes().length }) : li.querySelector(".title")?.textContent || "");
+    e.dataTransfer.setData("text/plain", draggedNotes()?.length ? t("selectionCount", { n: draggedNotes().length }) : li.querySelector(".title, .sep-title")?.textContent || "");
     li.classList.add("dragging");
   });
   li.addEventListener("dragend", () => {
@@ -1688,7 +1724,7 @@ function enableDrag(li, reorder, list) {
     for (const x of $("notebooks").children) x.classList.remove("drop-into");
   });
   if (!reorder) return;
-  const within = () => dragID && dragID !== li.dataset.id && !draggedNotes() && list.some((n) => n.id === dragID);
+  const within = () => dragID && dragID !== rowID(li) && !draggedNotes() && list.some((it) => it.id === dragID);
   li.addEventListener("dragover", (e) => {
     if (!within()) return;
     e.preventDefault();
@@ -1702,7 +1738,9 @@ function enableDrag(li, reorder, list) {
     e.preventDefault();
     const id = dragID;
     const { after } = dropAfter(li, e, list);
-    moveNote(id, after);
+    const sep = list.find((it) => it.id === id)?.sep;
+    if (sep) moveSeparator(sep, after);
+    else moveNote(id, after);
   });
 }
 
@@ -1784,7 +1822,8 @@ function subNotebookRows() {
     const s = state.subNotes.get(key) ?? { notes: [], total: 0 };
     const reorder = !trashed && (sub.sort || "order") === "order";
     const cls = depth ? "in-sub deep" : "in-sub";
-    const rows = s.notes.map((n) => noteRow(n, sub.sort || "order", reorder, s.notes, cls));
+    const items = listItems(s.notes, s.separators, s.total);
+    const rows = items.map((it) => it.sep ? separatorRow(it.sep, reorder, items, cls) : noteRow(it.note, sub.sort || "order", reorder, items, cls));
     if (s.notes.length < s.total) {
       const more = button(t("loadMore", { rest: s.total - s.notes.length }), () => {
         s.want = s.notes.length + LIST_PAGE;
@@ -1800,7 +1839,8 @@ function renderNotes() {
   if (renaming && parentOf(renaming)) return; // a sub notebook row is being renamed
   const ul = $("notes");
   ul.replaceChildren(...subNotebookRows());
-  for (const n of state.notes) ul.append(noteRow(n, currentSort(), canReorder(), state.notes, ""));
+  const items = listItems(state.notes, state.separators, state.total);
+  for (const it of items) ul.append(it.sep ? separatorRow(it.sep, canReorder(), items, "") : noteRow(it.note, currentSort(), canReorder(), items, ""));
   if (!state.query && state.notes.length < state.total) {
     const more = button(t("loadMore", { rest: state.total - state.notes.length }), () => {
       state.want = state.notes.length + LIST_PAGE;
@@ -1811,7 +1851,7 @@ function renderNotes() {
 }
 
 // noteRow returns the row of note n in the list, shown in sort; with reorder,
-// it can be dragged within list, the notes it is shown with.
+// it can be dragged within list, the rows it is shown with.
 function noteRow(n, sort, reorder, list, cls) {
   const li = el("li", [cls, n.id === state.selected ? "active" : "", state.chosen.has(n.id) ? "chosen" : ""].filter(Boolean).join(" "));
   li.dataset.id = n.id;
@@ -1841,6 +1881,220 @@ function noteRow(n, sort, reorder, list, cls) {
   });
   return li;
 }
+
+// separatorRow returns the row of separator sep in the list; with reorder,
+// it can be dragged within list, the rows it is shown with.
+function separatorRow(sep, reorder, list, cls) {
+  const li = el("li", ["separator", sep.color && `sep-${sep.color}`, cls].filter(Boolean).join(" "));
+  li.dataset.sep = sep.id;
+  if (sep.title) li.append(el("span", "sep-title", sep.title));
+  li.append(el("span", "sep-line"));
+  if (sep.date) li.append(el("span", "sep-date", formatDate(sep.date)));
+  const more = button("…", (e) => {
+    e.stopPropagation();
+    openSeparatorMenu(li, sep);
+  }, { cls: "nb-more", title: t("separatorActions") });
+  more.setAttribute("aria-haspopup", "menu");
+  more.setAttribute("aria-label", t("separatorActions"));
+  li.append(more);
+  li.setAttribute("role", "separator");
+  li.setAttribute("aria-label", [sep.title, sep.date].filter(Boolean).join(" ") || t("separator"));
+  if (reorder) enableDrag(li, true, list);
+  li.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    openSeparatorMenu(li, sep, e);
+  });
+  li.addEventListener("dblclick", () => editSeparator(sep));
+  return li;
+}
+
+// formatDate formats the date d (YYYY-MM-DD) in the language of the page.
+function formatDate(d) {
+  const [y, m, day] = d.split("-").map(Number);
+  const date = new Date(y, m - 1, day);
+  if (isNaN(date)) return d;
+  return date.toLocaleDateString(lang, { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+// openSeparatorMenu opens the menu of separator sep, at the pointer for a
+// right click (e), else beside its row li.
+function openSeparatorMenu(li, sep, e) {
+  closeNotebookMenu();
+  const m = $("notebook-menu");
+  m.replaceChildren();
+  const item = (label, fn, cls) => {
+    const b = button(label, () => {
+      closeNotebookMenu();
+      fn();
+    }, { cls });
+    b.setAttribute("role", "menuitem");
+    m.append(b);
+  };
+  item(t("separatorEdit"), () => editSeparator(sep));
+  item(t("separatorDelete"), () => deleteSeparator(sep), "danger");
+  menuRow = li;
+  li.classList.add("menu-open");
+  m.hidden = false;
+  const r = li.getBoundingClientRect();
+  const x = e ? e.clientX : r.right - 8;
+  const y = e ? e.clientY : r.bottom;
+  m.style.left = Math.min(x, innerWidth - m.offsetWidth - 8) + "px";
+  m.style.top = Math.min(y, innerHeight - m.offsetHeight - 8) + "px";
+  m.querySelector("button")?.focus();
+}
+
+// askSeparator asks for the heading, the date and the color of a separator
+// in its dialog, filled with sep; it resolves to {title, date, color}, or
+// null when cancelled.
+function askSeparator(sep, heading) {
+  const d = $("separator-edit");
+  d.querySelector("h2").textContent = heading;
+  $("separator-title").value = sep?.title ?? "";
+  // A new separator starts with today, which the × takes away.
+  $("separator-date").value = sep ? sep.date ?? "" : today();
+  const color = sep?.color ?? "";
+  for (const r of d.querySelectorAll("input[name=separator-color]")) r.checked = r.value === color;
+  d.returnValue = "";
+  d.showModal();
+  $("separator-title").focus();
+  return new Promise((resolve) => {
+    d.addEventListener("close", () => {
+      resolve(d.returnValue === "save" ? { title: $("separator-title").value.trim(), date: $("separator-date").value, color: d.querySelector("input[name=separator-color]:checked")?.value ?? "" } : null);
+    }, { once: true });
+  });
+}
+
+// today returns the date of today on this machine, as YYYY-MM-DD.
+function today() {
+  const d = new Date();
+  return [d.getFullYear(), d.getMonth() + 1, d.getDate()].map((v, i) => String(v).padStart(i ? 2 : 4, "0")).join("-");
+}
+
+// SEPARATOR_COLORS are the colors a separator can have: those of the color
+// marks.
+const SEPARATOR_COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "gray"];
+
+// The choices of the color, the plain one first.
+for (const c of ["", ...SEPARATOR_COLORS]) {
+  const name = c ? `mark_${c}` : "separatorColorNone"; // named by loadMessages
+  const r = el("input");
+  r.type = "radio";
+  r.name = "separator-color";
+  r.value = c;
+  r.dataset.i18nAriaLabel = name;
+  const l = el("label", "swatch");
+  l.dataset.i18nTitle = name;
+  l.append(r, el("span", c ? `mark-dot mark-${c}` : "mark-dot swatch-none"));
+  $("separator-color").append(l);
+}
+
+$("separator-date-clear").addEventListener("click", () => {
+  $("separator-date").value = "";
+  $("separator-date").focus();
+});
+$("separator-cancel").addEventListener("click", () => $("separator-edit").close());
+$("separator-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  $("separator-edit").close("save");
+});
+
+// separatorBody is the request body for the heading, the date and the color
+// of a separator; an empty one is left out, which takes it away.
+const separatorBody = ({ title, date, color }, more) => ({ ...more, ...(title ? { title } : {}), ...(date ? { date } : {}), ...(color ? { color } : {}) });
+
+// insertSeparator asks for a new separator and puts it right after the row
+// after (null for first) of notebook nb.
+async function insertSeparator(nb, after) {
+  const v = await askSeparator(null, t("separatorNew"));
+  if (!v) return;
+  let sep;
+  try {
+    sep = await api("/separators", { method: "POST", body: separatorBody(v, { notebook: nb, ...(after ? { after } : {}) }) });
+  } catch (e) {
+    alert(t("separatorFailed", { error: e.message }));
+    return;
+  }
+  offerUndo(t("toastSeparatorAdded"), () => api(`/separators/${encodeURIComponent(sep.id)}`, { method: "DELETE", params: { notebook: nb } }).then(() => loadNotes()));
+  await loadNotes();
+}
+
+// insertSeparatorAbove puts a new separator right above note n.
+function insertSeparatorAbove(n) {
+  const { items, nb } = listOf(n.id);
+  const i = items.findIndex((it) => it.id === n.id);
+  insertSeparator(nb, i > 0 ? items[i - 1].id : null);
+}
+
+async function editSeparator(sep) {
+  const v = await askSeparator(sep, t("separatorEdit"));
+  if (!v) return;
+  const url = `/separators/${encodeURIComponent(sep.id)}`;
+  try {
+    await api(url, { method: "PUT", body: separatorBody(v, { notebook: sep.notebook }) });
+  } catch (e) {
+    alert(t("separatorFailed", { error: e.message }));
+    await loadNotes();
+    return;
+  }
+  offerUndo(t("toastSeparatorEdited"), () => api(url, { method: "PUT", body: separatorBody(sep, { notebook: sep.notebook }) }).then(() => loadNotes()));
+  await loadNotes();
+}
+
+// deleteSeparator removes separator sep at once, as it holds no content; the
+// undo puts a new one with its heading, date and color where it was.
+async function deleteSeparator(sep) {
+  const { items } = listOf(sep.id);
+  const i = items.findIndex((it) => it.id === sep.id);
+  const after = i > 0 ? items[i - 1].id : null;
+  try {
+    await api(`/separators/${encodeURIComponent(sep.id)}`, { method: "DELETE", params: { notebook: sep.notebook } });
+  } catch (e) {
+    alert(t("separatorFailed", { error: e.message }));
+    await loadNotes();
+    return;
+  }
+  offerUndo(t("toastSeparatorDeleted"), () => api("/separators", { method: "POST", body: separatorBody(sep, { notebook: sep.notebook, ...(after ? { after } : {}) }) }).then(() => loadNotes()));
+  await loadNotes();
+}
+
+// moveSeparator puts separator sep right after the row after (null for
+// first) in the manual order.
+async function moveSeparator(sep, after, undoing) {
+  const { items } = listOf(sep.id);
+  const i = items.findIndex((it) => it.id === sep.id);
+  const before = i > 0 ? items[i - 1].id : null;
+  try {
+    await api(`/separators/${encodeURIComponent(sep.id)}/move`, { method: "POST", body: { notebook: sep.notebook, ...(after ? { after } : {}) } });
+  } catch (e) {
+    if (undoing) throw e;
+    alert(t("separatorFailed", { error: e.message }));
+    await loadNotes();
+    return;
+  }
+  if (!undoing) offerUndo(t("toastSeparatorMoved"), () => moveSeparator(sep, before, true));
+  await loadNotes();
+}
+
+// In the manual order, a right click on the list below the rows puts a
+// separator last (first while notes are left to read).
+$("notes").addEventListener("contextmenu", (e) => {
+  if (e.target !== $("notes") || !canReorder()) return;
+  e.preventDefault();
+  closeNotebookMenu();
+  const m = $("notebook-menu");
+  const items = listItems(state.notes, state.separators, state.total);
+  const all = state.notes.length >= state.total;
+  const b = button(t("separatorInsert"), () => {
+    closeNotebookMenu();
+    insertSeparator(state.notebook, all ? items.at(-1)?.id ?? null : null);
+  });
+  b.setAttribute("role", "menuitem");
+  m.replaceChildren(b);
+  m.hidden = false;
+  m.style.left = Math.min(e.clientX, innerWidth - m.offsetWidth - 8) + "px";
+  m.style.top = Math.min(e.clientY, innerHeight - m.offsetHeight - 8) + "px";
+  b.focus();
+});
 
 function markSelected() {
   for (const li of $("notes").children) li.classList.toggle("active", li.dataset.id === state.selected);
@@ -2128,6 +2382,15 @@ function openMarkMenu(n, at, e) {
   const none = button(t("markNone"), () => pick(null), { cls: "mark-none" });
   none.setAttribute("role", "menuitem");
   m.replaceChildren(el("div", "menu-label", t("markMenu")), grid("color"), grid("symbol"), none);
+  // From the list in the manual order, a separator can go above the note.
+  if (at.closest?.("#notes") && findListed(n.id) && listOf(n.id).reorder) {
+    const sep = button(t("separatorInsertAbove"), () => {
+      closeMarkMenu();
+      insertSeparatorAbove(n);
+    }, { cls: "mark-none" });
+    sep.setAttribute("role", "menuitem");
+    m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }), sep);
+  }
   m.hidden = false;
   const r = at.getBoundingClientRect();
   const x = e ? e.clientX : r.right - m.offsetWidth;
@@ -4107,7 +4370,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("preview-style").open || $("mark-names").open) return;
+  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

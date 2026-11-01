@@ -70,11 +70,35 @@ func CreateAiNotebookResultCodec() tools.JSONCodec[*CreateAiNotebookResult] {
 	}
 }
 
+// CreateAiSeparatorPayloadCodec returns a fresh codec for *CreateAiSeparatorPayload.
+func CreateAiSeparatorPayloadCodec() tools.JSONCodec[*CreateAiSeparatorPayload] {
+	return tools.JSONCodec[*CreateAiSeparatorPayload]{
+		ToJSON:   MarshalCreateAiSeparatorPayload,
+		FromJSON: UnmarshalCreateAiSeparatorPayload,
+	}
+}
+
+// CreateAiSeparatorResultCodec returns a fresh codec for *CreateAiSeparatorResult.
+func CreateAiSeparatorResultCodec() tools.JSONCodec[*CreateAiSeparatorResult] {
+	return tools.JSONCodec[*CreateAiSeparatorResult]{
+		ToJSON:   MarshalCreateAiSeparatorResult,
+		FromJSON: UnmarshalCreateAiSeparatorResult,
+	}
+}
+
 // DeleteAiNotePayloadCodec returns a fresh codec for *DeleteAiNotePayload.
 func DeleteAiNotePayloadCodec() tools.JSONCodec[*DeleteAiNotePayload] {
 	return tools.JSONCodec[*DeleteAiNotePayload]{
 		ToJSON:   MarshalDeleteAiNotePayload,
 		FromJSON: UnmarshalDeleteAiNotePayload,
+	}
+}
+
+// DeleteAiSeparatorPayloadCodec returns a fresh codec for *DeleteAiSeparatorPayload.
+func DeleteAiSeparatorPayloadCodec() tools.JSONCodec[*DeleteAiSeparatorPayload] {
+	return tools.JSONCodec[*DeleteAiSeparatorPayload]{
+		ToJSON:   MarshalDeleteAiSeparatorPayload,
+		FromJSON: UnmarshalDeleteAiSeparatorPayload,
 	}
 }
 
@@ -198,6 +222,22 @@ func MoveAiNoteResultCodec() tools.JSONCodec[*MoveAiNoteResult] {
 	}
 }
 
+// MoveAiSeparatorPayloadCodec returns a fresh codec for *MoveAiSeparatorPayload.
+func MoveAiSeparatorPayloadCodec() tools.JSONCodec[*MoveAiSeparatorPayload] {
+	return tools.JSONCodec[*MoveAiSeparatorPayload]{
+		ToJSON:   MarshalMoveAiSeparatorPayload,
+		FromJSON: UnmarshalMoveAiSeparatorPayload,
+	}
+}
+
+// MoveAiSeparatorResultCodec returns a fresh codec for *MoveAiSeparatorResult.
+func MoveAiSeparatorResultCodec() tools.JSONCodec[*MoveAiSeparatorResult] {
+	return tools.JSONCodec[*MoveAiSeparatorResult]{
+		ToJSON:   MarshalMoveAiSeparatorResult,
+		FromJSON: UnmarshalMoveAiSeparatorResult,
+	}
+}
+
 // SearchNotesPayloadCodec returns a fresh codec for *SearchNotesPayload.
 func SearchNotesPayloadCodec() tools.JSONCodec[*SearchNotesPayload] {
 	return tools.JSONCodec[*SearchNotesPayload]{
@@ -227,6 +267,22 @@ func UpdateAiNoteResultCodec() tools.JSONCodec[*UpdateAiNoteResult] {
 	return tools.JSONCodec[*UpdateAiNoteResult]{
 		ToJSON:   MarshalUpdateAiNoteResult,
 		FromJSON: UnmarshalUpdateAiNoteResult,
+	}
+}
+
+// UpdateAiSeparatorPayloadCodec returns a fresh codec for *UpdateAiSeparatorPayload.
+func UpdateAiSeparatorPayloadCodec() tools.JSONCodec[*UpdateAiSeparatorPayload] {
+	return tools.JSONCodec[*UpdateAiSeparatorPayload]{
+		ToJSON:   MarshalUpdateAiSeparatorPayload,
+		FromJSON: UnmarshalUpdateAiSeparatorPayload,
+	}
+}
+
+// UpdateAiSeparatorResultCodec returns a fresh codec for *UpdateAiSeparatorResult.
+func UpdateAiSeparatorResultCodec() tools.JSONCodec[*UpdateAiSeparatorResult] {
+	return tools.JSONCodec[*UpdateAiSeparatorResult]{
+		ToJSON:   MarshalUpdateAiSeparatorResult,
+		FromJSON: UnmarshalUpdateAiSeparatorResult,
 	}
 }
 
@@ -309,6 +365,32 @@ var (
 			return UnmarshalCreateAiNotebookResult(data)
 		},
 	}
+	// createAiSeparatorPayloadCodec provides an untyped codec for *CreateAiSeparatorPayload.
+	createAiSeparatorPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*CreateAiSeparatorPayload); ok {
+				return MarshalCreateAiSeparatorPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *CreateAiSeparatorPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalCreateAiSeparatorPayload(data)
+		},
+	}
+	// createAiSeparatorResultCodec provides an untyped codec for *CreateAiSeparatorResult.
+	createAiSeparatorResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*CreateAiSeparatorResult); ok {
+				return MarshalCreateAiSeparatorResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *CreateAiSeparatorResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalCreateAiSeparatorResult(data)
+		},
+	}
 	// deleteAiNotePayloadCodec provides an untyped codec for *DeleteAiNotePayload.
 	deleteAiNotePayloadCodec = tools.JSONCodec[any]{
 		ToJSON: func(v any) ([]byte, error) {
@@ -320,6 +402,19 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalDeleteAiNotePayload(data)
+		},
+	}
+	// deleteAiSeparatorPayloadCodec provides an untyped codec for *DeleteAiSeparatorPayload.
+	deleteAiSeparatorPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*DeleteAiSeparatorPayload); ok {
+				return MarshalDeleteAiSeparatorPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *DeleteAiSeparatorPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalDeleteAiSeparatorPayload(data)
 		},
 	}
 	// getNotePayloadCodec provides an untyped codec for *GetNotePayload.
@@ -517,6 +612,32 @@ var (
 			return UnmarshalMoveAiNoteResult(data)
 		},
 	}
+	// moveAiSeparatorPayloadCodec provides an untyped codec for *MoveAiSeparatorPayload.
+	moveAiSeparatorPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*MoveAiSeparatorPayload); ok {
+				return MarshalMoveAiSeparatorPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *MoveAiSeparatorPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalMoveAiSeparatorPayload(data)
+		},
+	}
+	// moveAiSeparatorResultCodec provides an untyped codec for *MoveAiSeparatorResult.
+	moveAiSeparatorResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*MoveAiSeparatorResult); ok {
+				return MarshalMoveAiSeparatorResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *MoveAiSeparatorResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalMoveAiSeparatorResult(data)
+		},
+	}
 	// searchNotesPayloadCodec provides an untyped codec for *SearchNotesPayload.
 	searchNotesPayloadCodec = tools.JSONCodec[any]{
 		ToJSON: func(v any) ([]byte, error) {
@@ -567,6 +688,32 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalUpdateAiNoteResult(data)
+		},
+	}
+	// updateAiSeparatorPayloadCodec provides an untyped codec for *UpdateAiSeparatorPayload.
+	updateAiSeparatorPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*UpdateAiSeparatorPayload); ok {
+				return MarshalUpdateAiSeparatorPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *UpdateAiSeparatorPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalUpdateAiSeparatorPayload(data)
+		},
+	}
+	// updateAiSeparatorResultCodec provides an untyped codec for *UpdateAiSeparatorResult.
+	updateAiSeparatorResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*UpdateAiSeparatorResult); ok {
+				return MarshalUpdateAiSeparatorResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *UpdateAiSeparatorResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalUpdateAiSeparatorResult(data)
 		},
 	}
 )
@@ -820,6 +967,72 @@ var createAiNotebookResultFields = []tools.FieldMetadata{
 		Description: "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width",
 	},
 }
+var createAiSeparatorPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "ID of a notebook of the collab kind",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Heading; omit for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("date")},
+		JSONType:    "string",
+		Description: "Date to show, as YYYY-MM-DD; omit for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("color")},
+		JSONType:    "string",
+		Description: "Color of the bar, one of the color marks; omit for the plain one",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("after")},
+		JSONType:    "string",
+		Description: "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first",
+	},
+}
+var createAiSeparatorResultFields = []tools.FieldMetadata{
+	{
+		JSONType:    "object",
+		Description: "A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook the separator is in",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Heading; absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("date")},
+		JSONType:    "string",
+		Description: "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("color")},
+		JSONType:    "string",
+		Description: "Color of the bar, one of the color marks; absent for the plain one",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("before")},
+		JSONType:    "string",
+		Description: "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
+	},
+}
 var deleteAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		JSONType: "object",
@@ -833,6 +1046,21 @@ var deleteAiNotePayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("version")},
 		JSONType:    "string",
 		Description: "Version of the note as returned by get_note",
+	},
+}
+var deleteAiSeparatorPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID, from list_notes",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook of the separator",
 	},
 }
 var getNotePayloadFields = []tools.FieldMetadata{
@@ -1392,6 +1620,46 @@ var listNotesResultFields = []tools.FieldMetadata{
 		JSONType:    "integer",
 		Description: "Offset just past the last character",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators")},
+		JSONType:    "array",
+		Description: "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}},
+		JSONType:    "object",
+		Description: "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}, tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}, tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook the separator is in",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}, tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Heading; absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}, tools.FixedField("date")},
+		JSONType:    "string",
+		Description: "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}, tools.FixedField("color")},
+		JSONType:    "string",
+		Description: "Color of the bar, one of the color marks; absent for the plain one",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("separators"), tools.DynamicField{}, tools.FixedField("before")},
+		JSONType:    "string",
+		Description: "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
+	},
 }
 var listTagsPayloadFields = []tools.FieldMetadata{
 	{
@@ -1444,7 +1712,7 @@ var moveAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("after")},
 		JSONType:    "string",
-		Description: "ID of the note of the same notebook to put the note after; omit to put it first",
+		Description: "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first",
 	},
 }
 var moveAiNoteResultFields = []tools.FieldMetadata{
@@ -1560,6 +1828,62 @@ var moveAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body_highlights"), tools.DynamicField{}, tools.FixedField("end")},
 		JSONType:    "integer",
 		Description: "Offset just past the last character",
+	},
+}
+var moveAiSeparatorPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID, from list_notes",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook of the separator",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("after")},
+		JSONType:    "string",
+		Description: "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first",
+	},
+}
+var moveAiSeparatorResultFields = []tools.FieldMetadata{
+	{
+		JSONType:    "object",
+		Description: "A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook the separator is in",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Heading; absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("date")},
+		JSONType:    "string",
+		Description: "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("color")},
+		JSONType:    "string",
+		Description: "Color of the bar, one of the color marks; absent for the plain one",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("before")},
+		JSONType:    "string",
+		Description: "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
 	},
 }
 var searchNotesPayloadFields = []tools.FieldMetadata{
@@ -1907,6 +2231,72 @@ var updateAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Offset just past the last character",
 	},
 }
+var updateAiSeparatorPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID, from list_notes",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook of the separator",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Heading; omit for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("date")},
+		JSONType:    "string",
+		Description: "Date to show, as YYYY-MM-DD; omit for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("color")},
+		JSONType:    "string",
+		Description: "Color of the bar, one of the color marks; omit for the plain one",
+	},
+}
+var updateAiSeparatorResultFields = []tools.FieldMetadata{
+	{
+		JSONType:    "object",
+		Description: "A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Separator ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
+		JSONType:    "string",
+		Description: "Notebook the separator is in",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("title")},
+		JSONType:    "string",
+		Description: "Heading; absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("date")},
+		JSONType:    "string",
+		Description: "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("color")},
+		JSONType:    "string",
+		Description: "Color of the bar, one of the color marks; absent for the plain one",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("before")},
+		JSONType:    "string",
+		Description: "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
+	},
+}
 
 // newValidationError converts a goa.ServiceError (possibly merged) into a
 // tools.ValidationError with structured FieldIssue entries. It trims any leading
@@ -2041,6 +2431,40 @@ func enrichCreateAiNotebookResultValidationError(err error) error {
 	}
 	return tools.NewValidationError(ve.Error(), issues, m)
 }
+func enrichCreateAiSeparatorPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(createAiSeparatorPayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichCreateAiSeparatorResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(createAiSeparatorResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
 func enrichDeleteAiNotePayloadValidationError(err error) error {
 	var ve *tools.ValidationError
 	if !errors.As(err, &ve) {
@@ -2053,6 +2477,23 @@ func enrichDeleteAiNotePayloadValidationError(err error) error {
 	m := make(map[string]string)
 	for _, is := range issues {
 		if field, ok := tools.LookupFieldMetadata(deleteAiNotePayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichDeleteAiSeparatorPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(deleteAiSeparatorPayloadFields, is.Field); ok && field.Description != "" {
 			m[is.Field] = field.Description
 		}
 	}
@@ -2279,6 +2720,40 @@ func enrichMoveAiNoteResultValidationError(err error) error {
 	}
 	return tools.NewValidationError(ve.Error(), issues, m)
 }
+func enrichMoveAiSeparatorPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(moveAiSeparatorPayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichMoveAiSeparatorResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(moveAiSeparatorResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
 func enrichSearchNotesPayloadValidationError(err error) error {
 	var ve *tools.ValidationError
 	if !errors.As(err, &ve) {
@@ -2342,6 +2817,40 @@ func enrichUpdateAiNoteResultValidationError(err error) error {
 	m := make(map[string]string)
 	for _, is := range issues {
 		if field, ok := tools.LookupFieldMetadata(updateAiNoteResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichUpdateAiSeparatorPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(updateAiSeparatorPayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichUpdateAiSeparatorResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(updateAiSeparatorResultFields, is.Field); ok && field.Description != "" {
 			m[is.Field] = field.Description
 		}
 	}
@@ -2533,6 +3042,68 @@ func invalidCreateAiNotebookResultFieldTypeError(err error) error {
 		nil,
 	)
 }
+func invalidCreateAiSeparatorPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "CreateAiSeparatorPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(createAiSeparatorPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidCreateAiSeparatorResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "CreateAiSeparatorResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(createAiSeparatorResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
 func invalidDeleteAiNotePayloadFieldTypeError(err error) error {
 	var typeErr *json.UnmarshalTypeError
 	if !errors.As(err, &typeErr) {
@@ -2544,6 +3115,37 @@ func invalidDeleteAiNotePayloadFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(deleteAiNotePayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidDeleteAiSeparatorPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "DeleteAiSeparatorPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(deleteAiSeparatorPayloadFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -3029,6 +3631,68 @@ func invalidMoveAiNoteResultFieldTypeError(err error) error {
 		nil,
 	)
 }
+func invalidMoveAiSeparatorPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "MoveAiSeparatorPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(moveAiSeparatorPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidMoveAiSeparatorResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "MoveAiSeparatorResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(moveAiSeparatorResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
 func invalidSearchNotesPayloadFieldTypeError(err error) error {
 	var typeErr *json.UnmarshalTypeError
 	if !errors.As(err, &typeErr) {
@@ -3133,6 +3797,68 @@ func invalidUpdateAiNoteResultFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(updateAiNoteResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidUpdateAiSeparatorPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "UpdateAiSeparatorPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(updateAiSeparatorPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidUpdateAiSeparatorResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "UpdateAiSeparatorResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(updateAiSeparatorResultFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -3514,6 +4240,104 @@ func UnmarshalCreateAiNotebookResult(data []byte) (*CreateAiNotebookResult, erro
 	return out, nil
 }
 
+// MarshalCreateAiSeparatorPayload serializes *CreateAiSeparatorPayload into JSON.
+func MarshalCreateAiSeparatorPayload(v *CreateAiSeparatorPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("createAiSeparatorPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.CreateAiSeparatorPayloadTransport
+	out = &toolhttp.CreateAiSeparatorPayloadTransport{
+		Notebook: &in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		After:    in.After,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalCreateAiSeparatorPayload deserializes JSON into *CreateAiSeparatorPayload.
+func UnmarshalCreateAiSeparatorPayload(data []byte) (*CreateAiSeparatorPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("createAiSeparatorPayload JSON is empty")
+	}
+	var tv toolhttp.CreateAiSeparatorPayloadTransport
+	if err := validateCreateAiSeparatorPayloadJSON(data); err != nil {
+		return nil, invalidCreateAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidCreateAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateCreateAiSeparatorPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichCreateAiSeparatorPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *CreateAiSeparatorPayload
+	out = &CreateAiSeparatorPayload{
+		Notebook: *in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		After:    in.After,
+	}
+	return out, nil
+}
+
+// MarshalCreateAiSeparatorResult serializes *CreateAiSeparatorResult into JSON.
+func MarshalCreateAiSeparatorResult(v *CreateAiSeparatorResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("createAiSeparatorResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.CreateAiSeparatorResultTransport
+	out = &toolhttp.CreateAiSeparatorResultTransport{
+		ID:       &in.ID,
+		Notebook: &in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		Before:   in.Before,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalCreateAiSeparatorResult deserializes JSON into *CreateAiSeparatorResult.
+func UnmarshalCreateAiSeparatorResult(data []byte) (*CreateAiSeparatorResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("createAiSeparatorResult JSON is empty")
+	}
+	var tv toolhttp.CreateAiSeparatorResultTransport
+	if err := validateCreateAiSeparatorResultJSON(data); err != nil {
+		return nil, invalidCreateAiSeparatorResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidCreateAiSeparatorResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateCreateAiSeparatorResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichCreateAiSeparatorResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *CreateAiSeparatorResult
+	out = &CreateAiSeparatorResult{
+		ID:       *in.ID,
+		Notebook: *in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		Before:   in.Before,
+	}
+	return out, nil
+}
+
 // MarshalDeleteAiNotePayload serializes *DeleteAiNotePayload into JSON.
 func MarshalDeleteAiNotePayload(v *DeleteAiNotePayload) ([]byte, error) {
 	if v == nil {
@@ -3552,6 +4376,48 @@ func UnmarshalDeleteAiNotePayload(data []byte) (*DeleteAiNotePayload, error) {
 	out = &DeleteAiNotePayload{
 		ID:      *in.ID,
 		Version: *in.Version,
+	}
+	return out, nil
+}
+
+// MarshalDeleteAiSeparatorPayload serializes *DeleteAiSeparatorPayload into JSON.
+func MarshalDeleteAiSeparatorPayload(v *DeleteAiSeparatorPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("deleteAiSeparatorPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.DeleteAiSeparatorPayloadTransport
+	out = &toolhttp.DeleteAiSeparatorPayloadTransport{
+		ID:       &in.ID,
+		Notebook: &in.Notebook,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalDeleteAiSeparatorPayload deserializes JSON into *DeleteAiSeparatorPayload.
+func UnmarshalDeleteAiSeparatorPayload(data []byte) (*DeleteAiSeparatorPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("deleteAiSeparatorPayload JSON is empty")
+	}
+	var tv toolhttp.DeleteAiSeparatorPayloadTransport
+	if err := validateDeleteAiSeparatorPayloadJSON(data); err != nil {
+		return nil, invalidDeleteAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidDeleteAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateDeleteAiSeparatorPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichDeleteAiSeparatorPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *DeleteAiSeparatorPayload
+	out = &DeleteAiSeparatorPayload{
+		ID:       *in.ID,
+		Notebook: *in.Notebook,
 	}
 	return out, nil
 }
@@ -4075,6 +4941,16 @@ func MarshalListNotesResult(v *ListNotesResult) ([]byte, error) {
 		}
 		out.Notes[i] = encodeNoteSummaryToNoteSummaryTransport(val)
 	}
+	if in.Separators != nil {
+		out.Separators = make([]*toolhttp.SeparatorTransport, len(in.Separators))
+		for i, val := range in.Separators {
+			if val == nil {
+				out.Separators[i] = nil
+				continue
+			}
+			out.Separators[i] = encodeSeparatorToSeparatorTransport(val)
+		}
+	}
 	return json.Marshal(out)
 }
 
@@ -4108,6 +4984,16 @@ func UnmarshalListNotesResult(data []byte) (*ListNotesResult, error) {
 			continue
 		}
 		out.Notes[i] = decodeNoteSummaryTransportToNoteSummary(val)
+	}
+	if in.Separators != nil {
+		out.Separators = make([]*Separator, len(in.Separators))
+		for i, val := range in.Separators {
+			if val == nil {
+				out.Separators[i] = nil
+				continue
+			}
+			out.Separators[i] = decodeSeparatorTransportToSeparator(val)
+		}
 	}
 	return out, nil
 }
@@ -4396,6 +5282,100 @@ func UnmarshalMoveAiNoteResult(data []byte) (*MoveAiNoteResult, error) {
 			}
 			out.BodyHighlights[i] = decodeTextRangeTransportToTextRange(val)
 		}
+	}
+	return out, nil
+}
+
+// MarshalMoveAiSeparatorPayload serializes *MoveAiSeparatorPayload into JSON.
+func MarshalMoveAiSeparatorPayload(v *MoveAiSeparatorPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("moveAiSeparatorPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.MoveAiSeparatorPayloadTransport
+	out = &toolhttp.MoveAiSeparatorPayloadTransport{
+		ID:       &in.ID,
+		Notebook: &in.Notebook,
+		After:    in.After,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalMoveAiSeparatorPayload deserializes JSON into *MoveAiSeparatorPayload.
+func UnmarshalMoveAiSeparatorPayload(data []byte) (*MoveAiSeparatorPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("moveAiSeparatorPayload JSON is empty")
+	}
+	var tv toolhttp.MoveAiSeparatorPayloadTransport
+	if err := validateMoveAiSeparatorPayloadJSON(data); err != nil {
+		return nil, invalidMoveAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidMoveAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateMoveAiSeparatorPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichMoveAiSeparatorPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *MoveAiSeparatorPayload
+	out = &MoveAiSeparatorPayload{
+		ID:       *in.ID,
+		Notebook: *in.Notebook,
+		After:    in.After,
+	}
+	return out, nil
+}
+
+// MarshalMoveAiSeparatorResult serializes *MoveAiSeparatorResult into JSON.
+func MarshalMoveAiSeparatorResult(v *MoveAiSeparatorResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("moveAiSeparatorResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.MoveAiSeparatorResultTransport
+	out = &toolhttp.MoveAiSeparatorResultTransport{
+		ID:       &in.ID,
+		Notebook: &in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		Before:   in.Before,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalMoveAiSeparatorResult deserializes JSON into *MoveAiSeparatorResult.
+func UnmarshalMoveAiSeparatorResult(data []byte) (*MoveAiSeparatorResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("moveAiSeparatorResult JSON is empty")
+	}
+	var tv toolhttp.MoveAiSeparatorResultTransport
+	if err := validateCreateAiSeparatorResultJSON(data); err != nil {
+		return nil, invalidMoveAiSeparatorResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidMoveAiSeparatorResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateMoveAiSeparatorResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichMoveAiSeparatorResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *MoveAiSeparatorResult
+	out = &MoveAiSeparatorResult{
+		ID:       *in.ID,
+		Notebook: *in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		Before:   in.Before,
 	}
 	return out, nil
 }
@@ -4723,6 +5703,104 @@ func UnmarshalUpdateAiNoteResult(data []byte) (*UpdateAiNoteResult, error) {
 	return out, nil
 }
 
+// MarshalUpdateAiSeparatorPayload serializes *UpdateAiSeparatorPayload into JSON.
+func MarshalUpdateAiSeparatorPayload(v *UpdateAiSeparatorPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("updateAiSeparatorPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.UpdateAiSeparatorPayloadTransport
+	out = &toolhttp.UpdateAiSeparatorPayloadTransport{
+		ID:       &in.ID,
+		Notebook: &in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalUpdateAiSeparatorPayload deserializes JSON into *UpdateAiSeparatorPayload.
+func UnmarshalUpdateAiSeparatorPayload(data []byte) (*UpdateAiSeparatorPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("updateAiSeparatorPayload JSON is empty")
+	}
+	var tv toolhttp.UpdateAiSeparatorPayloadTransport
+	if err := validateUpdateAiSeparatorPayloadJSON(data); err != nil {
+		return nil, invalidUpdateAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidUpdateAiSeparatorPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateUpdateAiSeparatorPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichUpdateAiSeparatorPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *UpdateAiSeparatorPayload
+	out = &UpdateAiSeparatorPayload{
+		ID:       *in.ID,
+		Notebook: *in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+	}
+	return out, nil
+}
+
+// MarshalUpdateAiSeparatorResult serializes *UpdateAiSeparatorResult into JSON.
+func MarshalUpdateAiSeparatorResult(v *UpdateAiSeparatorResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("updateAiSeparatorResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.UpdateAiSeparatorResultTransport
+	out = &toolhttp.UpdateAiSeparatorResultTransport{
+		ID:       &in.ID,
+		Notebook: &in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		Before:   in.Before,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalUpdateAiSeparatorResult deserializes JSON into *UpdateAiSeparatorResult.
+func UnmarshalUpdateAiSeparatorResult(data []byte) (*UpdateAiSeparatorResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("updateAiSeparatorResult JSON is empty")
+	}
+	var tv toolhttp.UpdateAiSeparatorResultTransport
+	if err := validateCreateAiSeparatorResultJSON(data); err != nil {
+		return nil, invalidUpdateAiSeparatorResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidUpdateAiSeparatorResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateUpdateAiSeparatorResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichUpdateAiSeparatorResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *UpdateAiSeparatorResult
+	out = &UpdateAiSeparatorResult{
+		ID:       *in.ID,
+		Notebook: *in.Notebook,
+		Title:    in.Title,
+		Date:     in.Date,
+		Color:    in.Color,
+		Before:   in.Before,
+	}
+	return out, nil
+}
+
 // validateListNotesPayloadJSON parses one JSON document and checks the exact value
 // shapes known from this generated Goa type.
 func validateListNotesPayloadJSON(data []byte) error {
@@ -4911,6 +5989,56 @@ func validateMoveAiNotePayloadJSON(data []byte) error {
 		return err
 	}
 	return validateMoveAiNotePayloadJSONValue("", root, "")
+}
+
+// validateCreateAiSeparatorPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateCreateAiSeparatorPayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateCreateAiSeparatorPayloadJSONValue("", root, "")
+}
+
+// validateCreateAiSeparatorResultJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateCreateAiSeparatorResultJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateListNotesResultSeparatorTransportJSONValue("", root, "")
+}
+
+// validateUpdateAiSeparatorPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateUpdateAiSeparatorPayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateUpdateAiSeparatorPayloadJSONValue("", root, "")
+}
+
+// validateDeleteAiSeparatorPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateDeleteAiSeparatorPayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateDeleteAiSeparatorPayloadJSONValue("", root, "")
+}
+
+// validateMoveAiSeparatorPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateMoveAiSeparatorPayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateMoveAiSeparatorPayloadJSONValue("", root, "")
 }
 
 // validateCreateAiNotebookPayloadJSON parses one JSON document and checks the exact value
@@ -5203,6 +6331,13 @@ func validateListNotesResultJSONValue(path string, value any, description string
 			); err != nil {
 				return err
 			}
+		case "separators":
+			if err := validateListNotesResultRootSeparatorsJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset",
+			); err != nil {
+				return err
+			}
 		case "total":
 			if err := validateIntJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -5213,6 +6348,7 @@ func validateListNotesResultJSONValue(path string, value any, description string
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"notes",
+				"separators",
 				"total",
 			})
 		}
@@ -5454,6 +6590,106 @@ func validateListNotesResultTextRangeTransportJSONValue(path string, value any, 
 			return unknownJSONFieldError(path, key, []string{
 				"end",
 				"start",
+			})
+		}
+	}
+	return nil
+}
+
+// validateListNotesResultRootSeparatorsJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListNotesResultRootSeparatorsJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateListNotesResultSeparatorTransportJSONValue(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateListNotesResultSeparatorTransportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListNotesResultSeparatorTransportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "before":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
+			); err != nil {
+				return err
+			}
+		case "color":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Color of the bar, one of the color marks; absent for the plain one",
+			); err != nil {
+				return err
+			}
+		case "date":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separator ID",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook the separator is in",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Heading; absent for none",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"before",
+				"color",
+				"date",
+				"id",
+				"notebook",
+				"title",
 			})
 		}
 	}
@@ -6706,7 +7942,7 @@ func validateMoveAiNotePayloadJSONValue(path string, value any, description stri
 		case "after":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "ID of the note of the same notebook to put the note after; omit to put it first",
+				typed[key], "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first",
 			); err != nil {
 				return err
 			}
@@ -6721,6 +7957,238 @@ func validateMoveAiNotePayloadJSONValue(path string, value any, description stri
 			return unknownJSONFieldError(path, key, []string{
 				"after",
 				"id",
+			})
+		}
+	}
+	return nil
+}
+
+// validateCreateAiSeparatorPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateCreateAiSeparatorPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "after":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first",
+			); err != nil {
+				return err
+			}
+		case "color":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Color of the bar, one of the color marks; omit for the plain one",
+			); err != nil {
+				return err
+			}
+		case "date":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Date to show, as YYYY-MM-DD; omit for none",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of a notebook of the collab kind",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Heading; omit for none",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"after",
+				"color",
+				"date",
+				"notebook",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateUpdateAiSeparatorPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateUpdateAiSeparatorPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "color":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Color of the bar, one of the color marks; omit for the plain one",
+			); err != nil {
+				return err
+			}
+		case "date":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Date to show, as YYYY-MM-DD; omit for none",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separator ID, from list_notes",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook of the separator",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Heading; omit for none",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"color",
+				"date",
+				"id",
+				"notebook",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateDeleteAiSeparatorPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateDeleteAiSeparatorPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separator ID, from list_notes",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook of the separator",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"id",
+				"notebook",
+			})
+		}
+	}
+	return nil
+}
+
+// validateMoveAiSeparatorPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateMoveAiSeparatorPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "after":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separator ID, from list_notes",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook of the separator",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"after",
+				"id",
+				"notebook",
 			})
 		}
 	}
@@ -7128,6 +8596,18 @@ func decodeNoteSummaryTransportToNoteSummary(v *toolhttp.NoteSummaryTransport) *
 
 	return res
 }
+func decodeSeparatorTransportToSeparator(v *toolhttp.SeparatorTransport) *Separator {
+	res := &Separator{
+		ID:       *v.ID,
+		Notebook: *v.Notebook,
+		Title:    v.Title,
+		Date:     v.Date,
+		Color:    v.Color,
+		Before:   v.Before,
+	}
+
+	return res
+}
 func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSummaryTransport {
 	res := &toolhttp.NoteSummaryTransport{
 		ID:              &v.ID,
@@ -7168,6 +8648,18 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 			}
 			res.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport(val)
 		}
+	}
+
+	return res
+}
+func encodeSeparatorToSeparatorTransport(v *Separator) *toolhttp.SeparatorTransport {
+	res := &toolhttp.SeparatorTransport{
+		ID:       &v.ID,
+		Notebook: &v.Notebook,
+		Title:    v.Title,
+		Date:     v.Date,
+		Color:    v.Color,
+		Before:   v.Before,
 	}
 
 	return res

@@ -138,6 +138,42 @@ type (
 		// and title is by code point, ignoring case and width
 		Sort *string `json:"sort"`
 	}
+	// CreateAiSeparatorPayloadTransport is the internal JSON transport type for CreateAiSeparatorPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	CreateAiSeparatorPayloadTransport struct {
+		// ID of a notebook of the collab kind
+		Notebook *string `json:"notebook"`
+		// Heading; omit for none
+		Title *string `json:"title,omitempty"`
+		// Date to show, as YYYY-MM-DD; omit for none
+		Date *string `json:"date,omitempty"`
+		// Color of the bar, one of the color marks; omit for the plain one
+		Color *string `json:"color,omitempty"`
+		// ID of the note or the separator of the same notebook to put it after in the
+		// manual order; omit to put it first
+		After *string `json:"after,omitempty"`
+	}
+	// CreateAiSeparatorResultTransport is the internal JSON transport type for CreateAiSeparatorResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	CreateAiSeparatorResultTransport struct {
+		// Separator ID
+		ID *string `json:"id"`
+		// Notebook the separator is in
+		Notebook *string `json:"notebook"`
+		// Heading; absent for none
+		Title *string `json:"title,omitempty"`
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string `json:"date,omitempty"`
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string `json:"color,omitempty"`
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string `json:"before,omitempty"`
+	}
 	// DeleteAiNotePayloadTransport is the internal JSON transport type for DeleteAiNotePayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -149,6 +185,16 @@ type (
 		ID *string `json:"id"`
 		// Version of the note as returned by get_note
 		Version *string `json:"version"`
+	}
+	// DeleteAiSeparatorPayloadTransport is the internal JSON transport type for DeleteAiSeparatorPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	DeleteAiSeparatorPayloadTransport struct {
+		// Separator ID, from list_notes
+		ID *string `json:"id"`
+		// Notebook of the separator
+		Notebook *string `json:"notebook"`
 	}
 	// GetNotePayloadTransport is the internal JSON transport type for GetNotePayload.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -285,6 +331,10 @@ type (
 		Total *int `json:"total"`
 		// Notes from offset, at most limit; fewer than total when the list goes on
 		Notes []*NoteSummaryTransport `json:"notes"`
+		// Separators between the notes, in the manual order, each before the note
+		// named by its before: only for a notebook listed in the order sort without a
+		// tag, and then all of them, regardless of limit and offset
+		Separators []*SeparatorTransport `json:"separators,omitempty"`
 	}
 	// ListTagsPayloadTransport is the internal JSON transport type for ListTagsPayload.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -317,8 +367,8 @@ type (
 		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
 		// #note/
 		ID *string `json:"id"`
-		// ID of the note of the same notebook to put the note after; omit to put it
-		// first
+		// ID of the note or the separator of the same notebook to put it after in the
+		// manual order; omit to put it first
 		After *string `json:"after,omitempty"`
 	}
 	// MoveAiNoteResultTransport is the internal JSON transport type for MoveAiNoteResult.
@@ -359,6 +409,38 @@ type (
 		TitleHighlights []*TextRangeTransport `json:"title_highlights,omitempty"`
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRangeTransport `json:"body_highlights,omitempty"`
+	}
+	// MoveAiSeparatorPayloadTransport is the internal JSON transport type for MoveAiSeparatorPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	MoveAiSeparatorPayloadTransport struct {
+		// Separator ID, from list_notes
+		ID *string `json:"id"`
+		// Notebook of the separator
+		Notebook *string `json:"notebook"`
+		// ID of the note or the separator of the same notebook to put it after in the
+		// manual order; omit to put it first
+		After *string `json:"after,omitempty"`
+	}
+	// MoveAiSeparatorResultTransport is the internal JSON transport type for MoveAiSeparatorResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	MoveAiSeparatorResultTransport struct {
+		// Separator ID
+		ID *string `json:"id"`
+		// Notebook the separator is in
+		Notebook *string `json:"notebook"`
+		// Heading; absent for none
+		Title *string `json:"title,omitempty"`
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string `json:"date,omitempty"`
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string `json:"color,omitempty"`
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string `json:"before,omitempty"`
 	}
 	// SearchNotesPayloadTransport is the internal JSON transport type for SearchNotesPayload.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -465,6 +547,41 @@ type (
 		TitleHighlights []*TextRangeTransport `json:"title_highlights,omitempty"`
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRangeTransport `json:"body_highlights,omitempty"`
+	}
+	// UpdateAiSeparatorPayloadTransport is the internal JSON transport type for UpdateAiSeparatorPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	UpdateAiSeparatorPayloadTransport struct {
+		// Separator ID, from list_notes
+		ID *string `json:"id"`
+		// Notebook of the separator
+		Notebook *string `json:"notebook"`
+		// Heading; omit for none
+		Title *string `json:"title,omitempty"`
+		// Date to show, as YYYY-MM-DD; omit for none
+		Date *string `json:"date,omitempty"`
+		// Color of the bar, one of the color marks; omit for the plain one
+		Color *string `json:"color,omitempty"`
+	}
+	// UpdateAiSeparatorResultTransport is the internal JSON transport type for UpdateAiSeparatorResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	UpdateAiSeparatorResultTransport struct {
+		// Separator ID
+		ID *string `json:"id"`
+		// Notebook the separator is in
+		Notebook *string `json:"notebook"`
+		// Heading; absent for none
+		Title *string `json:"title,omitempty"`
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string `json:"date,omitempty"`
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string `json:"color,omitempty"`
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string `json:"before,omitempty"`
 	}
 	// AIImportFileTransport is the internal JSON transport type for AIImportFileTransport.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -618,6 +735,25 @@ type (
 		// come by creation time, newest first), created and updated are newest first,
 		// and title is by code point, ignoring case and width
 		Sort *string `json:"sort"`
+	}
+	// SeparatorTransport is the internal JSON transport type for SeparatorTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	SeparatorTransport struct {
+		// Separator ID
+		ID *string `json:"id"`
+		// Notebook the separator is in
+		Notebook *string `json:"notebook"`
+		// Heading; absent for none
+		Title *string `json:"title,omitempty"`
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string `json:"date,omitempty"`
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string `json:"color,omitempty"`
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string `json:"before,omitempty"`
 	}
 	// TagCountTransport is the internal JSON transport type for TagCountTransport.
 	// It lives in the toolset-local http package and is used only for JSON

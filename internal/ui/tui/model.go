@@ -84,8 +84,9 @@ type Model struct {
 	width, height int
 
 	items   []*gennotes.NoteSummary
-	sel     int // index of the selected item
-	top     int // index of the first visible item
+	seps    []*gennotes.Separator // separators between the items, in the manual order of a notebook
+	sel     int                   // index of the selected item
+	top     int                   // index of the first visible item
 	total   int
 	mode    string // search mode reported by the server
 	query   string // applied search query
@@ -202,6 +203,7 @@ type (
 	listMsg struct {
 		seq   int
 		items []*gennotes.NoteSummary
+		seps  []*gennotes.Separator
 		total int
 		mode  string
 		err   error
@@ -493,8 +495,8 @@ func (m *Model) loadList() tea.Cmd {
 			if nb == nil && allSort != "" {
 				sort = &allSort
 			}
-			items, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort})
-			return listMsg{seq: seq, items: items, total: total, err: err}
+			items, seps, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort})
+			return listMsg{seq: seq, items: items, seps: seps, total: total, err: err}
 		}
 		res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: nb, Tag: tag, Limit: 200})
 		if err != nil {
@@ -510,7 +512,7 @@ func (m *Model) loadList() tea.Cmd {
 func loadTrashedNotebook(ctx context.Context, api *gennotes.Client, tid, q string, seq int) tea.Msg {
 	trash := trashNotebook
 	if q == "" {
-		items, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: &trash, TrashedNotebook: &tid})
+		items, _, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: &trash, TrashedNotebook: &tid})
 		return listMsg{seq: seq, items: items, total: total, err: err}
 	}
 	res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: &trash, Limit: 200})
@@ -530,19 +532,20 @@ func loadTrashedNotebook(ctx context.Context, api *gennotes.Client, tid, q strin
 const listPage = 500
 
 // listAll reads every page of the list p, which holds the whole list in
-// memory; its summaries are small.
-func listAll(ctx context.Context, api *gennotes.Client, p *gennotes.ListPayload) ([]*gennotes.NoteSummary, int, error) {
+// memory; its summaries are small. It returns the separators of the list too,
+// which every page carries.
+func listAll(ctx context.Context, api *gennotes.Client, p *gennotes.ListPayload) ([]*gennotes.NoteSummary, []*gennotes.Separator, int, error) {
 	p.Limit = listPage
 	var items []*gennotes.NoteSummary
 	for {
 		p.Offset = len(items)
 		res, err := api.List(ctx, p)
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, 0, err
 		}
 		items = append(items, res.Notes...)
 		if len(res.Notes) == 0 || len(items) >= res.Total {
-			return items, res.Total, nil
+			return items, res.Separators, res.Total, nil
 		}
 	}
 }
@@ -1238,7 +1241,7 @@ func (m *Model) applyList(msg listMsg) tea.Cmd {
 	if m.pending != "" {
 		prev, m.pending = m.pending, ""
 	}
-	m.items, m.total, m.mode = msg.items, msg.total, msg.mode
+	m.items, m.seps, m.total, m.mode = msg.items, msg.seps, msg.total, msg.mode
 	if len(m.items) == 0 {
 		m.sel, m.top, m.note = 0, 0, nil
 		m.renderPreview(false)
@@ -1897,7 +1900,11 @@ func (m *Model) handleClick(ms tea.Mouse) tea.Cmd {
 		}
 		m.focus = focusList
 		row := ms.Y - l.paneTop - 1
-		return m.pickIndex(m.top + row/itemHeight)
+		lines := m.listLines(m.top, l.paneH-2)
+		if row < 0 || row >= len(lines) || lines[row].note < 0 {
+			return nil // a separator, or below the notes
+		}
+		return m.pickIndex(lines[row].note)
 	case l.showPreview && ms.X >= l.previewX:
 		if m.focus == focusSearch {
 			m.input.Blur()

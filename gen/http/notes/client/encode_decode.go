@@ -1612,6 +1612,594 @@ func DecodeMoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 	}
 }
 
+// BuildCreateSeparatorRequest instantiates a HTTP request object with method
+// and path set to call the "notes" service "create_separator" endpoint
+func (c *Client) BuildCreateSeparatorRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: CreateSeparatorNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "create_separator", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeCreateSeparatorRequest returns an encoder for requests sent to the
+// notes create_separator server.
+func EncodeCreateSeparatorRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.CreateSeparatorPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "create_separator", "*notes.CreateSeparatorPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewCreateSeparatorRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "create_separator", err)
+		}
+		return nil
+	}
+}
+
+// DecodeCreateSeparatorResponse returns a decoder for responses returned by
+// the notes create_separator endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeCreateSeparatorResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeCreateSeparatorResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "create_separator", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusCreated:
+			var (
+				body CreateSeparatorResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			err = ValidateCreateSeparatorResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_separator", err)
+			}
+			res := NewCreateSeparatorSeparatorCreated(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body CreateSeparatorNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			err = ValidateCreateSeparatorNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_separator", err)
+			}
+			return nil, NewCreateSeparatorNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body CreateSeparatorBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			err = ValidateCreateSeparatorBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_separator", err)
+			}
+			return nil, NewCreateSeparatorBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body CreateSeparatorUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			err = ValidateCreateSeparatorUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_separator", err)
+			}
+			return nil, NewCreateSeparatorUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body CreateSeparatorVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			err = ValidateCreateSeparatorVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "create_separator", err)
+			}
+			return nil, NewCreateSeparatorVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "create_separator", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "create_separator", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildUpdateSeparatorRequest instantiates a HTTP request object with method
+// and path set to call the "notes" service "update_separator" endpoint
+func (c *Client) BuildUpdateSeparatorRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.UpdateSeparatorPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "update_separator", "*notes.UpdateSeparatorPayload", v)
+		}
+		id = p.ID
+	}
+
+	rawPath := fmt.Sprintf("/separators/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: UpdateSeparatorNotesPath(id), RawPath: rawPath}
+	req, err := http.NewRequest("PUT", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "update_separator", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeUpdateSeparatorRequest returns an encoder for requests sent to the
+// notes update_separator server.
+func EncodeUpdateSeparatorRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.UpdateSeparatorPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "update_separator", "*notes.UpdateSeparatorPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewUpdateSeparatorRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "update_separator", err)
+		}
+		return nil
+	}
+}
+
+// DecodeUpdateSeparatorResponse returns a decoder for responses returned by
+// the notes update_separator endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeUpdateSeparatorResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeUpdateSeparatorResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update_separator", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "update_separator", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body UpdateSeparatorResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update_separator", err)
+			}
+			err = ValidateUpdateSeparatorResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "update_separator", err)
+			}
+			res := NewUpdateSeparatorSeparatorOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body UpdateSeparatorNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update_separator", err)
+			}
+			err = ValidateUpdateSeparatorNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "update_separator", err)
+			}
+			return nil, NewUpdateSeparatorNotFound(&body)
+		case http.StatusUnauthorized:
+			var (
+				body UpdateSeparatorUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update_separator", err)
+			}
+			err = ValidateUpdateSeparatorUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "update_separator", err)
+			}
+			return nil, NewUpdateSeparatorUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body UpdateSeparatorVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update_separator", err)
+			}
+			err = ValidateUpdateSeparatorVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "update_separator", err)
+			}
+			return nil, NewUpdateSeparatorVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "update_separator", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "update_separator", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildDeleteSeparatorRequest instantiates a HTTP request object with method
+// and path set to call the "notes" service "delete_separator" endpoint
+func (c *Client) BuildDeleteSeparatorRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.DeleteSeparatorPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "delete_separator", "*notes.DeleteSeparatorPayload", v)
+		}
+		id = p.ID
+	}
+
+	rawPath := fmt.Sprintf("/separators/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteSeparatorNotesPath(id), RawPath: rawPath}
+	req, err := http.NewRequest("DELETE", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "delete_separator", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeDeleteSeparatorRequest returns an encoder for requests sent to the
+// notes delete_separator server.
+func EncodeDeleteSeparatorRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.DeleteSeparatorPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "delete_separator", "*notes.DeleteSeparatorPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		values := req.URL.Query()
+		values.Add("notebook", p.Notebook)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeDeleteSeparatorResponse returns a decoder for responses returned by
+// the notes delete_separator endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeDeleteSeparatorResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeDeleteSeparatorResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_separator", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "delete_separator", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		case http.StatusNotFound:
+			var (
+				body DeleteSeparatorNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_separator", err)
+			}
+			err = ValidateDeleteSeparatorNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_separator", err)
+			}
+			return nil, NewDeleteSeparatorNotFound(&body)
+		case http.StatusUnauthorized:
+			var (
+				body DeleteSeparatorUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_separator", err)
+			}
+			err = ValidateDeleteSeparatorUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_separator", err)
+			}
+			return nil, NewDeleteSeparatorUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body DeleteSeparatorVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_separator", err)
+			}
+			err = ValidateDeleteSeparatorVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_separator", err)
+			}
+			return nil, NewDeleteSeparatorVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_separator", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "delete_separator", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildMoveSeparatorRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "move_separator" endpoint
+func (c *Client) BuildMoveSeparatorRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.MoveSeparatorPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "move_separator", "*notes.MoveSeparatorPayload", v)
+		}
+		id = p.ID
+	}
+
+	rawPath := fmt.Sprintf("/separators/%v/move", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MoveSeparatorNotesPath(id), RawPath: rawPath}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "move_separator", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeMoveSeparatorRequest returns an encoder for requests sent to the notes
+// move_separator server.
+func EncodeMoveSeparatorRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.MoveSeparatorPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "move_separator", "*notes.MoveSeparatorPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewMoveSeparatorRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "move_separator", err)
+		}
+		return nil
+	}
+}
+
+// DecodeMoveSeparatorResponse returns a decoder for responses returned by the
+// notes move_separator endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+// DecodeMoveSeparatorResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeMoveSeparatorResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "move_separator", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body MoveSeparatorResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			err = ValidateMoveSeparatorResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_separator", err)
+			}
+			res := NewMoveSeparatorSeparatorOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body MoveSeparatorNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			err = ValidateMoveSeparatorNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_separator", err)
+			}
+			return nil, NewMoveSeparatorNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body MoveSeparatorBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			err = ValidateMoveSeparatorBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_separator", err)
+			}
+			return nil, NewMoveSeparatorBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body MoveSeparatorUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			err = ValidateMoveSeparatorUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_separator", err)
+			}
+			return nil, NewMoveSeparatorUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body MoveSeparatorVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			err = ValidateMoveSeparatorVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "move_separator", err)
+			}
+			return nil, NewMoveSeparatorVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "move_separator", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "move_separator", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildNotebooksRequest instantiates a HTTP request object with method and
 // path set to call the "notes" service "notebooks" endpoint
 func (c *Client) BuildNotebooksRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -5319,6 +5907,21 @@ func unmarshalTextRangeResponseBodyToNotesTextRange(v *TextRangeResponseBody) *n
 	res := &notes.TextRange{
 		Start: *v.Start,
 		End:   *v.End,
+	}
+
+	return res
+}
+
+// unmarshalSeparatorResponseBodyToNotesSeparator builds a value of type
+// *notes.Separator from a value of type *SeparatorResponseBody.
+func unmarshalSeparatorResponseBodyToNotesSeparator(v *SeparatorResponseBody) *notes.Separator {
+	res := &notes.Separator{
+		ID:       *v.ID,
+		Notebook: *v.Notebook,
+		Title:    v.Title,
+		Date:     v.Date,
+		Color:    v.Color,
+		Before:   v.Before,
 	}
 
 	return res

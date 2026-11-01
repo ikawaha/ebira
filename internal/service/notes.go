@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -98,7 +99,14 @@ func (s *Notes) List(ctx context.Context, p *gennotes.ListPayload) (*gennotes.No
 	if err != nil {
 		return nil, err
 	}
-	return &gennotes.NoteList{Total: total, Notes: summaries(res, false)}, nil
+	list := &gennotes.NoteList{Total: total, Notes: summaries(res, false)}
+	// Separators have a place only in the manual order of a notebook.
+	if nb := deref(p.Notebook); nb != "" && nb != store.Trash && deref(p.Tag) == "" && (sort == "" || sort == store.SortOrder) {
+		if list.Separators, err = s.separatorsOf(ctx, nb); err != nil {
+			return nil, err
+		}
+	}
+	return list, nil
 }
 
 func (s *Notes) Get(ctx context.Context, p *gennotes.GetPayload) (*gennotes.Note, error) {
@@ -390,41 +398,87 @@ func (s *Notes) moveNote(ctx context.Context, p *gennotes.MovePayload) (*gennote
 	if n.Notebook == store.Trash {
 		return nil, gennotes.MakeBadRequest(errors.New("notes in the trash have no manual order"))
 	}
-	keys, err := s.index.SortKeys(ctx, n.Notebook)
+	items, seps, err := s.manualOrder(ctx, n.Notebook)
 	if err != nil {
 		return nil, err
 	}
-	keys = slices.DeleteFunc(keys, func(k index.SortKey) bool { return k.ID == n.ID })
-	if len(keys) == 0 {
-		return toNote(n), nil // the only note of the notebook
+	items = slices.DeleteFunc(items, func(k index.SortKey) bool { return k.ID == n.ID })
+	pos, err := afterPos(items, deref(p.After), n.Notebook)
+	if err != nil {
+		return nil, err
 	}
-	pos := 0 // the index in keys that the note goes to
-	if after := deref(p.After); after != "" {
-		i := slices.IndexFunc(keys, func(k index.SortKey) bool { return k.ID == after })
-		if i < 0 {
-			return nil, gennotes.MakeBadRequest(fmt.Errorf("note %s is not another note of notebook %s", after, n.Notebook))
-		}
-		pos = i + 1
+	if err := s.applyKeys(ctx, n.Notebook, seps, place(items, pos, n.ID, n.SortKey())); err != nil {
+		return nil, err
 	}
-	key, ok := keyAt(keys, pos)
-	if !ok {
-		if err := s.respace(ctx, keys, pos, n); err != nil {
-			return nil, err
-		}
-		return toNote(n), nil
-	}
-	if n.Order != nil && *n.Order == key || n.Order == nil && n.SortKey() == key {
-		return toNote(n), nil
-	}
-	n.Order = &key
-	if err := s.write(ctx, n, true, n.Notebook); err != nil {
+	if n, err = s.load(p.ID, nil); err != nil {
 		return nil, err
 	}
 	return toNote(n), nil
 }
 
-// keyAt returns a key of the manual order for a note put at index pos of keys,
-// which are highest first, or false if its neighbors leave no room.
+// manualOrder returns the notes and the separators of notebook nb in the
+// manual order, highest first, and the separators as read.
+func (s *Notes) manualOrder(ctx context.Context, nb string) ([]index.SortKey, []store.Separator, error) {
+	keys, err := s.index.SortKeys(ctx, nb)
+	if err != nil {
+		return nil, nil, err
+	}
+	seps, err := s.store.Separators(nb)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, sep := range seps {
+		keys = append(keys, index.SortKey{ID: sep.ID, Key: sep.Order})
+	}
+	slices.SortStableFunc(keys, func(a, b index.SortKey) int {
+		if c := cmp.Compare(b.Key, a.Key); c != 0 {
+			return c
+		}
+		return strings.Compare(a.ID, b.ID)
+	})
+	return keys, seps, nil
+}
+
+// afterPos returns the index in items that an item put after the item with
+// ID after goes to: 0 for none, first.
+func afterPos(items []index.SortKey, after, nb string) (int, error) {
+	if after == "" {
+		return 0, nil
+	}
+	i := slices.IndexFunc(items, func(k index.SortKey) bool { return k.ID == after })
+	if i < 0 {
+		return 0, gennotes.MakeBadRequest(fmt.Errorf("%s is not another note or a separator of notebook %s", after, nb))
+	}
+	return i + 1, nil
+}
+
+// place returns the keys of the manual order to set for item id, now with
+// key cur, put at index pos of items, which are highest first and do not hold
+// it: one key between those of its new neighbors, or the keys of all of them
+// sortStep apart from the highest down when the neighbors leave no room. This
+// is rare, as keys start seconds apart.
+func place(items []index.SortKey, pos int, id string, cur int64) map[string]int64 {
+	if len(items) == 0 {
+		return map[string]int64{id: cur} // the only item of the notebook
+	}
+	if key, ok := keyAt(items, pos); ok {
+		return map[string]int64{id: key}
+	}
+	ids := make([]string, 0, len(items)+1)
+	for _, k := range items {
+		ids = append(ids, k.ID)
+	}
+	ids = slices.Insert(ids, pos, id)
+	top := max(cur, items[0].Key)
+	keys := make(map[string]int64, len(ids))
+	for i, id := range ids {
+		keys[id] = top - int64(i)*sortStep
+	}
+	return keys
+}
+
+// keyAt returns a key of the manual order for an item put at index pos of
+// keys, which are highest first, or false if its neighbors leave no room.
 func keyAt(keys []index.SortKey, pos int) (int64, bool) {
 	switch {
 	case pos == 0:
@@ -439,34 +493,37 @@ func keyAt(keys []index.SortKey, pos int) (int64, bool) {
 	return lower + (upper-lower)/2, true
 }
 
-// respace writes the notes of keys, with n put at index pos, sortStep apart
-// from the highest key down.
-func (s *Notes) respace(ctx context.Context, keys []index.SortKey, pos int, n *store.Note) error {
-	ids := make([]string, 0, len(keys)+1)
-	for _, k := range keys {
-		ids = append(ids, k.ID)
-	}
-	ids = slices.Insert(ids, pos, n.ID)
-	top := n.SortKey()
-	if len(keys) > 0 {
-		top = max(top, keys[0].Key)
-	}
-	for i, id := range ids {
-		key := top - int64(i)*sortStep
-		m := n
-		if id != n.ID {
-			var err error
-			if m, err = s.store.Load(id); err != nil {
-				return mapErr(err)
-			}
+// applyKeys sets the keys of the manual order of the notes and the
+// separators of notebook nb, whose separators are seps: a note is written
+// only when its key changes, and the separators once when one of them does.
+// A key for a separator not in seps adds the separator, as it is in seps
+// with its other fields. The caller holds s.mu.
+func (s *Notes) applyKeys(ctx context.Context, nb string, seps []store.Separator, keys map[string]int64) error {
+	changed := false
+	for i := range seps {
+		if key, ok := keys[seps[i].ID]; ok {
+			changed = changed || seps[i].Order != key
+			seps[i].Order = key
+			delete(keys, seps[i].ID)
 		}
-		if m.Order != nil && *m.Order == key {
+	}
+	ids := slices.Sorted(maps.Keys(keys))
+	for _, id := range ids {
+		m, err := s.store.Load(id)
+		if err != nil {
+			return mapErr(err)
+		}
+		key := keys[id]
+		if m.Order != nil && *m.Order == key || m.Order == nil && m.SortKey() == key {
 			continue
 		}
 		m.Order = &key
 		if err := s.write(ctx, m, true, m.Notebook); err != nil {
 			return err
 		}
+	}
+	if changed {
+		return s.saveSeparators(ctx, nb, seps)
 	}
 	return nil
 }
@@ -1202,8 +1259,8 @@ func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 	return res, nil
 }
 
-// notifyNotebooks publishes a notebooks event when the notebook list, names
-// or order differ from the last known state. The first call only records it.
+// notifyNotebooks publishes a notebooks event when the notebook list, names,
+// order or separators differ from the last known state. The first call only records it.
 func (s *Notes) notifyNotebooks(nbs []*gennotes.Notebook) {
 	var b strings.Builder
 	for _, nb := range nbs {
@@ -1211,6 +1268,7 @@ func (s *Notes) notifyNotebooks(nbs []*gennotes.Notebook) {
 	}
 	trashed, _ := s.store.TrashedNotebooks()
 	fmt.Fprintf(&b, "trash\x00%s\n", strings.Join(trashed, "\x00"))
+	b.WriteString(s.separatorsState(nbs))
 	state := b.String()
 	if s.nbState != "" && state != s.nbState {
 		s.events.publishAll(eventNotebooks)

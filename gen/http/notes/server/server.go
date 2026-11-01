@@ -31,6 +31,10 @@ type Server struct {
 	Search                http.Handler
 	Restore               http.Handler
 	Move                  http.Handler
+	CreateSeparator       http.Handler
+	UpdateSeparator       http.Handler
+	DeleteSeparator       http.Handler
+	MoveSeparator         http.Handler
 	Notebooks             http.Handler
 	Tags                  http.Handler
 	Marks                 http.Handler
@@ -96,6 +100,10 @@ func New(
 			{"Search", "GET", "/search"},
 			{"Restore", "POST", "/notes/{id}/restore"},
 			{"Move", "POST", "/notes/{id}/move"},
+			{"CreateSeparator", "POST", "/separators"},
+			{"UpdateSeparator", "PUT", "/separators/{id}"},
+			{"DeleteSeparator", "DELETE", "/separators/{id}"},
+			{"MoveSeparator", "POST", "/separators/{id}/move"},
 			{"Notebooks", "GET", "/notebooks"},
 			{"Tags", "GET", "/tags"},
 			{"Marks", "GET", "/marks"},
@@ -133,6 +141,10 @@ func New(
 		Search:                NewSearchHandler(e.Search, mux, decoder, encoder, errhandler, formatter),
 		Restore:               NewRestoreHandler(e.Restore, mux, decoder, encoder, errhandler, formatter),
 		Move:                  NewMoveHandler(e.Move, mux, decoder, encoder, errhandler, formatter),
+		CreateSeparator:       NewCreateSeparatorHandler(e.CreateSeparator, mux, decoder, encoder, errhandler, formatter),
+		UpdateSeparator:       NewUpdateSeparatorHandler(e.UpdateSeparator, mux, decoder, encoder, errhandler, formatter),
+		DeleteSeparator:       NewDeleteSeparatorHandler(e.DeleteSeparator, mux, decoder, encoder, errhandler, formatter),
+		MoveSeparator:         NewMoveSeparatorHandler(e.MoveSeparator, mux, decoder, encoder, errhandler, formatter),
 		Notebooks:             NewNotebooksHandler(e.Notebooks, mux, decoder, encoder, errhandler, formatter),
 		Tags:                  NewTagsHandler(e.Tags, mux, decoder, encoder, errhandler, formatter),
 		Marks:                 NewMarksHandler(e.Marks, mux, decoder, encoder, errhandler, formatter),
@@ -177,6 +189,10 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Search = m(s.Search)
 	s.Restore = m(s.Restore)
 	s.Move = m(s.Move)
+	s.CreateSeparator = m(s.CreateSeparator)
+	s.UpdateSeparator = m(s.UpdateSeparator)
+	s.DeleteSeparator = m(s.DeleteSeparator)
+	s.MoveSeparator = m(s.MoveSeparator)
 	s.Notebooks = m(s.Notebooks)
 	s.Tags = m(s.Tags)
 	s.Marks = m(s.Marks)
@@ -220,6 +236,10 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountSearchHandler(mux, h.Search)
 	MountRestoreHandler(mux, h.Restore)
 	MountMoveHandler(mux, h.Move)
+	MountCreateSeparatorHandler(mux, h.CreateSeparator)
+	MountUpdateSeparatorHandler(mux, h.UpdateSeparator)
+	MountDeleteSeparatorHandler(mux, h.DeleteSeparator)
+	MountMoveSeparatorHandler(mux, h.MoveSeparator)
 	MountNotebooksHandler(mux, h.Notebooks)
 	MountTagsHandler(mux, h.Tags)
 	MountMarksHandler(mux, h.Marks)
@@ -760,6 +780,218 @@ func NewMoveHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "move")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountCreateSeparatorHandler configures the mux to serve the "notes" service
+// "create_separator" endpoint.
+func MountCreateSeparatorHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/separators", f)
+}
+
+// NewCreateSeparatorHandler creates a HTTP handler which loads the HTTP
+// request and calls the "notes" service "create_separator" endpoint.
+func NewCreateSeparatorHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeCreateSeparatorRequest(mux, decoder)
+		encodeResponse = EncodeCreateSeparatorResponse(encoder)
+		encodeError    = EncodeCreateSeparatorError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "create_separator")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountUpdateSeparatorHandler configures the mux to serve the "notes" service
+// "update_separator" endpoint.
+func MountUpdateSeparatorHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/separators/{id}", f)
+}
+
+// NewUpdateSeparatorHandler creates a HTTP handler which loads the HTTP
+// request and calls the "notes" service "update_separator" endpoint.
+func NewUpdateSeparatorHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeUpdateSeparatorRequest(mux, decoder)
+		encodeResponse = EncodeUpdateSeparatorResponse(encoder)
+		encodeError    = EncodeUpdateSeparatorError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "update_separator")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountDeleteSeparatorHandler configures the mux to serve the "notes" service
+// "delete_separator" endpoint.
+func MountDeleteSeparatorHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("DELETE", "/separators/{id}", f)
+}
+
+// NewDeleteSeparatorHandler creates a HTTP handler which loads the HTTP
+// request and calls the "notes" service "delete_separator" endpoint.
+func NewDeleteSeparatorHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeDeleteSeparatorRequest(mux, decoder)
+		encodeResponse = EncodeDeleteSeparatorResponse(encoder)
+		encodeError    = EncodeDeleteSeparatorError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "delete_separator")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountMoveSeparatorHandler configures the mux to serve the "notes" service
+// "move_separator" endpoint.
+func MountMoveSeparatorHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/separators/{id}/move", f)
+}
+
+// NewMoveSeparatorHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "move_separator" endpoint.
+func NewMoveSeparatorHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeMoveSeparatorRequest(mux, decoder)
+		encodeResponse = EncodeMoveSeparatorResponse(encoder)
+		encodeError    = EncodeMoveSeparatorError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "move_separator")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

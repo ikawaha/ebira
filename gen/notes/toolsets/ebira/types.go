@@ -120,6 +120,36 @@ type (
 		// and title is by code point, ignoring case and width
 		Sort string
 	}
+	// CreateAiSeparatorPayload defines the JSON payload for the ebira.create_ai_separator tool.
+	CreateAiSeparatorPayload = struct {
+		// ID of a notebook of the collab kind
+		Notebook string
+		// Heading; omit for none
+		Title *string
+		// Date to show, as YYYY-MM-DD; omit for none
+		Date *string
+		// Color of the bar, one of the color marks; omit for the plain one
+		Color *string
+		// ID of the note or the separator of the same notebook to put it after in the
+		// manual order; omit to put it first
+		After *string
+	}
+	// CreateAiSeparatorResult defines the JSON result for the ebira.create_ai_separator tool.
+	CreateAiSeparatorResult = struct {
+		// Separator ID
+		ID string
+		// Notebook the separator is in
+		Notebook string
+		// Heading; absent for none
+		Title *string
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string
+	}
 	// DeleteAiNotePayload defines the JSON payload for the ebira.delete_ai_note tool.
 	DeleteAiNotePayload = struct {
 		// Note ID. A link to a note in the web UI, such as
@@ -128,6 +158,13 @@ type (
 		ID string
 		// Version of the note as returned by get_note
 		Version string
+	}
+	// DeleteAiSeparatorPayload defines the JSON payload for the ebira.delete_ai_separator tool.
+	DeleteAiSeparatorPayload = struct {
+		// Separator ID, from list_notes
+		ID string
+		// Notebook of the separator
+		Notebook string
 	}
 	// GetNotePayload defines the JSON payload for the ebira.get_note tool.
 	GetNotePayload = struct {
@@ -234,6 +271,10 @@ type (
 		Total int
 		// Notes from offset, at most limit; fewer than total when the list goes on
 		Notes []*NoteSummary
+		// Separators between the notes, in the manual order, each before the note
+		// named by its before: only for a notebook listed in the order sort without a
+		// tag, and then all of them, regardless of limit and offset
+		Separators []*Separator
 	}
 	// ListTagsPayload defines the JSON payload for the ebira.list_tags tool.
 	ListTagsPayload = struct {
@@ -254,8 +295,8 @@ type (
 		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
 		// #note/
 		ID string
-		// ID of the note of the same notebook to put the note after; omit to put it
-		// first
+		// ID of the note or the separator of the same notebook to put it after in the
+		// manual order; omit to put it first
 		After *string
 	}
 	// MoveAiNoteResult defines the JSON result for the ebira.move_ai_note tool.
@@ -293,6 +334,32 @@ type (
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRange
+	}
+	// MoveAiSeparatorPayload defines the JSON payload for the ebira.move_ai_separator tool.
+	MoveAiSeparatorPayload = struct {
+		// Separator ID, from list_notes
+		ID string
+		// Notebook of the separator
+		Notebook string
+		// ID of the note or the separator of the same notebook to put it after in the
+		// manual order; omit to put it first
+		After *string
+	}
+	// MoveAiSeparatorResult defines the JSON result for the ebira.move_ai_separator tool.
+	MoveAiSeparatorResult = struct {
+		// Separator ID
+		ID string
+		// Notebook the separator is in
+		Notebook string
+		// Heading; absent for none
+		Title *string
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string
 	}
 	// SearchNotesPayload defines the JSON payload for the ebira.search_notes tool.
 	SearchNotesPayload = struct {
@@ -387,6 +454,35 @@ type (
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
 		BodyHighlights []*TextRange
+	}
+	// UpdateAiSeparatorPayload defines the JSON payload for the ebira.update_ai_separator tool.
+	UpdateAiSeparatorPayload = struct {
+		// Separator ID, from list_notes
+		ID string
+		// Notebook of the separator
+		Notebook string
+		// Heading; omit for none
+		Title *string
+		// Date to show, as YYYY-MM-DD; omit for none
+		Date *string
+		// Color of the bar, one of the color marks; omit for the plain one
+		Color *string
+	}
+	// UpdateAiSeparatorResult defines the JSON result for the ebira.update_ai_separator tool.
+	UpdateAiSeparatorResult = struct {
+		// Separator ID
+		ID string
+		// Notebook the separator is in
+		Notebook string
+		// Heading; absent for none
+		Title *string
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string
 	}
 	// AIImportFile is a nested type used by the generated JSON contract.
 	AIImportFile = struct {
@@ -522,6 +618,22 @@ type (
 		// come by creation time, newest first), created and updated are newest first,
 		// and title is by code point, ignoring case and width
 		Sort string
+	}
+	// Separator is a nested type used by the generated JSON contract.
+	Separator = struct {
+		// Separator ID
+		ID string
+		// Notebook the separator is in
+		Notebook string
+		// Heading; absent for none
+		Title *string
+		// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+		Date *string
+		// Color of the bar, one of the color marks; absent for the plain one
+		Color *string
+		// ID of the note that comes right after the separator in the manual order;
+		// absent when the separator comes after the last note
+		Before *string
 	}
 	// TagCount is a nested type used by the generated JSON contract.
 	TagCount = struct {

@@ -53,11 +53,23 @@ type Service interface {
 	Search(context.Context, *SearchPayload) (res *SearchResult, err error)
 	// Move a note from the trash back to the notebook it was in.
 	Restore(context.Context, *RestorePayload) (res *Note, err error)
-	// Put a note right after another note of the same notebook in the manual order
-	// (sort order), or first when after is omitted. Only the moved note is
-	// written, with its new order; updated_at is kept, as the content does not
-	// change.
+	// Put a note right after another note or a separator of the same notebook in
+	// the manual order (sort order), or first when after is omitted. Only the
+	// moved note is written, with its new order; updated_at is kept, as the
+	// content does not change.
 	Move(context.Context, *MovePayload) (res *Note, err error)
+	// Put a new separator between the notes of a notebook in the manual order,
+	// right after a note or a separator, or first when after is omitted.
+	// Separators are kept in the _separators.yaml file of the notebook.
+	CreateSeparator(context.Context, *CreateSeparatorPayload) (res *Separator, err error)
+	// Replace the heading, the date and the color of a separator; an omitted one
+	// is taken away.
+	UpdateSeparator(context.Context, *UpdateSeparatorPayload) (res *Separator, err error)
+	// Remove a separator. It does not go to the trash.
+	DeleteSeparator(context.Context, *DeleteSeparatorPayload) (err error)
+	// Put a separator right after a note or another separator of its notebook in
+	// the manual order, or first when after is omitted.
+	MoveSeparator(context.Context, *MoveSeparatorPayload) (res *Separator, err error)
 	// List notebooks with their note counts: inbox first, then the others by order
 	// and name, trash last.
 	Notebooks(context.Context, *NotebooksPayload) (res []*Notebook, err error)
@@ -153,13 +165,30 @@ type Service interface {
 	// Move a note in a notebook of the collab kind to the trash, where people can
 	// restore it. The version from get_note is required.
 	DeleteAiNote(context.Context, *DeleteAiNotePayload) (err error)
-	// Put a note of a notebook of the collab kind right after another note of the
-	// same notebook in the manual order (the order sort of list_notes), or first
-	// when after is omitted. To put it last, pass the ID of the last note of
-	// list_notes with sort order. Only the order changes; the content and
-	// updated_at are kept, so no version is needed. Notes of other notebooks are
-	// ordered by people only.
+	// Put a note of a notebook of the collab kind right after another note or a
+	// separator of the same notebook in the manual order (the order sort of
+	// list_notes), or first when after is omitted. To put it last, pass the ID of
+	// the last note of list_notes with sort order. Only the order changes; the
+	// content and updated_at are kept, so no version is needed. Notes of other
+	// notebooks are ordered by people only.
 	MoveAiNote(context.Context, *MoveAiNotePayload) (res *Note, err error)
+	// Put a new separator between the notes of a notebook of the collab kind in
+	// the manual order (the order sort of list_notes), right after a note or a
+	// separator, or first when after is omitted. A separator is a bar with a
+	// heading, a date and a color to show, to arrange the notes; it has no body
+	// and is not a note. list_notes shows the separators of a notebook in the
+	// order sort.
+	CreateAiSeparator(context.Context, *CreateAiSeparatorPayload) (res *Separator, err error)
+	// Replace the heading, the date and the color of a separator in a notebook of
+	// the collab kind; an omitted one is taken away.
+	UpdateAiSeparator(context.Context, *UpdateAiSeparatorPayload) (res *Separator, err error)
+	// Remove a separator of a notebook of the collab kind. It does not go to the
+	// trash.
+	DeleteAiSeparator(context.Context, *DeleteAiSeparatorPayload) (err error)
+	// Put a separator of a notebook of the collab kind right after a note or
+	// another separator of the notebook in the manual order, or first when after
+	// is omitted.
+	MoveAiSeparator(context.Context, *MoveAiSeparatorPayload) (res *Separator, err error)
 	// Create a new notebook of the collab kind, where AI clients may write notes,
 	// or a sub notebook in a notebook of the collab kind, which takes the kind of
 	// its parent. Existing notebooks cannot be turned into collab notebooks by AI
@@ -249,7 +278,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [44]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "preview_style", "set_preview_style", "sync"}
+var MethodNames = [52]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "preview_style", "set_preview_style", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -344,6 +373,22 @@ type CreateAiNotebookPayload struct {
 	Parent *string
 }
 
+// CreateAiSeparatorPayload is the payload type of the notes service
+// create_ai_separator method.
+type CreateAiSeparatorPayload struct {
+	// ID of a notebook of the collab kind
+	Notebook string
+	// Heading; omit for none
+	Title *string
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string
+}
+
 // CreateNotebookPayload is the payload type of the notes service
 // create_notebook method.
 type CreateNotebookPayload struct {
@@ -384,6 +429,24 @@ type CreatePayload struct {
 	Body *string
 }
 
+// CreateSeparatorPayload is the payload type of the notes service
+// create_separator method.
+type CreateSeparatorPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Notebook to put the separator in; not the trash
+	Notebook string
+	// Heading; omit for none
+	Title *string
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string
+}
+
 // DeleteAiNotePayload is the payload type of the notes service delete_ai_note
 // method.
 type DeleteAiNotePayload struct {
@@ -393,6 +456,15 @@ type DeleteAiNotePayload struct {
 	ID string
 	// Version of the note as returned by get_note
 	Version string
+}
+
+// DeleteAiSeparatorPayload is the payload type of the notes service
+// delete_ai_separator method.
+type DeleteAiSeparatorPayload struct {
+	// Separator ID, from list_notes
+	ID string
+	// Notebook of the separator
+	Notebook string
 }
 
 // DeleteFilePayload is the payload type of the notes service delete_file
@@ -428,6 +500,17 @@ type DeletePayload struct {
 	// Delete only if the note's current version matches. Omit to delete
 	// unconditionally
 	IfMatch *string
+}
+
+// DeleteSeparatorPayload is the payload type of the notes service
+// delete_separator method.
+type DeleteSeparatorPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Separator ID
+	ID string
+	// Notebook of the separator
+	Notebook string
 }
 
 // DeleteTrashedNotebookPayload is the payload type of the notes service
@@ -682,8 +765,20 @@ type MoveAiNotePayload struct {
 	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
 	// #note/
 	ID string
-	// ID of the note of the same notebook to put the note after; omit to put it
-	// first
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string
+}
+
+// MoveAiSeparatorPayload is the payload type of the notes service
+// move_ai_separator method.
+type MoveAiSeparatorPayload struct {
+	// Separator ID, from list_notes
+	ID string
+	// Notebook of the separator
+	Notebook string
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
 	After *string
 }
 
@@ -717,8 +812,22 @@ type MovePayload struct {
 	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
 	// #note/
 	ID string
-	// ID of the note of the same notebook to put the note after; omit to put it
-	// first
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
+	After *string
+}
+
+// MoveSeparatorPayload is the payload type of the notes service move_separator
+// method.
+type MoveSeparatorPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Separator ID
+	ID string
+	// Notebook of the separator
+	Notebook string
+	// ID of the note or the separator of the same notebook to put it after in the
+	// manual order; omit to put it first
 	After *string
 }
 
@@ -772,7 +881,7 @@ type NoteEdit struct {
 type NoteEvent struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed
+	// order changed, or the separators of a notebook
 	Type string
 	// Note ID (absent for ready and notebooks)
 	ID *string
@@ -793,6 +902,10 @@ type NoteList struct {
 	Total int
 	// Notes from offset, at most limit; fewer than total when the list goes on
 	Notes []*NoteSummary
+	// Separators between the notes, in the manual order, each before the note
+	// named by its before: only for a notebook listed in the order sort without a
+	// tag, and then all of them, regardless of limit and offset
+	Separators []*Separator
 }
 
 type NoteSummary struct {
@@ -1015,6 +1128,23 @@ type SearchResult struct {
 	Notes []*NoteSummary
 }
 
+// Separator is the result type of the notes service create_separator method.
+type Separator struct {
+	// Separator ID
+	ID string
+	// Notebook the separator is in
+	Notebook string
+	// Heading; absent for none
+	Title *string
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string
+}
+
 // SetMarksPayload is the payload type of the notes service set_marks method.
 type SetMarksPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
@@ -1157,6 +1287,21 @@ type UpdateAiNotePayload struct {
 	Brief *bool
 }
 
+// UpdateAiSeparatorPayload is the payload type of the notes service
+// update_ai_separator method.
+type UpdateAiSeparatorPayload struct {
+	// Separator ID, from list_notes
+	ID string
+	// Notebook of the separator
+	Notebook string
+	// Heading; omit for none
+	Title *string
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string
+}
+
 // UpdatePayload is the payload type of the notes service update method.
 type UpdatePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
@@ -1176,6 +1321,23 @@ type UpdatePayload struct {
 	// Update only if the note's current version matches. Omit to overwrite
 	// unconditionally
 	IfMatch *string
+}
+
+// UpdateSeparatorPayload is the payload type of the notes service
+// update_separator method.
+type UpdateSeparatorPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Separator ID
+	ID string
+	// Notebook of the separator
+	Notebook string
+	// Heading; omit for none
+	Title *string
+	// Date to show, as YYYY-MM-DD; omit for none
+	Date *string
+	// Color of the bar, one of the color marks; omit for the plain one
+	Color *string
 }
 
 // MakeUnauthorized builds a goa.ServiceError from an error.
@@ -1621,7 +1783,7 @@ func validatejsonNoteEditTransport(value *jsonNoteEditTransport) (err error) {
 type jsonNoteEventTransport struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed
+	// order changed, or the separators of a notebook
 	Type *string `json:"type"`
 	// Note ID (absent for ready and notebooks)
 	ID *string `json:"id,omitempty"`
@@ -1675,6 +1837,10 @@ type jsonNoteListTransport struct {
 	Total *noteListIntTransport `json:"total"`
 	// Notes from offset, at most limit; fewer than total when the list goes on
 	Notes []*jsonNoteSummaryTransport `json:"notes"`
+	// Separators between the notes, in the manual order, each before the note
+	// named by its before: only for a notebook listed in the order sort without a
+	// tag, and then all of them, regardless of limit and offset
+	Separators []*jsonSeparatorTransport `json:"separators,omitempty"`
 }
 
 // validatejsonNoteListTransport checks decoded JSON before it becomes a service value.
@@ -1691,6 +1857,13 @@ func validatejsonNoteListTransport(value *jsonNoteListTransport) (err error) {
 	for _, e := range value.Notes {
 		if e != nil {
 			if err2 := validatejsonNoteSummaryTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range value.Separators {
+		if e != nil {
+			if err2 := validatejsonSeparatorTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -2167,6 +2340,54 @@ func validatejsonSearchResultTransport(value *jsonSearchResultTransport) (err er
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return err
+}
+
+// jsonSeparatorTransport stores JSON fields until they have been validated.
+type jsonSeparatorTransport struct {
+	// Separator ID
+	ID *string `json:"id"`
+	// Notebook the separator is in
+	Notebook *string `json:"notebook"`
+	// Heading; absent for none
+	Title *string `json:"title,omitempty"`
+	// Date to show, as YYYY-MM-DD; absent for none. It does not change the order
+	Date *string `json:"date,omitempty"`
+	// Color of the bar, one of the color marks; absent for the plain one
+	Color *string `json:"color,omitempty"`
+	// ID of the note that comes right after the separator in the manual order;
+	// absent when the separator comes after the last note
+	Before *string `json:"before,omitempty"`
+}
+
+// validatejsonSeparatorTransport checks decoded JSON before it becomes a service value.
+func validatejsonSeparatorTransport(value *jsonSeparatorTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Notebook == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notebook", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -2655,6 +2876,13 @@ func validateNoteListOriginal(value *NoteList) (err error) {
 			}
 		}
 	}
+	for _, e := range value.Separators {
+		if e != nil {
+			if err2 := validateSeparatorOriginal(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	return err
 }
 
@@ -2682,6 +2910,24 @@ func validateNoteSummaryOriginal(value *NoteSummary) (err error) {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
 		}
+	}
+	return err
+}
+
+// validateSeparatorOriginal checks the original typed value before JSON conversion.
+func validateSeparatorOriginal(value *Separator) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^sep-[a-z0-9_-]{1,60}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	if value.Date != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("value.date", *value.Date, goa.FormatDate))
+	}
+	if value.Color != nil {
+		if !(*value.Color == "red" || *value.Color == "orange" || *value.Color == "yellow" || *value.Color == "green" || *value.Color == "blue" || *value.Color == "purple" || *value.Color == "gray") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.color", *value.Color, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray"}))
+		}
+	}
+	if value.Before != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -3696,6 +3942,16 @@ func EncodeNoteList(in *NoteList) ([]byte, error) {
 			}
 			body.Notes[i] = encodeNoteSummaryToNoteSummaryTransport(val)
 		}
+		if in.Separators != nil {
+			body.Separators = make([]*jsonSeparatorTransport, len(in.Separators))
+			for i, val := range in.Separators {
+				if val == nil {
+					body.Separators[i] = nil
+					continue
+				}
+				body.Separators[i] = encodeSeparatorToSeparatorTransport(val)
+			}
+		}
 	}
 	if err := validatejsonNoteListTransport(body); err != nil {
 		return nil, fmt.Errorf("validate NoteList JSON: %w", err)
@@ -3742,6 +3998,16 @@ func DecodeNoteList(data []byte) (out *NoteList, err error) {
 				continue
 			}
 			out.Notes[i] = decodeNoteSummaryTransportToNoteSummary(val)
+		}
+		if body.Separators != nil {
+			out.Separators = make([]*Separator, len(body.Separators))
+			for i, val := range body.Separators {
+				if val == nil {
+					out.Separators[i] = nil
+					continue
+				}
+				out.Separators[i] = decodeSeparatorTransportToSeparator(val)
+			}
 		}
 	}
 	return out, nil
@@ -4222,6 +4488,72 @@ func DecodeSearchResult(data []byte) (out *SearchResult, err error) {
 	return out, nil
 }
 
+// EncodeSeparator turns a service value into JSON using the field names in the Goa design.
+func EncodeSeparator(in *Separator) ([]byte, error) {
+	if err := checkSeparatorValue(in); err != nil {
+		return nil, fmt.Errorf("encode Separator JSON: %w", err)
+	}
+	if err := validateSeparatorOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate Separator value: %w", err)
+	}
+	var body *jsonSeparatorTransport
+	{
+		body = &jsonSeparatorTransport{
+			ID:       &in.ID,
+			Notebook: &in.Notebook,
+			Title:    in.Title,
+			Date:     in.Date,
+			Color:    in.Color,
+			Before:   in.Before,
+		}
+	}
+	if err := validatejsonSeparatorTransport(body); err != nil {
+		return nil, fmt.Errorf("validate Separator JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode Separator JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeSeparator checks JSON field names from the Goa design and returns a service value.
+func DecodeSeparator(data []byte) (out *Separator, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode Separator JSON: %w", err)
+	}
+	if err := validateNoteListJSONValue9("", root, ""); err != nil {
+		return out, fmt.Errorf("decode Separator JSON: %w", err)
+	}
+	var body *jsonSeparatorTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode Separator JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode Separator JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode Separator JSON after first value: %w", err)
+	}
+	if err := validatejsonSeparatorTransport(body); err != nil {
+		return out, fmt.Errorf("validate Separator JSON: %w", err)
+	}
+	{
+		out = &Separator{
+			ID:       *body.ID,
+			Notebook: *body.Notebook,
+			Title:    body.Title,
+			Date:     body.Date,
+			Color:    body.Color,
+			Before:   body.Before,
+		}
+	}
+	return out, nil
+}
+
 // EncodeSyncResult turns a service value into JSON using the field names in the Goa design.
 func EncodeSyncResult(in *SyncResult) ([]byte, error) {
 	if err := checkSyncResultValue(in); err != nil {
@@ -4650,6 +4982,19 @@ func decodeNoteTransportToNote(v *jsonNoteTransport) *Note {
 	return res
 }
 
+func decodeSeparatorTransportToSeparator(v *jsonSeparatorTransport) *Separator {
+	res := &Separator{
+		ID:       *v.ID,
+		Notebook: *v.Notebook,
+		Title:    v.Title,
+		Date:     v.Date,
+		Color:    v.Color,
+		Before:   v.Before,
+	}
+
+	return res
+}
+
 func decodeTextRangeTransportToTextRange(v *jsonTextRangeTransport) *TextRange {
 	res := &TextRange{
 		Start: int(*v.Start),
@@ -4780,6 +5125,19 @@ func encodeNoteToNoteTransport(v *Note) *jsonNoteTransport {
 			}
 			res.BodyHighlights[i] = encodeTextRangeToTextRangeTransport(val)
 		}
+	}
+
+	return res
+}
+
+func encodeSeparatorToSeparatorTransport(v *Separator) *jsonSeparatorTransport {
+	res := &jsonSeparatorTransport{
+		ID:       &v.ID,
+		Notebook: &v.Notebook,
+		Title:    v.Title,
+		Date:     v.Date,
+		Color:    v.Color,
+		Before:   v.Before,
 	}
 
 	return res
@@ -5947,7 +6305,7 @@ func validateNoteEventJSONValue(path string, value any, description string) erro
 		case "type":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed",
+				typed[key], "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook",
 			); err != nil {
 				return err
 			}
@@ -6032,6 +6390,13 @@ func validateNoteListJSONValue(path string, value any, description string) error
 			); err != nil {
 				return err
 			}
+		case "separators":
+			if err := validateNoteListJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset",
+			); err != nil {
+				return err
+			}
 		case "total":
 			if err := validateGitSyncResultJSONValue2(
 				generatedJSONChildPath(path, key, false),
@@ -6042,6 +6407,7 @@ func validateNoteListJSONValue(path string, value any, description string) error
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"notes",
+				"separators",
 				"total",
 			})
 		}
@@ -6297,6 +6663,109 @@ func validateNoteListJSONValue7(path string, value any, description string) erro
 			item, description,
 		); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateNoteListJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteListJSONValue8(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateNoteListJSONValue9(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateNoteListJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateNoteListJSONValue9(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "before":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
+			); err != nil {
+				return err
+			}
+		case "color":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Color of the bar, one of the color marks; absent for the plain one",
+			); err != nil {
+				return err
+			}
+		case "date":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Separator ID",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook the separator is in",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Heading; absent for none",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"before",
+				"color",
+				"date",
+				"id",
+				"notebook",
+				"title",
+			})
 		}
 	}
 	return nil
@@ -7665,6 +8134,13 @@ func checkNoteListNoteListValue(in *NoteList, field string, active map[any]bool)
 				return err
 			}
 		}
+		for index1, item1 := range in.Separators {
+			_ = index1
+			_ = item1
+			if err := checkNoteListSeparatorValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "separators", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -7736,6 +8212,47 @@ func checkNoteListNoteSummaryValue(in *NoteSummary, field string, active map[any
 			_ = item1
 			if err := checkImportResultTextRangeValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "snippet_highlights", false), strconv.Itoa(index1), true), active); err != nil {
 				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkNoteListSeparatorValue checks one generated value on the active path.
+func checkNoteListSeparatorValue(in *Separator, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.ID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
+		}
+		if !utf8.ValidString(string(in.Notebook)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "notebook", false))
+		}
+		if in.Title != nil {
+			if !utf8.ValidString(string(*in.Title)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+			}
+		}
+		if in.Date != nil {
+			if !utf8.ValidString(string(*in.Date)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "date", false))
+			}
+		}
+		if in.Color != nil {
+			if !utf8.ValidString(string(*in.Color)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "color", false))
+			}
+		}
+		if in.Before != nil {
+			if !utf8.ValidString(string(*in.Before)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "before", false))
 			}
 		}
 	}
@@ -7962,6 +8479,18 @@ func checkSearchResultSearchResultValue(in *SearchResult, field string, active m
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// checkSeparatorValue checks text and cycles before conversion.
+func checkSeparatorValue(in *Separator) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkNoteListSeparatorValue(in, "$", active); err != nil {
+		return err
 	}
 	return nil
 }
