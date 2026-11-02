@@ -287,6 +287,8 @@
   "findNone": "なし",
   "copyNoteTitle": "題名をコピー",
   "copiedTitle": "題名「{title}」をコピーしました。",
+  "copySectionTitle": "この節を Markdown でコピー",
+  "copiedSection": "節「{title}」をコピーしました。",
   "copyLinkTitle": "ノートへのリンクをコピー（Y）",
   "copyURL": "URL をコピー",
   "copyMarkdownLink": "Markdown のリンクでコピー",

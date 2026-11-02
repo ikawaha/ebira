@@ -2299,6 +2299,7 @@ async function loadNote() {
   }
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
+  addSectionCopy(body, n.body || "");
   const title = el("h2", "", ...noteMarks(n), highlighted(n.title || t("untitled"), n.title_highlights));
   if (n.title) {
     const copy = button(kindSVG("copy"), copyTitle, { title: t("copyNoteTitle"), cls: "title-copy" });
@@ -2641,6 +2642,49 @@ async function copyTitle() {
     return;
   }
   showToast(t("copiedTitle", { title: n.title }));
+}
+
+// noteSections returns the Markdown of each heading of a note, outside quotes
+// and lists: from the heading up to the next one of the same or a higher level,
+// so a section holds its subsections. The source is cut along the tokens of the
+// renderer, so that a line like a heading inside a code block starts nothing.
+function noteSections(body) {
+  const tokens = marked.lexer(body, { gfm: true, breaks: true });
+  const sections = [];
+  tokens.forEach((tok, i) => {
+    if (tok.type !== "heading") return;
+    let end = i + 1;
+    while (end < tokens.length && !(tokens[end].type === "heading" && tokens[end].depth <= tok.depth)) end++;
+    sections.push({ level: tok.depth, markdown: tokens.slice(i, end).map((x) => x.raw).join("").trimEnd() + "\n" });
+  });
+  return sections;
+}
+
+// addSectionCopy adds a button to copy its section to each heading of a rendered
+// body. Raw HTML in a note can make headings the source has no token for, which
+// would pair buttons with the wrong sections: such a note gets no buttons.
+function addSectionCopy(el, body) {
+  const headings = [...el.children].filter((h) => /^H[1-6]$/.test(h.tagName));
+  const sections = noteSections(body);
+  if (headings.length !== sections.length) return;
+  if (headings.some((h, i) => h.tagName !== `H${sections[i].level}`)) return;
+  headings.forEach((h, i) => {
+    const name = h.textContent;
+    const copy = button(kindSVG("copy"), () => copySection(sections[i].markdown, name), { title: t("copySectionTitle"), cls: "section-copy" });
+    copy.setAttribute("aria-label", t("copySectionTitle"));
+    h.append(copy);
+  });
+}
+
+// copySection copies a section of the note in the preview to the clipboard.
+async function copySection(markdown, name) {
+  try {
+    await navigator.clipboard.writeText(markdown);
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(t("copiedSection", { title: name }));
 }
 
 // notePageURL returns the URL of note id in this UI, which opens the note here

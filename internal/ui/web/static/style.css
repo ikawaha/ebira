@@ -365,6 +365,12 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .title-copy svg { width: 16px; height: 16px; }
 .head-row h2:hover .title-copy, .title-copy:focus-visible { opacity: 1; }
 .title-copy:hover { color: var(--fg); background: var(--bg-active); }
+/* Copy a section: on the headings of the body, seen when the pointer is on one. */
+.section-copy { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 22px; height: 22px; margin-left: 6px; padding: 0; border: none; border-radius: 4px; background: none; color: var(--fg-muted); opacity: 0; cursor: pointer; }
+.section-copy svg { width: 15px; height: 15px; }
+.body :hover > .section-copy, .section-copy:focus-visible { opacity: 1; }
+.section-copy:hover { color: var(--fg); background: var(--bg-active); }
+@media (hover: none) { .section-copy { opacity: 0.4; } }
 .actions { display: flex; gap: 6px; padding-top: 4px; }
 /* The buttons of the preview drawn as icons; their names show on hover. */
 .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 26px; padding: 0; color: var(--fg-muted); }

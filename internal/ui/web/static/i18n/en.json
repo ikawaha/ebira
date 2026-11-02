@@ -287,6 +287,8 @@
   "findNone": "none",
   "copyNoteTitle": "Copy the title",
   "copiedTitle": "Copied the title {title}.",
+  "copySectionTitle": "Copy this section as Markdown",
+  "copiedSection": "Copied the section {title}.",
   "copyLinkTitle": "Copy a link to the note (Y)",
   "copyURL": "Copy the URL",
   "copyMarkdownLink": "Copy as a Markdown link",
