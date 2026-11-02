@@ -19,7 +19,7 @@ import (
 
 // markEmoji are the emoji of the marks that are symbols. They have the
 // emoji presentation, so that terminals draw them two columns wide.
-var markEmoji = map[string]string{"star": "⭐", "important": "❗", "question": "❓", "done": "✅", "pin": "📌", "urgent": "🔥", "idea": "💡", "wip": "🚧", "hold": "⏳", "dropped": "❌"}
+var markEmoji = map[string]string{"star": "⭐", "important": "❗", "question": "❓", "done": "✅", "pin": "📌", "urgent": "🔥", "idea": "💡", "wip": "🚧", "hold": "⏳", "dropped": "❌", "reply": "📩", "waiting": "🕒", "review": "👀"}
 
 // markColors are the colors of the marks that are colors, which read on dark
 // and light backgrounds alike.
@@ -136,25 +136,56 @@ func (m *Model) setMarks(id string, marks []string) tea.Cmd {
 // framed, and its name.
 func (m Model) renderMarkPrompt() string {
 	choices := m.markChoices()
-	var b strings.Builder
-	b.WriteString(m.th.style(m.th.accent).Render(" " + m.tr.t("prompt.mark") + " "))
-	for i, id := range choices {
-		badge := "✕"
-		if id != "" {
-			badge, _ = markBadge(id)
-		}
-		if i == m.markSel {
-			b.WriteString(m.th.style(m.th.accent).Render("[") + badge + m.th.style(m.th.accent).Render("]"))
-		} else {
-			b.WriteString(" " + badge + " ")
-		}
-	}
 	name := m.tr.t("mark.none")
 	if id := choices[min(m.markSel, len(choices)-1)]; id != "" {
 		name = m.markName(id)
 	}
+	label := m.th.style(m.th.accent).Render(" " + m.tr.t("prompt.mark") + " ")
+	badges := make([]string, len(choices))
+	widths := make([]int, len(choices))
+	for i, id := range choices {
+		badges[i], widths[i] = "✕", 1
+		if id != "" {
+			badges[i], widths[i] = markBadge(id)
+		}
+		widths[i] += 2 // the brackets of the choice, or spaces in their place
+	}
+	// On a narrow terminal the line would be cut at its end, with the choice
+	// perhaps in the part cut: the marks around the choice are shown instead.
+	first, last := markWindow(widths, m.markSel, m.width-lipgloss.Width(label)-lipgloss.Width(name)-1)
+	var b strings.Builder
+	b.WriteString(label)
+	for i := first; i < last; i++ {
+		if i == m.markSel {
+			b.WriteString(m.th.style(m.th.accent).Render("[") + badges[i] + m.th.style(m.th.accent).Render("]"))
+		} else {
+			b.WriteString(" " + badges[i] + " ")
+		}
+	}
 	b.WriteString(" " + m.th.style(m.th.fg).Render(name))
 	return b.String() + m.keys([][2]string{{"←→", "key.choose"}, {"enter", "key.ok"}, {"esc", "key.cancel"}})
+}
+
+// markWindow returns the range of the items of the given widths to show in room
+// cells: as many as fit around sel, which is always among them.
+func markWindow(widths []int, sel, room int) (first, last int) {
+	sel = max(min(sel, len(widths)-1), 0)
+	first, last = sel, sel+1
+	used := widths[sel]
+	for grew := true; grew; {
+		grew = false
+		if last < len(widths) && used+widths[last] <= room {
+			used += widths[last]
+			last++
+			grew = true
+		}
+		if first > 0 && used+widths[first-1] <= room {
+			first--
+			used += widths[first]
+			grew = true
+		}
+	}
+	return first, last
 }
 
 // loadMarks reads the marks with their names; none from a server without

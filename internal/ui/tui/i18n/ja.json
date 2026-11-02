@@ -224,5 +224,8 @@
   "mark.idea": "アイデア",
   "mark.wip": "作業中",
   "mark.hold": "保留",
-  "mark.dropped": "中止"
+  "mark.dropped": "中止",
+  "mark.reply": "要返信",
+  "mark.waiting": "返事待ち",
+  "mark.review": "確認中"
 }

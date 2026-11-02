@@ -4474,6 +4474,9 @@ definitions:
                     - wip
                     - hold
                     - dropped
+                    - reply
+                    - waiting
+                    - review
             kind:
                 type: string
                 description: color, or symbol for a mark drawn as an emoji
@@ -4534,7 +4537,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: pin
+                    example: yellow
                     enum:
                         - red
                         - orange
@@ -4553,6 +4556,9 @@ definitions:
                         - wip
                         - hold
                         - dropped
+                        - reply
+                        - waiting
+                        - review
                 description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
                 example:
                     - red
@@ -4683,7 +4689,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: question
+                    example: blue
                     enum:
                         - red
                         - orange
@@ -4702,6 +4708,9 @@ definitions:
                         - wip
                         - hold
                         - dropped
+                        - reply
+                        - waiting
+                        - review
                 description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
                 example:
                     - red
@@ -5068,7 +5077,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: hold
+                    example: blue
                     enum:
                         - red
                         - orange
@@ -5087,6 +5096,9 @@ definitions:
                         - wip
                         - hold
                         - dropped
+                        - reply
+                        - waiting
+                        - review
                 description: 'Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none'
                 example:
                     - red
@@ -10665,7 +10677,7 @@ definitions:
                 type: array
                 items:
                     type: string
-                    example: star
+                    example: wip
                     enum:
                         - red
                         - orange
@@ -10684,6 +10696,9 @@ definitions:
                         - wip
                         - hold
                         - dropped
+                        - reply
+                        - waiting
+                        - review
                 description: Marks of the note
                 example:
                     - red

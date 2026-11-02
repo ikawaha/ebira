@@ -861,8 +861,8 @@ func BuildSaveMarkNamesPayload(notesSaveMarkNamesBody *string, notesSaveMarkName
 			err = goa.MergeErrors(err, goa.MissingFieldError("names", "body"))
 		}
 		for k, v := range body.Names {
-			if !(k == "red" || k == "orange" || k == "yellow" || k == "green" || k == "blue" || k == "purple" || k == "gray" || k == "star" || k == "important" || k == "question" || k == "done" || k == "pin" || k == "urgent" || k == "idea" || k == "wip" || k == "hold" || k == "dropped") {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.names.key", k, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped"}))
+			if !(k == "red" || k == "orange" || k == "yellow" || k == "green" || k == "blue" || k == "purple" || k == "gray" || k == "star" || k == "important" || k == "question" || k == "done" || k == "pin" || k == "urgent" || k == "idea" || k == "wip" || k == "hold" || k == "dropped" || k == "reply" || k == "waiting" || k == "review") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.names.key", k, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 			}
 			if utf8.RuneCountInString(v) > 40 {
 				err = goa.MergeErrors(err, goa.InvalidLengthError("body.names[key]", v, utf8.RuneCountInString(v), 40, false))

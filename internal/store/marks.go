@@ -17,7 +17,7 @@ import (
 var MarkIDs = []string{
 	"red", "orange", "yellow", "green", "blue", "purple", "gray",
 	"star", "important", "question", "done", "pin", "urgent", "idea",
-	"wip", "hold", "dropped",
+	"wip", "hold", "dropped", "reply", "waiting", "review",
 }
 
 // MaxMarks is the number of marks a note can have. It is one for now; the

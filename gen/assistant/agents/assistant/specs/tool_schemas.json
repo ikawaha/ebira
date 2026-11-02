@@ -108,7 +108,10 @@
                   "idea",
                   "wip",
                   "hold",
-                  "dropped"
+                  "dropped",
+                  "reply",
+                  "waiting",
+                  "review"
                 ],
                 "type": "string"
               },
@@ -277,7 +280,10 @@
                       "idea",
                       "wip",
                       "hold",
-                      "dropped"
+                      "dropped",
+                      "reply",
+                      "waiting",
+                      "review"
                     ],
                     "type": "string"
                   },

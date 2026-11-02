@@ -76,3 +76,23 @@ func TestMarks(t *testing.T) {
 		t.Errorf("M in the trash: prompt %v", m.prompt)
 	}
 }
+
+func TestMarkWindow(t *testing.T) {
+	widths := []int{3, 3, 4, 4, 4, 4}
+	for _, tt := range []struct {
+		sel, room   int
+		first, last int
+	}{
+		{sel: 0, room: 100, first: 0, last: 6},
+		{sel: 0, room: 7, first: 0, last: 2},
+		{sel: 5, room: 8, first: 4, last: 6},
+		{sel: 3, room: 12, first: 2, last: 5},
+		{sel: 3, room: 1, first: 3, last: 4}, // the choice shows, even if it does not fit
+		{sel: 9, room: 4, first: 5, last: 6},
+	} {
+		first, last := markWindow(widths, tt.sel, tt.room)
+		if first != tt.first || last != tt.last {
+			t.Errorf("markWindow(%d, %d) = %d, %d, want %d, %d", tt.sel, tt.room, first, last, tt.first, tt.last)
+		}
+	}
+}

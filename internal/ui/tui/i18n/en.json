@@ -224,5 +224,8 @@
   "mark.idea": "Idea",
   "mark.wip": "In progress",
   "mark.hold": "On hold",
-  "mark.dropped": "Dropped"
+  "mark.dropped": "Dropped",
+  "mark.reply": "Reply needed",
+  "mark.waiting": "Waiting for a reply",
+  "mark.review": "In review"
 }
