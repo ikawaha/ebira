@@ -4150,7 +4150,8 @@ function toggleSettings(open = $("settings-menu").hidden) {
 
 $("settings").addEventListener("click", () => toggleSettings());
 $("settings-menu").addEventListener("click", (e) => {
-  if (e.target.closest("button")) toggleSettings(false);
+  // The menu stays open while the size of the text is tried.
+  if (e.target.closest("button") && !e.target.closest(".body-size")) toggleSettings(false);
 });
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
@@ -4198,6 +4199,36 @@ for (const b of document.querySelectorAll("#settings-menu [data-theme-choice]"))
   b.addEventListener("click", () => setTheme(b.dataset.themeChoice));
 }
 markTheme();
+
+// The size of the text of the body of notes, in the preview and the editor, kept
+// in the browser (see theme.js). It is a scale rather than a size, as the styles
+// of the preview set sizes of their own.
+const BODY_SIZES = [80, 90, 100, 110, 125, 150, 175, 200];
+
+function bodySize() {
+  let size = NaN;
+  try { size = Number(localStorage.getItem("ebira.bodySize")); } catch (_) { /* none */ }
+  return BODY_SIZES.includes(size) ? size : 100;
+}
+
+function showBodySize(size) {
+  document.documentElement.style.setProperty("--body-scale", String(size / 100));
+  $("body-size-reset").textContent = `${size}%`;
+  $("body-size-down").disabled = size === BODY_SIZES[0];
+  $("body-size-up").disabled = size === BODY_SIZES.at(-1);
+}
+
+function setBodySize(size) {
+  try { localStorage.setItem("ebira.bodySize", String(size)); } catch (_) { /* this page only */ }
+  showBodySize(size);
+  // CodeMirror measures its lines, and is not told when their height changes.
+  for (const node of document.querySelectorAll(".cm-content")) CM.EditorView.findFromDOM(node)?.requestMeasure();
+}
+
+$("body-size-down").addEventListener("click", () => setBodySize(BODY_SIZES[Math.max(BODY_SIZES.indexOf(bodySize()) - 1, 0)]));
+$("body-size-up").addEventListener("click", () => setBodySize(BODY_SIZES[Math.min(BODY_SIZES.indexOf(bodySize()) + 1, BODY_SIZES.length - 1)]));
+$("body-size-reset").addEventListener("click", () => setBodySize(100));
+showBodySize(bodySize());
 
 for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
   b.addEventListener("click", () => {

@@ -14,4 +14,9 @@
   try { chosen = localStorage.getItem("ebira.theme"); } catch (_) { /* none */ }
   if (chosen === "light" || chosen === "dark") root.dataset.theme = chosen;
   else if (chosen === "auto") delete root.dataset.theme;
+  // The size of the text of the body of notes, also chosen in the menu, as a
+  // percentage in ebira.bodySize.
+  let size = NaN;
+  try { size = Number(localStorage.getItem("ebira.bodySize")); } catch (_) { /* none */ }
+  if (size >= 50 && size <= 300) root.style.setProperty("--body-scale", String(size / 100));
 })();
