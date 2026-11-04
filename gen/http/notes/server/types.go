@@ -204,6 +204,13 @@ type GitSyncRequestBody struct {
 	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
 }
 
+// AddGuideRequestBody is the type of the "notes" service "add_guide" endpoint
+// HTTP request body.
+type AddGuideRequestBody struct {
+	// Language of the guide (default en)
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
+}
+
 // SetPreviewStyleRequestBody is the type of the "notes" service
 // "set_preview_style" endpoint HTTP request body.
 type SetPreviewStyleRequestBody struct {
@@ -771,6 +778,44 @@ type GitSyncResponseBody struct {
 	Conflicts []*GitConflictResponseBody `form:"conflicts" json:"conflicts" xml:"conflicts"`
 	// Files that could not be read when the index was updated after the sync
 	Errors []string `form:"errors" json:"errors" xml:"errors"`
+}
+
+// AddGuideResponseBody is the type of the "notes" service "add_guide" endpoint
+// HTTP response body.
+type AddGuideResponseBody struct {
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
+	ID string `form:"id" json:"id" xml:"id"`
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
+	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
+	Name string `form:"name" json:"name" xml:"name"`
+	// Sort key among the notebooks other than inbox and trash; lower comes first
+	Order int `form:"order" json:"order" xml:"order"`
+	// Number of notes
+	Count int `form:"count" json:"count" xml:"count"`
+	// Whether this is a system notebook (inbox or trash)
+	Reserved bool `form:"reserved" json:"reserved" xml:"reserved"`
+	// Kind of the notebook. AI clients may only read notes in default notebooks,
+	// may also create, update and delete notes in collab notebooks, which people
+	// share with AI, may only add notes to drop notebooks, whose notes they cannot
+	// see, and cannot see private notebooks at all. In the notebook list, AI
+	// clients see drop notebooks with a count of 0. A notebook without a kind set
+	// is default, except the inbox, which is drop
+	Kind string `form:"kind" json:"kind" xml:"kind"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
+	// Order of the note list: order is the manual order (notes not moved with move
+	// come by creation time, newest first), created and updated are newest first,
+	// and title is by code point, ignoring case and width
+	Sort string `form:"sort" json:"sort" xml:"sort"`
 }
 
 // PreviewStyleResponseBody is the type of the "notes" service "preview_style"
@@ -3221,6 +3266,43 @@ type GitSyncUnauthorizedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// AddGuideUnauthorizedResponseBody is the type of the "notes" service
+// "add_guide" endpoint HTTP response body for the "unauthorized" error.
+type AddGuideUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// AddGuideVerificationRequiredResponseBody is the type of the "notes" service
+// "add_guide" endpoint HTTP response body for the "verification_required"
+// error.
+type AddGuideVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // PreviewStyleUnauthorizedResponseBody is the type of the "notes" service
 // "preview_style" endpoint HTTP response body for the "unauthorized" error.
 type PreviewStyleUnauthorizedResponseBody struct {
@@ -4249,6 +4331,23 @@ func NewGitSyncResponseBody(res *notes.GitSyncResult) *GitSyncResponseBody {
 		}
 	} else {
 		body.Errors = []string{}
+	}
+	return body
+}
+
+// NewAddGuideResponseBody builds the HTTP response body from the result of the
+// "add_guide" endpoint of the "notes" service.
+func NewAddGuideResponseBody(res *notes.Notebook) *AddGuideResponseBody {
+	body := &AddGuideResponseBody{
+		ID:       res.ID,
+		Parent:   res.Parent,
+		Name:     res.Name,
+		Order:    res.Order,
+		Count:    res.Count,
+		Reserved: res.Reserved,
+		Kind:     res.Kind,
+		OwnKind:  res.OwnKind,
+		Sort:     res.Sort,
 	}
 	return body
 }
@@ -6157,6 +6256,34 @@ func NewGitSyncUnauthorizedResponseBody(res *goa.ServiceError) *GitSyncUnauthori
 	return body
 }
 
+// NewAddGuideUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "add_guide" endpoint of the "notes" service.
+func NewAddGuideUnauthorizedResponseBody(res *goa.ServiceError) *AddGuideUnauthorizedResponseBody {
+	body := &AddGuideUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewAddGuideVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "add_guide" endpoint of the "notes" service.
+func NewAddGuideVerificationRequiredResponseBody(res *goa.ServiceError) *AddGuideVerificationRequiredResponseBody {
+	body := &AddGuideVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewPreviewStyleUnauthorizedResponseBody builds the HTTP response body from
 // the result of the "preview_style" endpoint of the "notes" service.
 func NewPreviewStyleUnauthorizedResponseBody(res *goa.ServiceError) *PreviewStyleUnauthorizedResponseBody {
@@ -6682,6 +6809,16 @@ func NewGitSyncPayload(body *GitSyncRequestBody, session *string) *notes.GitSync
 	return v
 }
 
+// NewAddGuidePayload builds a notes service add_guide endpoint payload.
+func NewAddGuidePayload(body *AddGuideRequestBody, session *string) *notes.AddGuidePayload {
+	v := &notes.AddGuidePayload{
+		Lang: body.Lang,
+	}
+	v.Session = session
+
+	return v
+}
+
 // NewPreviewStylePayload builds a notes service preview_style endpoint payload.
 func NewPreviewStylePayload(session *string) *notes.PreviewStylePayload {
 	v := &notes.PreviewStylePayload{}
@@ -6973,6 +7110,17 @@ func ValidateImportRequestBody(body *ImportRequestBody) (err error) {
 			if err2 := validateImportFileRequestBody(e, "body.files[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// ValidateAddGuideRequestBody runs the validations defined on
+// AddGuideRequestBody
+func ValidateAddGuideRequestBody(body *AddGuideRequestBody) (err error) {
+	if body.Lang != nil {
+		if !(*body.Lang == "en" || *body.Lang == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.lang", *body.Lang, []any{"en", "ja"}))
 		}
 	}
 	return

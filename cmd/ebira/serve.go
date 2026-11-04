@@ -28,6 +28,7 @@ import (
 	"github.com/ikawaha/ebira/internal/auth"
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
+	"github.com/ikawaha/ebira/internal/guide"
 	"github.com/ikawaha/ebira/internal/history"
 	"github.com/ikawaha/ebira/internal/httpguard"
 	"github.com/ikawaha/ebira/internal/index"
@@ -150,9 +151,19 @@ func runServe(args []string) error {
 		return err
 	}
 
+	// A notes directory made now gets the guide, but one with notes does
+	// not, so that a guide deleted does not come back.
+	fresh := guide.IsNew(*notesDir)
 	st, err := store.New(*notesDir)
 	if err != nil {
 		return err
+	}
+	if fresh {
+		r, err := guide.Install(st, *o.lang, time.Now().UTC().Truncate(time.Second))
+		if err != nil {
+			return fmt.Errorf("add the guide: %w", err)
+		}
+		slog.Info("added the guide to the new notes directory", "notebook", r.Notebook)
 	}
 	conf, err := st.Config()
 	if err != nil {

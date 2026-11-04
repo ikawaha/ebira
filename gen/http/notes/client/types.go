@@ -204,6 +204,13 @@ type GitSyncRequestBody struct {
 	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
 }
 
+// AddGuideRequestBody is the type of the "notes" service "add_guide" endpoint
+// HTTP request body.
+type AddGuideRequestBody struct {
+	// Language of the guide (default en)
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
+}
+
 // SetPreviewStyleRequestBody is the type of the "notes" service
 // "set_preview_style" endpoint HTTP request body.
 type SetPreviewStyleRequestBody struct {
@@ -747,6 +754,44 @@ type GitSyncResponseBody struct {
 	Conflicts []*GitConflictResponseBody `form:"conflicts,omitempty" json:"conflicts,omitempty" xml:"conflicts,omitempty"`
 	// Files that could not be read when the index was updated after the sync
 	Errors []string `form:"errors,omitempty" json:"errors,omitempty" xml:"errors,omitempty"`
+}
+
+// AddGuideResponseBody is the type of the "notes" service "add_guide" endpoint
+// HTTP response body.
+type AddGuideResponseBody struct {
+	// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+	// notebook. It is derived from the display name when the notebook is created:
+	// an ASCII name is lower-cased with dashes, and a name with other characters,
+	// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+	// in internationalized domain names. Pass the ID as is wherever a notebook is
+	// asked for, and show people the name instead
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// For a sub notebook: the notebook it is in, whose kind it takes unless it
+	// sets its own. The notes of a sub notebook are not among those of its parent
+	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
+	// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Sort key among the notebooks other than inbox and trash; lower comes first
+	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
+	// Number of notes
+	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Whether this is a system notebook (inbox or trash)
+	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
+	// Kind of the notebook. AI clients may only read notes in default notebooks,
+	// may also create, update and delete notes in collab notebooks, which people
+	// share with AI, may only add notes to drop notebooks, whose notes they cannot
+	// see, and cannot see private notebooks at all. In the notebook list, AI
+	// clients see drop notebooks with a count of 0. A notebook without a kind set
+	// is default, except the inbox, which is drop
+	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+	// in effect, which is private in a private parent whatever the own kind.
+	// Absent when it takes the kind of its parent
+	OwnKind *string `form:"own_kind,omitempty" json:"own_kind,omitempty" xml:"own_kind,omitempty"`
+	// Order of the note list: order is the manual order (notes not moved with move
+	// come by creation time, newest first), created and updated are newest first,
+	// and title is by code point, ignoring case and width
+	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
 }
 
 // PreviewStyleResponseBody is the type of the "notes" service "preview_style"
@@ -3197,6 +3242,43 @@ type GitSyncUnauthorizedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// AddGuideUnauthorizedResponseBody is the type of the "notes" service
+// "add_guide" endpoint HTTP response body for the "unauthorized" error.
+type AddGuideUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// AddGuideVerificationRequiredResponseBody is the type of the "notes" service
+// "add_guide" endpoint HTTP response body for the "verification_required"
+// error.
+type AddGuideVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // PreviewStyleUnauthorizedResponseBody is the type of the "notes" service
 // "preview_style" endpoint HTTP response body for the "unauthorized" error.
 type PreviewStyleUnauthorizedResponseBody struct {
@@ -3748,6 +3830,15 @@ func NewImportRequestBody(p *notes.ImportPayload) *ImportRequestBody {
 func NewGitSyncRequestBody(p *notes.GitSyncPayload) *GitSyncRequestBody {
 	body := &GitSyncRequestBody{
 		Remote: p.Remote,
+	}
+	return body
+}
+
+// NewAddGuideRequestBody builds the HTTP request body from the payload of the
+// "add_guide" endpoint of the "notes" service.
+func NewAddGuideRequestBody(p *notes.AddGuidePayload) *AddGuideRequestBody {
+	body := &AddGuideRequestBody{
+		Lang: p.Lang,
 	}
 	return body
 }
@@ -6396,6 +6487,54 @@ func NewGitSyncUnauthorized(body *GitSyncUnauthorizedResponseBody) *goa.ServiceE
 	return v
 }
 
+// NewAddGuideNotebookOK builds a "notes" service "add_guide" endpoint result
+// from a HTTP "OK" response.
+func NewAddGuideNotebookOK(body *AddGuideResponseBody) *notes.Notebook {
+	v := &notes.Notebook{
+		ID:       *body.ID,
+		Parent:   body.Parent,
+		Name:     *body.Name,
+		Order:    *body.Order,
+		Count:    *body.Count,
+		Reserved: *body.Reserved,
+		Kind:     *body.Kind,
+		OwnKind:  body.OwnKind,
+		Sort:     *body.Sort,
+	}
+
+	return v
+}
+
+// NewAddGuideUnauthorized builds a notes service add_guide endpoint
+// unauthorized error.
+func NewAddGuideUnauthorized(body *AddGuideUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewAddGuideVerificationRequired builds a notes service add_guide endpoint
+// verification_required error.
+func NewAddGuideVerificationRequired(body *AddGuideVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewPreviewStylePreviewStyleOK builds a "notes" service "preview_style"
 // endpoint result from a HTTP "OK" response.
 func NewPreviewStylePreviewStyleOK(body *PreviewStyleResponseBody) *notes.PreviewStyle {
@@ -7431,6 +7570,54 @@ func ValidateGitSyncResponseBody(body *GitSyncResponseBody) (err error) {
 			if err2 := validateGitConflictResponseBody(e, "body.conflicts[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// ValidateAddGuideResponseBody runs the validations defined on
+// AddGuideResponseBody
+func ValidateAddGuideResponseBody(body *AddGuideResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Order == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("order", "body"))
+	}
+	if body.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
+	}
+	if body.Reserved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
+	}
+	if body.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if body.Sort == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Kind != nil {
+		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.Sort != nil {
+		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
 	}
 	return
@@ -10640,6 +10827,54 @@ func ValidateGitSyncBadRequestResponseBody(body *GitSyncBadRequestResponseBody) 
 // ValidateGitSyncUnauthorizedResponseBody runs the validations defined on
 // GitSyncUnauthorizedResponseBody
 func ValidateGitSyncUnauthorizedResponseBody(body *GitSyncUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateAddGuideUnauthorizedResponseBody runs the validations defined on
+// AddGuideUnauthorizedResponseBody
+func ValidateAddGuideUnauthorizedResponseBody(body *AddGuideUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateAddGuideVerificationRequiredResponseBody runs the validations
+// defined on AddGuideVerificationRequiredResponseBody
+func ValidateAddGuideVerificationRequiredResponseBody(body *AddGuideVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

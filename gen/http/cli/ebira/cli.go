@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|preview-style|set-preview-style|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -236,6 +236,10 @@ func ParseEndpoint(
 		notesGitSyncBodyFlag    = new(cliStringFlag)
 		notesGitSyncSessionFlag = new(cliStringFlag)
 
+		notesAddGuideFlags       = flag.NewFlagSet("add-guide", flag.ExitOnError)
+		notesAddGuideBodyFlag    = new(cliStringFlag)
+		notesAddGuideSessionFlag = new(cliStringFlag)
+
 		notesPreviewStyleFlags       = flag.NewFlagSet("preview-style", flag.ExitOnError)
 		notesPreviewStyleSessionFlag = new(cliStringFlag)
 
@@ -380,6 +384,8 @@ func ParseEndpoint(
 	notesGitStatusFlags.Var(notesGitStatusSessionFlag, "session", "")
 	notesGitSyncFlags.Var(notesGitSyncBodyFlag, "body", "")
 	notesGitSyncFlags.Var(notesGitSyncSessionFlag, "session", "")
+	notesAddGuideFlags.Var(notesAddGuideBodyFlag, "body", "")
+	notesAddGuideFlags.Var(notesAddGuideSessionFlag, "session", "")
 	notesPreviewStyleFlags.Var(notesPreviewStyleSessionFlag, "session", "")
 	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleBodyFlag, "body", "")
 	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleSessionFlag, "session", "")
@@ -436,6 +442,7 @@ func ParseEndpoint(
 	notesEventsFlags.Usage = notesEventsUsage
 	notesGitStatusFlags.Usage = notesGitStatusUsage
 	notesGitSyncFlags.Usage = notesGitSyncUsage
+	notesAddGuideFlags.Usage = notesAddGuideUsage
 	notesPreviewStyleFlags.Usage = notesPreviewStyleUsage
 	notesSetPreviewStyleFlags.Usage = notesSetPreviewStyleUsage
 	notesSyncFlags.Usage = notesSyncUsage
@@ -606,6 +613,9 @@ func ParseEndpoint(
 
 			case "git-sync":
 				epf = notesGitSyncFlags
+
+			case "add-guide":
+				epf = notesAddGuideFlags
 
 			case "preview-style":
 				epf = notesPreviewStyleFlags
@@ -809,6 +819,9 @@ func ParseEndpoint(
 			case "git-sync":
 				endpoint = c.GitSync()
 				data, err = notesc.BuildGitSyncPayload(notesGitSyncBodyFlag.value, notesGitSyncSessionFlag.value)
+			case "add-guide":
+				endpoint = c.AddGuide()
+				data, err = notesc.BuildAddGuidePayload(notesAddGuideBodyFlag.value, notesAddGuideSessionFlag.value)
 			case "preview-style":
 				endpoint = c.PreviewStyle()
 				data, err = notesc.BuildPreviewStylePayload(notesPreviewStyleSessionFlag.value)
@@ -916,6 +929,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    events: Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
 	fmt.Fprintln(os.Stderr, `    git-status: Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
 	fmt.Fprintln(os.Stderr, `    git-sync: Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.`)
+	fmt.Fprintln(os.Stderr, `    add-guide: Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.`)
 	fmt.Fprintln(os.Stderr, `    preview-style: Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.`)
 	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
 	fmt.Fprintln(os.Stderr, `    sync: Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
@@ -1697,6 +1711,26 @@ func notesGitSyncUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-sync --body '{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }' --session \"Voluptas est harum enim corrupti fugit.\"")
+}
+
+func notesAddGuideUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes add-guide", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes add-guide --body '{\n      \"lang\": \"ja\"\n   }' --session \"Asperiores quasi at repellat debitis necessitatibus dolor.\"")
 }
 
 func notesPreviewStyleUsage() {

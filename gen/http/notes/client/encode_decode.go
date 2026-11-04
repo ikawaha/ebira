@@ -5505,6 +5505,125 @@ func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restore
 	}
 }
 
+// BuildAddGuideRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "add_guide" endpoint
+func (c *Client) BuildAddGuideRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddGuideNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "add_guide", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeAddGuideRequest returns an encoder for requests sent to the notes
+// add_guide server.
+func EncodeAddGuideRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.AddGuidePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "add_guide", "*notes.AddGuidePayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewAddGuideRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "add_guide", err)
+		}
+		return nil
+	}
+}
+
+// DecodeAddGuideResponse returns a decoder for responses returned by the notes
+// add_guide endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeAddGuideResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeAddGuideResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_guide", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "add_guide", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body AddGuideResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_guide", err)
+			}
+			err = ValidateAddGuideResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_guide", err)
+			}
+			res := NewAddGuideNotebookOK(&body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body AddGuideUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_guide", err)
+			}
+			err = ValidateAddGuideUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_guide", err)
+			}
+			return nil, NewAddGuideUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body AddGuideVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_guide", err)
+			}
+			err = ValidateAddGuideVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "add_guide", err)
+			}
+			return nil, NewAddGuideVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "add_guide", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "add_guide", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildPreviewStyleRequest instantiates a HTTP request object with method and
 // path set to call the "notes" service "preview_style" endpoint
 func (c *Client) BuildPreviewStyleRequest(ctx context.Context, v any) (*http.Request, error) {

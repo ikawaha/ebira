@@ -158,6 +158,10 @@ type Client struct {
 	// endpoint.
 	GitSyncDoer goahttp.Doer
 
+	// AddGuide Doer is the HTTP client used to make requests to the add_guide
+	// endpoint.
+	AddGuideDoer goahttp.Doer
+
 	// PreviewStyle Doer is the HTTP client used to make requests to the
 	// preview_style endpoint.
 	PreviewStyleDoer goahttp.Doer
@@ -226,6 +230,7 @@ func NewClient(
 		EventsDoer:                doer,
 		GitStatusDoer:             doer,
 		GitSyncDoer:               doer,
+		AddGuideDoer:              doer,
 		PreviewStyleDoer:          doer,
 		SetPreviewStyleDoer:       doer,
 		SyncDoer:                  doer,
@@ -1144,6 +1149,30 @@ func (c *Client) GitSync() goa.Endpoint {
 		resp, err := c.GitSyncDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "git_sync", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// AddGuide returns an endpoint that makes HTTP requests to the notes service
+// add_guide server.
+func (c *Client) AddGuide() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeAddGuideRequest(c.encoder)
+		decodeResponse = DecodeAddGuideResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildAddGuideRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.AddGuideDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "add_guide", err)
 		}
 		return decodeResponse(resp)
 	}

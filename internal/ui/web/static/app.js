@@ -4169,6 +4169,23 @@ $("server-stats-open").addEventListener("click", () => openServerStats());
 $("mark-names-open").addEventListener("click", () => openMarkNames());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
+$("guide-add").addEventListener("click", () => addGuide());
+
+// addGuide adds the guide of ebira, in the language of the UI, as a new
+// notebook, and shows it.
+async function addGuide() {
+  let nb;
+  try {
+    nb = await api("/guide", { method: "POST", body: { lang } });
+  } catch (e) {
+    alert(t("guideFailed", { error: e.message }));
+    return;
+  }
+  await loadNotebooks();
+  if (state.side !== "notebooks") setSide("notebooks");
+  showNotebook(nb.id);
+  showToast(t("guideAdded", { name: nb.name }));
+}
 // Theme: auto (the system's), light or dark, chosen in the settings menu and
 // kept in the browser; without a choice, the server's (see theme.js).
 function currentTheme() {

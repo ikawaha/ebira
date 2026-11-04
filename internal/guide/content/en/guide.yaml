@@ -1,0 +1,44 @@
+# The notes of the guide in order, from the top. note is a file in this
+# folder, separator the heading of a separator, and sub a sub notebook of the
+# guide.
+name: ebira Guide
+items:
+  - separator: Getting started
+    color: blue
+  - note: welcome.md
+    mark: star
+  - note: screen.md
+  - note: notes.md
+  - separator: Writing
+    color: green
+  - note: markdown.md
+  - note: math.md
+  - note: images.md
+  - note: editor.md
+  - separator: Organizing
+    color: orange
+  - note: tags.md
+  - note: marks.md
+    mark: red
+  - note: separators.md
+  - separator: Finding
+    color: purple
+  - note: search.md
+    mark: pin
+  - note: find.md
+  - separator: Keeping safe
+    color: yellow
+  - note: history.md
+  - note: kinds.md
+  - separator: Connecting
+    color: gray
+  - note: ai.md
+  - note: sync.md
+  - note: passkey.md
+  - separator: Look and settings
+  - note: settings.md
+  - sub: terminal
+    name: Terminal
+    items:
+      - note: tui.md
+      - note: cli.md

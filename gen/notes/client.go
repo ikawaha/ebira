@@ -65,13 +65,14 @@ type Client struct {
 	EventsEndpoint                goa.Endpoint
 	GitStatusEndpoint             goa.Endpoint
 	GitSyncEndpoint               goa.Endpoint
+	AddGuideEndpoint              goa.Endpoint
 	PreviewStyleEndpoint          goa.Endpoint
 	SetPreviewStyleEndpoint       goa.Endpoint
 	SyncEndpoint                  goa.Endpoint
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -122,6 +123,7 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		EventsEndpoint:                events,
 		GitStatusEndpoint:             gitStatus,
 		GitSyncEndpoint:               gitSync,
+		AddGuideEndpoint:              addGuide,
 		PreviewStyleEndpoint:          previewStyle,
 		SetPreviewStyleEndpoint:       setPreviewStyle,
 		SyncEndpoint:                  sync,
@@ -871,6 +873,20 @@ func (c *Client) GitSync(ctx context.Context, p *GitSyncPayload) (res *GitSyncRe
 		return
 	}
 	return ires.(*GitSyncResult), nil
+}
+
+// AddGuide calls the "add_guide" endpoint of the "notes" service.
+// AddGuide may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) AddGuide(ctx context.Context, p *AddGuidePayload) (res *Notebook, err error) {
+	var ires any
+	ires, err = c.AddGuideEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Notebook), nil
 }
 
 // PreviewStyle calls the "preview_style" endpoint of the "notes" service.

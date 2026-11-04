@@ -1020,6 +1020,10 @@ func TestPeopleOnly(t *testing.T) {
 			_, err := svc.MoveSeparator(ctx, &gennotes.MoveSeparatorPayload{ID: "sep-x", Notebook: diary.ID})
 			return err
 		},
+		"add_guide": func(ctx context.Context) error {
+			_, err := svc.AddGuide(ctx, &gennotes.AddGuidePayload{})
+			return err
+		},
 	}
 	for name, call := range calls {
 		if err := call(ai); errorName(err) != "unauthorized" {

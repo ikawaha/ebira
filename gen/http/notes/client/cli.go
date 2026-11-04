@@ -1485,6 +1485,34 @@ func BuildGitSyncPayload(notesGitSyncBody *string, notesGitSyncSession *string) 
 	return v, nil
 }
 
+// BuildAddGuidePayload builds the payload for the notes add_guide endpoint
+// from CLI flags.
+func BuildAddGuidePayload(notesAddGuideBody *string, notesAddGuideSession *string) (*notes.AddGuidePayload, error) {
+	var err error
+	var body AddGuideRequestBody
+	{
+		if notesAddGuideBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesAddGuideBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"lang\": \"ja\"\n   }'")
+		}
+	}
+	var session *string
+	{
+		if notesAddGuideSession != nil {
+			session = notesAddGuideSession
+		}
+	}
+	v := &notes.AddGuidePayload{
+		Lang: body.Lang,
+	}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildPreviewStylePayload builds the payload for the notes preview_style
 // endpoint from CLI flags.
 func BuildPreviewStylePayload(notesPreviewStyleSession *string) (*notes.PreviewStylePayload, error) {

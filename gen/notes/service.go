@@ -245,6 +245,11 @@ type Service interface {
 	// this side's version; a file deleted on one side and changed on the other
 	// keeps the changed version. The index is updated afterwards. For people only.
 	GitSync(context.Context, *GitSyncPayload) (res *GitSyncResult, err error)
+	// Add the guide of ebira, notes that tell how to use it, as a new notebook
+	// after the others. The notebooks there are left as they are: a guide added
+	// before stays, and the new one takes another name, such as with (2). For
+	// people only.
+	AddGuide(context.Context, *AddGuidePayload) (res *Notebook, err error)
 	// Tell the style of the preview of the web UI: which built-in style the CSS
 	// file for the preview, next to the settings file, is or was made from, or
 	// that it is CSS of the user's own. For people only.
@@ -278,7 +283,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [52]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "preview_style", "set_preview_style", "sync"}
+var MethodNames = [53]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -330,6 +335,14 @@ type AddFilePayload struct {
 	ID string
 	// File name, such as the name of the uploaded file
 	Name string
+}
+
+// AddGuidePayload is the payload type of the notes service add_guide method.
+type AddGuidePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Language of the guide (default en)
+	Lang *string
 }
 
 type BrokenFileRef struct {

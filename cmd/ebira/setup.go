@@ -18,6 +18,7 @@ import (
 
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/gitsync"
+	"github.com/ikawaha/ebira/internal/guide"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/store"
 	"github.com/ikawaha/ebira/internal/ui/web"
@@ -207,7 +208,7 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		return "", errors.New("setup canceled")
 	}
 
-	if err := makeNotes(ctx, dir, url, remoteNotes, mode, out); err != nil {
+	if err := makeNotes(ctx, dir, url, remoteNotes, mode, cmp.Or(lang, settings.Lang), out); err != nil {
 		return "", err
 	}
 	if save {
@@ -233,8 +234,9 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 // makeNotes creates the notes directory dir: it clones the notes from the git
 // repository url when it has notes (remoteNotes) and dir has no files,
 // else creates them with the search mode, unless empty, and pushes them to
-// url, unless empty. A directory dir made here is removed on a failure.
-func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode string, out io.Writer) (err error) {
+// url, unless empty, with the guide in language lang when dir is new, as the
+// server would add it. A directory dir made here is removed on a failure.
+func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode, lang string, out io.Writer) (err error) {
 	if _, statErr := os.Stat(dir); errors.Is(statErr, fs.ErrNotExist) {
 		defer func() {
 			if err != nil {
@@ -257,9 +259,15 @@ func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode stri
 	if url == "" {
 		return nil
 	}
+	fresh := guide.IsNew(dir)
 	st, err := store.New(dir)
 	if err != nil {
 		return err
+	}
+	if fresh {
+		if _, err := guide.Install(st, lang, time.Now().UTC().Truncate(time.Second)); err != nil {
+			return err
+		}
 	}
 	label := "conflict " + time.Now().Format("2006-01-02 15:04")
 	fmt.Fprintf(out, "Pushing the notes to %s...\n", url)

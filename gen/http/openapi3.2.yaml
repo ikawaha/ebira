@@ -816,6 +816,67 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /guide:
+        post:
+            tags:
+                - notes
+            summary: add_guide notes
+            description: 'Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.'
+            operationId: notes#add_guide
+            requestBody:
+                description: Request body for add_guide.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AddGuideRequestBody'
+                        example:
+                            lang: ja
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Notebook'
+                            example:
+                                count: 2644179394501235538
+                                id: inbox
+                                kind: default
+                                name: Magnam et eaque.
+                                order: 1410197461231585894
+                                own_kind: drop
+                                parent: inbox
+                                reserved: true
+                                sort: order
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /import:
         post:
             tags:
@@ -4334,6 +4395,19 @@ paths:
                 - session_cookie_ebira_session: []
 components:
     schemas:
+        AddGuideRequestBody:
+            type: object
+            properties:
+                lang:
+                    type: string
+                    description: Language of the guide (default en)
+                    example: ja
+                    enum:
+                        - en
+                        - ja
+            description: Request body for add_guide.
+            example:
+                lang: ja
         AskRequestBody:
             type: object
             properties:

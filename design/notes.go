@@ -1348,6 +1348,26 @@ var _ = Service("notes", func() {
 		})
 	})
 
+	// The guide is added by people, from the settings of the web UI, so not
+	// an MCP tool.
+	Method("add_guide", func() {
+		Description("Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.")
+		Payload(func() {
+			sessionDSL()
+			Attribute("lang", String, "Language of the guide (default en)", func() {
+				Enum("en", "ja")
+				Example("ja")
+			})
+		})
+		Result(Notebook)
+		HTTP(func() {
+			POST("/guide")
+			Body(func() {
+				Attribute("lang")
+			})
+		})
+	})
+
 	// The style of the preview is the setting of this machine's web UI, for
 	// people only, so not an MCP tool. set_preview_style writes only a
 	// built-in style, never content from the request.

@@ -194,6 +194,11 @@ func GitSyncNotesPath() string {
 	return "/git/sync"
 }
 
+// AddGuideNotesPath returns the URL path to the notes service add_guide HTTP endpoint.
+func AddGuideNotesPath() string {
+	return "/guide"
+}
+
 // PreviewStyleNotesPath returns the URL path to the notes service preview_style HTTP endpoint.
 func PreviewStyleNotesPath() string {
 	return "/preview-style"
