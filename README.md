@@ -86,6 +86,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 - **Always up to date** — the index follows file changes (fsnotify), so `git pull` or another editor just works. The index is a cache: delete it and it is rebuilt.
 - **Web UI** — notebooks and tags, search as you type, Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation, code coloring and emoji completion such as `:smile` (CodeMirror 6), drag and drop to reorder and to import, images by paste, and live updates. In English and Japanese, with light and dark themes.
 - **TUI** — the same notes in the terminal.
+- **A guide in your notes** — a new notes directory starts with the guide of ebira, a notebook of notes that tell how to use it, each showing the feature it tells about. Change or delete them as you like; "Add the guide" in the gear menu adds it again at any time, as a new notebook.
 - **MCP server** — AI clients such as Claude Code can list, search and read notes, and write where you allow it (see [MCP server](#mcp-server)).
 - **Notebook kinds for AI** — `default` (AI reads), `collab` (AI reads and writes), `drop` (AI can only drop new notes in; the inbox by default), and `private` (invisible to AI).
 - **Assistant** — ask questions about your notes in the web UI; it searches and reads them, and answers with links. Claude or Gemini.
@@ -118,6 +119,8 @@ ebira runs on macOS and Linux.
    ```
 
    `ebira web` starts the server in the background and opens the web UI at <http://localhost:13579/>. `ebira` opens the TUI instead. The server keeps running when you close them.
+
+   A new notes directory starts with the notebook "ebira Guide" (in the language you chose), which tells how to use ebira. Read it from the top, try things on its notes, and move it to the trash when you are done; it does not come back by itself, but "Add the guide" in the gear menu adds it again.
 
 2. **Write notes**, in the web UI (`c` for a new note) or as files:
 

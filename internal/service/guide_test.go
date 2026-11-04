@@ -25,8 +25,7 @@ func TestAddGuide(t *testing.T) {
 	if res.Total == 0 {
 		t.Error("no notes of the guide found")
 	}
-	// The notes of the guide do not count as imported, so that importing the
-	// same file is not skipped.
+	// The guide can be added again, as another notebook.
 	again, err := svc.AddGuide(person, &gennotes.AddGuidePayload{Lang: ptr("ja")})
 	if err != nil {
 		t.Fatal(err)
