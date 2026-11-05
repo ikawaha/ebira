@@ -68,14 +68,14 @@ type Client struct {
 	AddGuideEndpoint              goa.Endpoint
 	PreviewStyleEndpoint          goa.Endpoint
 	SetPreviewStyleEndpoint       goa.Endpoint
-	SettingsFileEndpoint          goa.Endpoint
-	SaveSettingsFileEndpoint      goa.Endpoint
+	SettingsEndpoint              goa.Endpoint
+	SaveSettingsEndpoint          goa.Endpoint
 	RestartServerEndpoint         goa.Endpoint
 	SyncEndpoint                  goa.Endpoint
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settingsFile, saveSettingsFile, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -129,8 +129,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		AddGuideEndpoint:              addGuide,
 		PreviewStyleEndpoint:          previewStyle,
 		SetPreviewStyleEndpoint:       setPreviewStyle,
-		SettingsFileEndpoint:          settingsFile,
-		SaveSettingsFileEndpoint:      saveSettingsFile,
+		SettingsEndpoint:              settings,
+		SaveSettingsEndpoint:          saveSettings,
 		RestartServerEndpoint:         restartServer,
 		SyncEndpoint:                  sync,
 	}
@@ -924,35 +924,34 @@ func (c *Client) SetPreviewStyle(ctx context.Context, p *SetPreviewStylePayload)
 	return ires.(*PreviewStyle), nil
 }
 
-// SettingsFile calls the "settings_file" endpoint of the "notes" service.
-// SettingsFile may return the following errors:
+// Settings calls the "settings" endpoint of the "notes" service.
+// Settings may return the following errors:
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
-func (c *Client) SettingsFile(ctx context.Context, p *SettingsFilePayload) (res *SettingsFile, err error) {
+func (c *Client) Settings(ctx context.Context, p *SettingsPayload) (res *Settings, err error) {
 	var ires any
-	ires, err = c.SettingsFileEndpoint(ctx, p)
+	ires, err = c.SettingsEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
-	return ires.(*SettingsFile), nil
+	return ires.(*Settings), nil
 }
 
-// SaveSettingsFile calls the "save_settings_file" endpoint of the "notes"
-// service.
-// SaveSettingsFile may return the following errors:
-//   - "bad_request" (type *goa.ServiceError): The content is not valid settings, such as with an unknown key or value
-//   - "precondition_failed" (type *goa.ServiceError): The file was changed since it was read
+// SaveSettings calls the "save_settings" endpoint of the "notes" service.
+// SaveSettings may return the following errors:
+//   - "bad_request" (type *goa.ServiceError): The settings are invalid, such as auth: passkey without a passkey registered
+//   - "precondition_failed" (type *goa.ServiceError): The settings were changed since they were read
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
-func (c *Client) SaveSettingsFile(ctx context.Context, p *SaveSettingsFilePayload) (res *SettingsFile, err error) {
+func (c *Client) SaveSettings(ctx context.Context, p *SaveSettingsPayload) (res *Settings, err error) {
 	var ires any
-	ires, err = c.SaveSettingsFileEndpoint(ctx, p)
+	ires, err = c.SaveSettingsEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
-	return ires.(*SettingsFile), nil
+	return ires.(*Settings), nil
 }
 
 // RestartServer calls the "restart_server" endpoint of the "notes" service.

@@ -78,3 +78,36 @@ func TestConfig(t *testing.T) {
 		t.Errorf("the settings file was moved: %v", err)
 	}
 }
+
+func TestSaveSearch(t *testing.T) {
+	s, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := "# shared\nsearch: bigram # the mode\nmarks:\n  red: important\n"
+	if err := os.WriteFile(s.ConfigPath(), []byte(file), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveSearch(Config{Search: "ja", StopWords: []string{"の", "は"}, StopTags: []string{}}); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(s.ConfigPath())
+	for _, want := range []string{"# shared", "search: ja # the mode", "red: important", "stop_tags: []", "- の"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("file lacks %q:\n%s", want, b)
+		}
+	}
+	c, err := s.Config()
+	if err != nil || c.Search != "ja" || !slices.Equal(c.StopWords, []string{"の", "は"}) || c.StopTags == nil || len(c.StopTags) != 0 || c.Marks["red"] != "important" {
+		t.Errorf("read back = %+v, %v", c, err)
+	}
+
+	// The defaults leave the keys out, and keep the rest.
+	if err := s.SaveSearch(Config{}); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(s.ConfigPath())
+	if strings.Contains(string(b), "search") || strings.Contains(string(b), "stop_") || !strings.Contains(string(b), "red: important") {
+		t.Errorf("defaults:\n%s", b)
+	}
+}

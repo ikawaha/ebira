@@ -5858,13 +5858,13 @@ func DecodeSetPreviewStyleResponse(decoder func(*http.Response) goahttp.Decoder,
 	}
 }
 
-// BuildSettingsFileRequest instantiates a HTTP request object with method and
-// path set to call the "notes" service "settings_file" endpoint
-func (c *Client) BuildSettingsFileRequest(ctx context.Context, v any) (*http.Request, error) {
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SettingsFileNotesPath()}
+// BuildSettingsRequest instantiates a HTTP request object with method and path
+// set to call the "notes" service "settings" endpoint
+func (c *Client) BuildSettingsRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SettingsNotesPath()}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return nil, goahttp.ErrInvalidURL("notes", "settings_file", u.String(), err)
+		return nil, goahttp.ErrInvalidURL("notes", "settings", u.String(), err)
 	}
 	if ctx != nil {
 		req = req.WithContext(ctx)
@@ -5873,13 +5873,13 @@ func (c *Client) BuildSettingsFileRequest(ctx context.Context, v any) (*http.Req
 	return req, nil
 }
 
-// EncodeSettingsFileRequest returns an encoder for requests sent to the notes
-// settings_file server.
-func EncodeSettingsFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+// EncodeSettingsRequest returns an encoder for requests sent to the notes
+// settings server.
+func EncodeSettingsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
 	return func(req *http.Request, v any) error {
-		p, ok := v.(*notes.SettingsFilePayload)
+		p, ok := v.(*notes.SettingsPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("notes", "settings_file", "*notes.SettingsFilePayload", v)
+			return goahttp.ErrInvalidType("notes", "settings", "*notes.SettingsPayload", v)
 		}
 		if p.Session != nil {
 			v := *p.Session
@@ -5892,21 +5892,21 @@ func EncodeSettingsFileRequest(encoder func(*http.Request) goahttp.Encoder) func
 	}
 }
 
-// DecodeSettingsFileResponse returns a decoder for responses returned by the
-// notes settings_file endpoint. restoreBody controls whether the response body
-// should be restored after having been read.
-// DecodeSettingsFileResponse may return the following errors:
+// DecodeSettingsResponse returns a decoder for responses returned by the notes
+// settings endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+// DecodeSettingsResponse may return the following errors:
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
-func DecodeSettingsFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+func DecodeSettingsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
 			closeErr := responseBody.Close()
 			if err := errors.Join(readErr, closeErr); err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "settings", err)
 			}
 			resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			defer func() {
@@ -5915,71 +5915,71 @@ func DecodeSettingsFileResponse(decoder func(*http.Response) goahttp.Decoder, re
 		} else {
 			defer func() {
 				if err := responseBody.Close(); err != nil {
-					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "settings_file", err))
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "settings", err))
 				}
 			}()
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body SettingsFileResponseBody
+				body SettingsResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "settings", err)
 			}
-			err = ValidateSettingsFileResponseBody(&body)
+			err = ValidateSettingsResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "settings", err)
 			}
-			res := NewSettingsFileSettingsFileOK(&body)
+			res := NewSettingsSettingsOK(&body)
 			return res, nil
 		case http.StatusUnauthorized:
 			var (
-				body SettingsFileUnauthorizedResponseBody
+				body SettingsUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "settings", err)
 			}
-			err = ValidateSettingsFileUnauthorizedResponseBody(&body)
+			err = ValidateSettingsUnauthorizedResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "settings", err)
 			}
-			return nil, NewSettingsFileUnauthorized(&body)
+			return nil, NewSettingsUnauthorized(&body)
 		case http.StatusForbidden:
 			var (
-				body SettingsFileVerificationRequiredResponseBody
+				body SettingsVerificationRequiredResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "settings", err)
 			}
-			err = ValidateSettingsFileVerificationRequiredResponseBody(&body)
+			err = ValidateSettingsVerificationRequiredResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "settings", err)
 			}
-			return nil, NewSettingsFileVerificationRequired(&body)
+			return nil, NewSettingsVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "settings", err)
 			}
-			return nil, goahttp.ErrInvalidResponse("notes", "settings_file", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("notes", "settings", resp.StatusCode, string(body))
 		}
 	}
 }
 
-// BuildSaveSettingsFileRequest instantiates a HTTP request object with method
-// and path set to call the "notes" service "save_settings_file" endpoint
-func (c *Client) BuildSaveSettingsFileRequest(ctx context.Context, v any) (*http.Request, error) {
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SaveSettingsFileNotesPath()}
+// BuildSaveSettingsRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "save_settings" endpoint
+func (c *Client) BuildSaveSettingsRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SaveSettingsNotesPath()}
 	req, err := http.NewRequest("PUT", u.String(), nil)
 	if err != nil {
-		return nil, goahttp.ErrInvalidURL("notes", "save_settings_file", u.String(), err)
+		return nil, goahttp.ErrInvalidURL("notes", "save_settings", u.String(), err)
 	}
 	if ctx != nil {
 		req = req.WithContext(ctx)
@@ -5988,13 +5988,13 @@ func (c *Client) BuildSaveSettingsFileRequest(ctx context.Context, v any) (*http
 	return req, nil
 }
 
-// EncodeSaveSettingsFileRequest returns an encoder for requests sent to the
-// notes save_settings_file server.
-func EncodeSaveSettingsFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+// EncodeSaveSettingsRequest returns an encoder for requests sent to the notes
+// save_settings server.
+func EncodeSaveSettingsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
 	return func(req *http.Request, v any) error {
-		p, ok := v.(*notes.SaveSettingsFilePayload)
+		p, ok := v.(*notes.SaveSettingsPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("notes", "save_settings_file", "*notes.SaveSettingsFilePayload", v)
+			return goahttp.ErrInvalidType("notes", "save_settings", "*notes.SaveSettingsPayload", v)
 		}
 		if p.Session != nil {
 			v := *p.Session
@@ -6003,31 +6003,31 @@ func EncodeSaveSettingsFileRequest(encoder func(*http.Request) goahttp.Encoder) 
 				Value: v,
 			})
 		}
-		body := NewSaveSettingsFileRequestBody(p)
+		body := NewSaveSettingsRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("notes", "save_settings_file", err)
+			return goahttp.ErrEncodingError("notes", "save_settings", err)
 		}
 		return nil
 	}
 }
 
-// DecodeSaveSettingsFileResponse returns a decoder for responses returned by
-// the notes save_settings_file endpoint. restoreBody controls whether the
-// response body should be restored after having been read.
-// DecodeSaveSettingsFileResponse may return the following errors:
+// DecodeSaveSettingsResponse returns a decoder for responses returned by the
+// notes save_settings endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeSaveSettingsResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "precondition_failed" (type *goa.ServiceError): http.StatusPreconditionFailed
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
-func DecodeSaveSettingsFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+func DecodeSaveSettingsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
 			closeErr := responseBody.Close()
 			if err := errors.Join(readErr, closeErr); err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
 			resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			defer func() {
@@ -6036,88 +6036,88 @@ func DecodeSaveSettingsFileResponse(decoder func(*http.Response) goahttp.Decoder
 		} else {
 			defer func() {
 				if err := responseBody.Close(); err != nil {
-					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "save_settings_file", err))
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "save_settings", err))
 				}
 			}()
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body SaveSettingsFileResponseBody
+				body SaveSettingsResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
-			err = ValidateSaveSettingsFileResponseBody(&body)
+			err = ValidateSaveSettingsResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
-			res := NewSaveSettingsFileSettingsFileOK(&body)
+			res := NewSaveSettingsSettingsOK(&body)
 			return res, nil
 		case http.StatusBadRequest:
 			var (
-				body SaveSettingsFileBadRequestResponseBody
+				body SaveSettingsBadRequestResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
-			err = ValidateSaveSettingsFileBadRequestResponseBody(&body)
+			err = ValidateSaveSettingsBadRequestResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
-			return nil, NewSaveSettingsFileBadRequest(&body)
+			return nil, NewSaveSettingsBadRequest(&body)
 		case http.StatusPreconditionFailed:
 			var (
-				body SaveSettingsFilePreconditionFailedResponseBody
+				body SaveSettingsPreconditionFailedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
-			err = ValidateSaveSettingsFilePreconditionFailedResponseBody(&body)
+			err = ValidateSaveSettingsPreconditionFailedResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
-			return nil, NewSaveSettingsFilePreconditionFailed(&body)
+			return nil, NewSaveSettingsPreconditionFailed(&body)
 		case http.StatusUnauthorized:
 			var (
-				body SaveSettingsFileUnauthorizedResponseBody
+				body SaveSettingsUnauthorizedResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
-			err = ValidateSaveSettingsFileUnauthorizedResponseBody(&body)
+			err = ValidateSaveSettingsUnauthorizedResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
-			return nil, NewSaveSettingsFileUnauthorized(&body)
+			return nil, NewSaveSettingsUnauthorized(&body)
 		case http.StatusForbidden:
 			var (
-				body SaveSettingsFileVerificationRequiredResponseBody
+				body SaveSettingsVerificationRequiredResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
-			err = ValidateSaveSettingsFileVerificationRequiredResponseBody(&body)
+			err = ValidateSaveSettingsVerificationRequiredResponseBody(&body)
 			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
-			return nil, NewSaveSettingsFileVerificationRequired(&body)
+			return nil, NewSaveSettingsVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings_file", err)
+				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
 			}
-			return nil, goahttp.ErrInvalidResponse("notes", "save_settings_file", resp.StatusCode, string(body))
+			return nil, goahttp.ErrInvalidResponse("notes", "save_settings", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -6604,6 +6604,150 @@ func unmarshalGitConflictResponseBodyToNotesGitConflict(v *GitConflictResponseBo
 		Path:   *v.Path,
 		NoteID: v.NoteID,
 		CopyID: v.CopyID,
+	}
+
+	return res
+}
+
+// unmarshalMachineSettingsResponseBodyToNotesMachineSettings builds a value of
+// type *notes.MachineSettings from a value of type
+// *MachineSettingsResponseBody.
+func unmarshalMachineSettingsResponseBodyToNotesMachineSettings(v *MachineSettingsResponseBody) *notes.MachineSettings {
+	res := &notes.MachineSettings{
+		Lang:       v.Lang,
+		Theme:      v.Theme,
+		Auth:       v.Auth,
+		GitSync:    v.GitSync,
+		Watch:      v.Watch,
+		Provider:   v.Provider,
+		Model:      v.Model,
+		TuiPreview: v.TuiPreview,
+	}
+
+	return res
+}
+
+// unmarshalNotesSettingsResponseBodyToNotesNotesSettings builds a value of
+// type *notes.NotesSettings from a value of type *NotesSettingsResponseBody.
+func unmarshalNotesSettingsResponseBodyToNotesNotesSettings(v *NotesSettingsResponseBody) *notes.NotesSettings {
+	res := &notes.NotesSettings{
+		Search: v.Search,
+	}
+	res.StopWords = unmarshalStopListResponseBodyToNotesStopList(v.StopWords)
+	res.StopTags = unmarshalStopListResponseBodyToNotesStopList(v.StopTags)
+
+	return res
+}
+
+// unmarshalStopListResponseBodyToNotesStopList builds a value of type
+// *notes.StopList from a value of type *StopListResponseBody.
+func unmarshalStopListResponseBodyToNotesStopList(v *StopListResponseBody) *notes.StopList {
+	res := &notes.StopList{
+		Use: *v.Use,
+	}
+	if v.Words != nil {
+		res.Words = make([]string, len(v.Words))
+		for i, val := range v.Words {
+			res.Words[i] = val
+		}
+	}
+
+	return res
+}
+
+// marshalNotesMachineSettingsToMachineSettingsRequestBody builds a value of
+// type *MachineSettingsRequestBody from a value of type *notes.MachineSettings.
+func marshalNotesMachineSettingsToMachineSettingsRequestBody(v *notes.MachineSettings) *MachineSettingsRequestBody {
+	res := &MachineSettingsRequestBody{
+		Lang:       v.Lang,
+		Theme:      v.Theme,
+		Auth:       v.Auth,
+		GitSync:    v.GitSync,
+		Watch:      v.Watch,
+		Provider:   v.Provider,
+		Model:      v.Model,
+		TuiPreview: v.TuiPreview,
+	}
+
+	return res
+}
+
+// marshalNotesNotesSettingsToNotesSettingsRequestBody builds a value of type
+// *NotesSettingsRequestBody from a value of type *notes.NotesSettings.
+func marshalNotesNotesSettingsToNotesSettingsRequestBody(v *notes.NotesSettings) *NotesSettingsRequestBody {
+	res := &NotesSettingsRequestBody{
+		Search: v.Search,
+	}
+	if v.StopWords != nil {
+		res.StopWords = marshalNotesStopListToStopListRequestBody(v.StopWords)
+	}
+	if v.StopTags != nil {
+		res.StopTags = marshalNotesStopListToStopListRequestBody(v.StopTags)
+	}
+
+	return res
+}
+
+// marshalNotesStopListToStopListRequestBody builds a value of type
+// *StopListRequestBody from a value of type *notes.StopList.
+func marshalNotesStopListToStopListRequestBody(v *notes.StopList) *StopListRequestBody {
+	res := &StopListRequestBody{
+		Use: v.Use,
+	}
+	if v.Words != nil {
+		res.Words = make([]string, len(v.Words))
+		for i, val := range v.Words {
+			res.Words[i] = val
+		}
+	}
+
+	return res
+}
+
+// marshalMachineSettingsRequestBodyToNotesMachineSettings builds a value of
+// type *notes.MachineSettings from a value of type *MachineSettingsRequestBody.
+func marshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsRequestBody) *notes.MachineSettings {
+	res := &notes.MachineSettings{
+		Lang:       v.Lang,
+		Theme:      v.Theme,
+		Auth:       v.Auth,
+		GitSync:    v.GitSync,
+		Watch:      v.Watch,
+		Provider:   v.Provider,
+		Model:      v.Model,
+		TuiPreview: v.TuiPreview,
+	}
+
+	return res
+}
+
+// marshalNotesSettingsRequestBodyToNotesNotesSettings builds a value of type
+// *notes.NotesSettings from a value of type *NotesSettingsRequestBody.
+func marshalNotesSettingsRequestBodyToNotesNotesSettings(v *NotesSettingsRequestBody) *notes.NotesSettings {
+	res := &notes.NotesSettings{
+		Search: v.Search,
+	}
+	if v.StopWords != nil {
+		res.StopWords = marshalStopListRequestBodyToNotesStopList(v.StopWords)
+	}
+	if v.StopTags != nil {
+		res.StopTags = marshalStopListRequestBodyToNotesStopList(v.StopTags)
+	}
+
+	return res
+}
+
+// marshalStopListRequestBodyToNotesStopList builds a value of type
+// *notes.StopList from a value of type *StopListRequestBody.
+func marshalStopListRequestBodyToNotesStopList(v *StopListRequestBody) *notes.StopList {
+	res := &notes.StopList{
+		Use: v.Use,
+	}
+	if v.Words != nil {
+		res.Words = make([]string, len(v.Words))
+		for i, val := range v.Words {
+			res.Words[i] = val
+		}
 	}
 
 	return res

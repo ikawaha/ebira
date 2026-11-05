@@ -32,7 +32,7 @@ func TestOverriddenSettings(t *testing.T) {
 	}
 	got := overriddenSettings(fs)
 	slices.Sort(got)
-	if want := []string{"addr", "git_sync", "lang", "notes_dir"}; !slices.Equal(got, want) {
+	if want := []string{"addr", "git_sync", "lang", "notes_dir", "search"}; !slices.Equal(got, want) {
 		t.Errorf("overridden = %v, want %v", got, want)
 	}
 }

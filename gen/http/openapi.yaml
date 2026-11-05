@@ -2936,7 +2936,7 @@ paths:
             tags:
                 - notes
             summary: restart_server notes
-            description: Stop the server and start it again in the background with the same flags, so that it reads the settings file again. It answers before it stops; the server answers on GET /health with another pid once it runs again. For people only.
+            description: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.
             operationId: notes#restart_server
             responses:
                 "202":
@@ -2981,28 +2981,34 @@ paths:
                 - http
             security:
                 - session_cookie_ebira_session: []
-    /settings-file:
+    /settings:
         get:
             tags:
                 - notes
-            summary: settings_file notes
-            description: Read the settings file of the server's machine and user, which the server reads when it starts. For people only.
-            operationId: notes#settings_file
+            summary: settings notes
+            description: Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.
+            operationId: notes#settings
             responses:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/SettingsFile'
+                        $ref: '#/definitions/Settings'
                         required:
-                            - path
-                            - content
-                            - exists
+                            - machine
+                            - notes
+                            - machine_path
+                            - notes_path
+                            - notes_dir
+                            - addr
                             - version
                             - overridden
+                            - restart
+                            - passkeys
+                            - default_models
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     schema:
-                        $ref: '#/definitions/NotesSettingsFileUnauthorizedResponseBody'
+                        $ref: '#/definitions/NotesSettingsUnauthorizedResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -3014,7 +3020,7 @@ paths:
                 "403":
                     description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
                     schema:
-                        $ref: '#/definitions/NotesSettingsFileVerificationRequiredResponseBody'
+                        $ref: '#/definitions/NotesSettingsVerificationRequiredResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -3030,30 +3036,36 @@ paths:
         put:
             tags:
                 - notes
-            summary: save_settings_file notes
-            description: Write the settings file, which takes effect when the server starts again (restart_server). The content is checked as the commands read it first, and the file is left as it is when it is invalid. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the file decides how the server authenticates people.
-            operationId: notes#save_settings_file
+            summary: save_settings notes
+            description: Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.
+            operationId: notes#save_settings
             parameters:
-                - name: save_settings_file_request_body
+                - name: save_settings_request_body
                   in: body
                   required: true
                   schema:
-                    $ref: '#/definitions/NotesSaveSettingsFileRequestBody'
+                    $ref: '#/definitions/NotesSaveSettingsRequestBody'
             responses:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/SettingsFile'
+                        $ref: '#/definitions/Settings'
                         required:
-                            - path
-                            - content
-                            - exists
+                            - machine
+                            - notes
+                            - machine_path
+                            - notes_path
+                            - notes_dir
+                            - addr
                             - version
                             - overridden
+                            - restart
+                            - passkeys
+                            - default_models
                 "400":
-                    description: 'bad_request: The content is not valid settings, such as with an unknown key or value'
+                    description: 'bad_request: The settings are invalid, such as auth: passkey without a passkey registered'
                     schema:
-                        $ref: '#/definitions/NotesSaveSettingsFileBadRequestResponseBody'
+                        $ref: '#/definitions/NotesSaveSettingsBadRequestResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -3065,7 +3077,7 @@ paths:
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     schema:
-                        $ref: '#/definitions/NotesSaveSettingsFileUnauthorizedResponseBody'
+                        $ref: '#/definitions/NotesSaveSettingsUnauthorizedResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -3077,7 +3089,7 @@ paths:
                 "403":
                     description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
                     schema:
-                        $ref: '#/definitions/NotesSaveSettingsFileVerificationRequiredResponseBody'
+                        $ref: '#/definitions/NotesSaveSettingsVerificationRequiredResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -3087,9 +3099,9 @@ paths:
                             temporary: false
                             timeout: false
                 "412":
-                    description: 'precondition_failed: The file was changed since it was read'
+                    description: 'precondition_failed: The settings were changed since they were read'
                     schema:
-                        $ref: '#/definitions/NotesSaveSettingsFilePreconditionFailedResponseBody'
+                        $ref: '#/definitions/NotesSaveSettingsPreconditionFailedResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -4787,6 +4799,65 @@ definitions:
         required:
             - status
             - warnings
+    MachineSettings:
+        title: MachineSettings
+        type: object
+        properties:
+            auth:
+                type: string
+                description: How the REST API authenticates people; empty for none. passkey needs a passkey registered
+                example: none
+                enum:
+                    - none
+                    - passkey
+            git_sync:
+                type: string
+                description: Interval of syncing the notes with git, such as 10m; empty or 0 for none
+                example: 10m
+            lang:
+                type: string
+                description: Language of the UI; empty for the browser's
+                example: ja
+            model:
+                type: string
+                description: Model of the assistant; empty for the default of the provider
+                example: Vel sit soluta aut corporis nostrum.
+            provider:
+                type: string
+                description: Model provider of the assistant; empty for the one whose API key is set
+                example: anthropic
+                enum:
+                    - anthropic
+                    - gemini
+            theme:
+                type: string
+                description: Color theme of the UI; empty for auto, the system's
+                example: auto
+                enum:
+                    - auto
+                    - light
+                    - dark
+            tui_preview:
+                type: string
+                description: How the preview of the TUI shows a note; empty for rendered
+                example: rendered
+                enum:
+                    - rendered
+                    - source
+            watch:
+                type: boolean
+                description: Whether the server watches the notes directory; left out for true
+                example: true
+        description: Settings of the server's machine and user, in its settings file, that the web UI changes; a value left out is the default
+        example:
+            auth: none
+            git_sync: 10m
+            lang: ja
+            model: Vel sit soluta aut corporis nostrum.
+            provider: anthropic
+            theme: auto
+            tui_preview: rendered
+            watch: true
     MarkInfo:
         title: MarkInfo
         type: object
@@ -11064,14 +11135,14 @@ definitions:
             - temporary
             - timeout
             - fault
-    NotesSaveSettingsFileBadRequestResponseBody:
+    NotesSaveSettingsBadRequestResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
         properties:
             fault:
                 type: boolean
                 description: Is the error a server-side fault?
-                example: false
+                example: true
             id:
                 type: string
                 description: ID is a unique identifier for this particular occurrence of the problem.
@@ -11094,7 +11165,7 @@ definitions:
                 example: false
         description: Error response result type (default view)
         example:
-            fault: false
+            fault: true
             id: 123abc
             message: parameter 'p' must be an integer
             name: bad_request
@@ -11107,14 +11178,14 @@ definitions:
             - temporary
             - timeout
             - fault
-    NotesSaveSettingsFilePreconditionFailedResponseBody:
+    NotesSaveSettingsPreconditionFailedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
         properties:
             fault:
                 type: boolean
                 description: Is the error a server-side fault?
-                example: true
+                example: false
             id:
                 type: string
                 description: ID is a unique identifier for this particular occurrence of the problem.
@@ -11130,19 +11201,19 @@ definitions:
             temporary:
                 type: boolean
                 description: Is the error temporary?
-                example: false
+                example: true
             timeout:
                 type: boolean
                 description: Is the error a timeout?
-                example: true
+                example: false
         description: Error response result type (default view)
         example:
-            fault: true
+            fault: false
             id: 123abc
             message: parameter 'p' must be an integer
             name: bad_request
-            temporary: false
-            timeout: true
+            temporary: true
+            timeout: false
         required:
             - name
             - id
@@ -11150,66 +11221,46 @@ definitions:
             - temporary
             - timeout
             - fault
-    NotesSaveSettingsFileRequestBody:
-        title: NotesSaveSettingsFileRequestBody
+    NotesSaveSettingsRequestBody:
+        title: NotesSaveSettingsRequestBody
         type: object
         properties:
-            content:
-                type: string
-                description: Content of the file in YAML
-                example: i4w
-                maxLength: 65536
+            machine:
+                $ref: '#/definitions/MachineSettings'
+            notes:
+                $ref: '#/definitions/NotesSettings'
             version:
                 type: string
-                description: Version of the content the change was made on, as settings_file returned it
-                example: Minima asperiores deleniti.
+                description: Version of the settings the change was made on, as settings returned it
+                example: Quibusdam perferendis impedit.
         example:
-            content: i4w
-            version: Minima asperiores deleniti.
-    NotesSaveSettingsFileUnauthorizedResponseBody:
-        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
-        type: object
-        properties:
-            fault:
-                type: boolean
-                description: Is the error a server-side fault?
-                example: true
-            id:
-                type: string
-                description: ID is a unique identifier for this particular occurrence of the problem.
-                example: 123abc
-            message:
-                type: string
-                description: Message is a human-readable explanation specific to this occurrence of the problem.
-                example: parameter 'p' must be an integer
-            name:
-                type: string
-                description: Name is the name of this class of errors.
-                example: bad_request
-            temporary:
-                type: boolean
-                description: Is the error temporary?
-                example: false
-            timeout:
-                type: boolean
-                description: Is the error a timeout?
-                example: true
-        description: Error response result type (default view)
-        example:
-            fault: true
-            id: 123abc
-            message: parameter 'p' must be an integer
-            name: bad_request
-            temporary: false
-            timeout: true
-        required:
-            - name
-            - id
-            - message
-            - temporary
-            - timeout
-            - fault
-    NotesSaveSettingsFileVerificationRequiredResponseBody:
+            machine:
+                auth: none
+                git_sync: 10m
+                lang: ja
+                model: Vel sit soluta aut corporis nostrum.
+                provider: anthropic
+                theme: auto
+                tui_preview: rendered
+                watch: true
+            notes:
+                search: bigram
+                stop_tags:
+                    use: none
+                    words:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+                stop_words:
+                    use: none
+                    words:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+            version: Quibusdam perferendis impedit.
+    NotesSaveSettingsUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
         properties:
@@ -11232,7 +11283,7 @@ definitions:
             temporary:
                 type: boolean
                 description: Is the error temporary?
-                example: false
+                example: true
             timeout:
                 type: boolean
                 description: Is the error a timeout?
@@ -11240,6 +11291,49 @@ definitions:
         description: Error response result type (default view)
         example:
             fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSaveSettingsVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
             id: 123abc
             message: parameter 'p' must be an integer
             name: bad_request
@@ -11649,50 +11743,45 @@ definitions:
             - temporary
             - timeout
             - fault
-    NotesSettingsFileUnauthorizedResponseBody:
-        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+    NotesSettings:
+        title: NotesSettings
         type: object
         properties:
-            fault:
-                type: boolean
-                description: Is the error a server-side fault?
-                example: true
-            id:
+            search:
                 type: string
-                description: ID is a unique identifier for this particular occurrence of the problem.
-                example: 123abc
-            message:
-                type: string
-                description: Message is a human-readable explanation specific to this occurrence of the problem.
-                example: parameter 'p' must be an integer
-            name:
-                type: string
-                description: Name is the name of this class of errors.
-                example: bad_request
-            temporary:
-                type: boolean
-                description: Is the error temporary?
-                example: false
-            timeout:
-                type: boolean
-                description: Is the error a timeout?
-                example: true
-        description: Error response result type (default view)
+                description: Search mode; empty for bigram. Another mode makes the index again when the server starts, on every machine
+                example: bigram
+                enum:
+                    - like
+                    - bigram
+                    - trigram
+                    - en
+                    - ja
+            stop_tags:
+                $ref: '#/definitions/StopList'
+            stop_words:
+                $ref: '#/definitions/StopList'
+        description: Settings synced with the notes, in _ebira.yaml of the notes directory, that the web UI changes
         example:
-            fault: true
-            id: 123abc
-            message: parameter 'p' must be an integer
-            name: bad_request
-            temporary: false
-            timeout: true
+            search: bigram
+            stop_tags:
+                use: none
+                words:
+                    - Consequatur dicta dolorem sint aut aliquid aut.
+                    - Consequuntur perferendis dolorum magnam consequatur.
+                    - Aliquid incidunt.
+                    - Reprehenderit ad dolores aut est omnis.
+            stop_words:
+                use: none
+                words:
+                    - Consequatur dicta dolorem sint aut aliquid aut.
+                    - Consequuntur perferendis dolorum magnam consequatur.
+                    - Aliquid incidunt.
+                    - Reprehenderit ad dolores aut est omnis.
         required:
-            - name
-            - id
-            - message
-            - temporary
-            - timeout
-            - fault
-    NotesSettingsFileVerificationRequiredResponseBody:
+            - stop_words
+            - stop_tags
+    NotesSettingsUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'
         type: object
         properties:
@@ -11728,6 +11817,49 @@ definitions:
             name: bad_request
             temporary: true
             timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesSettingsVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
         required:
             - name
             - id
@@ -12907,47 +13039,150 @@ definitions:
         required:
             - id
             - notebook
-    SettingsFile:
-        title: SettingsFile
+    Settings:
+        title: Settings
         type: object
         properties:
-            content:
+            addr:
                 type: string
-                description: Content of the file; empty when it does not exist
-                example: Voluptatibus voluptatem nobis voluptatibus omnis magnam ut.
-            exists:
-                type: boolean
-                description: Whether the file exists
-                example: false
+                description: Address the server listens on, which a restart keeps
+                example: Quis quia amet ut quia consequatur a.
+            default_models:
+                type: object
+                description: Default models of the assistant by provider
+                example:
+                    Repudiandae expedita.: Culpa facilis corporis sit.
+                    Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+                additionalProperties:
+                    type: string
+                    example: Dolorem saepe voluptatem.
+            machine:
+                $ref: '#/definitions/MachineSettings'
+            machine_path:
+                type: string
+                description: Path of the settings file of the machine and user
+                example: /Users/you/.config/ebira/config.yaml
+            notes:
+                $ref: '#/definitions/NotesSettings'
+            notes_dir:
+                type: string
+                description: Notes directory of the server, which a restart keeps
+                example: Laudantium recusandae enim consectetur.
+            notes_path:
+                type: string
+                description: Path of the settings synced with the notes
+                example: /Users/you/notes/_ebira.yaml
             overridden:
                 type: array
                 items:
                     type: string
-                    example: Harum nisi excepturi est sit et voluptates.
-                description: 'Keys of the file whose values the server does not take, and a restart would not either: those of the flags it was started with, which a restart keeps, and notes_dir and addr, as a restart keeps the notes directory and the address'
+                    example: Molestiae illo debitis sunt.
+                description: Keys whose values the server does not take, and a restart would not either, as it was started with their flags
                 example:
                     - lang
-            path:
+            passkeys:
+                type: boolean
+                description: 'Whether a passkey is registered, which auth: passkey needs to sign in'
+                example: true
+            restart:
+                type: boolean
+                description: Whether restart_server can start the server again
+                example: false
+            restart_unavailable:
                 type: string
-                description: Path of the settings file of the server's machine and user
-                example: /Users/you/.config/ebira/config.yaml
+                description: 'Why restart_server cannot start the server again, when it cannot: executable_gone when the executable of the server was removed, as go run does when it ends, and unsupported when the server has no way to'
+                example: unsupported
+                enum:
+                    - executable_gone
+                    - unsupported
             version:
                 type: string
-                description: Version of the content, to pass to save_settings_file
-                example: Nihil qui aut.
+                description: Version of the settings, to pass to save_settings
+                example: Accusantium ipsum ea.
         example:
-            content: Voluptatibus voluptatem nobis voluptatibus omnis magnam ut.
-            exists: false
+            addr: Quis quia amet ut quia consequatur a.
+            default_models:
+                Repudiandae expedita.: Culpa facilis corporis sit.
+                Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+            machine:
+                auth: none
+                git_sync: 10m
+                lang: ja
+                model: Vel sit soluta aut corporis nostrum.
+                provider: anthropic
+                theme: auto
+                tui_preview: rendered
+                watch: true
+            machine_path: /Users/you/.config/ebira/config.yaml
+            notes:
+                search: bigram
+                stop_tags:
+                    use: none
+                    words:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+                stop_words:
+                    use: none
+                    words:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+            notes_dir: Laudantium recusandae enim consectetur.
+            notes_path: /Users/you/notes/_ebira.yaml
             overridden:
                 - lang
-            path: /Users/you/.config/ebira/config.yaml
-            version: Nihil qui aut.
+            passkeys: true
+            restart: false
+            restart_unavailable: unsupported
+            version: Accusantium ipsum ea.
         required:
-            - path
-            - content
-            - exists
+            - machine
+            - notes
+            - machine_path
+            - notes_path
+            - notes_dir
+            - addr
             - version
             - overridden
+            - restart
+            - passkeys
+            - default_models
+    StopList:
+        title: StopList
+        type: object
+        properties:
+            use:
+                type: string
+                description: default for the list of kagome's ja filter, from Lucene; none for no list; list for words
+                example: none
+                enum:
+                    - default
+                    - none
+                    - list
+            words:
+                type: array
+                items:
+                    type: string
+                    example: Consequatur dicta dolorem sint aut aliquid aut.
+                description: The words or parts of speech, for list
+                example:
+                    - Consequatur dicta dolorem sint aut aliquid aut.
+                    - Consequuntur perferendis dolorum magnam consequatur.
+                    - Aliquid incidunt.
+                    - Reprehenderit ad dolores aut est omnis.
+        description: A stop list of the ja search mode
+        example:
+            use: none
+            words:
+                - Consequatur dicta dolorem sint aut aliquid aut.
+                - Consequuntur perferendis dolorum magnam consequatur.
+                - Aliquid incidunt.
+                - Reprehenderit ad dolores aut est omnis.
+        required:
+            - use
     SyncResult:
         title: SyncResult
         type: object

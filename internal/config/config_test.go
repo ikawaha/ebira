@@ -276,3 +276,46 @@ func TestWrite(t *testing.T) {
 		t.Errorf("files: %v", es)
 	}
 }
+
+func TestParseUnknownKeys(t *testing.T) {
+	_, err := Parse([]byte("lang: ja\nsearch: ja\nlng: en\n"), "/c/config.yaml")
+	if err == nil {
+		t.Fatal("unknown keys passed")
+	}
+	want := "/c/config.yaml: line 2: search is not a key of the settings file; write it in _ebira.yaml of the notes directory, shared with the notes; line 3: unknown key lng"
+	if err.Error() != want {
+		t.Errorf("err = %q\nwant %q", err, want)
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	setHome(t)
+	p, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file := "# mine\nnotes_dir: ~/notes\nlang: en # the UI\ntheme: dark\n# auth: passkey\n"
+	if err := os.WriteFile(p, []byte(file), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	off := false
+	if _, err := Update(Config{Lang: "ja", GitSync: "10m", Watch: &off}); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(p)
+	for _, want := range []string{"# mine", "notes_dir: ~/notes", "lang: ja # the UI", "git_sync: 10m", "watch: false", "# auth: passkey"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("file lacks %q:\n%s", want, b)
+		}
+	}
+	if strings.Contains(string(b), "theme") {
+		t.Errorf("theme, set to the default, is kept:\n%s", b)
+	}
+	c, err := Load()
+	if err != nil || c.Lang != "ja" || c.GitSync != "10m" || c.Watch == nil || *c.Watch || c.Theme != "" {
+		t.Errorf("read back = %+v, %v", c, err)
+	}
+}

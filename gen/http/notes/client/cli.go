@@ -1557,47 +1557,50 @@ func BuildSetPreviewStylePayload(notesSetPreviewStyleBody *string, notesSetPrevi
 	return v, nil
 }
 
-// BuildSettingsFilePayload builds the payload for the notes settings_file
-// endpoint from CLI flags.
-func BuildSettingsFilePayload(notesSettingsFileSession *string) (*notes.SettingsFilePayload, error) {
+// BuildSettingsPayload builds the payload for the notes settings endpoint from
+// CLI flags.
+func BuildSettingsPayload(notesSettingsSession *string) (*notes.SettingsPayload, error) {
 	var session *string
 	{
-		if notesSettingsFileSession != nil {
-			session = notesSettingsFileSession
+		if notesSettingsSession != nil {
+			session = notesSettingsSession
 		}
 	}
-	v := &notes.SettingsFilePayload{}
+	v := &notes.SettingsPayload{}
 	v.Session = session
 
 	return v, nil
 }
 
-// BuildSaveSettingsFilePayload builds the payload for the notes
-// save_settings_file endpoint from CLI flags.
-func BuildSaveSettingsFilePayload(notesSaveSettingsFileBody *string, notesSaveSettingsFileSession *string) (*notes.SaveSettingsFilePayload, error) {
+// BuildSaveSettingsPayload builds the payload for the notes save_settings
+// endpoint from CLI flags.
+func BuildSaveSettingsPayload(notesSaveSettingsBody *string, notesSaveSettingsSession *string) (*notes.SaveSettingsPayload, error) {
 	var err error
-	var body SaveSettingsFileRequestBody
+	var body SaveSettingsRequestBody
 	{
-		if notesSaveSettingsFileBody == nil {
+		if notesSaveSettingsBody == nil {
 			return nil, fmt.Errorf("missing required flag --body")
 		}
-		err = json.Unmarshal([]byte(*notesSaveSettingsFileBody), &body)
+		err = json.Unmarshal([]byte(*notesSaveSettingsBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"content\": \"i4w\",\n      \"version\": \"Minima asperiores deleniti.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"watch\": true\n      },\n      \"notes\": {\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }'")
 		}
 	}
 	var session *string
 	{
-		if notesSaveSettingsFileSession != nil {
-			session = notesSaveSettingsFileSession
+		if notesSaveSettingsSession != nil {
+			session = notesSaveSettingsSession
 		}
 	}
-	v := &notes.SaveSettingsFilePayload{}
-	if body.Content != nil {
-		v.Content = *body.Content
-	}
+	v := &notes.SaveSettingsPayload{}
 	if body.Version != nil {
 		v.Version = *body.Version
+	}
+	if body.Machine != nil {
+		v.Machine = marshalMachineSettingsRequestBodyToNotesMachineSettings(body.Machine)
+	}
+	if body.Notes != nil {
+		v.Notes = marshalNotesSettingsRequestBodyToNotesNotesSettings(body.Notes)
 	}
 	v.Session = session
 

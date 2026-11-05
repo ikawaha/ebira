@@ -430,8 +430,10 @@ async function api(path, opts = {}) {
     if (res.status === 401 && !url.pathname.startsWith("/auth/")) showSignIn(t("authExpired"));
     throw err;
   }
-  if (res.status === 204) return null;
-  const data = await res.json();
+  // No content, such as 204, or 202 of a restart.
+  const text = await res.text();
+  if (!text) return null;
+  const data = JSON.parse(text);
   // Over HTTP the version of a note comes in the ETag header, not the body.
   const etag = res.headers.get("ETag");
   if (etag && data && typeof data === "object" && !Array.isArray(data)) data.version = etag;
@@ -2429,8 +2431,9 @@ async function setMarks(n, marks) {
   if (state.selected === n.id && !state.editing) loadNote();
 }
 
-// openMarkNames opens the dialog to name the marks, which says what they mean.
-function openMarkNames() {
+// openMarkNames opens the dialog to name the marks, which says what they mean;
+// saved tells when the names are saved.
+function openMarkNames(saved) {
   const d = $("mark-names");
   const inputs = {};
   const rows = state.marks.map((mk) => {
@@ -2456,6 +2459,7 @@ function openMarkNames() {
     d.close();
     renderNotes();
     loadNote();
+    saved?.();
   }, { cls: "primary" });
   d.replaceChildren(
     el("div", "files-head", el("h2", "", t("markNames")), button("×", () => d.close(), { title: t("closeTitle") })),
@@ -2467,76 +2471,194 @@ function openMarkNames() {
   rows[0]?.querySelector("input").focus();
 }
 
-// The settings file of the server's machine and user, edited as it is, with
-// its comments. The server checks it before it writes it, and reads it when
-// it starts, so the dialog offers to restart the server.
-async function openSettingsFile() {
-  const d = $("settings-file");
-  let file;
+// The settings of the server, with a control for each: those of the machine
+// and user in the settings file, and those synced with the notes. The server
+// writes only those keys, keeping the rest of the files with their comments,
+// and reads them when it starts, so the dialog offers to restart it.
+async function openServerSettings() {
+  const d = $("server-settings");
+  let cur;
   try {
-    file = await api("/settings-file");
+    cur = await api("/settings");
   } catch (e) {
-    alert(t("settingsFileFailed", { error: e.message }));
+    alert(t("settingsFailed", { error: e.message }));
     return;
   }
-  const area = el("textarea");
-  area.value = file.content;
-  area.spellcheck = false;
-  area.setAttribute("aria-label", file.path);
+  const overridden = new Set(cur.overridden);
+  const langName = (l) => document.querySelector(`#settings-menu [data-lang="${l}"]`)?.textContent || l;
+  // A control for a value; "" is the default, which the file leaves out.
+  const select = (value, options) => {
+    const s = el("select");
+    for (const [v, label] of options) {
+      const o = el("option", "", label);
+      o.value = v;
+      s.append(o);
+    }
+    s.value = value || "";
+    return s;
+  };
+  const text = (value, placeholder) => {
+    const i = el("input");
+    i.value = value || "";
+    i.placeholder = placeholder || "";
+    i.spellcheck = false;
+    i.autocomplete = "off";
+    return i;
+  };
+  const m = cur.machine;
+  const c = {
+    lang: select(m.lang, [["", t("settingsLangDefault")], ...LANGS.map((l) => [l, langName(l)])]),
+    theme: select(m.theme === "auto" ? "" : m.theme, [["", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]]),
+    auth: select(m.auth === "none" ? "" : m.auth, [["", t("settingsAuthNone")], ["passkey", t("settingsAuthPasskey")]]),
+    git_sync: text(m.git_sync, t("settingsGitSyncPlaceholder")),
+    watch: el("input"),
+    provider: select(m.provider, [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]]),
+    model: text(m.model),
+    tui_preview: select(m.tui_preview === "rendered" ? "" : m.tui_preview, [["", t("settingsTUIRendered")], ["source", t("settingsTUISource")]]),
+    search: select(cur.notes.search === "bigram" ? "" : cur.notes.search, [["", "bigram"], ["like", "like"], ["trigram", "trigram"], ["en", "en"], ["ja", "ja"]]),
+  };
+  c.watch.type = "checkbox";
+  c.watch.checked = m.watch !== false;
+  // The placeholder of the model is the default of the provider chosen.
+  const modelPlaceholder = () => {
+    const p = c.provider.value;
+    c.model.placeholder = p ? cur.default_models[p] || "" : Object.values(cur.default_models).join(" / ");
+  };
+  c.provider.addEventListener("change", modelPlaceholder);
+  modelPlaceholder();
+  // auth: passkey needs a passkey, or nobody can sign in after a restart.
+  if (!cur.passkeys && c.auth.value !== "passkey") c.auth.querySelector('option[value="passkey"]').disabled = true;
+
+  // A stop list: the default, none, or words, one per line.
+  const stopList = (list, name) => {
+    const area = el("textarea");
+    area.value = (list.words || []).join("\n");
+    area.spellcheck = false;
+    area.rows = 4;
+    const radios = ["default", "none", "list"].map((use) => {
+      const r = el("input");
+      r.type = "radio";
+      r.name = name;
+      r.value = use;
+      r.checked = list.use === use;
+      r.addEventListener("change", () => { area.hidden = use !== "list" || !r.checked; });
+      return el("label", "settings-radio", r, " ", t("settingsStop_" + use));
+    });
+    area.hidden = list.use !== "list";
+    const value = () => {
+      const use = radios.map((l) => l.querySelector("input")).find((r) => r.checked)?.value || "default";
+      return use === "list" ? { use, words: area.value.split("\n") } : { use };
+    };
+    return { node: el("div", "settings-stop", el("div", "settings-radios", ...radios), area), value };
+  };
+  const stopWords = stopList(cur.notes.stop_words, "stop-words");
+  const stopTags = stopList(cur.notes.stop_tags, "stop-tags");
+
+  const row = (key, label, control, hint) => {
+    const l = el("label", "settings-label", label);
+    const box = el("div", "settings-control", control);
+    if (hint) box.append(el("p", "hint", hint));
+    if (overridden.has(key)) {
+      for (const e of box.querySelectorAll("input, select, textarea")) e.disabled = true;
+      box.append(el("p", "hint", t("settingsOverridden")));
+    }
+    return el("div", "settings-row", l, box);
+  };
+  const fixed = (label, value, hint) => el("div", "settings-row", el("span", "settings-label", label),
+    el("div", "settings-control", el("code", "", value), el("p", "hint", hint)));
+  const section = (title, path, ...rows) => el("section", "settings-section",
+    el("h3", "", title), el("p", "path", el("span", "path-label", t("settingsPath")), " ", el("code", "", path)), ...rows);
+  const jaRows = [row("stop_words", t("settingsStopWords"), stopWords.node), row("stop_tags", t("settingsStopTags"), stopTags.node)];
+  const showJa = () => { for (const r of jaRows) r.hidden = c.search.value !== "ja"; };
+  c.search.addEventListener("change", showJa);
+  showJa();
+
+  const machineValue = () => {
+    const v = (k) => c[k].value.trim() || undefined;
+    return {
+      lang: v("lang"), theme: v("theme"), auth: v("auth"), git_sync: v("git_sync"),
+      watch: c.watch.checked ? undefined : false,
+      provider: v("provider"), model: v("model"), tui_preview: v("tui_preview"),
+    };
+  };
+  const notesValue = () => ({ search: c.search.value || undefined, stop_words: stopWords.value(), stop_tags: stopTags.value() });
+  // The names of the marks are in the settings synced with the notes too:
+  // once saved, the settings have another version.
+  const markNamesSaved = async () => {
+    try {
+      cur.version = (await api("/settings")).version;
+    } catch (_) { /* saving tells */ }
+  };
+  const initial = JSON.stringify([machineValue(), notesValue()]);
+  const dirty = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
+
   const msg = el("p", "error");
   msg.hidden = true;
-  const fail = (text) => {
-    msg.textContent = text;
+  const fail = (s) => {
+    msg.textContent = s;
     msg.hidden = false;
   };
-  const dirty = () => area.value !== file.content;
   const close = () => {
-    if (dirty() && !confirm(t("settingsFileDiscard"))) return;
+    if (dirty() && !confirm(t("settingsDiscard"))) return;
     d.close();
   };
-  // save writes the file when it changed, and tells whether it is saved.
+  // save writes the settings when they changed, and tells whether they are
+  // saved.
+  let saved = false;
   const save = async () => {
     msg.hidden = true;
-    if (!dirty() && file.exists) return true;
+    if (!dirty() && !saved) return true;
     try {
-      file = await api("/settings-file", { method: "PUT", body: { content: area.value, version: file.version } });
+      cur = await api("/settings", { method: "PUT", body: { machine: machineValue(), notes: notesValue(), version: cur.version } });
     } catch (e) {
-      fail(e.name === "precondition_failed" ? t("settingsFileChanged") : t("settingsFileInvalid", { error: e.message }));
+      fail(e.name === "precondition_failed" ? t("settingsChanged") : t("settingsInvalid", { error: e.message }));
       return false;
     }
+    saved = true;
     return true;
   };
   const saveButton = button(t("save"), async () => {
     if (await save()) {
       d.close();
-      showToast(t("settingsFileSaved"));
+      showToast(t("settingsSaved"));
     }
-  });
-  const restartButton = button(t("settingsFileSaveRestart"), async () => {
+  }, { cls: cur.restart ? "" : "primary" });
+  const restartButton = button(t("settingsSaveRestart"), async () => {
     if (!(await save())) return;
-    for (const b of d.querySelectorAll("button")) b.disabled = true;
-    area.readOnly = true;
+    for (const e of d.querySelectorAll("button, input, select, textarea")) e.disabled = true;
     try {
       await restartServer();
     } catch (e) {
       for (const b of d.querySelectorAll("button")) b.disabled = false;
-      area.readOnly = false;
-      fail(t("settingsFileRestartFailed", { error: e.message }));
+      fail(t("settingsRestartFailed", { error: e.message }));
     }
   }, { cls: "primary" });
-  area.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-      e.preventDefault();
-      saveButton.click();
-    }
-  });
-  const hints = [el("p", "hint", t("settingsFileHint", { path: file.path }))];
-  const flags = file.overridden.filter((k) => k !== "notes_dir" && k !== "addr");
-  if (flags.length) hints.push(el("p", "hint", t("settingsFileOverridden", { keys: flags.join(", ") })));
+  restartButton.hidden = !cur.restart;
+  const noRestart = el("p", "hint", t(cur.restart_unavailable === "executable_gone" ? "settingsExecutableGone" : "settingsNoRestart"));
+  noRestart.hidden = cur.restart;
+
   d.replaceChildren(
-    el("div", "files-head", el("h2", "", t("settingsFile")), button("×", close, { title: t("closeTitle") })),
-    ...hints,
-    area,
+    el("div", "files-head", el("h2", "", t("serverSettings")), button("×", close, { title: t("closeTitle") })),
+    el("p", "hint", t("settingsApply")),
+    el("div", "settings-body",
+      section(t("settingsMachine"), cur.machine_path,
+        row("lang", t("settingsLang"), c.lang),
+        row("theme", t("settingsTheme"), c.theme),
+        row("auth", t("settingsAuth"), c.auth, cur.passkeys ? "" : t("settingsAuthNoPasskey")),
+        row("git_sync", t("settingsGitSync"), c.git_sync),
+        row("watch", t("settingsWatch"), el("label", "settings-check", c.watch, " ", t("settingsWatchLabel"))),
+        row("provider", t("settingsProvider"), c.provider),
+        row("model", t("settingsModel"), c.model),
+        row("tui_preview", t("settingsTUIPreview"), c.tui_preview, t("settingsTUIPreviewHint")),
+        fixed(t("settingsNotesDir"), cur.notes_dir, t("settingsKept")),
+        fixed(t("settingsAddr"), cur.addr, t("settingsKept"))),
+      section(t("settingsNotes"), cur.notes_path,
+        el("p", "hint", t("settingsNotesHint")),
+        row("search", t("settingsSearch"), c.search, t("settingsSearchHint")),
+        ...jaRows,
+        el("div", "settings-row", el("span", "settings-label", t("markNames")),
+          el("div", "settings-control", button(t("markNamesMenu"), () => openMarkNames(markNamesSaved)))))),
+    noRestart,
     msg,
     el("div", "files-actions", button(t("cancel"), close), saveButton, restartButton));
   d.oncancel = (e) => { // Esc
@@ -2544,11 +2666,11 @@ async function openSettingsFile() {
     close();
   };
   d.showModal();
-  area.focus();
+  c.lang.focus();
 }
 
-// restartServer asks the server to start again, waits until another one
-// answers, and reloads the page, which the new server serves.
+// restartServer asks the server to start again, waits until it answers as
+// another instance, and reloads the page, which the new one serves.
 async function restartServer() {
   const before = await (await fetch("/health")).json();
   await api("/server/restart", { method: "POST" });
@@ -2558,7 +2680,8 @@ async function restartServer() {
     await new Promise((r) => setTimeout(r, 500));
     try {
       const res = await fetch("/health");
-      if (res.ok && (await res.json()).pid !== before.pid) {
+      const now = res.ok && (await res.json());
+      if (now && (now.instance !== before.instance || now.pid !== before.pid)) {
         location.reload();
         return;
       }
@@ -4266,8 +4389,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
 $("server-stats-open").addEventListener("click", () => openServerStats());
-$("mark-names-open").addEventListener("click", () => openMarkNames());
-$("settings-file-open").addEventListener("click", () => openSettingsFile());
+$("server-settings-open").addEventListener("click", () => openServerSettings());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
 $("guide-add").addEventListener("click", () => addGuide());
@@ -4631,7 +4753,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("settings-file").open) return;
+  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("server-settings").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

@@ -89,3 +89,10 @@ func Terminate(pid int) error {
 func NotifyStop(parent context.Context) (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 }
+
+// Reexec replaces the process with exe run with args, the whole command line
+// with its name, and the same environment: the same process, in the same
+// terminal or in the background as it was. logPath is not used here.
+func Reexec(exe string, args []string, logPath string) error {
+	return syscall.Exec(exe, args, os.Environ())
+}

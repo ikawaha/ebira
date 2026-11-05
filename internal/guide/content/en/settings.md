@@ -7,8 +7,7 @@ tags: [guide, settings]
 - Language and theme (auto, light or dark)
 - Text size of notes (− and +)
 - Style…: how the preview looks (Band, Document, Compact or Lined)
-- Names of the marks…
-- Settings file…: edit the settings file below
+- Server settings…: change the language, authentication, search mode and more, in the two files below
 - Import Markdown (or drop files onto the page)
 - Check images, Server status, Sync with git
 - Add the guide
@@ -28,7 +27,7 @@ git_sync: 10m        # how often to sync with git
 auth: none           # passkey asks for a passkey
 ```
 
-You can edit it with Settings file… in the gear menu too. The server reads it when it starts, so Save and restart applies it (`notes_dir` and `addr` change when the server is stopped and started).
+You can also change its settings one by one with Server settings… in the gear menu, which keeps the comments of the file. The server reads the settings when it starts, so choose Save and restart to apply them. `notes_dir` and `addr`, though, apply only when you stop the server and start it again.
 
 The settings synced with the notes are in `_ebira.yaml` of the notes directory, such as the search mode `search`.
 

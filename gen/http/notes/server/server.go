@@ -61,8 +61,8 @@ type Server struct {
 	AddGuide              http.Handler
 	PreviewStyle          http.Handler
 	SetPreviewStyle       http.Handler
-	SettingsFile          http.Handler
-	SaveSettingsFile      http.Handler
+	Settings              http.Handler
+	SaveSettings          http.Handler
 	RestartServer         http.Handler
 	Sync                  http.Handler
 }
@@ -134,8 +134,8 @@ func New(
 			{"AddGuide", "POST", "/guide"},
 			{"PreviewStyle", "GET", "/preview-style"},
 			{"SetPreviewStyle", "PUT", "/preview-style"},
-			{"SettingsFile", "GET", "/settings-file"},
-			{"SaveSettingsFile", "PUT", "/settings-file"},
+			{"Settings", "GET", "/settings"},
+			{"SaveSettings", "PUT", "/settings"},
 			{"RestartServer", "POST", "/server/restart"},
 			{"Sync", "POST", "/sync"},
 		},
@@ -179,8 +179,8 @@ func New(
 		AddGuide:              NewAddGuideHandler(e.AddGuide, mux, decoder, encoder, errhandler, formatter),
 		PreviewStyle:          NewPreviewStyleHandler(e.PreviewStyle, mux, decoder, encoder, errhandler, formatter),
 		SetPreviewStyle:       NewSetPreviewStyleHandler(e.SetPreviewStyle, mux, decoder, encoder, errhandler, formatter),
-		SettingsFile:          NewSettingsFileHandler(e.SettingsFile, mux, decoder, encoder, errhandler, formatter),
-		SaveSettingsFile:      NewSaveSettingsFileHandler(e.SaveSettingsFile, mux, decoder, encoder, errhandler, formatter),
+		Settings:              NewSettingsHandler(e.Settings, mux, decoder, encoder, errhandler, formatter),
+		SaveSettings:          NewSaveSettingsHandler(e.SaveSettings, mux, decoder, encoder, errhandler, formatter),
 		RestartServer:         NewRestartServerHandler(e.RestartServer, mux, decoder, encoder, errhandler, formatter),
 		Sync:                  NewSyncHandler(e.Sync, mux, decoder, encoder, errhandler, formatter),
 	}
@@ -231,8 +231,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.AddGuide = m(s.AddGuide)
 	s.PreviewStyle = m(s.PreviewStyle)
 	s.SetPreviewStyle = m(s.SetPreviewStyle)
-	s.SettingsFile = m(s.SettingsFile)
-	s.SaveSettingsFile = m(s.SaveSettingsFile)
+	s.Settings = m(s.Settings)
+	s.SaveSettings = m(s.SaveSettings)
 	s.RestartServer = m(s.RestartServer)
 	s.Sync = m(s.Sync)
 }
@@ -282,8 +282,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountAddGuideHandler(mux, h.AddGuide)
 	MountPreviewStyleHandler(mux, h.PreviewStyle)
 	MountSetPreviewStyleHandler(mux, h.SetPreviewStyle)
-	MountSettingsFileHandler(mux, h.SettingsFile)
-	MountSaveSettingsFileHandler(mux, h.SaveSettingsFile)
+	MountSettingsHandler(mux, h.Settings)
+	MountSaveSettingsHandler(mux, h.SaveSettings)
 	MountRestartServerHandler(mux, h.RestartServer)
 	MountSyncHandler(mux, h.Sync)
 }
@@ -2461,21 +2461,21 @@ func NewSetPreviewStyleHandler(
 	})
 }
 
-// MountSettingsFileHandler configures the mux to serve the "notes" service
-// "settings_file" endpoint.
-func MountSettingsFileHandler(mux goahttp.Muxer, h http.Handler) {
+// MountSettingsHandler configures the mux to serve the "notes" service
+// "settings" endpoint.
+func MountSettingsHandler(mux goahttp.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("GET", "/settings-file", f)
+	mux.Handle("GET", "/settings", f)
 }
 
-// NewSettingsFileHandler creates a HTTP handler which loads the HTTP request
-// and calls the "notes" service "settings_file" endpoint.
-func NewSettingsFileHandler(
+// NewSettingsHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "settings" endpoint.
+func NewSettingsHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
@@ -2484,13 +2484,13 @@ func NewSettingsFileHandler(
 	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
-		decodeRequest  = DecodeSettingsFileRequest(mux, decoder)
-		encodeResponse = EncodeSettingsFileResponse(encoder)
-		encodeError    = EncodeSettingsFileError(encoder, formatter)
+		decodeRequest  = DecodeSettingsRequest(mux, decoder)
+		encodeResponse = EncodeSettingsResponse(encoder)
+		encodeError    = EncodeSettingsError(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
-		ctx = context.WithValue(ctx, goa.MethodKey, "settings_file")
+		ctx = context.WithValue(ctx, goa.MethodKey, "settings")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {
@@ -2514,21 +2514,21 @@ func NewSettingsFileHandler(
 	})
 }
 
-// MountSaveSettingsFileHandler configures the mux to serve the "notes" service
-// "save_settings_file" endpoint.
-func MountSaveSettingsFileHandler(mux goahttp.Muxer, h http.Handler) {
+// MountSaveSettingsHandler configures the mux to serve the "notes" service
+// "save_settings" endpoint.
+func MountSaveSettingsHandler(mux goahttp.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("PUT", "/settings-file", f)
+	mux.Handle("PUT", "/settings", f)
 }
 
-// NewSaveSettingsFileHandler creates a HTTP handler which loads the HTTP
-// request and calls the "notes" service "save_settings_file" endpoint.
-func NewSaveSettingsFileHandler(
+// NewSaveSettingsHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "save_settings" endpoint.
+func NewSaveSettingsHandler(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
@@ -2537,13 +2537,13 @@ func NewSaveSettingsFileHandler(
 	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
-		decodeRequest  = DecodeSaveSettingsFileRequest(mux, decoder)
-		encodeResponse = EncodeSaveSettingsFileResponse(encoder)
-		encodeError    = EncodeSaveSettingsFileError(encoder, formatter)
+		decodeRequest  = DecodeSaveSettingsRequest(mux, decoder)
+		encodeResponse = EncodeSaveSettingsResponse(encoder)
+		encodeError    = EncodeSaveSettingsError(encoder, formatter)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
-		ctx = context.WithValue(ctx, goa.MethodKey, "save_settings_file")
+		ctx = context.WithValue(ctx, goa.MethodKey, "save_settings")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

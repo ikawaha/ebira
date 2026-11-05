@@ -4,13 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/ikawaha/ebira/internal/auth"
 	"github.com/ikawaha/ebira/internal/config"
-	"github.com/ikawaha/ebira/internal/daemon"
 	"github.com/ikawaha/ebira/internal/service"
 	"github.com/ikawaha/ebira/internal/ui/web"
 )
@@ -39,17 +37,20 @@ func checkSettings(c config.Config) error {
 	return nil
 }
 
-// settingKeys are the keys of the settings file by the flags of serve that
-// replace them.
+// settingKeys are the keys of the settings by the flags of serve that replace
+// them: of the settings file, and of the settings synced with the notes.
 var settingKeys = map[string]string{
-	"addr":     "addr",
-	"watch":    "watch",
-	"provider": "provider",
-	"model":    "model",
-	"lang":     "lang",
-	"theme":    "theme",
-	"auth":     "auth",
-	"git-sync": "git_sync",
+	"search":    "search",
+	"stopwords": "stop_words",
+	"stoptags":  "stop_tags",
+	"addr":      "addr",
+	"watch":     "watch",
+	"provider":  "provider",
+	"model":     "model",
+	"lang":      "lang",
+	"theme":     "theme",
+	"auth":      "auth",
+	"git-sync":  "git_sync",
 }
 
 // overriddenSettings returns the keys of the settings file whose values the
@@ -65,30 +66,35 @@ func overriddenSettings(fs *flag.FlagSet) []string {
 	return keys
 }
 
-// settingsFile returns how the server of notesDir handles the settings file:
-// it restarts by ebira server restart, run in the background, which stops it
-// and starts it again with its flags and environment.
-func settingsFile(fs *flag.FlagSet, notesDir, stateDir string) service.SettingsFile {
-	return service.SettingsFile{
-		Check: func(b []byte) error {
-			p, err := config.Path()
-			if err != nil {
-				return err
-			}
-			c, err := config.Parse(b, p)
-			if err != nil {
-				return err
-			}
-			return checkSettings(c)
-		},
-		Overridden: overriddenSettings(fs),
+// serverSettings returns how the server of fs, listening on addr, handles its
+// settings: it restarts by restart, which stops it and starts its process
+// again as itself (see serve).
+func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart func()) service.Settings {
+	return service.Settings{
+		Check:         checkSettings,
+		Overridden:    overriddenSettings(fs),
+		Addr:          addr,
+		Passkeys:      passkeys,
+		DefaultModels: defaultModels,
 		Restart: func() error {
-			exe, err := os.Executable()
-			if err != nil {
-				return err
-			}
-			_, _, err = daemon.Spawn(exe, []string{"server", "restart", "-notes", notesDir}, filepath.Join(stateDir, daemon.LogFile))
-			return err
+			restart()
+			return nil
 		},
+		Restartable: restartable,
 	}
+}
+
+// restartable tells why the server cannot run its executable again, such as
+// one built by go run, which removes it when it ends while the server it
+// started in the background still runs; "" when it can. The path is not
+// told, so that the page does not show the files of the machine.
+func restartable() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return service.RestartUnsupported
+	}
+	if _, err := os.Stat(exe); err != nil {
+		return service.RestartExecutableGone
+	}
+	return ""
 }

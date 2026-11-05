@@ -69,8 +69,8 @@ type Endpoints struct {
 	AddGuide              goa.Endpoint
 	PreviewStyle          goa.Endpoint
 	SetPreviewStyle       goa.Endpoint
-	SettingsFile          goa.Endpoint
-	SaveSettingsFile      goa.Endpoint
+	Settings              goa.Endpoint
+	SaveSettings          goa.Endpoint
 	RestartServer         goa.Endpoint
 	Sync                  goa.Endpoint
 }
@@ -159,8 +159,8 @@ func NewEndpoints(s Service) *Endpoints {
 		AddGuide:              NewAddGuideEndpoint(s, a.APIKeyAuth),
 		PreviewStyle:          NewPreviewStyleEndpoint(s, a.APIKeyAuth),
 		SetPreviewStyle:       NewSetPreviewStyleEndpoint(s, a.APIKeyAuth),
-		SettingsFile:          NewSettingsFileEndpoint(s, a.APIKeyAuth),
-		SaveSettingsFile:      NewSaveSettingsFileEndpoint(s, a.APIKeyAuth),
+		Settings:              NewSettingsEndpoint(s, a.APIKeyAuth),
+		SaveSettings:          NewSaveSettingsEndpoint(s, a.APIKeyAuth),
 		RestartServer:         NewRestartServerEndpoint(s, a.APIKeyAuth),
 		Sync:                  NewSyncEndpoint(s, a.APIKeyAuth),
 	}
@@ -220,8 +220,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.AddGuide = m(e.AddGuide)
 	e.PreviewStyle = m(e.PreviewStyle)
 	e.SetPreviewStyle = m(e.SetPreviewStyle)
-	e.SettingsFile = m(e.SettingsFile)
-	e.SaveSettingsFile = m(e.SaveSettingsFile)
+	e.Settings = m(e.Settings)
+	e.SaveSettings = m(e.SaveSettings)
 	e.RestartServer = m(e.RestartServer)
 	e.Sync = m(e.Sync)
 }
@@ -1258,11 +1258,11 @@ func NewSetPreviewStyleEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc)
 	}
 }
 
-// NewSettingsFileEndpoint returns an endpoint function that calls the method
-// "settings_file" of service "notes".
-func NewSettingsFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+// NewSettingsEndpoint returns an endpoint function that calls the method
+// "settings" of service "notes".
+func NewSettingsEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		p := req.(*SettingsFilePayload)
+		p := req.(*SettingsPayload)
 		var err error
 		sc := security.APIKeyScheme{
 			Name:           "session",
@@ -1277,15 +1277,15 @@ func NewSettingsFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) go
 		if err != nil {
 			return nil, err
 		}
-		return s.SettingsFile(ctx, p)
+		return s.Settings(ctx, p)
 	}
 }
 
-// NewSaveSettingsFileEndpoint returns an endpoint function that calls the
-// method "save_settings_file" of service "notes".
-func NewSaveSettingsFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+// NewSaveSettingsEndpoint returns an endpoint function that calls the method
+// "save_settings" of service "notes".
+func NewSaveSettingsEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		p := req.(*SaveSettingsFilePayload)
+		p := req.(*SaveSettingsPayload)
 		var err error
 		sc := security.APIKeyScheme{
 			Name:           "session",
@@ -1300,7 +1300,7 @@ func NewSaveSettingsFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc
 		if err != nil {
 			return nil, err
 		}
-		return s.SaveSettingsFile(ctx, p)
+		return s.SaveSettings(ctx, p)
 	}
 }
 

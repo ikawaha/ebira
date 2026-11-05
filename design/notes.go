@@ -348,16 +348,68 @@ var PreviewStyle = Type("PreviewStyle", func() {
 	})
 })
 
-var SettingsFile = Type("SettingsFile", func() {
-	RequiredAttribute("path", String, "Path of the settings file of the server's machine and user", func() {
+var MachineSettings = Type("MachineSettings", func() {
+	Description("Settings of the server's machine and user, in its settings file, that the web UI changes; a value left out is the default")
+	Attribute("lang", String, "Language of the UI; empty for the browser's", func() {
+		Example("ja")
+	})
+	Attribute("theme", String, "Color theme of the UI; empty for auto, the system's", func() {
+		Enum("auto", "light", "dark")
+	})
+	Attribute("auth", String, "How the REST API authenticates people; empty for none. passkey needs a passkey registered", func() {
+		Enum("none", "passkey")
+	})
+	Attribute("git_sync", String, "Interval of syncing the notes with git, such as 10m; empty or 0 for none", func() {
+		Example("10m")
+	})
+	Attribute("watch", Boolean, "Whether the server watches the notes directory; left out for true")
+	Attribute("provider", String, "Model provider of the assistant; empty for the one whose API key is set", func() {
+		Enum("anthropic", "gemini")
+	})
+	Attribute("model", String, "Model of the assistant; empty for the default of the provider")
+	Attribute("tui_preview", String, "How the preview of the TUI shows a note; empty for rendered", func() {
+		Enum("rendered", "source")
+	})
+})
+
+var StopList = Type("StopList", func() {
+	Description("A stop list of the ja search mode")
+	RequiredAttribute("use", String, "default for the list of kagome's ja filter, from Lucene; none for no list; list for words", func() {
+		Enum("default", "none", "list")
+	})
+	Attribute("words", ArrayOf(String), "The words or parts of speech, for list")
+})
+
+var NotesSettings = Type("NotesSettings", func() {
+	Description("Settings synced with the notes, in _ebira.yaml of the notes directory, that the web UI changes")
+	Attribute("search", String, "Search mode; empty for bigram. Another mode makes the index again when the server starts, on every machine", func() {
+		Enum("like", "bigram", "trigram", "en", "ja")
+	})
+	RequiredAttribute("stop_words", StopList, "Stop words of the ja mode")
+	RequiredAttribute("stop_tags", StopList, "Stop parts of speech of the ja mode, each written as the IPA dictionary names of its levels joined by -")
+})
+
+var Settings = Type("Settings", func() {
+	RequiredAttribute("machine", MachineSettings, "Settings of the server's machine and user")
+	RequiredAttribute("notes", NotesSettings, "Settings synced with the notes")
+	RequiredAttribute("machine_path", String, "Path of the settings file of the machine and user", func() {
 		Example("/Users/you/.config/ebira/config.yaml")
 	})
-	RequiredAttribute("content", String, "Content of the file; empty when it does not exist")
-	RequiredAttribute("exists", Boolean, "Whether the file exists")
-	RequiredAttribute("version", String, "Version of the content, to pass to save_settings_file")
-	RequiredAttribute("overridden", ArrayOf(String), "Keys of the file whose values the server does not take, and a restart would not either: those of the flags it was started with, which a restart keeps, and notes_dir and addr, as a restart keeps the notes directory and the address", func() {
+	RequiredAttribute("notes_path", String, "Path of the settings synced with the notes", func() {
+		Example("/Users/you/notes/_ebira.yaml")
+	})
+	RequiredAttribute("notes_dir", String, "Notes directory of the server, which a restart keeps")
+	RequiredAttribute("addr", String, "Address the server listens on, which a restart keeps")
+	RequiredAttribute("version", String, "Version of the settings, to pass to save_settings")
+	RequiredAttribute("overridden", ArrayOf(String), "Keys whose values the server does not take, and a restart would not either, as it was started with their flags", func() {
 		Example([]string{"lang"})
 	})
+	RequiredAttribute("restart", Boolean, "Whether restart_server can start the server again")
+	Attribute("restart_unavailable", String, "Why restart_server cannot start the server again, when it cannot: executable_gone when the executable of the server was removed, as go run does when it ends, and unsupported when the server has no way to", func() {
+		Enum("executable_gone", "unsupported")
+	})
+	RequiredAttribute("passkeys", Boolean, "Whether a passkey is registered, which auth: passkey needs to sign in")
+	RequiredAttribute("default_models", MapOf(String, String), "Default models of the assistant by provider")
 })
 
 var GitConflict = Type("GitConflict", func() {
@@ -1410,33 +1462,33 @@ var _ = Service("notes", func() {
 		})
 	})
 
-	// The settings file of the server's machine and user. For people only,
-	// so not MCP tools: it decides how the server authenticates people.
-	Method("settings_file", func() {
-		Description("Read the settings file of the server's machine and user, which the server reads when it starts. For people only.")
+	// The settings of the server. For people only, so not MCP tools: they
+	// decide how the server authenticates people.
+	Method("settings", func() {
+		Description("Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.")
 		Payload(sessionDSL)
-		Result(SettingsFile)
+		Result(Settings)
 		HTTP(func() {
-			GET("/settings-file")
+			GET("/settings")
 		})
 	})
 
-	Method("save_settings_file", func() {
-		Description("Write the settings file, which takes effect when the server starts again (restart_server). The content is checked as the commands read it first, and the file is left as it is when it is invalid. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the file decides how the server authenticates people.")
+	Method("save_settings", func() {
+		Description("Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("content", String, "Content of the file in YAML", func() {
-				MaxLength(65536)
-			})
-			RequiredAttribute("version", String, "Version of the content the change was made on, as settings_file returned it")
+			RequiredAttribute("machine", MachineSettings, "Settings of the server's machine and user")
+			RequiredAttribute("notes", NotesSettings, "Settings synced with the notes")
+			RequiredAttribute("version", String, "Version of the settings the change was made on, as settings returned it")
 		})
-		Result(SettingsFile)
-		Error("bad_request", ErrorResult, "The content is not valid settings, such as with an unknown key or value")
-		Error("precondition_failed", ErrorResult, "The file was changed since it was read")
+		Result(Settings)
+		Error("bad_request", ErrorResult, "The settings are invalid, such as auth: passkey without a passkey registered")
+		Error("precondition_failed", ErrorResult, "The settings were changed since they were read")
 		HTTP(func() {
-			PUT("/settings-file")
+			PUT("/settings")
 			Body(func() {
-				Attribute("content")
+				Attribute("machine")
+				Attribute("notes")
 				Attribute("version")
 			})
 			Response("bad_request", StatusBadRequest)
@@ -1445,7 +1497,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("restart_server", func() {
-		Description("Stop the server and start it again in the background with the same flags, so that it reads the settings file again. It answers before it stops; the server answers on GET /health with another pid once it runs again. For people only.")
+		Description("Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.")
 		Payload(sessionDSL)
 		Error("unavailable", ErrorResult, "The server cannot start itself again")
 		HTTP(func() {

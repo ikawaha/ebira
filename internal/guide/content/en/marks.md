@@ -13,7 +13,7 @@ Open the menu with the flag button of the preview, a right click in the list, or
 
 ## Names of the marks
 
-"Names of the marks…" in the gear menu gives the marks meanings, such as red for urgent. The names are synced with the notes.
+"Names of the marks…" in Server settings… of the gear menu gives the marks meanings, such as red for urgent. The names are synced with the notes.
 
 ## Searching by mark
 

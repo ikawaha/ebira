@@ -170,13 +170,13 @@ type Client struct {
 	// set_preview_style endpoint.
 	SetPreviewStyleDoer goahttp.Doer
 
-	// SettingsFile Doer is the HTTP client used to make requests to the
-	// settings_file endpoint.
-	SettingsFileDoer goahttp.Doer
+	// Settings Doer is the HTTP client used to make requests to the settings
+	// endpoint.
+	SettingsDoer goahttp.Doer
 
-	// SaveSettingsFile Doer is the HTTP client used to make requests to the
-	// save_settings_file endpoint.
-	SaveSettingsFileDoer goahttp.Doer
+	// SaveSettings Doer is the HTTP client used to make requests to the
+	// save_settings endpoint.
+	SaveSettingsDoer goahttp.Doer
 
 	// RestartServer Doer is the HTTP client used to make requests to the
 	// restart_server endpoint.
@@ -245,8 +245,8 @@ func NewClient(
 		AddGuideDoer:              doer,
 		PreviewStyleDoer:          doer,
 		SetPreviewStyleDoer:       doer,
-		SettingsFileDoer:          doer,
-		SaveSettingsFileDoer:      doer,
+		SettingsDoer:              doer,
+		SaveSettingsDoer:          doer,
 		RestartServerDoer:         doer,
 		SyncDoer:                  doer,
 		RestoreResponseBody:       restoreBody,
@@ -1241,15 +1241,15 @@ func (c *Client) SetPreviewStyle() goa.Endpoint {
 	}
 }
 
-// SettingsFile returns an endpoint that makes HTTP requests to the notes
-// service settings_file server.
-func (c *Client) SettingsFile() goa.Endpoint {
+// Settings returns an endpoint that makes HTTP requests to the notes service
+// settings server.
+func (c *Client) Settings() goa.Endpoint {
 	var (
-		encodeRequest  = EncodeSettingsFileRequest(c.encoder)
-		decodeResponse = DecodeSettingsFileResponse(c.decoder, c.RestoreResponseBody)
+		encodeRequest  = EncodeSettingsRequest(c.encoder)
+		decodeResponse = DecodeSettingsResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
-		req, err := c.BuildSettingsFileRequest(ctx, v)
+		req, err := c.BuildSettingsRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -1257,23 +1257,23 @@ func (c *Client) SettingsFile() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		resp, err := c.SettingsFileDoer.Do(req)
+		resp, err := c.SettingsDoer.Do(req)
 		if err != nil {
-			return nil, goahttp.ErrRequestError("notes", "settings_file", err)
+			return nil, goahttp.ErrRequestError("notes", "settings", err)
 		}
 		return decodeResponse(resp)
 	}
 }
 
-// SaveSettingsFile returns an endpoint that makes HTTP requests to the notes
-// service save_settings_file server.
-func (c *Client) SaveSettingsFile() goa.Endpoint {
+// SaveSettings returns an endpoint that makes HTTP requests to the notes
+// service save_settings server.
+func (c *Client) SaveSettings() goa.Endpoint {
 	var (
-		encodeRequest  = EncodeSaveSettingsFileRequest(c.encoder)
-		decodeResponse = DecodeSaveSettingsFileResponse(c.decoder, c.RestoreResponseBody)
+		encodeRequest  = EncodeSaveSettingsRequest(c.encoder)
+		decodeResponse = DecodeSaveSettingsResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
-		req, err := c.BuildSaveSettingsFileRequest(ctx, v)
+		req, err := c.BuildSaveSettingsRequest(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -1281,9 +1281,9 @@ func (c *Client) SaveSettingsFile() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		resp, err := c.SaveSettingsFileDoer.Do(req)
+		resp, err := c.SaveSettingsDoer.Do(req)
 		if err != nil {
-			return nil, goahttp.ErrRequestError("notes", "save_settings_file", err)
+			return nil, goahttp.ErrRequestError("notes", "save_settings", err)
 		}
 		return decodeResponse(resp)
 	}

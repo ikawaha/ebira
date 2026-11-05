@@ -1204,14 +1204,44 @@ func has(m *yaml.Node, key string) bool {
 	return false
 }
 
-// unset removes key from the mapping node m.
+// unset removes key from the mapping node m, keeping its comments.
 func unset(m *yaml.Node, key string) {
 	for i := 0; i+1 < len(m.Content); i += 2 {
 		if m.Content[i].Value == key {
-			m.Content = append(m.Content[:i], m.Content[i+2:]...)
+			removePair(m, i)
 			return
 		}
 	}
+}
+
+// removePair removes the pair at i of the mapping node m, keeping its
+// comments, such as lines commented out after it: they go before the next
+// key, or to the end of m.
+func removePair(m *yaml.Node, i int) {
+	k, v := m.Content[i], m.Content[i+1]
+	var kept []string
+	for _, c := range []string{k.HeadComment, v.HeadComment, v.FootComment, k.FootComment} {
+		if c != "" {
+			kept = append(kept, c)
+		}
+	}
+	m.Content = append(m.Content[:i], m.Content[i+2:]...)
+	if len(kept) == 0 {
+		return
+	}
+	c := strings.Join(kept, "\n")
+	if i < len(m.Content) {
+		next := m.Content[i]
+		if next.HeadComment != "" {
+			c += "\n" + next.HeadComment
+		}
+		next.HeadComment = c
+		return
+	}
+	if m.FootComment != "" {
+		c = m.FootComment + "\n" + c
+	}
+	m.FootComment = c
 }
 
 func writeFileAtomic(path string, b []byte) error {

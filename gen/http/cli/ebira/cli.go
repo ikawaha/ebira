@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings-file|save-settings-file|restart-server|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -247,12 +247,12 @@ func ParseEndpoint(
 		notesSetPreviewStyleBodyFlag    = new(cliStringFlag)
 		notesSetPreviewStyleSessionFlag = new(cliStringFlag)
 
-		notesSettingsFileFlags       = flag.NewFlagSet("settings-file", flag.ExitOnError)
-		notesSettingsFileSessionFlag = new(cliStringFlag)
+		notesSettingsFlags       = flag.NewFlagSet("settings", flag.ExitOnError)
+		notesSettingsSessionFlag = new(cliStringFlag)
 
-		notesSaveSettingsFileFlags       = flag.NewFlagSet("save-settings-file", flag.ExitOnError)
-		notesSaveSettingsFileBodyFlag    = new(cliStringFlag)
-		notesSaveSettingsFileSessionFlag = new(cliStringFlag)
+		notesSaveSettingsFlags       = flag.NewFlagSet("save-settings", flag.ExitOnError)
+		notesSaveSettingsBodyFlag    = new(cliStringFlag)
+		notesSaveSettingsSessionFlag = new(cliStringFlag)
 
 		notesRestartServerFlags       = flag.NewFlagSet("restart-server", flag.ExitOnError)
 		notesRestartServerSessionFlag = new(cliStringFlag)
@@ -401,9 +401,9 @@ func ParseEndpoint(
 	notesPreviewStyleFlags.Var(notesPreviewStyleSessionFlag, "session", "")
 	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleBodyFlag, "body", "")
 	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleSessionFlag, "session", "")
-	notesSettingsFileFlags.Var(notesSettingsFileSessionFlag, "session", "")
-	notesSaveSettingsFileFlags.Var(notesSaveSettingsFileBodyFlag, "body", "")
-	notesSaveSettingsFileFlags.Var(notesSaveSettingsFileSessionFlag, "session", "")
+	notesSettingsFlags.Var(notesSettingsSessionFlag, "session", "")
+	notesSaveSettingsFlags.Var(notesSaveSettingsBodyFlag, "body", "")
+	notesSaveSettingsFlags.Var(notesSaveSettingsSessionFlag, "session", "")
 	notesRestartServerFlags.Var(notesRestartServerSessionFlag, "session", "")
 	notesSyncFlags.Var(notesSyncSessionFlag, "session", "")
 	assistantStatusFlags.Var(assistantStatusSessionFlag, "session", "")
@@ -463,8 +463,8 @@ func ParseEndpoint(
 	notesAddGuideFlags.Usage = notesAddGuideUsage
 	notesPreviewStyleFlags.Usage = notesPreviewStyleUsage
 	notesSetPreviewStyleFlags.Usage = notesSetPreviewStyleUsage
-	notesSettingsFileFlags.Usage = notesSettingsFileUsage
-	notesSaveSettingsFileFlags.Usage = notesSaveSettingsFileUsage
+	notesSettingsFlags.Usage = notesSettingsUsage
+	notesSaveSettingsFlags.Usage = notesSaveSettingsUsage
 	notesRestartServerFlags.Usage = notesRestartServerUsage
 	notesSyncFlags.Usage = notesSyncUsage
 
@@ -644,11 +644,11 @@ func ParseEndpoint(
 			case "set-preview-style":
 				epf = notesSetPreviewStyleFlags
 
-			case "settings-file":
-				epf = notesSettingsFileFlags
+			case "settings":
+				epf = notesSettingsFlags
 
-			case "save-settings-file":
-				epf = notesSaveSettingsFileFlags
+			case "save-settings":
+				epf = notesSaveSettingsFlags
 
 			case "restart-server":
 				epf = notesRestartServerFlags
@@ -858,12 +858,12 @@ func ParseEndpoint(
 			case "set-preview-style":
 				endpoint = c.SetPreviewStyle()
 				data, err = notesc.BuildSetPreviewStylePayload(notesSetPreviewStyleBodyFlag.value, notesSetPreviewStyleSessionFlag.value)
-			case "settings-file":
-				endpoint = c.SettingsFile()
-				data, err = notesc.BuildSettingsFilePayload(notesSettingsFileSessionFlag.value)
-			case "save-settings-file":
-				endpoint = c.SaveSettingsFile()
-				data, err = notesc.BuildSaveSettingsFilePayload(notesSaveSettingsFileBodyFlag.value, notesSaveSettingsFileSessionFlag.value)
+			case "settings":
+				endpoint = c.Settings()
+				data, err = notesc.BuildSettingsPayload(notesSettingsSessionFlag.value)
+			case "save-settings":
+				endpoint = c.SaveSettings()
+				data, err = notesc.BuildSaveSettingsPayload(notesSaveSettingsBodyFlag.value, notesSaveSettingsSessionFlag.value)
 			case "restart-server":
 				endpoint = c.RestartServer()
 				data, err = notesc.BuildRestartServerPayload(notesRestartServerSessionFlag.value)
@@ -972,9 +972,9 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    add-guide: Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.`)
 	fmt.Fprintln(os.Stderr, `    preview-style: Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.`)
 	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
-	fmt.Fprintln(os.Stderr, `    settings-file: Read the settings file of the server's machine and user, which the server reads when it starts. For people only.`)
-	fmt.Fprintln(os.Stderr, `    save-settings-file: Write the settings file, which takes effect when the server starts again (restart_server). The content is checked as the commands read it first, and the file is left as it is when it is invalid. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the file decides how the server authenticates people.`)
-	fmt.Fprintln(os.Stderr, `    restart-server: Stop the server and start it again in the background with the same flags, so that it reads the settings file again. It answers before it stops; the server answers on GET /health with another pid once it runs again. For people only.`)
+	fmt.Fprintln(os.Stderr, `    settings: Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.`)
+	fmt.Fprintln(os.Stderr, `    save-settings: Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.`)
+	fmt.Fprintln(os.Stderr, `    restart-server: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.`)
 	fmt.Fprintln(os.Stderr, `    sync: Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
@@ -1814,34 +1814,34 @@ func notesSetPreviewStyleUsage() {
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes set-preview-style --body '{\n      \"style\": \"band\"\n   }' --session \"Rem dignissimos molestiae.\"")
 }
 
-func notesSettingsFileUsage() {
+func notesSettingsUsage() {
 	// Header with flags
-	fmt.Fprintf(os.Stderr, "%s [flags] notes settings-file", os.Args[0])
+	fmt.Fprintf(os.Stderr, "%s [flags] notes settings", os.Args[0])
 	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Read the settings file of the server's machine and user, which the server reads when it starts. For people only.`)
+	fmt.Fprintln(os.Stderr, `Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes settings-file --session \"Magnam cumque.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes settings --session \"Libero fuga earum perspiciatis non eligendi modi.\"")
 }
 
-func notesSaveSettingsFileUsage() {
+func notesSaveSettingsUsage() {
 	// Header with flags
-	fmt.Fprintf(os.Stderr, "%s [flags] notes save-settings-file", os.Args[0])
+	fmt.Fprintf(os.Stderr, "%s [flags] notes save-settings", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
 	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Write the settings file, which takes effect when the server starts again (restart_server). The content is checked as the commands read it first, and the file is left as it is when it is invalid. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the file decides how the server authenticates people.`)
+	fmt.Fprintln(os.Stderr, `Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
@@ -1849,7 +1849,7 @@ func notesSaveSettingsFileUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-settings-file --body '{\n      \"content\": \"i4w\",\n      \"version\": \"Minima asperiores deleniti.\"\n   }' --session \"Blanditiis aliquam esse consequatur.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-settings --body '{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"watch\": true\n      },\n      \"notes\": {\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }' --session \"Saepe optio.\"")
 }
 
 func notesRestartServerUsage() {
@@ -1860,7 +1860,7 @@ func notesRestartServerUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Stop the server and start it again in the background with the same flags, so that it reads the settings file again. It answers before it stops; the server answers on GET /health with another pid once it runs again. For people only.`)
+	fmt.Fprintln(os.Stderr, `Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)

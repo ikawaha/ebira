@@ -1024,12 +1024,12 @@ func TestPeopleOnly(t *testing.T) {
 			_, err := svc.AddGuide(ctx, &gennotes.AddGuidePayload{})
 			return err
 		},
-		"settings_file": func(ctx context.Context) error {
-			_, err := svc.SettingsFile(ctx, &gennotes.SettingsFilePayload{})
+		"settings": func(ctx context.Context) error {
+			_, err := svc.Settings(ctx, &gennotes.SettingsPayload{})
 			return err
 		},
-		"save_settings_file": func(ctx context.Context) error {
-			_, err := svc.SaveSettingsFile(ctx, &gennotes.SaveSettingsFilePayload{Content: "auth: none\n"})
+		"save_settings": func(ctx context.Context) error {
+			_, err := svc.SaveSettings(ctx, &gennotes.SaveSettingsPayload{Machine: &gennotes.MachineSettings{}, Notes: &gennotes.NotesSettings{}})
 			return err
 		},
 		"restart_server": func(ctx context.Context) error {

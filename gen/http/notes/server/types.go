@@ -218,12 +218,14 @@ type SetPreviewStyleRequestBody struct {
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 }
 
-// SaveSettingsFileRequestBody is the type of the "notes" service
-// "save_settings_file" endpoint HTTP request body.
-type SaveSettingsFileRequestBody struct {
-	// Content of the file in YAML
-	Content *string `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
-	// Version of the content the change was made on, as settings_file returned it
+// SaveSettingsRequestBody is the type of the "notes" service "save_settings"
+// endpoint HTTP request body.
+type SaveSettingsRequestBody struct {
+	// Settings of the server's machine and user
+	Machine *MachineSettingsRequestBody `form:"machine,omitempty" json:"machine,omitempty" xml:"machine,omitempty"`
+	// Settings synced with the notes
+	Notes *NotesSettingsRequestBody `form:"notes,omitempty" json:"notes,omitempty" xml:"notes,omitempty"`
+	// Version of the settings the change was made on, as settings returned it
 	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
 }
 
@@ -861,40 +863,68 @@ type SetPreviewStyleResponseBody struct {
 	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
 }
 
-// SettingsFileResponseBody is the type of the "notes" service "settings_file"
-// endpoint HTTP response body.
-type SettingsFileResponseBody struct {
-	// Path of the settings file of the server's machine and user
-	Path string `form:"path" json:"path" xml:"path"`
-	// Content of the file; empty when it does not exist
-	Content string `form:"content" json:"content" xml:"content"`
-	// Whether the file exists
-	Exists bool `form:"exists" json:"exists" xml:"exists"`
-	// Version of the content, to pass to save_settings_file
+// SettingsResponseBody is the type of the "notes" service "settings" endpoint
+// HTTP response body.
+type SettingsResponseBody struct {
+	// Settings of the server's machine and user
+	Machine *MachineSettingsResponseBody `form:"machine" json:"machine" xml:"machine"`
+	// Settings synced with the notes
+	Notes *NotesSettingsResponseBody `form:"notes" json:"notes" xml:"notes"`
+	// Path of the settings file of the machine and user
+	MachinePath string `form:"machine_path" json:"machine_path" xml:"machine_path"`
+	// Path of the settings synced with the notes
+	NotesPath string `form:"notes_path" json:"notes_path" xml:"notes_path"`
+	// Notes directory of the server, which a restart keeps
+	NotesDir string `form:"notes_dir" json:"notes_dir" xml:"notes_dir"`
+	// Address the server listens on, which a restart keeps
+	Addr string `form:"addr" json:"addr" xml:"addr"`
+	// Version of the settings, to pass to save_settings
 	Version string `form:"version" json:"version" xml:"version"`
-	// Keys of the file whose values the server does not take, and a restart would
-	// not either: those of the flags it was started with, which a restart keeps,
-	// and notes_dir and addr, as a restart keeps the notes directory and the
-	// address
+	// Keys whose values the server does not take, and a restart would not either,
+	// as it was started with their flags
 	Overridden []string `form:"overridden" json:"overridden" xml:"overridden"`
+	// Whether restart_server can start the server again
+	Restart bool `form:"restart" json:"restart" xml:"restart"`
+	// Why restart_server cannot start the server again, when it cannot:
+	// executable_gone when the executable of the server was removed, as go run
+	// does when it ends, and unsupported when the server has no way to
+	RestartUnavailable *string `form:"restart_unavailable,omitempty" json:"restart_unavailable,omitempty" xml:"restart_unavailable,omitempty"`
+	// Whether a passkey is registered, which auth: passkey needs to sign in
+	Passkeys bool `form:"passkeys" json:"passkeys" xml:"passkeys"`
+	// Default models of the assistant by provider
+	DefaultModels map[string]string `form:"default_models" json:"default_models" xml:"default_models"`
 }
 
-// SaveSettingsFileResponseBody is the type of the "notes" service
-// "save_settings_file" endpoint HTTP response body.
-type SaveSettingsFileResponseBody struct {
-	// Path of the settings file of the server's machine and user
-	Path string `form:"path" json:"path" xml:"path"`
-	// Content of the file; empty when it does not exist
-	Content string `form:"content" json:"content" xml:"content"`
-	// Whether the file exists
-	Exists bool `form:"exists" json:"exists" xml:"exists"`
-	// Version of the content, to pass to save_settings_file
+// SaveSettingsResponseBody is the type of the "notes" service "save_settings"
+// endpoint HTTP response body.
+type SaveSettingsResponseBody struct {
+	// Settings of the server's machine and user
+	Machine *MachineSettingsResponseBody `form:"machine" json:"machine" xml:"machine"`
+	// Settings synced with the notes
+	Notes *NotesSettingsResponseBody `form:"notes" json:"notes" xml:"notes"`
+	// Path of the settings file of the machine and user
+	MachinePath string `form:"machine_path" json:"machine_path" xml:"machine_path"`
+	// Path of the settings synced with the notes
+	NotesPath string `form:"notes_path" json:"notes_path" xml:"notes_path"`
+	// Notes directory of the server, which a restart keeps
+	NotesDir string `form:"notes_dir" json:"notes_dir" xml:"notes_dir"`
+	// Address the server listens on, which a restart keeps
+	Addr string `form:"addr" json:"addr" xml:"addr"`
+	// Version of the settings, to pass to save_settings
 	Version string `form:"version" json:"version" xml:"version"`
-	// Keys of the file whose values the server does not take, and a restart would
-	// not either: those of the flags it was started with, which a restart keeps,
-	// and notes_dir and addr, as a restart keeps the notes directory and the
-	// address
+	// Keys whose values the server does not take, and a restart would not either,
+	// as it was started with their flags
 	Overridden []string `form:"overridden" json:"overridden" xml:"overridden"`
+	// Whether restart_server can start the server again
+	Restart bool `form:"restart" json:"restart" xml:"restart"`
+	// Why restart_server cannot start the server again, when it cannot:
+	// executable_gone when the executable of the server was removed, as go run
+	// does when it ends, and unsupported when the server has no way to
+	RestartUnavailable *string `form:"restart_unavailable,omitempty" json:"restart_unavailable,omitempty" xml:"restart_unavailable,omitempty"`
+	// Whether a passkey is registered, which auth: passkey needs to sign in
+	Passkeys bool `form:"passkeys" json:"passkeys" xml:"passkeys"`
+	// Default models of the assistant by provider
+	DefaultModels map[string]string `form:"default_models" json:"default_models" xml:"default_models"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -3422,9 +3452,9 @@ type SetPreviewStyleVerificationRequiredResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SettingsFileUnauthorizedResponseBody is the type of the "notes" service
-// "settings_file" endpoint HTTP response body for the "unauthorized" error.
-type SettingsFileUnauthorizedResponseBody struct {
+// SettingsUnauthorizedResponseBody is the type of the "notes" service
+// "settings" endpoint HTTP response body for the "unauthorized" error.
+type SettingsUnauthorizedResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3440,10 +3470,9 @@ type SettingsFileUnauthorizedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SettingsFileVerificationRequiredResponseBody is the type of the "notes"
-// service "settings_file" endpoint HTTP response body for the
-// "verification_required" error.
-type SettingsFileVerificationRequiredResponseBody struct {
+// SettingsVerificationRequiredResponseBody is the type of the "notes" service
+// "settings" endpoint HTTP response body for the "verification_required" error.
+type SettingsVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3459,9 +3488,9 @@ type SettingsFileVerificationRequiredResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SaveSettingsFileBadRequestResponseBody is the type of the "notes" service
-// "save_settings_file" endpoint HTTP response body for the "bad_request" error.
-type SaveSettingsFileBadRequestResponseBody struct {
+// SaveSettingsBadRequestResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "bad_request" error.
+type SaveSettingsBadRequestResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3477,10 +3506,10 @@ type SaveSettingsFileBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SaveSettingsFilePreconditionFailedResponseBody is the type of the "notes"
-// service "save_settings_file" endpoint HTTP response body for the
+// SaveSettingsPreconditionFailedResponseBody is the type of the "notes"
+// service "save_settings" endpoint HTTP response body for the
 // "precondition_failed" error.
-type SaveSettingsFilePreconditionFailedResponseBody struct {
+type SaveSettingsPreconditionFailedResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3496,10 +3525,9 @@ type SaveSettingsFilePreconditionFailedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SaveSettingsFileUnauthorizedResponseBody is the type of the "notes" service
-// "save_settings_file" endpoint HTTP response body for the "unauthorized"
-// error.
-type SaveSettingsFileUnauthorizedResponseBody struct {
+// SaveSettingsUnauthorizedResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "unauthorized" error.
+type SaveSettingsUnauthorizedResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3515,10 +3543,10 @@ type SaveSettingsFileUnauthorizedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SaveSettingsFileVerificationRequiredResponseBody is the type of the "notes"
-// service "save_settings_file" endpoint HTTP response body for the
+// SaveSettingsVerificationRequiredResponseBody is the type of the "notes"
+// service "save_settings" endpoint HTTP response body for the
 // "verification_required" error.
-type SaveSettingsFileVerificationRequiredResponseBody struct {
+type SaveSettingsVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3847,6 +3875,48 @@ type GitConflictResponseBody struct {
 	CopyID *string `form:"copy_id,omitempty" json:"copy_id,omitempty" xml:"copy_id,omitempty"`
 }
 
+// MachineSettingsResponseBody is used to define fields on response body types.
+type MachineSettingsResponseBody struct {
+	// Language of the UI; empty for the browser's
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
+	// Color theme of the UI; empty for auto, the system's
+	Theme *string `form:"theme,omitempty" json:"theme,omitempty" xml:"theme,omitempty"`
+	// How the REST API authenticates people; empty for none. passkey needs a
+	// passkey registered
+	Auth *string `form:"auth,omitempty" json:"auth,omitempty" xml:"auth,omitempty"`
+	// Interval of syncing the notes with git, such as 10m; empty or 0 for none
+	GitSync *string `form:"git_sync,omitempty" json:"git_sync,omitempty" xml:"git_sync,omitempty"`
+	// Whether the server watches the notes directory; left out for true
+	Watch *bool `form:"watch,omitempty" json:"watch,omitempty" xml:"watch,omitempty"`
+	// Model provider of the assistant; empty for the one whose API key is set
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty" xml:"provider,omitempty"`
+	// Model of the assistant; empty for the default of the provider
+	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
+	// How the preview of the TUI shows a note; empty for rendered
+	TuiPreview *string `form:"tui_preview,omitempty" json:"tui_preview,omitempty" xml:"tui_preview,omitempty"`
+}
+
+// NotesSettingsResponseBody is used to define fields on response body types.
+type NotesSettingsResponseBody struct {
+	// Search mode; empty for bigram. Another mode makes the index again when the
+	// server starts, on every machine
+	Search *string `form:"search,omitempty" json:"search,omitempty" xml:"search,omitempty"`
+	// Stop words of the ja mode
+	StopWords *StopListResponseBody `form:"stop_words" json:"stop_words" xml:"stop_words"`
+	// Stop parts of speech of the ja mode, each written as the IPA dictionary
+	// names of its levels joined by -
+	StopTags *StopListResponseBody `form:"stop_tags" json:"stop_tags" xml:"stop_tags"`
+}
+
+// StopListResponseBody is used to define fields on response body types.
+type StopListResponseBody struct {
+	// default for the list of kagome's ja filter, from Lucene; none for no list;
+	// list for words
+	Use string `form:"use" json:"use" xml:"use"`
+	// The words or parts of speech, for list
+	Words []string `form:"words,omitempty" json:"words,omitempty" xml:"words,omitempty"`
+}
+
 // ImportFileRequestBody is used to define fields on request body types.
 type ImportFileRequestBody struct {
 	// Path of the image as the Markdown file refers to it, one of the paths the
@@ -3856,6 +3926,48 @@ type ImportFileRequestBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
 	Content []byte `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
+}
+
+// MachineSettingsRequestBody is used to define fields on request body types.
+type MachineSettingsRequestBody struct {
+	// Language of the UI; empty for the browser's
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
+	// Color theme of the UI; empty for auto, the system's
+	Theme *string `form:"theme,omitempty" json:"theme,omitempty" xml:"theme,omitempty"`
+	// How the REST API authenticates people; empty for none. passkey needs a
+	// passkey registered
+	Auth *string `form:"auth,omitempty" json:"auth,omitempty" xml:"auth,omitempty"`
+	// Interval of syncing the notes with git, such as 10m; empty or 0 for none
+	GitSync *string `form:"git_sync,omitempty" json:"git_sync,omitempty" xml:"git_sync,omitempty"`
+	// Whether the server watches the notes directory; left out for true
+	Watch *bool `form:"watch,omitempty" json:"watch,omitempty" xml:"watch,omitempty"`
+	// Model provider of the assistant; empty for the one whose API key is set
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty" xml:"provider,omitempty"`
+	// Model of the assistant; empty for the default of the provider
+	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
+	// How the preview of the TUI shows a note; empty for rendered
+	TuiPreview *string `form:"tui_preview,omitempty" json:"tui_preview,omitempty" xml:"tui_preview,omitempty"`
+}
+
+// NotesSettingsRequestBody is used to define fields on request body types.
+type NotesSettingsRequestBody struct {
+	// Search mode; empty for bigram. Another mode makes the index again when the
+	// server starts, on every machine
+	Search *string `form:"search,omitempty" json:"search,omitempty" xml:"search,omitempty"`
+	// Stop words of the ja mode
+	StopWords *StopListRequestBody `form:"stop_words,omitempty" json:"stop_words,omitempty" xml:"stop_words,omitempty"`
+	// Stop parts of speech of the ja mode, each written as the IPA dictionary
+	// names of its levels joined by -
+	StopTags *StopListRequestBody `form:"stop_tags,omitempty" json:"stop_tags,omitempty" xml:"stop_tags,omitempty"`
+}
+
+// StopListRequestBody is used to define fields on request body types.
+type StopListRequestBody struct {
+	// default for the list of kagome's ja filter, from Lucene; none for no list;
+	// list for words
+	Use *string `form:"use,omitempty" json:"use,omitempty" xml:"use,omitempty"`
+	// The words or parts of speech, for list
+	Words []string `form:"words,omitempty" json:"words,omitempty" xml:"words,omitempty"`
 }
 
 // NewListResponseBody builds the HTTP response body from the result of the
@@ -4588,14 +4700,24 @@ func NewSetPreviewStyleResponseBody(res *notes.PreviewStyle) *SetPreviewStyleRes
 	return body
 }
 
-// NewSettingsFileResponseBody builds the HTTP response body from the result of
-// the "settings_file" endpoint of the "notes" service.
-func NewSettingsFileResponseBody(res *notes.SettingsFile) *SettingsFileResponseBody {
-	body := &SettingsFileResponseBody{
-		Path:    res.Path,
-		Content: res.Content,
-		Exists:  res.Exists,
-		Version: res.Version,
+// NewSettingsResponseBody builds the HTTP response body from the result of the
+// "settings" endpoint of the "notes" service.
+func NewSettingsResponseBody(res *notes.Settings) *SettingsResponseBody {
+	body := &SettingsResponseBody{
+		MachinePath:        res.MachinePath,
+		NotesPath:          res.NotesPath,
+		NotesDir:           res.NotesDir,
+		Addr:               res.Addr,
+		Version:            res.Version,
+		Restart:            res.Restart,
+		RestartUnavailable: res.RestartUnavailable,
+		Passkeys:           res.Passkeys,
+	}
+	if res.Machine != nil {
+		body.Machine = marshalNotesMachineSettingsToMachineSettingsResponseBody(res.Machine)
+	}
+	if res.Notes != nil {
+		body.Notes = marshalNotesNotesSettingsToNotesSettingsResponseBody(res.Notes)
 	}
 	if res.Overridden != nil {
 		body.Overridden = make([]string, len(res.Overridden))
@@ -4604,18 +4726,36 @@ func NewSettingsFileResponseBody(res *notes.SettingsFile) *SettingsFileResponseB
 		}
 	} else {
 		body.Overridden = []string{}
+	}
+	if res.DefaultModels != nil {
+		body.DefaultModels = make(map[string]string, len(res.DefaultModels))
+		for key, val := range res.DefaultModels {
+			tk := key
+			tv := val
+			body.DefaultModels[tk] = tv
+		}
 	}
 	return body
 }
 
-// NewSaveSettingsFileResponseBody builds the HTTP response body from the
-// result of the "save_settings_file" endpoint of the "notes" service.
-func NewSaveSettingsFileResponseBody(res *notes.SettingsFile) *SaveSettingsFileResponseBody {
-	body := &SaveSettingsFileResponseBody{
-		Path:    res.Path,
-		Content: res.Content,
-		Exists:  res.Exists,
-		Version: res.Version,
+// NewSaveSettingsResponseBody builds the HTTP response body from the result of
+// the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsResponseBody(res *notes.Settings) *SaveSettingsResponseBody {
+	body := &SaveSettingsResponseBody{
+		MachinePath:        res.MachinePath,
+		NotesPath:          res.NotesPath,
+		NotesDir:           res.NotesDir,
+		Addr:               res.Addr,
+		Version:            res.Version,
+		Restart:            res.Restart,
+		RestartUnavailable: res.RestartUnavailable,
+		Passkeys:           res.Passkeys,
+	}
+	if res.Machine != nil {
+		body.Machine = marshalNotesMachineSettingsToMachineSettingsResponseBody(res.Machine)
+	}
+	if res.Notes != nil {
+		body.Notes = marshalNotesNotesSettingsToNotesSettingsResponseBody(res.Notes)
 	}
 	if res.Overridden != nil {
 		body.Overridden = make([]string, len(res.Overridden))
@@ -4624,6 +4764,14 @@ func NewSaveSettingsFileResponseBody(res *notes.SettingsFile) *SaveSettingsFileR
 		}
 	} else {
 		body.Overridden = []string{}
+	}
+	if res.DefaultModels != nil {
+		body.DefaultModels = make(map[string]string, len(res.DefaultModels))
+		for key, val := range res.DefaultModels {
+			tk := key
+			tv := val
+			body.DefaultModels[tk] = tv
+		}
 	}
 	return body
 }
@@ -6593,10 +6741,10 @@ func NewSetPreviewStyleVerificationRequiredResponseBody(res *goa.ServiceError) *
 	return body
 }
 
-// NewSettingsFileUnauthorizedResponseBody builds the HTTP response body from
-// the result of the "settings_file" endpoint of the "notes" service.
-func NewSettingsFileUnauthorizedResponseBody(res *goa.ServiceError) *SettingsFileUnauthorizedResponseBody {
-	body := &SettingsFileUnauthorizedResponseBody{
+// NewSettingsUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "settings" endpoint of the "notes" service.
+func NewSettingsUnauthorizedResponseBody(res *goa.ServiceError) *SettingsUnauthorizedResponseBody {
+	body := &SettingsUnauthorizedResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -6607,10 +6755,10 @@ func NewSettingsFileUnauthorizedResponseBody(res *goa.ServiceError) *SettingsFil
 	return body
 }
 
-// NewSettingsFileVerificationRequiredResponseBody builds the HTTP response
-// body from the result of the "settings_file" endpoint of the "notes" service.
-func NewSettingsFileVerificationRequiredResponseBody(res *goa.ServiceError) *SettingsFileVerificationRequiredResponseBody {
-	body := &SettingsFileVerificationRequiredResponseBody{
+// NewSettingsVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "settings" endpoint of the "notes" service.
+func NewSettingsVerificationRequiredResponseBody(res *goa.ServiceError) *SettingsVerificationRequiredResponseBody {
+	body := &SettingsVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -6621,10 +6769,10 @@ func NewSettingsFileVerificationRequiredResponseBody(res *goa.ServiceError) *Set
 	return body
 }
 
-// NewSaveSettingsFileBadRequestResponseBody builds the HTTP response body from
-// the result of the "save_settings_file" endpoint of the "notes" service.
-func NewSaveSettingsFileBadRequestResponseBody(res *goa.ServiceError) *SaveSettingsFileBadRequestResponseBody {
-	body := &SaveSettingsFileBadRequestResponseBody{
+// NewSaveSettingsBadRequestResponseBody builds the HTTP response body from the
+// result of the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsBadRequestResponseBody(res *goa.ServiceError) *SaveSettingsBadRequestResponseBody {
+	body := &SaveSettingsBadRequestResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -6635,11 +6783,10 @@ func NewSaveSettingsFileBadRequestResponseBody(res *goa.ServiceError) *SaveSetti
 	return body
 }
 
-// NewSaveSettingsFilePreconditionFailedResponseBody builds the HTTP response
-// body from the result of the "save_settings_file" endpoint of the "notes"
-// service.
-func NewSaveSettingsFilePreconditionFailedResponseBody(res *goa.ServiceError) *SaveSettingsFilePreconditionFailedResponseBody {
-	body := &SaveSettingsFilePreconditionFailedResponseBody{
+// NewSaveSettingsPreconditionFailedResponseBody builds the HTTP response body
+// from the result of the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsPreconditionFailedResponseBody(res *goa.ServiceError) *SaveSettingsPreconditionFailedResponseBody {
+	body := &SaveSettingsPreconditionFailedResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -6650,10 +6797,10 @@ func NewSaveSettingsFilePreconditionFailedResponseBody(res *goa.ServiceError) *S
 	return body
 }
 
-// NewSaveSettingsFileUnauthorizedResponseBody builds the HTTP response body
-// from the result of the "save_settings_file" endpoint of the "notes" service.
-func NewSaveSettingsFileUnauthorizedResponseBody(res *goa.ServiceError) *SaveSettingsFileUnauthorizedResponseBody {
-	body := &SaveSettingsFileUnauthorizedResponseBody{
+// NewSaveSettingsUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsUnauthorizedResponseBody(res *goa.ServiceError) *SaveSettingsUnauthorizedResponseBody {
+	body := &SaveSettingsUnauthorizedResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -6664,11 +6811,10 @@ func NewSaveSettingsFileUnauthorizedResponseBody(res *goa.ServiceError) *SaveSet
 	return body
 }
 
-// NewSaveSettingsFileVerificationRequiredResponseBody builds the HTTP response
-// body from the result of the "save_settings_file" endpoint of the "notes"
-// service.
-func NewSaveSettingsFileVerificationRequiredResponseBody(res *goa.ServiceError) *SaveSettingsFileVerificationRequiredResponseBody {
-	body := &SaveSettingsFileVerificationRequiredResponseBody{
+// NewSaveSettingsVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsVerificationRequiredResponseBody(res *goa.ServiceError) *SaveSettingsVerificationRequiredResponseBody {
+	body := &SaveSettingsVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -7219,23 +7365,25 @@ func NewSetPreviewStylePayload(body *SetPreviewStyleRequestBody, session *string
 	return v
 }
 
-// NewSettingsFilePayload builds a notes service settings_file endpoint payload.
-func NewSettingsFilePayload(session *string) *notes.SettingsFilePayload {
-	v := &notes.SettingsFilePayload{}
+// NewSettingsPayload builds a notes service settings endpoint payload.
+func NewSettingsPayload(session *string) *notes.SettingsPayload {
+	v := &notes.SettingsPayload{}
 	v.Session = session
 
 	return v
 }
 
-// NewSaveSettingsFilePayload builds a notes service save_settings_file
-// endpoint payload.
-func NewSaveSettingsFilePayload(body *SaveSettingsFileRequestBody, session *string) *notes.SaveSettingsFilePayload {
-	v := &notes.SaveSettingsFilePayload{}
-	if body.Content != nil {
-		v.Content = *body.Content
-	}
+// NewSaveSettingsPayload builds a notes service save_settings endpoint payload.
+func NewSaveSettingsPayload(body *SaveSettingsRequestBody, session *string) *notes.SaveSettingsPayload {
+	v := &notes.SaveSettingsPayload{}
 	if body.Version != nil {
 		v.Version = *body.Version
+	}
+	if body.Machine != nil {
+		v.Machine = unmarshalMachineSettingsRequestBodyToNotesMachineSettings(body.Machine)
+	}
+	if body.Notes != nil {
+		v.Notes = unmarshalNotesSettingsRequestBodyToNotesNotesSettings(body.Notes)
 	}
 	v.Session = session
 
@@ -7549,12 +7697,17 @@ func ValidateSetPreviewStyleRequestBody(body *SetPreviewStyleRequestBody) (err e
 	return
 }
 
-// ValidateSaveSettingsFileRequestBody runs the validations defined on
-// SaveSettingsFileRequestBody
-func ValidateSaveSettingsFileRequestBody(body *SaveSettingsFileRequestBody) (err error) {
-	if body.Content != nil {
-		if utf8.RuneCountInString(*body.Content) > 65536 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *body.Content, utf8.RuneCountInString(*body.Content), 65536, false))
+// ValidateSaveSettingsRequestBody runs the validations defined on
+// SaveSettingsRequestBody
+func ValidateSaveSettingsRequestBody(body *SaveSettingsRequestBody) (err error) {
+	if body.Machine != nil {
+		if err2 := validateMachineSettingsRequestBody(body.Machine, "body.machine"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Notes != nil {
+		if err2 := validateNotesSettingsRequestBody(body.Notes, "body.notes"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
@@ -7600,6 +7753,139 @@ func validateImportFileRequestBody(body *ImportFileRequestBody, path string) (er
 		}
 		if utf8.RuneCountInString(*body.Name) > 255 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(path+".name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
+		}
+	}
+	return
+}
+
+// ValidateMachineSettingsRequestBody runs the validations defined on
+// MachineSettings
+func ValidateMachineSettingsRequestBody(body *MachineSettingsRequestBody) (err error) {
+	if body.Theme != nil {
+		if !(*body.Theme == "auto" || *body.Theme == "light" || *body.Theme == "dark") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.theme", *body.Theme, []any{"auto", "light", "dark"}))
+		}
+	}
+	if body.Auth != nil {
+		if !(*body.Auth == "none" || *body.Auth == "passkey") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.auth", *body.Auth, []any{"none", "passkey"}))
+		}
+	}
+	if body.Provider != nil {
+		if !(*body.Provider == "anthropic" || *body.Provider == "gemini") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.provider", *body.Provider, []any{"anthropic", "gemini"}))
+		}
+	}
+	if body.TuiPreview != nil {
+		if !(*body.TuiPreview == "rendered" || *body.TuiPreview == "source") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	return
+}
+
+// validateMachineSettingsRequestBody checks MachineSettings and reports errors
+// using the path supplied by its caller
+func validateMachineSettingsRequestBody(body *MachineSettingsRequestBody, path string) (err error) {
+	if body.Theme != nil {
+		if !(*body.Theme == "auto" || *body.Theme == "light" || *body.Theme == "dark") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".theme", *body.Theme, []any{"auto", "light", "dark"}))
+		}
+	}
+	if body.Auth != nil {
+		if !(*body.Auth == "none" || *body.Auth == "passkey") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".auth", *body.Auth, []any{"none", "passkey"}))
+		}
+	}
+	if body.Provider != nil {
+		if !(*body.Provider == "anthropic" || *body.Provider == "gemini") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".provider", *body.Provider, []any{"anthropic", "gemini"}))
+		}
+	}
+	if body.TuiPreview != nil {
+		if !(*body.TuiPreview == "rendered" || *body.TuiPreview == "source") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	return
+}
+
+// ValidateNotesSettingsRequestBody runs the validations defined on
+// NotesSettings
+func ValidateNotesSettingsRequestBody(body *NotesSettingsRequestBody) (err error) {
+	if body.StopWords == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_words", "body"))
+	}
+	if body.StopTags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_tags", "body"))
+	}
+	if body.Search != nil {
+		if !(*body.Search == "like" || *body.Search == "bigram" || *body.Search == "trigram" || *body.Search == "en" || *body.Search == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.search", *body.Search, []any{"like", "bigram", "trigram", "en", "ja"}))
+		}
+	}
+	if body.StopWords != nil {
+		if err2 := validateStopListRequestBody(body.StopWords, "body.stop_words"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.StopTags != nil {
+		if err2 := validateStopListRequestBody(body.StopTags, "body.stop_tags"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validateNotesSettingsRequestBody checks NotesSettings and reports errors
+// using the path supplied by its caller
+func validateNotesSettingsRequestBody(body *NotesSettingsRequestBody, path string) (err error) {
+	if body.StopWords == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_words", path))
+	}
+	if body.StopTags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_tags", path))
+	}
+	if body.Search != nil {
+		if !(*body.Search == "like" || *body.Search == "bigram" || *body.Search == "trigram" || *body.Search == "en" || *body.Search == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".search", *body.Search, []any{"like", "bigram", "trigram", "en", "ja"}))
+		}
+	}
+	if body.StopWords != nil {
+		if err2 := validateStopListRequestBody(body.StopWords, path+".stop_words"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.StopTags != nil {
+		if err2 := validateStopListRequestBody(body.StopTags, path+".stop_tags"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateStopListRequestBody runs the validations defined on StopList
+func ValidateStopListRequestBody(body *StopListRequestBody) (err error) {
+	if body.Use == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("use", "body"))
+	}
+	if body.Use != nil {
+		if !(*body.Use == "default" || *body.Use == "none" || *body.Use == "list") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.use", *body.Use, []any{"default", "none", "list"}))
+		}
+	}
+	return
+}
+
+// validateStopListRequestBody checks StopList and reports errors using the
+// path supplied by its caller
+func validateStopListRequestBody(body *StopListRequestBody, path string) (err error) {
+	if body.Use == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("use", path))
+	}
+	if body.Use != nil {
+		if !(*body.Use == "default" || *body.Use == "none" || *body.Use == "list") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".use", *body.Use, []any{"default", "none", "list"}))
 		}
 	}
 	return

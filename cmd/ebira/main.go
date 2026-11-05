@@ -106,7 +106,7 @@ func run(args []string) error {
 		case "web":
 			return runWeb(args[1:])
 		case "serve":
-			return runServe(args[1:])
+			return serve(args[1:])
 		case "server":
 			return runServer(args[1:])
 		case "files":
