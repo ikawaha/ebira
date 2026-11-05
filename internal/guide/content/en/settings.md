@@ -11,6 +11,7 @@ tags: [guide, settings]
 - Import Markdown (or drop files onto the page)
 - Check images, Server status, Sync with git
 - Add the guide
+- Report an issue: open the page to post a request or a bug on GitHub
 
 ## The settings file
 

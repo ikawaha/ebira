@@ -264,6 +264,8 @@
   "guideAdd": "ガイドを追加",
   "guideAddTitle": "ebira の使い方を説明するノートを、新しいノートブックとして足します",
   "guideAdded": "ガイドを {name} として足しました",
+  "issueOpen": "要望・不具合を報告",
+  "issueOpenTitle": "ebira への要望や不具合を GitHub の Issue に書くページを開きます",
   "guideFailed": "ガイドを足せません: {error}",
   "markNamesHint": "赤は「重要」のように、それぞれのマークの意味を書きます。名前はノートと一緒に保存され、mark:名前 でそのマークのノートを探せます。",
   "searchHelpMark": "そのマークのノート。色や記号の名前（red、star など）か、付けた名前で",
