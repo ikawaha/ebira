@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -314,7 +315,11 @@ func runServe(args []string) error {
 		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)
 	}
 	svc.SetPreviewCSS(previewCSS)
-	ui := web.Handler(web.Options{Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS})
+	bi, _ := debug.ReadBuildInfo()
+	ui := web.Handler(web.Options{
+		Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS,
+		Version: versionLabel(bi), VersionText: versionText(bi, daemon.Version()),
+	})
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)
 	root.Handle(web.LegacyPrefix, http.RedirectHandler(web.Prefix, http.StatusMovedPermanently))

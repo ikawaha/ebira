@@ -12,6 +12,7 @@ tags: [guide, settings]
 - Check images, Server status, Sync with git
 - Add the guide
 - Report an issue: open the page to post a request or a bug on GitHub
+- At the bottom, the version of ebira; choose it to copy the details, to tell in a report
 
 ## The settings file
 

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"embed"
 	"errors"
+	"html"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -78,6 +79,11 @@ type Options struct {
 	// PreviewCSS is the path of the CSS the user wrote to style the preview,
 	// read at each request (see PreviewCSS); empty or a missing file is none.
 	PreviewCSS string
+	// Version is the version of ebira in short, given as the data-version
+	// attribute, which the settings menu tells; VersionText is all that
+	// ebira version prints, given as data-version-text, which the menu
+	// copies. Empty tells none.
+	Version, VersionText string
 }
 
 // stylesDir is where the built-in styles of the preview are served, under
@@ -106,6 +112,9 @@ func Handler(o Options) http.Handler {
 	}
 	if searchMode.MatchString(search) {
 		attrs += ` data-search-mode="` + search + `"`
+	}
+	if o.Version != "" {
+		attrs += ` data-version="` + html.EscapeString(o.Version) + `" data-version-text="` + html.EscapeString(o.VersionText) + `"`
 	}
 	page = bytes.Replace(page, []byte("<html>"), []byte("<html"+attrs+">"), 1)
 	files := http.StripPrefix(AssetsPrefix, http.FileServerFS(sub))

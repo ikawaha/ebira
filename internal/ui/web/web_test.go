@@ -116,3 +116,18 @@ func TestMessages(t *testing.T) {
 		}
 	}
 }
+
+func TestHandlerVersion(t *testing.T) {
+	srv := httptest.NewServer(Handler(Options{Version: `v0.1.0"<x>`, VersionText: "version:   v0.1.0\ngo:        go1.26.0\n"}))
+	defer srv.Close()
+	res, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	want := `<html data-version="v0.1.0&#34;&lt;x&gt;" data-version-text="version:   v0.1.0` + "\n" + `go:        go1.26.0` + "\n" + `">`
+	if !strings.Contains(string(body), want) {
+		t.Errorf("no %q in the page", want)
+	}
+}
