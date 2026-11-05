@@ -209,6 +209,21 @@ func SetPreviewStyleNotesPath() string {
 	return "/preview-style"
 }
 
+// SettingsFileNotesPath returns the URL path to the notes service settings_file HTTP endpoint.
+func SettingsFileNotesPath() string {
+	return "/settings-file"
+}
+
+// SaveSettingsFileNotesPath returns the URL path to the notes service save_settings_file HTTP endpoint.
+func SaveSettingsFileNotesPath() string {
+	return "/settings-file"
+}
+
+// RestartServerNotesPath returns the URL path to the notes service restart_server HTTP endpoint.
+func RestartServerNotesPath() string {
+	return "/server/restart"
+}
+
 // SyncNotesPath returns the URL path to the notes service sync HTTP endpoint.
 func SyncNotesPath() string {
 	return "/sync"

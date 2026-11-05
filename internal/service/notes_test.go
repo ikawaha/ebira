@@ -1024,6 +1024,17 @@ func TestPeopleOnly(t *testing.T) {
 			_, err := svc.AddGuide(ctx, &gennotes.AddGuidePayload{})
 			return err
 		},
+		"settings_file": func(ctx context.Context) error {
+			_, err := svc.SettingsFile(ctx, &gennotes.SettingsFilePayload{})
+			return err
+		},
+		"save_settings_file": func(ctx context.Context) error {
+			_, err := svc.SaveSettingsFile(ctx, &gennotes.SaveSettingsFilePayload{Content: "auth: none\n"})
+			return err
+		},
+		"restart_server": func(ctx context.Context) error {
+			return svc.RestartServer(ctx, &gennotes.RestartServerPayload{})
+		},
 	}
 	for name, call := range calls {
 		if err := call(ai); errorName(err) != "unauthorized" {

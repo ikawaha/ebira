@@ -258,6 +258,20 @@ type Service interface {
 	// default. A file that is not a built-in style as it is, changed or of the
 	// user's own, is copied to preview.css.bak first. For people only.
 	SetPreviewStyle(context.Context, *SetPreviewStylePayload) (res *PreviewStyle, err error)
+	// Read the settings file of the server's machine and user, which the server
+	// reads when it starts. For people only.
+	SettingsFile(context.Context, *SettingsFilePayload) (res *SettingsFile, err error)
+	// Write the settings file, which takes effect when the server starts again
+	// (restart_server). The content is checked as the commands read it first, and
+	// the file is left as it is when it is invalid. For people only; while
+	// passkeys are required, the session must have signed in with a passkey
+	// recently, as the file decides how the server authenticates people.
+	SaveSettingsFile(context.Context, *SaveSettingsFilePayload) (res *SettingsFile, err error)
+	// Stop the server and start it again in the background with the same flags, so
+	// that it reads the settings file again. It answers before it stops; the
+	// server answers on GET /health with another pid once it runs again. For
+	// people only.
+	RestartServer(context.Context, *RestartServerPayload) (err error)
 	// Scan the notes directory and bring the SQLite index in line with the YAML
 	// files. Not needed while the server watches files.
 	Sync(context.Context, *SyncPayload) (res *SyncResult, err error)
@@ -283,7 +297,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [53]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "sync"}
+var MethodNames = [56]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings_file", "save_settings_file", "restart_server", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -1048,6 +1062,13 @@ type PreviewStylePayload struct {
 	Session *string
 }
 
+// RestartServerPayload is the payload type of the notes service restart_server
+// method.
+type RestartServerPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
 // RestoreNotebookPayload is the payload type of the notes service
 // restore_notebook method.
 type RestoreNotebookPayload struct {
@@ -1105,6 +1126,17 @@ type SaveNotebookPayload struct {
 	// created and updated are newest first, and title is by code point, ignoring
 	// case and width
 	Sort *string
+}
+
+// SaveSettingsFilePayload is the payload type of the notes service
+// save_settings_file method.
+type SaveSettingsFilePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Content of the file in YAML
+	Content string
+	// Version of the content the change was made on, as settings_file returned it
+	Version string
 }
 
 // SearchPayload is the payload type of the notes service search method.
@@ -1177,6 +1209,30 @@ type SetPreviewStylePayload struct {
 	Session *string
 	// Built-in style to use, or default for none
 	Style string
+}
+
+// SettingsFile is the result type of the notes service settings_file method.
+type SettingsFile struct {
+	// Path of the settings file of the server's machine and user
+	Path string
+	// Content of the file; empty when it does not exist
+	Content string
+	// Whether the file exists
+	Exists bool
+	// Version of the content, to pass to save_settings_file
+	Version string
+	// Keys of the file whose values the server does not take, and a restart would
+	// not either: those of the flags it was started with, which a restart keeps,
+	// and notes_dir and addr, as a restart keeps the notes directory and the
+	// address
+	Overridden []string
+}
+
+// SettingsFilePayload is the payload type of the notes service settings_file
+// method.
+type SettingsFilePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 }
 
 // SyncPayload is the payload type of the notes service sync method.
@@ -1391,6 +1447,11 @@ func MakeForbidden(err error) *goa.ServiceError {
 // MakeTooLarge builds a goa.ServiceError from an error.
 func MakeTooLarge(err error) *goa.ServiceError {
 	return goa.NewServiceError(err, "too_large", false, false, false)
+}
+
+// MakeUnavailable builds a goa.ServiceError from an error.
+func MakeUnavailable(err error) *goa.ServiceError {
+	return goa.NewServiceError(err, "unavailable", false, false, false)
 }
 
 // fileCheckInt64Transport stores JSON fields until they have been validated.
@@ -2405,6 +2466,46 @@ func validatejsonSeparatorTransport(value *jsonSeparatorTransport) (err error) {
 	return err
 }
 
+// jsonSettingsFileTransport stores JSON fields until they have been validated.
+type jsonSettingsFileTransport struct {
+	// Path of the settings file of the server's machine and user
+	Path *string `json:"path"`
+	// Content of the file; empty when it does not exist
+	Content *string `json:"content"`
+	// Whether the file exists
+	Exists *bool `json:"exists"`
+	// Version of the content, to pass to save_settings_file
+	Version *string `json:"version"`
+	// Keys of the file whose values the server does not take, and a restart would
+	// not either: those of the flags it was started with, which a restart keeps,
+	// and notes_dir and addr, as a restart keeps the notes directory and the
+	// address
+	Overridden []string `json:"overridden"`
+}
+
+// validatejsonSettingsFileTransport checks decoded JSON before it becomes a service value.
+func validatejsonSettingsFileTransport(value *jsonSettingsFileTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if value.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if value.Exists == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("exists", "body"))
+	}
+	if value.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if value.Overridden == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("overridden", "body"))
+	}
+	return err
+}
+
 // jsonSyncResultTransport stores JSON fields until they have been validated.
 type jsonSyncResultTransport struct {
 	// Number of notes added to the index
@@ -3006,6 +3107,14 @@ func validateSearchResultOriginal(value *SearchResult) (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return err
+}
+
+// validateSettingsFileOriginal checks the original typed value before JSON conversion.
+func validateSettingsFileOriginal(value *SettingsFile) (err error) {
+	if value.Overridden == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("overridden", "value"))
 	}
 	return err
 }
@@ -4562,6 +4671,76 @@ func DecodeSeparator(data []byte) (out *Separator, err error) {
 			Date:     body.Date,
 			Color:    body.Color,
 			Before:   body.Before,
+		}
+	}
+	return out, nil
+}
+
+// EncodeSettingsFile turns a service value into JSON using the field names in the Goa design.
+func EncodeSettingsFile(in *SettingsFile) ([]byte, error) {
+	if err := checkSettingsFileValue(in); err != nil {
+		return nil, fmt.Errorf("encode SettingsFile JSON: %w", err)
+	}
+	if err := validateSettingsFileOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate SettingsFile value: %w", err)
+	}
+	var body *jsonSettingsFileTransport
+	{
+		body = &jsonSettingsFileTransport{
+			Path:    &in.Path,
+			Content: &in.Content,
+			Exists:  &in.Exists,
+			Version: &in.Version,
+		}
+		body.Overridden = make([]string, len(in.Overridden))
+		for i, val := range in.Overridden {
+			body.Overridden[i] = val
+		}
+	}
+	if err := validatejsonSettingsFileTransport(body); err != nil {
+		return nil, fmt.Errorf("validate SettingsFile JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode SettingsFile JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeSettingsFile checks JSON field names from the Goa design and returns a service value.
+func DecodeSettingsFile(data []byte) (out *SettingsFile, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode SettingsFile JSON: %w", err)
+	}
+	if err := validateSettingsFileJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode SettingsFile JSON: %w", err)
+	}
+	var body *jsonSettingsFileTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode SettingsFile JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode SettingsFile JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode SettingsFile JSON after first value: %w", err)
+	}
+	if err := validatejsonSettingsFileTransport(body); err != nil {
+		return out, fmt.Errorf("validate SettingsFile JSON: %w", err)
+	}
+	{
+		out = &SettingsFile{
+			Path:    *body.Path,
+			Content: *body.Content,
+			Exists:  *body.Exists,
+			Version: *body.Version,
+		}
+		out.Overridden = make([]string, len(body.Overridden))
+		for i, val := range body.Overridden {
+			out.Overridden[i] = val
 		}
 	}
 	return out, nil
@@ -7183,6 +7362,98 @@ func validateSearchResultJSONValue2(path string, value any, description string) 
 	return nil
 }
 
+// validateSettingsFileJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSettingsFileJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "content":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Content of the file; empty when it does not exist",
+			); err != nil {
+				return err
+			}
+		case "exists":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the file exists",
+			); err != nil {
+				return err
+			}
+		case "overridden":
+			if err := validateSettingsFileJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Keys of the file whose values the server does not take, and a restart would not either: those of the flags it was started with, which a restart keeps, and notes_dir and addr, as a restart keeps the notes directory and the address",
+			); err != nil {
+				return err
+			}
+		case "path":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Path of the settings file of the server's machine and user",
+			); err != nil {
+				return err
+			}
+		case "version":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Version of the content, to pass to save_settings_file",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"content",
+				"exists",
+				"overridden",
+				"path",
+				"version",
+			})
+		}
+	}
+	return nil
+}
+
+// validateSettingsFileJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSettingsFileJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateAIImportFileJSONValue3(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // validateSyncResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateSyncResultJSONValue(path string, value any, description string) error {
 	field := path
@@ -8504,6 +8775,49 @@ func checkSeparatorValue(in *Separator) error {
 	active := make(map[any]bool)
 	if err := checkNoteListSeparatorValue(in, "$", active); err != nil {
 		return err
+	}
+	return nil
+}
+
+// checkSettingsFileValue checks text and cycles before conversion.
+func checkSettingsFileValue(in *SettingsFile) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkSettingsFileSettingsFileValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkSettingsFileSettingsFileValue checks one generated value on the active path.
+func checkSettingsFileSettingsFileValue(in *SettingsFile, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Path)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "path", false))
+		}
+		if !utf8.ValidString(string(in.Content)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "content", false))
+		}
+		if !utf8.ValidString(string(in.Version)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "version", false))
+		}
+		for index1, item1 := range in.Overridden {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "overridden", false), strconv.Itoa(index1), true))
+			}
+		}
 	}
 	return nil
 }

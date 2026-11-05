@@ -2467,6 +2467,106 @@ function openMarkNames() {
   rows[0]?.querySelector("input").focus();
 }
 
+// The settings file of the server's machine and user, edited as it is, with
+// its comments. The server checks it before it writes it, and reads it when
+// it starts, so the dialog offers to restart the server.
+async function openSettingsFile() {
+  const d = $("settings-file");
+  let file;
+  try {
+    file = await api("/settings-file");
+  } catch (e) {
+    alert(t("settingsFileFailed", { error: e.message }));
+    return;
+  }
+  const area = el("textarea");
+  area.value = file.content;
+  area.spellcheck = false;
+  area.setAttribute("aria-label", file.path);
+  const msg = el("p", "error");
+  msg.hidden = true;
+  const fail = (text) => {
+    msg.textContent = text;
+    msg.hidden = false;
+  };
+  const dirty = () => area.value !== file.content;
+  const close = () => {
+    if (dirty() && !confirm(t("settingsFileDiscard"))) return;
+    d.close();
+  };
+  // save writes the file when it changed, and tells whether it is saved.
+  const save = async () => {
+    msg.hidden = true;
+    if (!dirty() && file.exists) return true;
+    try {
+      file = await api("/settings-file", { method: "PUT", body: { content: area.value, version: file.version } });
+    } catch (e) {
+      fail(e.name === "precondition_failed" ? t("settingsFileChanged") : t("settingsFileInvalid", { error: e.message }));
+      return false;
+    }
+    return true;
+  };
+  const saveButton = button(t("save"), async () => {
+    if (await save()) {
+      d.close();
+      showToast(t("settingsFileSaved"));
+    }
+  });
+  const restartButton = button(t("settingsFileSaveRestart"), async () => {
+    if (!(await save())) return;
+    for (const b of d.querySelectorAll("button")) b.disabled = true;
+    area.readOnly = true;
+    try {
+      await restartServer();
+    } catch (e) {
+      for (const b of d.querySelectorAll("button")) b.disabled = false;
+      area.readOnly = false;
+      fail(t("settingsFileRestartFailed", { error: e.message }));
+    }
+  }, { cls: "primary" });
+  area.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      e.preventDefault();
+      saveButton.click();
+    }
+  });
+  const hints = [el("p", "hint", t("settingsFileHint", { path: file.path }))];
+  const flags = file.overridden.filter((k) => k !== "notes_dir" && k !== "addr");
+  if (flags.length) hints.push(el("p", "hint", t("settingsFileOverridden", { keys: flags.join(", ") })));
+  d.replaceChildren(
+    el("div", "files-head", el("h2", "", t("settingsFile")), button("×", close, { title: t("closeTitle") })),
+    ...hints,
+    area,
+    msg,
+    el("div", "files-actions", button(t("cancel"), close), saveButton, restartButton));
+  d.oncancel = (e) => { // Esc
+    e.preventDefault();
+    close();
+  };
+  d.showModal();
+  area.focus();
+}
+
+// restartServer asks the server to start again, waits until another one
+// answers, and reloads the page, which the new server serves.
+async function restartServer() {
+  const before = await (await fetch("/health")).json();
+  await api("/server/restart", { method: "POST" });
+  showToast(t("serverRestarting"));
+  const deadline = Date.now() + 5 * 60 * 1000; // as ebira server start waits
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 500));
+    try {
+      const res = await fetch("/health");
+      if (res.ok && (await res.json()).pid !== before.pid) {
+        location.reload();
+        return;
+      }
+    } catch (_) { /* stopped meanwhile */ }
+  }
+  throw new Error(t("serverRestartTimeout"));
+}
+
 // Find in the note: a bar in the head of the preview, opened with f or its
 // button (pressed again, it closes the bar), marks the text of the note that matches what is typed, without
 // asking the server or changing the list, as the search box does. Enter and
@@ -4167,6 +4267,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
 $("files-check-open").addEventListener("click", () => openFilesCheck());
 $("server-stats-open").addEventListener("click", () => openServerStats());
 $("mark-names-open").addEventListener("click", () => openMarkNames());
+$("settings-file-open").addEventListener("click", () => openSettingsFile());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
 $("guide-add").addEventListener("click", () => addGuide());
@@ -4530,7 +4631,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open) return;
+  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("settings-file").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

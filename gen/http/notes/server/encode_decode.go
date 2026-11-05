@@ -4509,6 +4509,293 @@ func EncodeSetPreviewStyleError(encoder func(context.Context, http.ResponseWrite
 	}
 }
 
+// EncodeSettingsFileResponse returns an encoder for responses returned by the
+// notes settings_file endpoint.
+func EncodeSettingsFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.SettingsFile)
+		enc := encoder(ctx, w)
+		body := NewSettingsFileResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeSettingsFileRequest returns a decoder for requests sent to the notes
+// settings_file endpoint.
+func DecodeSettingsFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SettingsFilePayload, error) {
+	return func(r *http.Request) (*notes.SettingsFilePayload, error) {
+		var payload *notes.SettingsFilePayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewSettingsFilePayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSettingsFileError returns an encoder for errors returned by the
+// settings_file notes endpoint.
+func EncodeSettingsFileError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSettingsFileUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSettingsFileVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeSaveSettingsFileResponse returns an encoder for responses returned by
+// the notes save_settings_file endpoint.
+func EncodeSaveSettingsFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.SettingsFile)
+		enc := encoder(ctx, w)
+		body := NewSaveSettingsFileResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeSaveSettingsFileRequest returns a decoder for requests sent to the
+// notes save_settings_file endpoint.
+func DecodeSaveSettingsFileRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SaveSettingsFilePayload, error) {
+	return func(r *http.Request) (*notes.SaveSettingsFilePayload, error) {
+		var payload *notes.SaveSettingsFilePayload
+		var (
+			body SaveSettingsFileRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateSaveSettingsFileRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewSaveSettingsFilePayload(&body, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSaveSettingsFileError returns an encoder for errors returned by the
+// save_settings_file notes endpoint.
+func EncodeSaveSettingsFileError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsFileBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "precondition_failed":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsFilePreconditionFailedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusPreconditionFailed)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsFileUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsFileVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeRestartServerResponse returns an encoder for responses returned by the
+// notes restart_server endpoint.
+func EncodeRestartServerResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusAccepted)
+		return nil
+	}
+}
+
+// DecodeRestartServerRequest returns a decoder for requests sent to the notes
+// restart_server endpoint.
+func DecodeRestartServerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.RestartServerPayload, error) {
+	return func(r *http.Request) (*notes.RestartServerPayload, error) {
+		var payload *notes.RestartServerPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewRestartServerPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeRestartServerError returns an encoder for errors returned by the
+// restart_server notes endpoint.
+func EncodeRestartServerError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unavailable":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestartServerUnavailableResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestartServerUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestartServerVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeSyncResponse returns an encoder for responses returned by the notes
 // sync endpoint.
 func EncodeSyncResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {

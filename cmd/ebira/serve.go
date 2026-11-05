@@ -318,6 +318,7 @@ func runServe(args []string) error {
 		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)
 	}
 	svc.SetPreviewCSS(previewCSS)
+	svc.SetSettingsFile(settingsFile(fs, *notesDir, stateDir))
 	bi, _ := debug.ReadBuildInfo()
 	ui := web.Handler(web.Options{
 		Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS,

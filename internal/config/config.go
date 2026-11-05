@@ -107,6 +107,12 @@ func Load() (Config, error) {
 	if err != nil {
 		return c, err
 	}
+	return Parse(b, p)
+}
+
+// Parse reads b as the settings file at path p, as Load does.
+func Parse(b []byte, p string) (Config, error) {
+	var c Config
 	dec := yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(true)
 	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) { // io.EOF: an empty file
@@ -116,6 +122,7 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("%s: data_dir is replaced by notes_dir, the notes directory itself: write notes_dir: %s", p, filepath.Join(c.LegacyDataDir, "notes"))
 	}
 	if c.NotesDir != "" {
+		var err error
 		if c.NotesDir, err = resolve(c.NotesDir, filepath.Dir(p)); err != nil {
 			return c, fmt.Errorf("%s: notes_dir: %w", p, err)
 		}
@@ -236,6 +243,46 @@ func Save(c Config) (string, error) {
 		return "", err
 	}
 	return p, os.WriteFile(p, append(b, add...), 0o644)
+}
+
+// Write replaces the settings file with b, creating the file when it does
+// not exist. The file is replaced at once, so that a command reading it
+// meanwhile reads the old or the new content.
+func Write(b []byte) (string, error) {
+	p, err := Path()
+	if err != nil {
+		return "", err
+	}
+	// A link, such as to a repository of dotfiles, stays a link.
+	target := p
+	if t, err := filepath.EvalSymlinks(p); err == nil {
+		target = t
+	}
+	dir := filepath.Dir(target)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	mode := fs.FileMode(0o644)
+	if fi, err := os.Stat(target); err == nil {
+		mode = fi.Mode().Perm()
+	}
+	f, err := os.CreateTemp(dir, ".config-*.yaml")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(f.Name()) // after a failure; renamed otherwise
+	if _, err := f.Write(b); err != nil {
+		f.Close()
+		return "", err
+	}
+	if err := f.Chmod(mode); err != nil {
+		f.Close()
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	return p, os.Rename(f.Name(), target)
 }
 
 // homeRel returns path with the home directory written as ~.

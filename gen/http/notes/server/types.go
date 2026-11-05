@@ -218,6 +218,15 @@ type SetPreviewStyleRequestBody struct {
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 }
 
+// SaveSettingsFileRequestBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP request body.
+type SaveSettingsFileRequestBody struct {
+	// Content of the file in YAML
+	Content *string `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
+	// Version of the content the change was made on, as settings_file returned it
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -850,6 +859,42 @@ type SetPreviewStyleResponseBody struct {
 	// was not a built-in style as it is; only in the result of set_preview_style,
 	// when one was made
 	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
+}
+
+// SettingsFileResponseBody is the type of the "notes" service "settings_file"
+// endpoint HTTP response body.
+type SettingsFileResponseBody struct {
+	// Path of the settings file of the server's machine and user
+	Path string `form:"path" json:"path" xml:"path"`
+	// Content of the file; empty when it does not exist
+	Content string `form:"content" json:"content" xml:"content"`
+	// Whether the file exists
+	Exists bool `form:"exists" json:"exists" xml:"exists"`
+	// Version of the content, to pass to save_settings_file
+	Version string `form:"version" json:"version" xml:"version"`
+	// Keys of the file whose values the server does not take, and a restart would
+	// not either: those of the flags it was started with, which a restart keeps,
+	// and notes_dir and addr, as a restart keeps the notes directory and the
+	// address
+	Overridden []string `form:"overridden" json:"overridden" xml:"overridden"`
+}
+
+// SaveSettingsFileResponseBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP response body.
+type SaveSettingsFileResponseBody struct {
+	// Path of the settings file of the server's machine and user
+	Path string `form:"path" json:"path" xml:"path"`
+	// Content of the file; empty when it does not exist
+	Content string `form:"content" json:"content" xml:"content"`
+	// Whether the file exists
+	Exists bool `form:"exists" json:"exists" xml:"exists"`
+	// Version of the content, to pass to save_settings_file
+	Version string `form:"version" json:"version" xml:"version"`
+	// Keys of the file whose values the server does not take, and a restart would
+	// not either: those of the flags it was started with, which a restart keeps,
+	// and notes_dir and addr, as a restart keeps the notes directory and the
+	// address
+	Overridden []string `form:"overridden" json:"overridden" xml:"overridden"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -3377,6 +3422,173 @@ type SetPreviewStyleVerificationRequiredResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// SettingsFileUnauthorizedResponseBody is the type of the "notes" service
+// "settings_file" endpoint HTTP response body for the "unauthorized" error.
+type SettingsFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SettingsFileVerificationRequiredResponseBody is the type of the "notes"
+// service "settings_file" endpoint HTTP response body for the
+// "verification_required" error.
+type SettingsFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveSettingsFileBadRequestResponseBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP response body for the "bad_request" error.
+type SaveSettingsFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveSettingsFilePreconditionFailedResponseBody is the type of the "notes"
+// service "save_settings_file" endpoint HTTP response body for the
+// "precondition_failed" error.
+type SaveSettingsFilePreconditionFailedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveSettingsFileUnauthorizedResponseBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP response body for the "unauthorized"
+// error.
+type SaveSettingsFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveSettingsFileVerificationRequiredResponseBody is the type of the "notes"
+// service "save_settings_file" endpoint HTTP response body for the
+// "verification_required" error.
+type SaveSettingsFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestartServerUnavailableResponseBody is the type of the "notes" service
+// "restart_server" endpoint HTTP response body for the "unavailable" error.
+type RestartServerUnavailableResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestartServerUnauthorizedResponseBody is the type of the "notes" service
+// "restart_server" endpoint HTTP response body for the "unauthorized" error.
+type RestartServerUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestartServerVerificationRequiredResponseBody is the type of the "notes"
+// service "restart_server" endpoint HTTP response body for the
+// "verification_required" error.
+type RestartServerVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // SyncUnauthorizedResponseBody is the type of the "notes" service "sync"
 // endpoint HTTP response body for the "unauthorized" error.
 type SyncUnauthorizedResponseBody struct {
@@ -4372,6 +4584,46 @@ func NewSetPreviewStyleResponseBody(res *notes.PreviewStyle) *SetPreviewStyleRes
 		Modified: res.Modified,
 		Path:     res.Path,
 		Backup:   res.Backup,
+	}
+	return body
+}
+
+// NewSettingsFileResponseBody builds the HTTP response body from the result of
+// the "settings_file" endpoint of the "notes" service.
+func NewSettingsFileResponseBody(res *notes.SettingsFile) *SettingsFileResponseBody {
+	body := &SettingsFileResponseBody{
+		Path:    res.Path,
+		Content: res.Content,
+		Exists:  res.Exists,
+		Version: res.Version,
+	}
+	if res.Overridden != nil {
+		body.Overridden = make([]string, len(res.Overridden))
+		for i, val := range res.Overridden {
+			body.Overridden[i] = val
+		}
+	} else {
+		body.Overridden = []string{}
+	}
+	return body
+}
+
+// NewSaveSettingsFileResponseBody builds the HTTP response body from the
+// result of the "save_settings_file" endpoint of the "notes" service.
+func NewSaveSettingsFileResponseBody(res *notes.SettingsFile) *SaveSettingsFileResponseBody {
+	body := &SaveSettingsFileResponseBody{
+		Path:    res.Path,
+		Content: res.Content,
+		Exists:  res.Exists,
+		Version: res.Version,
+	}
+	if res.Overridden != nil {
+		body.Overridden = make([]string, len(res.Overridden))
+		for i, val := range res.Overridden {
+			body.Overridden[i] = val
+		}
+	} else {
+		body.Overridden = []string{}
 	}
 	return body
 }
@@ -6341,6 +6593,134 @@ func NewSetPreviewStyleVerificationRequiredResponseBody(res *goa.ServiceError) *
 	return body
 }
 
+// NewSettingsFileUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "settings_file" endpoint of the "notes" service.
+func NewSettingsFileUnauthorizedResponseBody(res *goa.ServiceError) *SettingsFileUnauthorizedResponseBody {
+	body := &SettingsFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSettingsFileVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "settings_file" endpoint of the "notes" service.
+func NewSettingsFileVerificationRequiredResponseBody(res *goa.ServiceError) *SettingsFileVerificationRequiredResponseBody {
+	body := &SettingsFileVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveSettingsFileBadRequestResponseBody builds the HTTP response body from
+// the result of the "save_settings_file" endpoint of the "notes" service.
+func NewSaveSettingsFileBadRequestResponseBody(res *goa.ServiceError) *SaveSettingsFileBadRequestResponseBody {
+	body := &SaveSettingsFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveSettingsFilePreconditionFailedResponseBody builds the HTTP response
+// body from the result of the "save_settings_file" endpoint of the "notes"
+// service.
+func NewSaveSettingsFilePreconditionFailedResponseBody(res *goa.ServiceError) *SaveSettingsFilePreconditionFailedResponseBody {
+	body := &SaveSettingsFilePreconditionFailedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveSettingsFileUnauthorizedResponseBody builds the HTTP response body
+// from the result of the "save_settings_file" endpoint of the "notes" service.
+func NewSaveSettingsFileUnauthorizedResponseBody(res *goa.ServiceError) *SaveSettingsFileUnauthorizedResponseBody {
+	body := &SaveSettingsFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveSettingsFileVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "save_settings_file" endpoint of the "notes"
+// service.
+func NewSaveSettingsFileVerificationRequiredResponseBody(res *goa.ServiceError) *SaveSettingsFileVerificationRequiredResponseBody {
+	body := &SaveSettingsFileVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestartServerUnavailableResponseBody builds the HTTP response body from
+// the result of the "restart_server" endpoint of the "notes" service.
+func NewRestartServerUnavailableResponseBody(res *goa.ServiceError) *RestartServerUnavailableResponseBody {
+	body := &RestartServerUnavailableResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestartServerUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "restart_server" endpoint of the "notes" service.
+func NewRestartServerUnauthorizedResponseBody(res *goa.ServiceError) *RestartServerUnauthorizedResponseBody {
+	body := &RestartServerUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestartServerVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "restart_server" endpoint of the "notes" service.
+func NewRestartServerVerificationRequiredResponseBody(res *goa.ServiceError) *RestartServerVerificationRequiredResponseBody {
+	body := &RestartServerVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewSyncUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "sync" endpoint of the "notes" service.
 func NewSyncUnauthorizedResponseBody(res *goa.ServiceError) *SyncUnauthorizedResponseBody {
@@ -6839,6 +7219,38 @@ func NewSetPreviewStylePayload(body *SetPreviewStyleRequestBody, session *string
 	return v
 }
 
+// NewSettingsFilePayload builds a notes service settings_file endpoint payload.
+func NewSettingsFilePayload(session *string) *notes.SettingsFilePayload {
+	v := &notes.SettingsFilePayload{}
+	v.Session = session
+
+	return v
+}
+
+// NewSaveSettingsFilePayload builds a notes service save_settings_file
+// endpoint payload.
+func NewSaveSettingsFilePayload(body *SaveSettingsFileRequestBody, session *string) *notes.SaveSettingsFilePayload {
+	v := &notes.SaveSettingsFilePayload{}
+	if body.Content != nil {
+		v.Content = *body.Content
+	}
+	if body.Version != nil {
+		v.Version = *body.Version
+	}
+	v.Session = session
+
+	return v
+}
+
+// NewRestartServerPayload builds a notes service restart_server endpoint
+// payload.
+func NewRestartServerPayload(session *string) *notes.RestartServerPayload {
+	v := &notes.RestartServerPayload{}
+	v.Session = session
+
+	return v
+}
+
 // NewSyncPayload builds a notes service sync endpoint payload.
 func NewSyncPayload(session *string) *notes.SyncPayload {
 	v := &notes.SyncPayload{}
@@ -7132,6 +7544,17 @@ func ValidateSetPreviewStyleRequestBody(body *SetPreviewStyleRequestBody) (err e
 	if body.Style != nil {
 		if !(*body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"default", "band", "document", "compact", "lined"}))
+		}
+	}
+	return
+}
+
+// ValidateSaveSettingsFileRequestBody runs the validations defined on
+// SaveSettingsFileRequestBody
+func ValidateSaveSettingsFileRequestBody(body *SaveSettingsFileRequestBody) (err error) {
+	if body.Content != nil {
+		if utf8.RuneCountInString(*body.Content) > 65536 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *body.Content, utf8.RuneCountInString(*body.Content), 65536, false))
 		}
 	}
 	return

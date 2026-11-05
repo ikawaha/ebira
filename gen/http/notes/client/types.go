@@ -218,6 +218,15 @@ type SetPreviewStyleRequestBody struct {
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 }
 
+// SaveSettingsFileRequestBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP request body.
+type SaveSettingsFileRequestBody struct {
+	// Content of the file in YAML
+	Content *string `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
+	// Version of the content the change was made on, as settings_file returned it
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -826,6 +835,42 @@ type SetPreviewStyleResponseBody struct {
 	// was not a built-in style as it is; only in the result of set_preview_style,
 	// when one was made
 	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
+}
+
+// SettingsFileResponseBody is the type of the "notes" service "settings_file"
+// endpoint HTTP response body.
+type SettingsFileResponseBody struct {
+	// Path of the settings file of the server's machine and user
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// Content of the file; empty when it does not exist
+	Content *string `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
+	// Whether the file exists
+	Exists *bool `form:"exists,omitempty" json:"exists,omitempty" xml:"exists,omitempty"`
+	// Version of the content, to pass to save_settings_file
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+	// Keys of the file whose values the server does not take, and a restart would
+	// not either: those of the flags it was started with, which a restart keeps,
+	// and notes_dir and addr, as a restart keeps the notes directory and the
+	// address
+	Overridden []string `form:"overridden,omitempty" json:"overridden,omitempty" xml:"overridden,omitempty"`
+}
+
+// SaveSettingsFileResponseBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP response body.
+type SaveSettingsFileResponseBody struct {
+	// Path of the settings file of the server's machine and user
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// Content of the file; empty when it does not exist
+	Content *string `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
+	// Whether the file exists
+	Exists *bool `form:"exists,omitempty" json:"exists,omitempty" xml:"exists,omitempty"`
+	// Version of the content, to pass to save_settings_file
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+	// Keys of the file whose values the server does not take, and a restart would
+	// not either: those of the flags it was started with, which a restart keeps,
+	// and notes_dir and addr, as a restart keeps the notes directory and the
+	// address
+	Overridden []string `form:"overridden,omitempty" json:"overridden,omitempty" xml:"overridden,omitempty"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -3353,6 +3398,173 @@ type SetPreviewStyleVerificationRequiredResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// SettingsFileUnauthorizedResponseBody is the type of the "notes" service
+// "settings_file" endpoint HTTP response body for the "unauthorized" error.
+type SettingsFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SettingsFileVerificationRequiredResponseBody is the type of the "notes"
+// service "settings_file" endpoint HTTP response body for the
+// "verification_required" error.
+type SettingsFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsFileBadRequestResponseBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP response body for the "bad_request" error.
+type SaveSettingsFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsFilePreconditionFailedResponseBody is the type of the "notes"
+// service "save_settings_file" endpoint HTTP response body for the
+// "precondition_failed" error.
+type SaveSettingsFilePreconditionFailedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsFileUnauthorizedResponseBody is the type of the "notes" service
+// "save_settings_file" endpoint HTTP response body for the "unauthorized"
+// error.
+type SaveSettingsFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsFileVerificationRequiredResponseBody is the type of the "notes"
+// service "save_settings_file" endpoint HTTP response body for the
+// "verification_required" error.
+type SaveSettingsFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestartServerUnavailableResponseBody is the type of the "notes" service
+// "restart_server" endpoint HTTP response body for the "unavailable" error.
+type RestartServerUnavailableResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestartServerUnauthorizedResponseBody is the type of the "notes" service
+// "restart_server" endpoint HTTP response body for the "unauthorized" error.
+type RestartServerUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestartServerVerificationRequiredResponseBody is the type of the "notes"
+// service "restart_server" endpoint HTTP response body for the
+// "verification_required" error.
+type RestartServerVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // SyncUnauthorizedResponseBody is the type of the "notes" service "sync"
 // endpoint HTTP response body for the "unauthorized" error.
 type SyncUnauthorizedResponseBody struct {
@@ -3848,6 +4060,16 @@ func NewAddGuideRequestBody(p *notes.AddGuidePayload) *AddGuideRequestBody {
 func NewSetPreviewStyleRequestBody(p *notes.SetPreviewStylePayload) *SetPreviewStyleRequestBody {
 	body := &SetPreviewStyleRequestBody{
 		Style: &p.Style,
+	}
+	return body
+}
+
+// NewSaveSettingsFileRequestBody builds the HTTP request body from the payload
+// of the "save_settings_file" endpoint of the "notes" service.
+func NewSaveSettingsFileRequestBody(p *notes.SaveSettingsFilePayload) *SaveSettingsFileRequestBody {
+	body := &SaveSettingsFileRequestBody{
+		Content: &p.Content,
+		Version: &p.Version,
 	}
 	return body
 }
@@ -6621,6 +6843,175 @@ func NewSetPreviewStyleVerificationRequired(body *SetPreviewStyleVerificationReq
 	return v
 }
 
+// NewSettingsFileSettingsFileOK builds a "notes" service "settings_file"
+// endpoint result from a HTTP "OK" response.
+func NewSettingsFileSettingsFileOK(body *SettingsFileResponseBody) *notes.SettingsFile {
+	v := &notes.SettingsFile{
+		Path:    *body.Path,
+		Content: *body.Content,
+		Exists:  *body.Exists,
+		Version: *body.Version,
+	}
+	v.Overridden = make([]string, len(body.Overridden))
+	for i, val := range body.Overridden {
+		v.Overridden[i] = val
+	}
+
+	return v
+}
+
+// NewSettingsFileUnauthorized builds a notes service settings_file endpoint
+// unauthorized error.
+func NewSettingsFileUnauthorized(body *SettingsFileUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSettingsFileVerificationRequired builds a notes service settings_file
+// endpoint verification_required error.
+func NewSettingsFileVerificationRequired(body *SettingsFileVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsFileSettingsFileOK builds a "notes" service
+// "save_settings_file" endpoint result from a HTTP "OK" response.
+func NewSaveSettingsFileSettingsFileOK(body *SaveSettingsFileResponseBody) *notes.SettingsFile {
+	v := &notes.SettingsFile{
+		Path:    *body.Path,
+		Content: *body.Content,
+		Exists:  *body.Exists,
+		Version: *body.Version,
+	}
+	v.Overridden = make([]string, len(body.Overridden))
+	for i, val := range body.Overridden {
+		v.Overridden[i] = val
+	}
+
+	return v
+}
+
+// NewSaveSettingsFileBadRequest builds a notes service save_settings_file
+// endpoint bad_request error.
+func NewSaveSettingsFileBadRequest(body *SaveSettingsFileBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsFilePreconditionFailed builds a notes service
+// save_settings_file endpoint precondition_failed error.
+func NewSaveSettingsFilePreconditionFailed(body *SaveSettingsFilePreconditionFailedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsFileUnauthorized builds a notes service save_settings_file
+// endpoint unauthorized error.
+func NewSaveSettingsFileUnauthorized(body *SaveSettingsFileUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsFileVerificationRequired builds a notes service
+// save_settings_file endpoint verification_required error.
+func NewSaveSettingsFileVerificationRequired(body *SaveSettingsFileVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestartServerUnavailable builds a notes service restart_server endpoint
+// unavailable error.
+func NewRestartServerUnavailable(body *RestartServerUnavailableResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestartServerUnauthorized builds a notes service restart_server endpoint
+// unauthorized error.
+func NewRestartServerUnauthorized(body *RestartServerUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestartServerVerificationRequired builds a notes service restart_server
+// endpoint verification_required error.
+func NewRestartServerVerificationRequired(body *RestartServerVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewSyncResultOK builds a "notes" service "sync" endpoint result from a HTTP
 // "OK" response.
 func NewSyncResultOK(body *SyncResponseBody) *notes.SyncResult {
@@ -7659,6 +8050,48 @@ func ValidateSetPreviewStyleResponseBody(body *SetPreviewStyleResponseBody) (err
 		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined"}))
 		}
+	}
+	return
+}
+
+// ValidateSettingsFileResponseBody runs the validations defined on
+// SettingsFileResponseBody
+func ValidateSettingsFileResponseBody(body *SettingsFileResponseBody) (err error) {
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if body.Exists == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("exists", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.Overridden == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("overridden", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsFileResponseBody runs the validations defined on
+// SaveSettingsFileResponseBody
+func ValidateSaveSettingsFileResponseBody(body *SaveSettingsFileResponseBody) (err error) {
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
+	}
+	if body.Content == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
+	}
+	if body.Exists == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("exists", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.Overridden == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("overridden", "body"))
 	}
 	return
 }
@@ -10971,6 +11404,222 @@ func ValidateSetPreviewStyleUnauthorizedResponseBody(body *SetPreviewStyleUnauth
 // ValidateSetPreviewStyleVerificationRequiredResponseBody runs the validations
 // defined on SetPreviewStyleVerificationRequiredResponseBody
 func ValidateSetPreviewStyleVerificationRequiredResponseBody(body *SetPreviewStyleVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSettingsFileUnauthorizedResponseBody runs the validations defined on
+// SettingsFileUnauthorizedResponseBody
+func ValidateSettingsFileUnauthorizedResponseBody(body *SettingsFileUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSettingsFileVerificationRequiredResponseBody runs the validations
+// defined on SettingsFileVerificationRequiredResponseBody
+func ValidateSettingsFileVerificationRequiredResponseBody(body *SettingsFileVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsFileBadRequestResponseBody runs the validations defined
+// on SaveSettingsFileBadRequestResponseBody
+func ValidateSaveSettingsFileBadRequestResponseBody(body *SaveSettingsFileBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsFilePreconditionFailedResponseBody runs the validations
+// defined on SaveSettingsFilePreconditionFailedResponseBody
+func ValidateSaveSettingsFilePreconditionFailedResponseBody(body *SaveSettingsFilePreconditionFailedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsFileUnauthorizedResponseBody runs the validations
+// defined on SaveSettingsFileUnauthorizedResponseBody
+func ValidateSaveSettingsFileUnauthorizedResponseBody(body *SaveSettingsFileUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsFileVerificationRequiredResponseBody runs the
+// validations defined on SaveSettingsFileVerificationRequiredResponseBody
+func ValidateSaveSettingsFileVerificationRequiredResponseBody(body *SaveSettingsFileVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestartServerUnavailableResponseBody runs the validations defined on
+// RestartServerUnavailableResponseBody
+func ValidateRestartServerUnavailableResponseBody(body *RestartServerUnavailableResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestartServerUnauthorizedResponseBody runs the validations defined
+// on RestartServerUnauthorizedResponseBody
+func ValidateRestartServerUnauthorizedResponseBody(body *RestartServerUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestartServerVerificationRequiredResponseBody runs the validations
+// defined on RestartServerVerificationRequiredResponseBody
+func ValidateRestartServerVerificationRequiredResponseBody(body *RestartServerVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

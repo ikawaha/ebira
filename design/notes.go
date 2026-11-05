@@ -348,6 +348,18 @@ var PreviewStyle = Type("PreviewStyle", func() {
 	})
 })
 
+var SettingsFile = Type("SettingsFile", func() {
+	RequiredAttribute("path", String, "Path of the settings file of the server's machine and user", func() {
+		Example("/Users/you/.config/ebira/config.yaml")
+	})
+	RequiredAttribute("content", String, "Content of the file; empty when it does not exist")
+	RequiredAttribute("exists", Boolean, "Whether the file exists")
+	RequiredAttribute("version", String, "Version of the content, to pass to save_settings_file")
+	RequiredAttribute("overridden", ArrayOf(String), "Keys of the file whose values the server does not take, and a restart would not either: those of the flags it was started with, which a restart keeps, and notes_dir and addr, as a restart keeps the notes directory and the address", func() {
+		Example([]string{"lang"})
+	})
+})
+
 var GitConflict = Type("GitConflict", func() {
 	RequiredAttribute("path", String, "File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it", func() {
 		Example("inbox/3f9a1c0e7b2d4a.yaml")
@@ -1395,6 +1407,51 @@ var _ = Service("notes", func() {
 			Body(func() {
 				Attribute("style")
 			})
+		})
+	})
+
+	// The settings file of the server's machine and user. For people only,
+	// so not MCP tools: it decides how the server authenticates people.
+	Method("settings_file", func() {
+		Description("Read the settings file of the server's machine and user, which the server reads when it starts. For people only.")
+		Payload(sessionDSL)
+		Result(SettingsFile)
+		HTTP(func() {
+			GET("/settings-file")
+		})
+	})
+
+	Method("save_settings_file", func() {
+		Description("Write the settings file, which takes effect when the server starts again (restart_server). The content is checked as the commands read it first, and the file is left as it is when it is invalid. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the file decides how the server authenticates people.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("content", String, "Content of the file in YAML", func() {
+				MaxLength(65536)
+			})
+			RequiredAttribute("version", String, "Version of the content the change was made on, as settings_file returned it")
+		})
+		Result(SettingsFile)
+		Error("bad_request", ErrorResult, "The content is not valid settings, such as with an unknown key or value")
+		Error("precondition_failed", ErrorResult, "The file was changed since it was read")
+		HTTP(func() {
+			PUT("/settings-file")
+			Body(func() {
+				Attribute("content")
+				Attribute("version")
+			})
+			Response("bad_request", StatusBadRequest)
+			Response("precondition_failed", StatusPreconditionFailed)
+		})
+	})
+
+	Method("restart_server", func() {
+		Description("Stop the server and start it again in the background with the same flags, so that it reads the settings file again. It answers before it stops; the server answers on GET /health with another pid once it runs again. For people only.")
+		Payload(sessionDSL)
+		Error("unavailable", ErrorResult, "The server cannot start itself again")
+		HTTP(func() {
+			POST("/server/restart")
+			Response(StatusAccepted)
+			Response("unavailable", StatusServiceUnavailable)
 		})
 	})
 

@@ -1557,6 +1557,68 @@ func BuildSetPreviewStylePayload(notesSetPreviewStyleBody *string, notesSetPrevi
 	return v, nil
 }
 
+// BuildSettingsFilePayload builds the payload for the notes settings_file
+// endpoint from CLI flags.
+func BuildSettingsFilePayload(notesSettingsFileSession *string) (*notes.SettingsFilePayload, error) {
+	var session *string
+	{
+		if notesSettingsFileSession != nil {
+			session = notesSettingsFileSession
+		}
+	}
+	v := &notes.SettingsFilePayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildSaveSettingsFilePayload builds the payload for the notes
+// save_settings_file endpoint from CLI flags.
+func BuildSaveSettingsFilePayload(notesSaveSettingsFileBody *string, notesSaveSettingsFileSession *string) (*notes.SaveSettingsFilePayload, error) {
+	var err error
+	var body SaveSettingsFileRequestBody
+	{
+		if notesSaveSettingsFileBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesSaveSettingsFileBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"content\": \"i4w\",\n      \"version\": \"Minima asperiores deleniti.\"\n   }'")
+		}
+	}
+	var session *string
+	{
+		if notesSaveSettingsFileSession != nil {
+			session = notesSaveSettingsFileSession
+		}
+	}
+	v := &notes.SaveSettingsFilePayload{}
+	if body.Content != nil {
+		v.Content = *body.Content
+	}
+	if body.Version != nil {
+		v.Version = *body.Version
+	}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildRestartServerPayload builds the payload for the notes restart_server
+// endpoint from CLI flags.
+func BuildRestartServerPayload(notesRestartServerSession *string) (*notes.RestartServerPayload, error) {
+	var session *string
+	{
+		if notesRestartServerSession != nil {
+			session = notesRestartServerSession
+		}
+	}
+	v := &notes.RestartServerPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildSyncPayload builds the payload for the notes sync endpoint from CLI
 // flags.
 func BuildSyncPayload(notesSyncSession *string) (*notes.SyncPayload, error) {

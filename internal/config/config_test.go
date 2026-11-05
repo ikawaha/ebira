@@ -226,3 +226,53 @@ func TestSet(t *testing.T) {
 		t.Errorf("loaded: %+v, %v", c, err)
 	}
 }
+
+func TestWrite(t *testing.T) {
+	home := setHome(t)
+	p, err := Write([]byte("lang: ja\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); string(b) != "lang: ja\n" {
+		t.Errorf("new file: %q", b)
+	}
+
+	// The mode is kept.
+	if err := os.Chmod(p, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Write([]byte("lang: en\n")); err != nil {
+		t.Fatal(err)
+	}
+	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o600 {
+		t.Errorf("mode = %v, want 0600", fi.Mode().Perm())
+	}
+
+	// A link stays a link, and its target is written.
+	target := filepath.Join(home, "dotfiles", "config.yaml")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("lang: en\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Write([]byte("theme: dark\n")); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(p); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("the link was replaced: %v", err)
+	}
+	if b, _ := os.ReadFile(target); string(b) != "theme: dark\n" {
+		t.Errorf("target: %q", b)
+	}
+	// No temporary file is left.
+	if es, _ := os.ReadDir(filepath.Dir(p)); len(es) != 1 {
+		t.Errorf("files: %v", es)
+	}
+}
