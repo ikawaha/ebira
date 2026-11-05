@@ -1,13 +1,15 @@
-//go:build !unix
+//go:build !unix && !windows
 
 package daemon
 
 import (
+	"context"
 	"errors"
 	"os"
+	"os/signal"
 )
 
-var errUnsupported = errors.New("running the server in the background is supported on Unix only")
+var errUnsupported = errors.New("running the server in the background is supported on Unix and Windows only")
 
 // Lock is not supported on this system; it never fails, so that the server
 // runs without the single-server check.
@@ -26,3 +28,8 @@ func Alive(pid int) bool { return false }
 
 // Terminate is not supported on this system.
 func Terminate(pid int) error { return errUnsupported }
+
+// NotifyStop returns a context canceled by Ctrl+C.
+func NotifyStop(parent context.Context) (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(parent, os.Interrupt)
+}

@@ -10,10 +10,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	genassistant "github.com/ikawaha/ebira/gen/assistant"
@@ -200,7 +198,7 @@ func runServe(args []string) error {
 	if mode == index.ModeJa {
 		slog.Info("ja stop lists", "stop_words", stopListLog(cfg.StopWords), "stop_tags", stopListLog(cfg.StopTags))
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := daemon.NotifyStop(context.Background())
 	defer stop()
 
 	moved, err := st.MigrateFlat()

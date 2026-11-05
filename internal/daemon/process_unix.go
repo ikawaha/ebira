@@ -3,9 +3,11 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"syscall"
 )
@@ -80,4 +82,10 @@ func Alive(pid int) bool {
 // Terminate asks process pid to shut down (SIGTERM).
 func Terminate(pid int) error {
 	return syscall.Kill(pid, syscall.SIGTERM)
+}
+
+// NotifyStop returns a context canceled when the process is asked to shut
+// down: by Ctrl+C, or by Terminate (SIGTERM).
+func NotifyStop(parent context.Context) (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 }

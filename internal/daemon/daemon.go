@@ -4,7 +4,7 @@
 //
 // The files are in the state directory of the notes directory (see
 // config.StateDir):
-//   - server.lock: held with flock by the running server, so that a second
+//   - server.lock: held with flock (LockFileEx on Windows) by the running server, so that a second
 //     server for the same notes directory fails to start. The OS releases it
 //     when the process ends, so a stale file needs no cleaning.
 //   - server.json: the State of the running server, to find and stop it.
