@@ -38,6 +38,9 @@ type Notes struct {
 	// markNames are the names of the marks, by their IDs, from the settings
 	// of the notes (see SetMarkNames).
 	markNames map[string]string
+	// settings tells how to check the settings and restart the server (see
+	// SetSettings).
+	settings Settings
 }
 
 var _ gennotes.Service = (*Notes)(nil)

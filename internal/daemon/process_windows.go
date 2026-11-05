@@ -154,3 +154,11 @@ func NotifyStop(parent context.Context) (context.Context, context.CancelFunc) {
 	}()
 	return ctx, stop
 }
+
+// Reexec starts exe with args, the whole command line with its name, in the
+// background, as Windows cannot replace a process; the caller then exits. The
+// output goes to logPath.
+func Reexec(exe string, args []string, logPath string) error {
+	_, _, err := Spawn(exe, args[1:], logPath)
+	return err
+}

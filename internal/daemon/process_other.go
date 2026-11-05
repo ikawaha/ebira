@@ -33,3 +33,6 @@ func Terminate(pid int) error { return errUnsupported }
 func NotifyStop(parent context.Context) (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(parent, os.Interrupt)
 }
+
+// Reexec is not supported on this system.
+func Reexec(exe string, args []string, logPath string) error { return errUnsupported }

@@ -61,6 +61,9 @@ type Server struct {
 	AddGuide              http.Handler
 	PreviewStyle          http.Handler
 	SetPreviewStyle       http.Handler
+	Settings              http.Handler
+	SaveSettings          http.Handler
+	RestartServer         http.Handler
 	Sync                  http.Handler
 }
 
@@ -131,6 +134,9 @@ func New(
 			{"AddGuide", "POST", "/guide"},
 			{"PreviewStyle", "GET", "/preview-style"},
 			{"SetPreviewStyle", "PUT", "/preview-style"},
+			{"Settings", "GET", "/settings"},
+			{"SaveSettings", "PUT", "/settings"},
+			{"RestartServer", "POST", "/server/restart"},
 			{"Sync", "POST", "/sync"},
 		},
 		List:                  NewListHandler(e.List, mux, decoder, encoder, errhandler, formatter),
@@ -173,6 +179,9 @@ func New(
 		AddGuide:              NewAddGuideHandler(e.AddGuide, mux, decoder, encoder, errhandler, formatter),
 		PreviewStyle:          NewPreviewStyleHandler(e.PreviewStyle, mux, decoder, encoder, errhandler, formatter),
 		SetPreviewStyle:       NewSetPreviewStyleHandler(e.SetPreviewStyle, mux, decoder, encoder, errhandler, formatter),
+		Settings:              NewSettingsHandler(e.Settings, mux, decoder, encoder, errhandler, formatter),
+		SaveSettings:          NewSaveSettingsHandler(e.SaveSettings, mux, decoder, encoder, errhandler, formatter),
+		RestartServer:         NewRestartServerHandler(e.RestartServer, mux, decoder, encoder, errhandler, formatter),
 		Sync:                  NewSyncHandler(e.Sync, mux, decoder, encoder, errhandler, formatter),
 	}
 }
@@ -222,6 +231,9 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.AddGuide = m(s.AddGuide)
 	s.PreviewStyle = m(s.PreviewStyle)
 	s.SetPreviewStyle = m(s.SetPreviewStyle)
+	s.Settings = m(s.Settings)
+	s.SaveSettings = m(s.SaveSettings)
+	s.RestartServer = m(s.RestartServer)
 	s.Sync = m(s.Sync)
 }
 
@@ -270,6 +282,9 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountAddGuideHandler(mux, h.AddGuide)
 	MountPreviewStyleHandler(mux, h.PreviewStyle)
 	MountSetPreviewStyleHandler(mux, h.SetPreviewStyle)
+	MountSettingsHandler(mux, h.Settings)
+	MountSaveSettingsHandler(mux, h.SaveSettings)
+	MountRestartServerHandler(mux, h.RestartServer)
 	MountSyncHandler(mux, h.Sync)
 }
 
@@ -2423,6 +2438,165 @@ func NewSetPreviewStyleHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "set_preview_style")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountSettingsHandler configures the mux to serve the "notes" service
+// "settings" endpoint.
+func MountSettingsHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/settings", f)
+}
+
+// NewSettingsHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "settings" endpoint.
+func NewSettingsHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeSettingsRequest(mux, decoder)
+		encodeResponse = EncodeSettingsResponse(encoder)
+		encodeError    = EncodeSettingsError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "settings")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountSaveSettingsHandler configures the mux to serve the "notes" service
+// "save_settings" endpoint.
+func MountSaveSettingsHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/settings", f)
+}
+
+// NewSaveSettingsHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "save_settings" endpoint.
+func NewSaveSettingsHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeSaveSettingsRequest(mux, decoder)
+		encodeResponse = EncodeSaveSettingsResponse(encoder)
+		encodeError    = EncodeSaveSettingsError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "save_settings")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountRestartServerHandler configures the mux to serve the "notes" service
+// "restart_server" endpoint.
+func MountRestartServerHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/server/restart", f)
+}
+
+// NewRestartServerHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "restart_server" endpoint.
+func NewRestartServerHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeRestartServerRequest(mux, decoder)
+		encodeResponse = EncodeRestartServerResponse(encoder)
+		encodeError    = EncodeRestartServerError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "restart_server")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

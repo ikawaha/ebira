@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"context"
+	"crypto/rand"
 	"errors"
 	"flag"
 	"fmt"
@@ -309,7 +310,7 @@ func runServe(args []string) error {
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(gate), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
-	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
+	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Instance: rand.Text(), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
 	root.Handle("GET /debug/stats", statsHandler(ix, state.StartedAt, rest.Session))
@@ -318,6 +319,13 @@ func runServe(args []string) error {
 		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)
 	}
 	svc.SetPreviewCSS(previewCSS)
+	restartc := make(chan struct{}, 1)
+	svc.SetSettings(serverSettings(fs, *addr, passkeys.Registered, func() {
+		select {
+		case restartc <- struct{}{}:
+		default: // asked already
+		}
+	}))
 	bi, _ := debug.ReadBuildInfo()
 	ui := web.Handler(web.Options{
 		Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS,
@@ -349,17 +357,50 @@ func runServe(args []string) error {
 	defer daemon.RemoveState(stateDir)
 	slog.Info("listening", "addr", "http://"+*addr, "ui", "http://"+*addr+web.Prefix, "mcp", "http://"+*addr+"/mcp", "auth", *o.auth, "version", state.Version, "pid", state.PID)
 
+	restart := false
 	select {
 	case err := <-errc:
 		return err
 	case <-ctx.Done():
+	case <-restartc:
+		restart = true
+		slog.Info("restarting the server")
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+	if restart {
+		// The caller starts the process again once this returns, with the
+		// lock and the index closed.
+		return restartError{logPath: filepath.Join(stateDir, daemon.LogFile)}
+	}
 	return nil
+}
+
+// restartError is returned by runServe when it is asked to start again.
+type restartError struct {
+	logPath string // for the output of a new process, on Windows
+}
+
+func (restartError) Error() string { return "the server is asked to start again" }
+
+// serve runs the server, and starts its process again as itself when it is
+// asked to, such as to read the settings again: with the same executable,
+// command line and environment, so that a server in the foreground stays in
+// its terminal.
+func serve(args []string) error {
+	err := runServe(args)
+	var r restartError
+	if !errors.As(err, &r) {
+		return err
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	return daemon.Reexec(exe, os.Args, r.logPath)
 }
 
 // Model providers of the assistant.

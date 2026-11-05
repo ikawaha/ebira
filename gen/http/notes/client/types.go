@@ -218,6 +218,17 @@ type SetPreviewStyleRequestBody struct {
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 }
 
+// SaveSettingsRequestBody is the type of the "notes" service "save_settings"
+// endpoint HTTP request body.
+type SaveSettingsRequestBody struct {
+	// Settings of the server's machine and user
+	Machine *MachineSettingsRequestBody `form:"machine,omitempty" json:"machine,omitempty" xml:"machine,omitempty"`
+	// Settings synced with the notes
+	Notes *NotesSettingsRequestBody `form:"notes,omitempty" json:"notes,omitempty" xml:"notes,omitempty"`
+	// Version of the settings the change was made on, as settings returned it
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+}
+
 // ListResponseBody is the type of the "notes" service "list" endpoint HTTP
 // response body.
 type ListResponseBody struct {
@@ -826,6 +837,70 @@ type SetPreviewStyleResponseBody struct {
 	// was not a built-in style as it is; only in the result of set_preview_style,
 	// when one was made
 	Backup *string `form:"backup,omitempty" json:"backup,omitempty" xml:"backup,omitempty"`
+}
+
+// SettingsResponseBody is the type of the "notes" service "settings" endpoint
+// HTTP response body.
+type SettingsResponseBody struct {
+	// Settings of the server's machine and user
+	Machine *MachineSettingsResponseBody `form:"machine,omitempty" json:"machine,omitempty" xml:"machine,omitempty"`
+	// Settings synced with the notes
+	Notes *NotesSettingsResponseBody `form:"notes,omitempty" json:"notes,omitempty" xml:"notes,omitempty"`
+	// Path of the settings file of the machine and user
+	MachinePath *string `form:"machine_path,omitempty" json:"machine_path,omitempty" xml:"machine_path,omitempty"`
+	// Path of the settings synced with the notes
+	NotesPath *string `form:"notes_path,omitempty" json:"notes_path,omitempty" xml:"notes_path,omitempty"`
+	// Notes directory of the server, which a restart keeps
+	NotesDir *string `form:"notes_dir,omitempty" json:"notes_dir,omitempty" xml:"notes_dir,omitempty"`
+	// Address the server listens on, which a restart keeps
+	Addr *string `form:"addr,omitempty" json:"addr,omitempty" xml:"addr,omitempty"`
+	// Version of the settings, to pass to save_settings
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+	// Keys whose values the server does not take, and a restart would not either,
+	// as it was started with their flags
+	Overridden []string `form:"overridden,omitempty" json:"overridden,omitempty" xml:"overridden,omitempty"`
+	// Whether restart_server can start the server again
+	Restart *bool `form:"restart,omitempty" json:"restart,omitempty" xml:"restart,omitempty"`
+	// Why restart_server cannot start the server again, when it cannot:
+	// executable_gone when the executable of the server was removed, as go run
+	// does when it ends, and unsupported when the server has no way to
+	RestartUnavailable *string `form:"restart_unavailable,omitempty" json:"restart_unavailable,omitempty" xml:"restart_unavailable,omitempty"`
+	// Whether a passkey is registered, which auth: passkey needs to sign in
+	Passkeys *bool `form:"passkeys,omitempty" json:"passkeys,omitempty" xml:"passkeys,omitempty"`
+	// Default models of the assistant by provider
+	DefaultModels map[string]string `form:"default_models,omitempty" json:"default_models,omitempty" xml:"default_models,omitempty"`
+}
+
+// SaveSettingsResponseBody is the type of the "notes" service "save_settings"
+// endpoint HTTP response body.
+type SaveSettingsResponseBody struct {
+	// Settings of the server's machine and user
+	Machine *MachineSettingsResponseBody `form:"machine,omitempty" json:"machine,omitempty" xml:"machine,omitempty"`
+	// Settings synced with the notes
+	Notes *NotesSettingsResponseBody `form:"notes,omitempty" json:"notes,omitempty" xml:"notes,omitempty"`
+	// Path of the settings file of the machine and user
+	MachinePath *string `form:"machine_path,omitempty" json:"machine_path,omitempty" xml:"machine_path,omitempty"`
+	// Path of the settings synced with the notes
+	NotesPath *string `form:"notes_path,omitempty" json:"notes_path,omitempty" xml:"notes_path,omitempty"`
+	// Notes directory of the server, which a restart keeps
+	NotesDir *string `form:"notes_dir,omitempty" json:"notes_dir,omitempty" xml:"notes_dir,omitempty"`
+	// Address the server listens on, which a restart keeps
+	Addr *string `form:"addr,omitempty" json:"addr,omitempty" xml:"addr,omitempty"`
+	// Version of the settings, to pass to save_settings
+	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
+	// Keys whose values the server does not take, and a restart would not either,
+	// as it was started with their flags
+	Overridden []string `form:"overridden,omitempty" json:"overridden,omitempty" xml:"overridden,omitempty"`
+	// Whether restart_server can start the server again
+	Restart *bool `form:"restart,omitempty" json:"restart,omitempty" xml:"restart,omitempty"`
+	// Why restart_server cannot start the server again, when it cannot:
+	// executable_gone when the executable of the server was removed, as go run
+	// does when it ends, and unsupported when the server has no way to
+	RestartUnavailable *string `form:"restart_unavailable,omitempty" json:"restart_unavailable,omitempty" xml:"restart_unavailable,omitempty"`
+	// Whether a passkey is registered, which auth: passkey needs to sign in
+	Passkeys *bool `form:"passkeys,omitempty" json:"passkeys,omitempty" xml:"passkeys,omitempty"`
+	// Default models of the assistant by provider
+	DefaultModels map[string]string `form:"default_models,omitempty" json:"default_models,omitempty" xml:"default_models,omitempty"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -3353,6 +3428,171 @@ type SetPreviewStyleVerificationRequiredResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// SettingsUnauthorizedResponseBody is the type of the "notes" service
+// "settings" endpoint HTTP response body for the "unauthorized" error.
+type SettingsUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SettingsVerificationRequiredResponseBody is the type of the "notes" service
+// "settings" endpoint HTTP response body for the "verification_required" error.
+type SettingsVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsBadRequestResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "bad_request" error.
+type SaveSettingsBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsPreconditionFailedResponseBody is the type of the "notes"
+// service "save_settings" endpoint HTTP response body for the
+// "precondition_failed" error.
+type SaveSettingsPreconditionFailedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsUnauthorizedResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "unauthorized" error.
+type SaveSettingsUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsVerificationRequiredResponseBody is the type of the "notes"
+// service "save_settings" endpoint HTTP response body for the
+// "verification_required" error.
+type SaveSettingsVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestartServerUnavailableResponseBody is the type of the "notes" service
+// "restart_server" endpoint HTTP response body for the "unavailable" error.
+type RestartServerUnavailableResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestartServerUnauthorizedResponseBody is the type of the "notes" service
+// "restart_server" endpoint HTTP response body for the "unauthorized" error.
+type RestartServerUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestartServerVerificationRequiredResponseBody is the type of the "notes"
+// service "restart_server" endpoint HTTP response body for the
+// "verification_required" error.
+type RestartServerVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // SyncUnauthorizedResponseBody is the type of the "notes" service "sync"
 // endpoint HTTP response body for the "unauthorized" error.
 type SyncUnauthorizedResponseBody struct {
@@ -3611,6 +3851,48 @@ type GitConflictResponseBody struct {
 	CopyID *string `form:"copy_id,omitempty" json:"copy_id,omitempty" xml:"copy_id,omitempty"`
 }
 
+// MachineSettingsResponseBody is used to define fields on response body types.
+type MachineSettingsResponseBody struct {
+	// Language of the UI; empty for the browser's
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
+	// Color theme of the UI; empty for auto, the system's
+	Theme *string `form:"theme,omitempty" json:"theme,omitempty" xml:"theme,omitempty"`
+	// How the REST API authenticates people; empty for none. passkey needs a
+	// passkey registered
+	Auth *string `form:"auth,omitempty" json:"auth,omitempty" xml:"auth,omitempty"`
+	// Interval of syncing the notes with git, such as 10m; empty or 0 for none
+	GitSync *string `form:"git_sync,omitempty" json:"git_sync,omitempty" xml:"git_sync,omitempty"`
+	// Whether the server watches the notes directory; left out for true
+	Watch *bool `form:"watch,omitempty" json:"watch,omitempty" xml:"watch,omitempty"`
+	// Model provider of the assistant; empty for the one whose API key is set
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty" xml:"provider,omitempty"`
+	// Model of the assistant; empty for the default of the provider
+	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
+	// How the preview of the TUI shows a note; empty for rendered
+	TuiPreview *string `form:"tui_preview,omitempty" json:"tui_preview,omitempty" xml:"tui_preview,omitempty"`
+}
+
+// NotesSettingsResponseBody is used to define fields on response body types.
+type NotesSettingsResponseBody struct {
+	// Search mode; empty for bigram. Another mode makes the index again when the
+	// server starts, on every machine
+	Search *string `form:"search,omitempty" json:"search,omitempty" xml:"search,omitempty"`
+	// Stop words of the ja mode
+	StopWords *StopListResponseBody `form:"stop_words,omitempty" json:"stop_words,omitempty" xml:"stop_words,omitempty"`
+	// Stop parts of speech of the ja mode, each written as the IPA dictionary
+	// names of its levels joined by -
+	StopTags *StopListResponseBody `form:"stop_tags,omitempty" json:"stop_tags,omitempty" xml:"stop_tags,omitempty"`
+}
+
+// StopListResponseBody is used to define fields on response body types.
+type StopListResponseBody struct {
+	// default for the list of kagome's ja filter, from Lucene; none for no list;
+	// list for words
+	Use *string `form:"use,omitempty" json:"use,omitempty" xml:"use,omitempty"`
+	// The words or parts of speech, for list
+	Words []string `form:"words,omitempty" json:"words,omitempty" xml:"words,omitempty"`
+}
+
 // ImportFileRequestBody is used to define fields on request body types.
 type ImportFileRequestBody struct {
 	// Path of the image as the Markdown file refers to it, one of the paths the
@@ -3620,6 +3902,48 @@ type ImportFileRequestBody struct {
 	Name string `form:"name" json:"name" xml:"name"`
 	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
 	Content []byte `form:"content" json:"content" xml:"content"`
+}
+
+// MachineSettingsRequestBody is used to define fields on request body types.
+type MachineSettingsRequestBody struct {
+	// Language of the UI; empty for the browser's
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
+	// Color theme of the UI; empty for auto, the system's
+	Theme *string `form:"theme,omitempty" json:"theme,omitempty" xml:"theme,omitempty"`
+	// How the REST API authenticates people; empty for none. passkey needs a
+	// passkey registered
+	Auth *string `form:"auth,omitempty" json:"auth,omitempty" xml:"auth,omitempty"`
+	// Interval of syncing the notes with git, such as 10m; empty or 0 for none
+	GitSync *string `form:"git_sync,omitempty" json:"git_sync,omitempty" xml:"git_sync,omitempty"`
+	// Whether the server watches the notes directory; left out for true
+	Watch *bool `form:"watch,omitempty" json:"watch,omitempty" xml:"watch,omitempty"`
+	// Model provider of the assistant; empty for the one whose API key is set
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty" xml:"provider,omitempty"`
+	// Model of the assistant; empty for the default of the provider
+	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
+	// How the preview of the TUI shows a note; empty for rendered
+	TuiPreview *string `form:"tui_preview,omitempty" json:"tui_preview,omitempty" xml:"tui_preview,omitempty"`
+}
+
+// NotesSettingsRequestBody is used to define fields on request body types.
+type NotesSettingsRequestBody struct {
+	// Search mode; empty for bigram. Another mode makes the index again when the
+	// server starts, on every machine
+	Search *string `form:"search,omitempty" json:"search,omitempty" xml:"search,omitempty"`
+	// Stop words of the ja mode
+	StopWords *StopListRequestBody `form:"stop_words" json:"stop_words" xml:"stop_words"`
+	// Stop parts of speech of the ja mode, each written as the IPA dictionary
+	// names of its levels joined by -
+	StopTags *StopListRequestBody `form:"stop_tags" json:"stop_tags" xml:"stop_tags"`
+}
+
+// StopListRequestBody is used to define fields on request body types.
+type StopListRequestBody struct {
+	// default for the list of kagome's ja filter, from Lucene; none for no list;
+	// list for words
+	Use string `form:"use" json:"use" xml:"use"`
+	// The words or parts of speech, for list
+	Words []string `form:"words,omitempty" json:"words,omitempty" xml:"words,omitempty"`
 }
 
 // NewCreateRequestBody builds the HTTP request body from the payload of the
@@ -3848,6 +4172,21 @@ func NewAddGuideRequestBody(p *notes.AddGuidePayload) *AddGuideRequestBody {
 func NewSetPreviewStyleRequestBody(p *notes.SetPreviewStylePayload) *SetPreviewStyleRequestBody {
 	body := &SetPreviewStyleRequestBody{
 		Style: &p.Style,
+	}
+	return body
+}
+
+// NewSaveSettingsRequestBody builds the HTTP request body from the payload of
+// the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsRequestBody(p *notes.SaveSettingsPayload) *SaveSettingsRequestBody {
+	body := &SaveSettingsRequestBody{
+		Version: &p.Version,
+	}
+	if p.Machine != nil {
+		body.Machine = marshalNotesMachineSettingsToMachineSettingsRequestBody(p.Machine)
+	}
+	if p.Notes != nil {
+		body.Notes = marshalNotesNotesSettingsToNotesSettingsRequestBody(p.Notes)
 	}
 	return body
 }
@@ -6621,6 +6960,199 @@ func NewSetPreviewStyleVerificationRequired(body *SetPreviewStyleVerificationReq
 	return v
 }
 
+// NewSettingsSettingsOK builds a "notes" service "settings" endpoint result
+// from a HTTP "OK" response.
+func NewSettingsSettingsOK(body *SettingsResponseBody) *notes.Settings {
+	v := &notes.Settings{
+		MachinePath:        *body.MachinePath,
+		NotesPath:          *body.NotesPath,
+		NotesDir:           *body.NotesDir,
+		Addr:               *body.Addr,
+		Version:            *body.Version,
+		Restart:            *body.Restart,
+		RestartUnavailable: body.RestartUnavailable,
+		Passkeys:           *body.Passkeys,
+	}
+	v.Machine = unmarshalMachineSettingsResponseBodyToNotesMachineSettings(body.Machine)
+	v.Notes = unmarshalNotesSettingsResponseBodyToNotesNotesSettings(body.Notes)
+	v.Overridden = make([]string, len(body.Overridden))
+	for i, val := range body.Overridden {
+		v.Overridden[i] = val
+	}
+	v.DefaultModels = make(map[string]string, len(body.DefaultModels))
+	for key, val := range body.DefaultModels {
+		tk := key
+		tv := val
+		v.DefaultModels[tk] = tv
+	}
+
+	return v
+}
+
+// NewSettingsUnauthorized builds a notes service settings endpoint
+// unauthorized error.
+func NewSettingsUnauthorized(body *SettingsUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSettingsVerificationRequired builds a notes service settings endpoint
+// verification_required error.
+func NewSettingsVerificationRequired(body *SettingsVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsSettingsOK builds a "notes" service "save_settings" endpoint
+// result from a HTTP "OK" response.
+func NewSaveSettingsSettingsOK(body *SaveSettingsResponseBody) *notes.Settings {
+	v := &notes.Settings{
+		MachinePath:        *body.MachinePath,
+		NotesPath:          *body.NotesPath,
+		NotesDir:           *body.NotesDir,
+		Addr:               *body.Addr,
+		Version:            *body.Version,
+		Restart:            *body.Restart,
+		RestartUnavailable: body.RestartUnavailable,
+		Passkeys:           *body.Passkeys,
+	}
+	v.Machine = unmarshalMachineSettingsResponseBodyToNotesMachineSettings(body.Machine)
+	v.Notes = unmarshalNotesSettingsResponseBodyToNotesNotesSettings(body.Notes)
+	v.Overridden = make([]string, len(body.Overridden))
+	for i, val := range body.Overridden {
+		v.Overridden[i] = val
+	}
+	v.DefaultModels = make(map[string]string, len(body.DefaultModels))
+	for key, val := range body.DefaultModels {
+		tk := key
+		tv := val
+		v.DefaultModels[tk] = tv
+	}
+
+	return v
+}
+
+// NewSaveSettingsBadRequest builds a notes service save_settings endpoint
+// bad_request error.
+func NewSaveSettingsBadRequest(body *SaveSettingsBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsPreconditionFailed builds a notes service save_settings
+// endpoint precondition_failed error.
+func NewSaveSettingsPreconditionFailed(body *SaveSettingsPreconditionFailedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsUnauthorized builds a notes service save_settings endpoint
+// unauthorized error.
+func NewSaveSettingsUnauthorized(body *SaveSettingsUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsVerificationRequired builds a notes service save_settings
+// endpoint verification_required error.
+func NewSaveSettingsVerificationRequired(body *SaveSettingsVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestartServerUnavailable builds a notes service restart_server endpoint
+// unavailable error.
+func NewRestartServerUnavailable(body *RestartServerUnavailableResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestartServerUnauthorized builds a notes service restart_server endpoint
+// unauthorized error.
+func NewRestartServerUnauthorized(body *RestartServerUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestartServerVerificationRequired builds a notes service restart_server
+// endpoint verification_required error.
+func NewRestartServerVerificationRequired(body *RestartServerVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewSyncResultOK builds a "notes" service "sync" endpoint result from a HTTP
 // "OK" response.
 func NewSyncResultOK(body *SyncResponseBody) *notes.SyncResult {
@@ -7658,6 +8190,114 @@ func ValidateSetPreviewStyleResponseBody(body *SetPreviewStyleResponseBody) (err
 	if body.Style != nil {
 		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+		}
+	}
+	return
+}
+
+// ValidateSettingsResponseBody runs the validations defined on
+// SettingsResponseBody
+func ValidateSettingsResponseBody(body *SettingsResponseBody) (err error) {
+	if body.Machine == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("machine", "body"))
+	}
+	if body.Notes == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "body"))
+	}
+	if body.MachinePath == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("machine_path", "body"))
+	}
+	if body.NotesPath == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes_path", "body"))
+	}
+	if body.NotesDir == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes_dir", "body"))
+	}
+	if body.Addr == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("addr", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.Overridden == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("overridden", "body"))
+	}
+	if body.Restart == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("restart", "body"))
+	}
+	if body.Passkeys == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("passkeys", "body"))
+	}
+	if body.DefaultModels == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("default_models", "body"))
+	}
+	if body.Machine != nil {
+		if err2 := validateMachineSettingsResponseBody(body.Machine, "body.machine"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Notes != nil {
+		if err2 := validateNotesSettingsResponseBody(body.Notes, "body.notes"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.RestartUnavailable != nil {
+		if !(*body.RestartUnavailable == "executable_gone" || *body.RestartUnavailable == "unsupported") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.restart_unavailable", *body.RestartUnavailable, []any{"executable_gone", "unsupported"}))
+		}
+	}
+	return
+}
+
+// ValidateSaveSettingsResponseBody runs the validations defined on
+// SaveSettingsResponseBody
+func ValidateSaveSettingsResponseBody(body *SaveSettingsResponseBody) (err error) {
+	if body.Machine == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("machine", "body"))
+	}
+	if body.Notes == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "body"))
+	}
+	if body.MachinePath == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("machine_path", "body"))
+	}
+	if body.NotesPath == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes_path", "body"))
+	}
+	if body.NotesDir == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes_dir", "body"))
+	}
+	if body.Addr == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("addr", "body"))
+	}
+	if body.Version == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("version", "body"))
+	}
+	if body.Overridden == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("overridden", "body"))
+	}
+	if body.Restart == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("restart", "body"))
+	}
+	if body.Passkeys == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("passkeys", "body"))
+	}
+	if body.DefaultModels == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("default_models", "body"))
+	}
+	if body.Machine != nil {
+		if err2 := validateMachineSettingsResponseBody(body.Machine, "body.machine"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Notes != nil {
+		if err2 := validateNotesSettingsResponseBody(body.Notes, "body.notes"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.RestartUnavailable != nil {
+		if !(*body.RestartUnavailable == "executable_gone" || *body.RestartUnavailable == "unsupported") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.restart_unavailable", *body.RestartUnavailable, []any{"executable_gone", "unsupported"}))
 		}
 	}
 	return
@@ -10992,6 +11632,222 @@ func ValidateSetPreviewStyleVerificationRequiredResponseBody(body *SetPreviewSty
 	return
 }
 
+// ValidateSettingsUnauthorizedResponseBody runs the validations defined on
+// SettingsUnauthorizedResponseBody
+func ValidateSettingsUnauthorizedResponseBody(body *SettingsUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSettingsVerificationRequiredResponseBody runs the validations
+// defined on SettingsVerificationRequiredResponseBody
+func ValidateSettingsVerificationRequiredResponseBody(body *SettingsVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsBadRequestResponseBody runs the validations defined on
+// SaveSettingsBadRequestResponseBody
+func ValidateSaveSettingsBadRequestResponseBody(body *SaveSettingsBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsPreconditionFailedResponseBody runs the validations
+// defined on SaveSettingsPreconditionFailedResponseBody
+func ValidateSaveSettingsPreconditionFailedResponseBody(body *SaveSettingsPreconditionFailedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsUnauthorizedResponseBody runs the validations defined on
+// SaveSettingsUnauthorizedResponseBody
+func ValidateSaveSettingsUnauthorizedResponseBody(body *SaveSettingsUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsVerificationRequiredResponseBody runs the validations
+// defined on SaveSettingsVerificationRequiredResponseBody
+func ValidateSaveSettingsVerificationRequiredResponseBody(body *SaveSettingsVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestartServerUnavailableResponseBody runs the validations defined on
+// RestartServerUnavailableResponseBody
+func ValidateRestartServerUnavailableResponseBody(body *RestartServerUnavailableResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestartServerUnauthorizedResponseBody runs the validations defined
+// on RestartServerUnauthorizedResponseBody
+func ValidateRestartServerUnauthorizedResponseBody(body *RestartServerUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestartServerVerificationRequiredResponseBody runs the validations
+// defined on RestartServerVerificationRequiredResponseBody
+func ValidateRestartServerVerificationRequiredResponseBody(body *RestartServerVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateSyncUnauthorizedResponseBody runs the validations defined on
 // SyncUnauthorizedResponseBody
 func ValidateSyncUnauthorizedResponseBody(body *SyncUnauthorizedResponseBody) (err error) {
@@ -11803,6 +12659,139 @@ func validateGitConflictResponseBody(body *GitConflictResponseBody, path string)
 	return
 }
 
+// ValidateMachineSettingsResponseBody runs the validations defined on
+// MachineSettings
+func ValidateMachineSettingsResponseBody(body *MachineSettingsResponseBody) (err error) {
+	if body.Theme != nil {
+		if !(*body.Theme == "auto" || *body.Theme == "light" || *body.Theme == "dark") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.theme", *body.Theme, []any{"auto", "light", "dark"}))
+		}
+	}
+	if body.Auth != nil {
+		if !(*body.Auth == "none" || *body.Auth == "passkey") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.auth", *body.Auth, []any{"none", "passkey"}))
+		}
+	}
+	if body.Provider != nil {
+		if !(*body.Provider == "anthropic" || *body.Provider == "gemini") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.provider", *body.Provider, []any{"anthropic", "gemini"}))
+		}
+	}
+	if body.TuiPreview != nil {
+		if !(*body.TuiPreview == "rendered" || *body.TuiPreview == "source") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	return
+}
+
+// validateMachineSettingsResponseBody checks MachineSettings and reports
+// errors using the path supplied by its caller
+func validateMachineSettingsResponseBody(body *MachineSettingsResponseBody, path string) (err error) {
+	if body.Theme != nil {
+		if !(*body.Theme == "auto" || *body.Theme == "light" || *body.Theme == "dark") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".theme", *body.Theme, []any{"auto", "light", "dark"}))
+		}
+	}
+	if body.Auth != nil {
+		if !(*body.Auth == "none" || *body.Auth == "passkey") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".auth", *body.Auth, []any{"none", "passkey"}))
+		}
+	}
+	if body.Provider != nil {
+		if !(*body.Provider == "anthropic" || *body.Provider == "gemini") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".provider", *body.Provider, []any{"anthropic", "gemini"}))
+		}
+	}
+	if body.TuiPreview != nil {
+		if !(*body.TuiPreview == "rendered" || *body.TuiPreview == "source") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	return
+}
+
+// ValidateNotesSettingsResponseBody runs the validations defined on
+// NotesSettings
+func ValidateNotesSettingsResponseBody(body *NotesSettingsResponseBody) (err error) {
+	if body.StopWords == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_words", "body"))
+	}
+	if body.StopTags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_tags", "body"))
+	}
+	if body.Search != nil {
+		if !(*body.Search == "like" || *body.Search == "bigram" || *body.Search == "trigram" || *body.Search == "en" || *body.Search == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.search", *body.Search, []any{"like", "bigram", "trigram", "en", "ja"}))
+		}
+	}
+	if body.StopWords != nil {
+		if err2 := validateStopListResponseBody(body.StopWords, "body.stop_words"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.StopTags != nil {
+		if err2 := validateStopListResponseBody(body.StopTags, "body.stop_tags"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validateNotesSettingsResponseBody checks NotesSettings and reports errors
+// using the path supplied by its caller
+func validateNotesSettingsResponseBody(body *NotesSettingsResponseBody, path string) (err error) {
+	if body.StopWords == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_words", path))
+	}
+	if body.StopTags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_tags", path))
+	}
+	if body.Search != nil {
+		if !(*body.Search == "like" || *body.Search == "bigram" || *body.Search == "trigram" || *body.Search == "en" || *body.Search == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".search", *body.Search, []any{"like", "bigram", "trigram", "en", "ja"}))
+		}
+	}
+	if body.StopWords != nil {
+		if err2 := validateStopListResponseBody(body.StopWords, path+".stop_words"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.StopTags != nil {
+		if err2 := validateStopListResponseBody(body.StopTags, path+".stop_tags"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateStopListResponseBody runs the validations defined on StopList
+func ValidateStopListResponseBody(body *StopListResponseBody) (err error) {
+	if body.Use == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("use", "body"))
+	}
+	if body.Use != nil {
+		if !(*body.Use == "default" || *body.Use == "none" || *body.Use == "list") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.use", *body.Use, []any{"default", "none", "list"}))
+		}
+	}
+	return
+}
+
+// validateStopListResponseBody checks StopList and reports errors using the
+// path supplied by its caller
+func validateStopListResponseBody(body *StopListResponseBody, path string) (err error) {
+	if body.Use == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("use", path))
+	}
+	if body.Use != nil {
+		if !(*body.Use == "default" || *body.Use == "none" || *body.Use == "list") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".use", *body.Use, []any{"default", "none", "list"}))
+		}
+	}
+	return
+}
+
 // ValidateImportFileRequestBody runs the validations defined on ImportFile
 func ValidateImportFileRequestBody(body *ImportFileRequestBody) (err error) {
 	if body.Content == nil {
@@ -11828,6 +12817,76 @@ func validateImportFileRequestBody(body *ImportFileRequestBody, path string) (er
 	}
 	if utf8.RuneCountInString(body.Name) > 255 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError(path+".name", body.Name, utf8.RuneCountInString(body.Name), 255, false))
+	}
+	return
+}
+
+// ValidateMachineSettingsRequestBody runs the validations defined on
+// MachineSettings
+func ValidateMachineSettingsRequestBody(body *MachineSettingsRequestBody) (err error) {
+	if body.Theme != nil {
+		if !(*body.Theme == "auto" || *body.Theme == "light" || *body.Theme == "dark") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.theme", *body.Theme, []any{"auto", "light", "dark"}))
+		}
+	}
+	if body.Auth != nil {
+		if !(*body.Auth == "none" || *body.Auth == "passkey") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.auth", *body.Auth, []any{"none", "passkey"}))
+		}
+	}
+	if body.Provider != nil {
+		if !(*body.Provider == "anthropic" || *body.Provider == "gemini") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.provider", *body.Provider, []any{"anthropic", "gemini"}))
+		}
+	}
+	if body.TuiPreview != nil {
+		if !(*body.TuiPreview == "rendered" || *body.TuiPreview == "source") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	return
+}
+
+// ValidateNotesSettingsRequestBody runs the validations defined on
+// NotesSettings
+func ValidateNotesSettingsRequestBody(body *NotesSettingsRequestBody) (err error) {
+	if body.StopWords == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_words", "body"))
+	}
+	if body.StopTags == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stop_tags", "body"))
+	}
+	if body.Search != nil {
+		if !(*body.Search == "like" || *body.Search == "bigram" || *body.Search == "trigram" || *body.Search == "en" || *body.Search == "ja") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.search", *body.Search, []any{"like", "bigram", "trigram", "en", "ja"}))
+		}
+	}
+	if body.StopWords != nil {
+		if err2 := validateStopListRequestBody(body.StopWords, "body.stop_words"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.StopTags != nil {
+		if err2 := validateStopListRequestBody(body.StopTags, "body.stop_tags"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateStopListRequestBody runs the validations defined on StopList
+func ValidateStopListRequestBody(body *StopListRequestBody) (err error) {
+	if !(body.Use == "default" || body.Use == "none" || body.Use == "list") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.use", body.Use, []any{"default", "none", "list"}))
+	}
+	return
+}
+
+// validateStopListRequestBody checks StopList and reports errors using the
+// path supplied by its caller
+func validateStopListRequestBody(body *StopListRequestBody, path string) (err error) {
+	if !(body.Use == "default" || body.Use == "none" || body.Use == "list") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".use", body.Use, []any{"default", "none", "list"}))
 	}
 	return
 }

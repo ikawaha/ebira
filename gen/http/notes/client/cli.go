@@ -1557,6 +1557,71 @@ func BuildSetPreviewStylePayload(notesSetPreviewStyleBody *string, notesSetPrevi
 	return v, nil
 }
 
+// BuildSettingsPayload builds the payload for the notes settings endpoint from
+// CLI flags.
+func BuildSettingsPayload(notesSettingsSession *string) (*notes.SettingsPayload, error) {
+	var session *string
+	{
+		if notesSettingsSession != nil {
+			session = notesSettingsSession
+		}
+	}
+	v := &notes.SettingsPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildSaveSettingsPayload builds the payload for the notes save_settings
+// endpoint from CLI flags.
+func BuildSaveSettingsPayload(notesSaveSettingsBody *string, notesSaveSettingsSession *string) (*notes.SaveSettingsPayload, error) {
+	var err error
+	var body SaveSettingsRequestBody
+	{
+		if notesSaveSettingsBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesSaveSettingsBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"watch\": true\n      },\n      \"notes\": {\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }'")
+		}
+	}
+	var session *string
+	{
+		if notesSaveSettingsSession != nil {
+			session = notesSaveSettingsSession
+		}
+	}
+	v := &notes.SaveSettingsPayload{}
+	if body.Version != nil {
+		v.Version = *body.Version
+	}
+	if body.Machine != nil {
+		v.Machine = marshalMachineSettingsRequestBodyToNotesMachineSettings(body.Machine)
+	}
+	if body.Notes != nil {
+		v.Notes = marshalNotesSettingsRequestBodyToNotesNotesSettings(body.Notes)
+	}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildRestartServerPayload builds the payload for the notes restart_server
+// endpoint from CLI flags.
+func BuildRestartServerPayload(notesRestartServerSession *string) (*notes.RestartServerPayload, error) {
+	var session *string
+	{
+		if notesRestartServerSession != nil {
+			session = notesRestartServerSession
+		}
+	}
+	v := &notes.RestartServerPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildSyncPayload builds the payload for the notes sync endpoint from CLI
 // flags.
 func BuildSyncPayload(notesSyncSession *string) (*notes.SyncPayload, error) {

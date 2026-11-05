@@ -3923,6 +3923,279 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /server/restart:
+        post:
+            tags:
+                - notes
+            summary: restart_server notes
+            description: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.
+            operationId: notes#restart_server
+            responses:
+                "202":
+                    description: Accepted response.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "503":
+                    description: 'unavailable: The server cannot start itself again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unavailable
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /settings:
+        get:
+            tags:
+                - notes
+            summary: settings notes
+            description: Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.
+            operationId: notes#settings
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Settings'
+                            example:
+                                addr: Quis quia amet ut quia consequatur a.
+                                default_models:
+                                    Repudiandae expedita.: Culpa facilis corporis sit.
+                                    Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+                                machine:
+                                    auth: none
+                                    git_sync: 10m
+                                    lang: ja
+                                    model: Vel sit soluta aut corporis nostrum.
+                                    provider: anthropic
+                                    theme: auto
+                                    tui_preview: rendered
+                                    watch: true
+                                machine_path: /Users/you/.config/ebira/config.yaml
+                                notes:
+                                    search: bigram
+                                    stop_tags:
+                                        use: none
+                                        words:
+                                            - Consequatur dicta dolorem sint aut aliquid aut.
+                                            - Consequuntur perferendis dolorum magnam consequatur.
+                                            - Aliquid incidunt.
+                                            - Reprehenderit ad dolores aut est omnis.
+                                    stop_words:
+                                        use: none
+                                        words:
+                                            - Consequatur dicta dolorem sint aut aliquid aut.
+                                            - Consequuntur perferendis dolorum magnam consequatur.
+                                            - Aliquid incidunt.
+                                            - Reprehenderit ad dolores aut est omnis.
+                                notes_dir: Laudantium recusandae enim consectetur.
+                                notes_path: /Users/you/notes/_ebira.yaml
+                                overridden:
+                                    - lang
+                                passkeys: true
+                                restart: false
+                                restart_unavailable: unsupported
+                                version: Accusantium ipsum ea.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        put:
+            tags:
+                - notes
+            summary: save_settings notes
+            description: Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.
+            operationId: notes#save_settings
+            requestBody:
+                description: Request body for save_settings.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SaveSettingsRequestBody'
+                        example:
+                            machine:
+                                auth: none
+                                git_sync: 10m
+                                lang: ja
+                                model: Vel sit soluta aut corporis nostrum.
+                                provider: anthropic
+                                theme: auto
+                                tui_preview: rendered
+                                watch: true
+                            notes:
+                                search: bigram
+                                stop_tags:
+                                    use: none
+                                    words:
+                                        - Consequatur dicta dolorem sint aut aliquid aut.
+                                        - Consequuntur perferendis dolorum magnam consequatur.
+                                        - Aliquid incidunt.
+                                        - Reprehenderit ad dolores aut est omnis.
+                                stop_words:
+                                    use: none
+                                    words:
+                                        - Consequatur dicta dolorem sint aut aliquid aut.
+                                        - Consequuntur perferendis dolorum magnam consequatur.
+                                        - Aliquid incidunt.
+                                        - Reprehenderit ad dolores aut est omnis.
+                            version: Quibusdam perferendis impedit.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Settings'
+                            example:
+                                addr: Recusandae repudiandae repellat nihil hic impedit quam.
+                                default_models:
+                                    Rem laboriosam.: Et nostrum doloremque doloribus.
+                                    Rerum inventore dignissimos tenetur.: Unde dolore laborum laborum sed quam.
+                                    Soluta vero blanditiis eum qui quia.: Ipsam nemo id.
+                                machine:
+                                    auth: none
+                                    git_sync: 10m
+                                    lang: ja
+                                    model: Vel sit soluta aut corporis nostrum.
+                                    provider: anthropic
+                                    theme: auto
+                                    tui_preview: rendered
+                                    watch: true
+                                machine_path: /Users/you/.config/ebira/config.yaml
+                                notes:
+                                    search: bigram
+                                    stop_tags:
+                                        use: none
+                                        words:
+                                            - Consequatur dicta dolorem sint aut aliquid aut.
+                                            - Consequuntur perferendis dolorum magnam consequatur.
+                                            - Aliquid incidunt.
+                                            - Reprehenderit ad dolores aut est omnis.
+                                    stop_words:
+                                        use: none
+                                        words:
+                                            - Consequatur dicta dolorem sint aut aliquid aut.
+                                            - Consequuntur perferendis dolorum magnam consequatur.
+                                            - Aliquid incidunt.
+                                            - Reprehenderit ad dolores aut est omnis.
+                                notes_dir: Consectetur sunt enim est est porro.
+                                notes_path: /Users/you/notes/_ebira.yaml
+                                overridden:
+                                    - lang
+                                passkeys: true
+                                restart: false
+                                restart_unavailable: unsupported
+                                version: Id quo doloremque perspiciatis et perferendis.
+                "400":
+                    description: 'bad_request: The settings are invalid, such as auth: passkey without a passkey registered'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "412":
+                    description: 'precondition_failed: The settings were changed since they were read'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: precondition_failed
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /sync:
         post:
             tags:
@@ -5105,6 +5378,64 @@ components:
             required:
                 - status
                 - warnings
+        MachineSettings:
+            type: object
+            properties:
+                auth:
+                    type: string
+                    description: How the REST API authenticates people; empty for none. passkey needs a passkey registered
+                    example: none
+                    enum:
+                        - none
+                        - passkey
+                git_sync:
+                    type: string
+                    description: Interval of syncing the notes with git, such as 10m; empty or 0 for none
+                    example: 10m
+                lang:
+                    type: string
+                    description: Language of the UI; empty for the browser's
+                    example: ja
+                model:
+                    type: string
+                    description: Model of the assistant; empty for the default of the provider
+                    example: Vel sit soluta aut corporis nostrum.
+                provider:
+                    type: string
+                    description: Model provider of the assistant; empty for the one whose API key is set
+                    example: anthropic
+                    enum:
+                        - anthropic
+                        - gemini
+                theme:
+                    type: string
+                    description: Color theme of the UI; empty for auto, the system's
+                    example: auto
+                    enum:
+                        - auto
+                        - light
+                        - dark
+                tui_preview:
+                    type: string
+                    description: How the preview of the TUI shows a note; empty for rendered
+                    example: rendered
+                    enum:
+                        - rendered
+                        - source
+                watch:
+                    type: boolean
+                    description: Whether the server watches the notes directory; left out for true
+                    example: true
+            description: Settings of the server's machine and user, in its settings file, that the web UI changes; a value left out is the default
+            example:
+                auth: none
+                git_sync: 10m
+                lang: ja
+                model: Vel sit soluta aut corporis nostrum.
+                provider: anthropic
+                theme: auto
+                tui_preview: rendered
+                watch: true
         MarkInfo:
             type: object
             properties:
@@ -6071,6 +6402,43 @@ components:
                 - reserved
                 - kind
                 - sort
+        NotesSettings:
+            type: object
+            properties:
+                search:
+                    type: string
+                    description: Search mode; empty for bigram. Another mode makes the index again when the server starts, on every machine
+                    example: bigram
+                    enum:
+                        - like
+                        - bigram
+                        - trigram
+                        - en
+                        - ja
+                stop_tags:
+                    $ref: '#/components/schemas/StopList'
+                stop_words:
+                    $ref: '#/components/schemas/StopList'
+            description: Settings synced with the notes, in _ebira.yaml of the notes directory, that the web UI changes
+            example:
+                search: bigram
+                stop_tags:
+                    use: none
+                    words:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+                stop_words:
+                    use: none
+                    words:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+            required:
+                - stop_words
+                - stop_tags
         PasskeyInfo:
             type: object
             properties:
@@ -6196,6 +6564,45 @@ components:
                 name: Commodi vel.
                 order: 6133899287636492423
                 sort: updated
+        SaveSettingsRequestBody:
+            type: object
+            properties:
+                machine:
+                    $ref: '#/components/schemas/MachineSettings'
+                notes:
+                    $ref: '#/components/schemas/NotesSettings'
+                version:
+                    type: string
+                    description: Version of the settings the change was made on, as settings returned it
+                    example: Quibusdam perferendis impedit.
+            description: Request body for save_settings.
+            example:
+                machine:
+                    auth: none
+                    git_sync: 10m
+                    lang: ja
+                    model: Vel sit soluta aut corporis nostrum.
+                    provider: anthropic
+                    theme: auto
+                    tui_preview: rendered
+                    watch: true
+                notes:
+                    search: bigram
+                    stop_tags:
+                        use: none
+                        words:
+                            - Consequatur dicta dolorem sint aut aliquid aut.
+                            - Consequuntur perferendis dolorum magnam consequatur.
+                            - Aliquid incidunt.
+                            - Reprehenderit ad dolores aut est omnis.
+                    stop_words:
+                        use: none
+                        words:
+                            - Consequatur dicta dolorem sint aut aliquid aut.
+                            - Consequuntur perferendis dolorum magnam consequatur.
+                            - Aliquid incidunt.
+                            - Reprehenderit ad dolores aut est omnis.
+                version: Quibusdam perferendis impedit.
         SearchResult:
             type: object
             properties:
@@ -6493,6 +6900,116 @@ components:
             description: Request body for set_preview_style.
             example:
                 style: band
+        Settings:
+            type: object
+            properties:
+                addr:
+                    type: string
+                    description: Address the server listens on, which a restart keeps
+                    example: Quis quia amet ut quia consequatur a.
+                default_models:
+                    type: object
+                    description: Default models of the assistant by provider
+                    example:
+                        Repudiandae expedita.: Culpa facilis corporis sit.
+                        Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+                    additionalProperties:
+                        type: string
+                        example: Dolorem saepe voluptatem.
+                machine:
+                    $ref: '#/components/schemas/MachineSettings'
+                machine_path:
+                    type: string
+                    description: Path of the settings file of the machine and user
+                    example: /Users/you/.config/ebira/config.yaml
+                notes:
+                    $ref: '#/components/schemas/NotesSettings'
+                notes_dir:
+                    type: string
+                    description: Notes directory of the server, which a restart keeps
+                    example: Laudantium recusandae enim consectetur.
+                notes_path:
+                    type: string
+                    description: Path of the settings synced with the notes
+                    example: /Users/you/notes/_ebira.yaml
+                overridden:
+                    type: array
+                    items:
+                        type: string
+                        example: Molestiae illo debitis sunt.
+                    description: Keys whose values the server does not take, and a restart would not either, as it was started with their flags
+                    example:
+                        - lang
+                passkeys:
+                    type: boolean
+                    description: 'Whether a passkey is registered, which auth: passkey needs to sign in'
+                    example: true
+                restart:
+                    type: boolean
+                    description: Whether restart_server can start the server again
+                    example: false
+                restart_unavailable:
+                    type: string
+                    description: 'Why restart_server cannot start the server again, when it cannot: executable_gone when the executable of the server was removed, as go run does when it ends, and unsupported when the server has no way to'
+                    example: unsupported
+                    enum:
+                        - executable_gone
+                        - unsupported
+                version:
+                    type: string
+                    description: Version of the settings, to pass to save_settings
+                    example: Accusantium ipsum ea.
+            example:
+                addr: Quis quia amet ut quia consequatur a.
+                default_models:
+                    Repudiandae expedita.: Culpa facilis corporis sit.
+                    Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+                machine:
+                    auth: none
+                    git_sync: 10m
+                    lang: ja
+                    model: Vel sit soluta aut corporis nostrum.
+                    provider: anthropic
+                    theme: auto
+                    tui_preview: rendered
+                    watch: true
+                machine_path: /Users/you/.config/ebira/config.yaml
+                notes:
+                    search: bigram
+                    stop_tags:
+                        use: none
+                        words:
+                            - Consequatur dicta dolorem sint aut aliquid aut.
+                            - Consequuntur perferendis dolorum magnam consequatur.
+                            - Aliquid incidunt.
+                            - Reprehenderit ad dolores aut est omnis.
+                    stop_words:
+                        use: none
+                        words:
+                            - Consequatur dicta dolorem sint aut aliquid aut.
+                            - Consequuntur perferendis dolorum magnam consequatur.
+                            - Aliquid incidunt.
+                            - Reprehenderit ad dolores aut est omnis.
+                notes_dir: Laudantium recusandae enim consectetur.
+                notes_path: /Users/you/notes/_ebira.yaml
+                overridden:
+                    - lang
+                passkeys: true
+                restart: false
+                restart_unavailable: unsupported
+                version: Accusantium ipsum ea.
+            required:
+                - machine
+                - notes
+                - machine_path
+                - notes_path
+                - notes_dir
+                - addr
+                - version
+                - overridden
+                - restart
+                - passkeys
+                - default_models
         StatusResponseBody:
             type: object
             properties:
@@ -6535,6 +7052,38 @@ components:
                 - mode
                 - registered
                 - signed_in
+        StopList:
+            type: object
+            properties:
+                use:
+                    type: string
+                    description: default for the list of kagome's ja filter, from Lucene; none for no list; list for words
+                    example: none
+                    enum:
+                        - default
+                        - none
+                        - list
+                words:
+                    type: array
+                    items:
+                        type: string
+                        example: Consequatur dicta dolorem sint aut aliquid aut.
+                    description: The words or parts of speech, for list
+                    example:
+                        - Consequatur dicta dolorem sint aut aliquid aut.
+                        - Consequuntur perferendis dolorum magnam consequatur.
+                        - Aliquid incidunt.
+                        - Reprehenderit ad dolores aut est omnis.
+            description: A stop list of the ja search mode
+            example:
+                use: none
+                words:
+                    - Consequatur dicta dolorem sint aut aliquid aut.
+                    - Consequuntur perferendis dolorum magnam consequatur.
+                    - Aliquid incidunt.
+                    - Reprehenderit ad dolores aut est omnis.
+            required:
+                - use
         SyncResult:
             type: object
             properties:
