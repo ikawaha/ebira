@@ -5,6 +5,8 @@ package watch
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,12 +86,20 @@ func Run(ctx context.Context, dir, ext string, debounce time.Duration, fn func()
 			}
 			onErr(err)
 		case <-timer.C:
+			// Watch the tree again before telling: on Linux, moving a
+			// watched directory, such as a notebook into the trash, drops
+			// its watch, also the one added when it appeared at its new
+			// path, as inotify gives both the same descriptor.
+			if err := watchTree(w, dir, depth); err != nil {
+				onErr(err)
+			}
 			fn()
 		}
 	}
 }
 
 // watchTree watches dir and the directories under it, down to depth levels.
+// Directories already watched stay so.
 func watchTree(w *fsnotify.Watcher, dir string, depth int) error {
 	if err := w.Add(dir); err != nil {
 		return err
@@ -103,7 +113,8 @@ func watchTree(w *fsnotify.Watcher, dir string, depth int) error {
 	}
 	for _, e := range entries {
 		if e.IsDir() && !hidden(e.Name()) && !skipped(e.Name()) {
-			if err := watchTree(w, filepath.Join(dir, e.Name()), depth-1); err != nil {
+			// One removed meanwhile is not watched, and not an error.
+			if err := watchTree(w, filepath.Join(dir, e.Name()), depth-1); err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 		}
