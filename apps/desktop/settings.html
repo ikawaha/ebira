@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 13px -apple-system, sans-serif; margin: 20px; }
+  label { display: block; margin-bottom: 4px; font-weight: 600; }
+  .row { display: flex; gap: 8px; margin-bottom: 14px; }
+  input { flex: 1; min-width: 0; padding: 4px 6px; font: inherit; }
+  .hint { margin: -10px 0 14px; opacity: .7; }
+  #problem { color: #c9302c; white-space: pre-wrap; max-height: 64px; overflow: auto; margin: 0 0 10px; user-select: text; -webkit-user-select: text; }
+  #problem:empty { display: none; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+<form id="form">
+  <label for="notes">{{t "Notes folder"}}</label>
+  <div class="row">
+    <input id="notes" value="{{.Notes}}" spellcheck="false">
+    <button type="button" id="choose">{{t "Choose…"}}</button>
+  </div>
+  <p class="hint">{{t "Folders in it become notebooks."}}</p>
+  <label for="addr">{{t "Server address"}}</label>
+  <div class="row"><input id="addr" value="{{.Addr}}" spellcheck="false"></div>
+  <p id="problem">{{.Problem}}</p>
+  <div class="actions">
+    <button type="button" id="cancel">{{t "Cancel"}}</button>
+    <button type="submit">{{t "Apply"}}</button>
+  </div>
+</form>
+<script>
+  const post = (m) => window.webkit.messageHandlers.external.postMessage("ebira:settings:" + m);
+  const byId = (id) => document.getElementById(id);
+  function setNotes(dir) { byId("notes").value = dir; }
+  function showProblem(text) { byId("problem").textContent = text; }
+  byId("choose").onclick = () => post("choose");
+  byId("cancel").onclick = () => post("close");
+  byId("form").onsubmit = (e) => {
+    e.preventDefault();
+    showProblem("");
+    post("apply:" + JSON.stringify({ notes: byId("notes").value.trim(), addr: byId("addr").value.trim() }));
+  };
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") post("close"); });
+</script>
+</body>
+</html>

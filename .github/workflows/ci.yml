@@ -67,6 +67,34 @@ jobs:
             exit 1
           fi
 
+  desktop:
+    # apps/desktop, the Wails app, is a module of its own, with cgo and Cocoa:
+    # macOS only.
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/desktop/go.mod
+          cache-dependency-path: apps/desktop/go.sum
+      - name: gofmt
+        run: |
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "run gofmt -w on:"
+            echo "$files"
+            exit 1
+          fi
+      - run: go vet .
+      - run: go build -o /dev/null .
+      - name: go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
   codemirror:
     runs-on: ubuntu-latest
     defaults:

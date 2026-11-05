@@ -34,15 +34,24 @@ const (
 	LogFile   = "server.log"
 )
 
+// API is the version of the REST API of the server, and of what the native app
+// relies on in its page. Clients built apart from the server, such as the native
+// app, use a server of another build when its API is not newer than the one they
+// know. Raise it when a change breaks such clients, as removing or renaming an
+// endpoint or a field; adding ones does not.
+const API = 1
+
 // ErrRunning is returned by Lock when a server holds the lock.
 var ErrRunning = errors.New("a server is already running for this notes directory")
 
 // State describes a running server. It is written to server.json and served
 // at GET /health.
 type State struct {
-	PID       int       `json:"pid"`
-	Addr      string    `json:"addr"`
-	Version   string    `json:"version"`
+	PID     int    `json:"pid"`
+	Addr    string `json:"addr"`
+	Version string `json:"version"`
+	// API is the version of the REST API (see API); 0 for earlier builds.
+	API       int       `json:"api"`
 	NotesDir  string    `json:"notes_dir"`
 	StartedAt time.Time `json:"started_at"`
 	// Flags are the flags of ebira serve other than -notes, so that
