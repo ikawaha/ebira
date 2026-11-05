@@ -104,7 +104,9 @@ func (r *replay) Response() *model.Response {
 
 func (r *replay) Close() error { return nil }
 
-func newTestService(t *testing.T) *service.Notes {
+// newTestService returns the service on a store with a note, and what setup
+// adds to it.
+func newTestService(t *testing.T, setup ...func(*store.Store) error) *service.Notes {
 	t.Helper()
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -115,6 +117,11 @@ func newTestService(t *testing.T) *service.Notes {
 	now := time.Date(2026, 10, 16, 0, 0, 0, 0, time.UTC)
 	if err := st.Create(&store.Note{ID: "tokyo", Notebook: "weather", Title: "東京の天気", Body: "昨日の東京は雨だった。", CreatedAt: now, UpdatedAt: now}); err != nil {
 		t.Fatal(err)
+	}
+	for _, f := range setup {
+		if err := f(st); err != nil {
+			t.Fatal(err)
+		}
 	}
 	ix, err := index.Open(ctx, filepath.Join(dir, "index.sqlite"), index.Config{Mode: index.ModeBigram})
 	if err != nil {

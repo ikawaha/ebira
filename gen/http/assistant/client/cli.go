@@ -16,9 +16,24 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
+// BuildStatusPayload builds the payload for the assistant status endpoint from
+// CLI flags.
+func BuildStatusPayload(assistantStatusSession *string) (*assistant.StatusPayload, error) {
+	var session *string
+	{
+		if assistantStatusSession != nil {
+			session = assistantStatusSession
+		}
+	}
+	v := &assistant.StatusPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildAskPayload builds the payload for the assistant ask endpoint from CLI
 // flags.
-func BuildAskPayload(assistantAskBody *string) (*assistant.AskPayload, error) {
+func BuildAskPayload(assistantAskBody *string, assistantAskSession *string) (*assistant.AskPayload, error) {
 	var err error
 	var body AskRequestBody
 	{
@@ -39,9 +54,16 @@ func BuildAskPayload(assistantAskBody *string) (*assistant.AskPayload, error) {
 			return nil, err
 		}
 	}
+	var session *string
+	{
+		if assistantAskSession != nil {
+			session = assistantAskSession
+		}
+	}
 	v := &assistant.AskPayload{
 		Question: body.Question,
 	}
+	v.Session = session
 
 	return v, nil
 }

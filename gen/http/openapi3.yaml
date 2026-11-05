@@ -23,6 +23,19 @@ paths:
                             example:
                                 available: false
                                 reason: Sit eligendi quod dolores.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
                 "503":
                     description: 'unavailable: The assistant is not configured, such as when no model API key is set'
                     content:
@@ -36,6 +49,8 @@ paths:
                                 name: unavailable
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
         post:
             tags:
                 - assistant
@@ -60,6 +75,19 @@ paths:
                                 $ref: '#/components/schemas/AskResponseBody'
                             example:
                                 answer: Quia molestiae nesciunt qui dignissimos vel.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
                 "503":
                     description: 'unavailable: The assistant is not configured, such as when no model API key is set'
                     content:
@@ -73,6 +101,8 @@ paths:
                                 name: unavailable
                                 temporary: false
                                 timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /auth:
         get:
             tags:
@@ -4688,7 +4718,7 @@ components:
                 fault:
                     type: boolean
                     description: Is the error a server-side fault?
-                    example: true
+                    example: false
                 id:
                     type: string
                     description: ID is a unique identifier for this particular occurrence of the problem.
@@ -4704,19 +4734,19 @@ components:
                 temporary:
                     type: boolean
                     description: Is the error temporary?
-                    example: false
+                    example: true
                 timeout:
                     type: boolean
                     description: Is the error a timeout?
-                    example: false
+                    example: true
             description: Error response result type
             example:
-                fault: true
+                fault: false
                 id: 123abc
                 message: parameter 'p' must be an integer
                 name: bad_request
-                temporary: false
-                timeout: false
+                temporary: true
+                timeout: true
             required:
                 - name
                 - id

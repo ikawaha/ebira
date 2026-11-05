@@ -566,7 +566,7 @@ func (m *Model) checkAssistant() tea.Cmd {
 	}
 	ctx, api := m.ctx, m.ask
 	return func() tea.Msg {
-		res, err := api.Status(ctx)
+		res, err := api.Status(ctx, &genassistant.StatusPayload{})
 		return assistantStatusMsg{res: res, err: err}
 	}
 }
@@ -1003,6 +1003,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.applyList(msg)
 
 	case assistantStatusMsg:
+		if errorName(msg.err) == "unauthorized" {
+			return m, m.checkAuth()
+		}
 		// When the status is unknown, such as with an older server, the
 		// question itself tells.
 		if msg.err != nil || msg.res.Available || m.prompt != promptAsk {
@@ -1024,6 +1027,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.answer.pending, m.answer.text, m.answer.err = false, msg.text, msg.err
 		m.answerOn = true // show it even if the user moved on meanwhile
 		m.renderPreview(false)
+		if errorName(msg.err) == "unauthorized" {
+			return m, m.checkAuth()
+		}
 		if msg.err != nil {
 			m.setStatus(statusError, "status.assistantFailed", "err", errorMessage(msg.err))
 		} else {

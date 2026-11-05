@@ -34,10 +34,30 @@ func (c *Client) BuildStatusRequest(ctx context.Context, v any) (*http.Request, 
 	return req, nil
 }
 
+// EncodeStatusRequest returns an encoder for requests sent to the assistant
+// status server.
+func EncodeStatusRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*assistant.StatusPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("assistant", "status", "*assistant.StatusPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
 // DecodeStatusResponse returns a decoder for responses returned by the
 // assistant status endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
 // DecodeStatusResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "unavailable" (type *goa.ServiceError): http.StatusServiceUnavailable
 //   - error: internal error
 func DecodeStatusResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
@@ -76,6 +96,20 @@ func DecodeStatusResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			}
 			res := NewStatusResultOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body StatusUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("assistant", "status", err)
+			}
+			err = ValidateStatusUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("assistant", "status", err)
+			}
+			return nil, NewStatusUnauthorized(&body)
 		case http.StatusServiceUnavailable:
 			var (
 				body StatusUnavailableResponseBody
@@ -123,6 +157,13 @@ func EncodeAskRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Re
 		if !ok {
 			return goahttp.ErrInvalidType("assistant", "ask", "*assistant.AskPayload", v)
 		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
 		body := NewAskRequestBody(p)
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("assistant", "ask", err)
@@ -135,6 +176,7 @@ func EncodeAskRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Re
 // ask endpoint. restoreBody controls whether the response body should be
 // restored after having been read.
 // DecodeAskResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "unavailable" (type *goa.ServiceError): http.StatusServiceUnavailable
 //   - error: internal error
 func DecodeAskResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
@@ -173,6 +215,20 @@ func DecodeAskResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 			}
 			res := NewAskResultOK(&body)
 			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body AskUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("assistant", "ask", err)
+			}
+			err = ValidateAskUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("assistant", "ask", err)
+			}
+			return nil, NewAskUnauthorized(&body)
 		case http.StatusServiceUnavailable:
 			var (
 				body AskUnavailableResponseBody
