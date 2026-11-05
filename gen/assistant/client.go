@@ -29,11 +29,12 @@ func NewClient(status, ask goa.Endpoint) *Client {
 
 // Status calls the "status" endpoint of the "assistant" service.
 // Status may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set
 //   - error: internal error
-func (c *Client) Status(ctx context.Context) (res *StatusResult, err error) {
+func (c *Client) Status(ctx context.Context, p *StatusPayload) (res *StatusResult, err error) {
 	var ires any
-	ires, err = c.StatusEndpoint(ctx, nil)
+	ires, err = c.StatusEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -42,6 +43,7 @@ func (c *Client) Status(ctx context.Context) (res *StatusResult, err error) {
 
 // Ask calls the "ask" endpoint of the "assistant" service.
 // Ask may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set
 //   - error: internal error
 func (c *Client) Ask(ctx context.Context, p *AskPayload) (res *AskResult, err error) {

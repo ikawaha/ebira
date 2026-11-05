@@ -34,7 +34,7 @@ func UsageCommands() []string {
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
 	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
-		os.Args[0] + " " + "assistant status" + "\n" +
+		os.Args[0] + " " + "assistant status --session \"Voluptate exercitationem.\"" + "\n" +
 		os.Args[0] + " " + "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"" + "\n" +
 		""
 }
@@ -252,10 +252,12 @@ func ParseEndpoint(
 
 		assistantFlags = flag.NewFlagSet("assistant", flag.ContinueOnError)
 
-		assistantStatusFlags = flag.NewFlagSet("status", flag.ExitOnError)
+		assistantStatusFlags       = flag.NewFlagSet("status", flag.ExitOnError)
+		assistantStatusSessionFlag = new(cliStringFlag)
 
-		assistantAskFlags    = flag.NewFlagSet("ask", flag.ExitOnError)
-		assistantAskBodyFlag = new(cliStringFlag)
+		assistantAskFlags       = flag.NewFlagSet("ask", flag.ExitOnError)
+		assistantAskBodyFlag    = new(cliStringFlag)
+		assistantAskSessionFlag = new(cliStringFlag)
 
 		authFlags = flag.NewFlagSet("auth", flag.ContinueOnError)
 
@@ -390,7 +392,9 @@ func ParseEndpoint(
 	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleBodyFlag, "body", "")
 	notesSetPreviewStyleFlags.Var(notesSetPreviewStyleSessionFlag, "session", "")
 	notesSyncFlags.Var(notesSyncSessionFlag, "session", "")
+	assistantStatusFlags.Var(assistantStatusSessionFlag, "session", "")
 	assistantAskFlags.Var(assistantAskBodyFlag, "body", "")
+	assistantAskFlags.Var(assistantAskSessionFlag, "session", "")
 	authStatusFlags.Var(authStatusSessionFlag, "session", "")
 	authRegisterBeginFlags.Var(authRegisterBeginBodyFlag, "body", "")
 	authRegisterBeginFlags.Var(authRegisterBeginSessionFlag, "session", "")
@@ -837,9 +841,10 @@ func ParseEndpoint(
 			switch epn {
 			case "status":
 				endpoint = c.Status()
+				data, err = assistantc.BuildStatusPayload(assistantStatusSessionFlag.value)
 			case "ask":
 				endpoint = c.Ask()
-				data, err = assistantc.BuildAskPayload(assistantAskBodyFlag.value)
+				data, err = assistantc.BuildAskPayload(assistantAskBodyFlag.value, assistantAskSessionFlag.value)
 			}
 		case "auth":
 			c := authc.NewClient(scheme, host, doer, enc, dec, restore)
@@ -1804,6 +1809,7 @@ func assistantUsage() {
 func assistantStatusUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] assistant status", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -1811,16 +1817,18 @@ func assistantStatusUsage() {
 	fmt.Fprintln(os.Stderr, `Tell whether the assistant can answer questions, so that a UI can say so before a question is asked.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "assistant status")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "assistant status --session \"Voluptate exercitationem.\"")
 }
 
 func assistantAskUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] assistant ask", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -1829,10 +1837,11 @@ func assistantAskUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "assistant ask --body '{\n      \"question\": \"8kf\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "assistant ask --body '{\n      \"question\": \"8kf\"\n   }' --session \"Aut quasi vel alias ut rerum.\"")
 }
 
 // authUsage displays the usage of the auth command and its subcommands.

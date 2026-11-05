@@ -11,17 +11,24 @@ import (
 	"context"
 
 	goa "goa.design/goa/v3/pkg"
+	"goa.design/goa/v3/security"
 )
 
 // Answers questions about the notes with the assistant agent.
 type Service interface {
 	// Tell whether the assistant can answer questions, so that a UI can say so
 	// before a question is asked.
-	Status(context.Context) (res *StatusResult, err error)
+	Status(context.Context, *StatusPayload) (res *StatusResult, err error)
 	// Ask a question about the notes. The agent searches and reads the notes, then
 	// answers citing the notes it used. Each question is answered on its own,
 	// without the earlier ones.
 	Ask(context.Context, *AskPayload) (res *AskResult, err error)
+}
+
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// APIKeyAuth implements the authorization logic for the APIKey security scheme.
+	APIKeyAuth(ctx context.Context, key string, schema *security.APIKeyScheme) (context.Context, error)
 }
 
 // APIName is the name of the API as defined in the design.
@@ -42,6 +49,8 @@ var MethodNames = [2]string{"status", "ask"}
 
 // AskPayload is the payload type of the assistant service ask method.
 type AskPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
 	// Question
 	Question string
 }
@@ -52,12 +61,23 @@ type AskResult struct {
 	Answer string
 }
 
+// StatusPayload is the payload type of the assistant service status method.
+type StatusPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
 // StatusResult is the result type of the assistant service status method.
 type StatusResult struct {
 	// Whether the assistant can answer questions
 	Available bool
 	// Why the assistant cannot answer questions, when it cannot
 	Reason *string
+}
+
+// MakeUnauthorized builds a goa.ServiceError from an error.
+func MakeUnauthorized(err error) *goa.ServiceError {
+	return goa.NewServiceError(err, "unauthorized", false, false, false)
 }
 
 // MakeUnavailable builds a goa.ServiceError from an error.

@@ -37,9 +37,45 @@ type AskResponseBody struct {
 	Answer string `form:"answer" json:"answer" xml:"answer"`
 }
 
+// StatusUnauthorizedResponseBody is the type of the "assistant" service
+// "status" endpoint HTTP response body for the "unauthorized" error.
+type StatusUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // StatusUnavailableResponseBody is the type of the "assistant" service
 // "status" endpoint HTTP response body for the "unavailable" error.
 type StatusUnavailableResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// AskUnauthorizedResponseBody is the type of the "assistant" service "ask"
+// endpoint HTTP response body for the "unauthorized" error.
+type AskUnauthorizedResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -92,10 +128,38 @@ func NewAskResponseBody(res *assistant.AskResult) *AskResponseBody {
 	return body
 }
 
+// NewStatusUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "status" endpoint of the "assistant" service.
+func NewStatusUnauthorizedResponseBody(res *goa.ServiceError) *StatusUnauthorizedResponseBody {
+	body := &StatusUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewStatusUnavailableResponseBody builds the HTTP response body from the
 // result of the "status" endpoint of the "assistant" service.
 func NewStatusUnavailableResponseBody(res *goa.ServiceError) *StatusUnavailableResponseBody {
 	body := &StatusUnavailableResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewAskUnauthorizedResponseBody builds the HTTP response body from the result
+// of the "ask" endpoint of the "assistant" service.
+func NewAskUnauthorizedResponseBody(res *goa.ServiceError) *AskUnauthorizedResponseBody {
+	body := &AskUnauthorizedResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -120,11 +184,20 @@ func NewAskUnavailableResponseBody(res *goa.ServiceError) *AskUnavailableRespons
 	return body
 }
 
+// NewStatusPayload builds a assistant service status endpoint payload.
+func NewStatusPayload(session *string) *assistant.StatusPayload {
+	v := &assistant.StatusPayload{}
+	v.Session = session
+
+	return v
+}
+
 // NewAskPayload builds a assistant service ask endpoint payload.
-func NewAskPayload(body *AskRequestBody) *assistant.AskPayload {
+func NewAskPayload(body *AskRequestBody, session *string) *assistant.AskPayload {
 	v := &assistant.AskPayload{
 		Question: *body.Question,
 	}
+	v.Session = session
 
 	return v
 }

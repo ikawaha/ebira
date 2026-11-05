@@ -104,6 +104,7 @@ func NewStatusHandler(
 	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
+		decodeRequest  = DecodeStatusRequest(mux, decoder)
 		encodeResponse = EncodeStatusResponse(encoder)
 		encodeError    = EncodeStatusError(encoder, formatter)
 	)
@@ -111,8 +112,14 @@ func NewStatusHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "status")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "assistant")
-		var err error
-		res, err := endpoint(ctx, nil)
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)

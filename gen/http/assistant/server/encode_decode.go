@@ -30,6 +30,29 @@ func EncodeStatusResponse(encoder func(context.Context, http.ResponseWriter) goa
 	}
 }
 
+// DecodeStatusRequest returns a decoder for requests sent to the assistant
+// status endpoint.
+func DecodeStatusRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*assistant.StatusPayload, error) {
+	return func(r *http.Request) (*assistant.StatusPayload, error) {
+		var payload *assistant.StatusPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewStatusPayload(session)
+
+		return payload, nil
+	}
+}
+
 // EncodeStatusError returns an encoder for errors returned by the status
 // assistant endpoint.
 func EncodeStatusError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
@@ -40,6 +63,19 @@ func EncodeStatusError(encoder func(context.Context, http.ResponseWriter) goahtt
 			return encodeError(ctx, w, v)
 		}
 		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewStatusUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
 		case "unavailable":
 			var res *goa.ServiceError
 			errors.As(v, &res)
@@ -95,7 +131,20 @@ func DecodeAskRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if err != nil {
 			return payload, err
 		}
-		payload = NewAskPayload(&body)
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewAskPayload(&body, session)
 
 		return payload, nil
 	}
@@ -111,6 +160,19 @@ func EncodeAskError(encoder func(context.Context, http.ResponseWriter) goahttp.E
 			return encodeError(ctx, w, v)
 		}
 		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewAskUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
 		case "unavailable":
 			var res *goa.ServiceError
 			errors.As(v, &res)

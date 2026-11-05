@@ -62,7 +62,7 @@ func (a *Assistant) Ask(ctx context.Context, p *genassistant.AskPayload) (*genas
 }
 
 // Status reports that the assistant can answer questions.
-func (a *Assistant) Status(context.Context) (*genassistant.StatusResult, error) {
+func (a *Assistant) Status(context.Context, *genassistant.StatusPayload) (*genassistant.StatusResult, error) {
 	return &genassistant.StatusResult{Available: true}, nil
 }
 
@@ -77,6 +77,6 @@ func (u Unavailable) Ask(context.Context, *genassistant.AskPayload) (*genassista
 }
 
 // Status reports that the assistant cannot answer questions, and why.
-func (u Unavailable) Status(context.Context) (*genassistant.StatusResult, error) {
+func (u Unavailable) Status(context.Context, *genassistant.StatusPayload) (*genassistant.StatusResult, error) {
 	return &genassistant.StatusResult{Available: false, Reason: &u.Reason}, nil
 }

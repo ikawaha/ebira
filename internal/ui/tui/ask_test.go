@@ -112,3 +112,27 @@ func TestAskUnavailable(t *testing.T) {
 		t.Error("a late status was shown")
 	}
 }
+
+// TestAskUnauthorized checks that when the session has expired, the question
+// prompt is closed, so that the keys go to the sign-in.
+func TestAskUnauthorized(t *testing.T) {
+	m := New(context.Background(), &Clients{}, false, "en")
+	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	m = tm.(Model)
+	refused := genassistant.MakeUnauthorized(errors.New("sign in with a passkey"))
+
+	m, _ = press(t, m, text("?"))
+	tm, _ = m.Update(assistantStatusMsg{err: refused})
+	m = tm.(Model)
+	if m.prompt != promptNone || m.promptIn.Focused() {
+		t.Error("the prompt is still open after the status was refused")
+	}
+
+	// The prompt opened again while the question was being answered.
+	m, _ = press(t, m, text("?"), text("x"), tea.KeyPressMsg{Code: tea.KeyEnter}, text("?"))
+	tm, _ = m.Update(answerMsg{seq: m.askSeq, err: refused})
+	m = tm.(Model)
+	if m.prompt != promptNone || m.promptIn.Focused() {
+		t.Error("the prompt is still open after the question was refused")
+	}
+}

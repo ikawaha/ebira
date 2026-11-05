@@ -289,10 +289,13 @@ func runServe(args []string) error {
 	// Only the REST API, which the UI uses, is marked as from people: every
 	// request without passkeys (auth: none), and requests signed in with a
 	// passkey with them. MCP (and the assistant) are treated as AI, which
-	// cannot see private notebooks; their endpoints ignore sessions.
+	// cannot see private notebooks; their endpoints ignore sessions, except
+	// that the assistant lets in only people signed in, without marking them.
 	rest := service.REST{Notes: svc}
+	gate := agent.Gate{Service: asst}
 	if *o.auth == auth.ModePasskey {
 		rest.Session = passkeys.Check
+		gate.Session = passkeys.Check
 	}
 	notesEndpoints := gennotes.NewEndpoints(rest)
 	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil))
@@ -303,7 +306,7 @@ func runServe(args []string) error {
 	}
 	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
-	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(asst), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
+	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(gate), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}

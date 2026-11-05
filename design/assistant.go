@@ -29,13 +29,21 @@ var _ = Service("assistant", func() {
 		})
 	})
 
+	// While passkeys are required, only people signed in may ask, so that no
+	// one else spends the model API key. The assistant still reads the notes
+	// as AI: the session only lets the request in.
+	Security(SessionAuth)
+	Error("unauthorized", ErrorResult, "The session is invalid or expired: sign in with a passkey again")
 	Error("unavailable", ErrorResult, "The assistant is not configured, such as when no model API key is set")
 	HTTP(func() {
+		Cookie("session:" + sessionCookie)
+		Response("unauthorized", StatusUnauthorized)
 		Response("unavailable", StatusServiceUnavailable)
 	})
 
 	Method("status", func() {
 		Description("Tell whether the assistant can answer questions, so that a UI can say so before a question is asked.")
+		Payload(sessionDSL)
 		Result(func() {
 			RequiredAttribute("available", Boolean, "Whether the assistant can answer questions")
 			Attribute("reason", String, "Why the assistant cannot answer questions, when it cannot")
@@ -48,6 +56,7 @@ var _ = Service("assistant", func() {
 	Method("ask", func() {
 		Description("Ask a question about the notes. The agent searches and reads the notes, then answers citing the notes it used. Each question is answered on its own, without the earlier ones.")
 		Payload(func() {
+			sessionDSL()
 			RequiredAttribute("question", String, "Question", func() {
 				MinLength(1)
 				MaxLength(2000)
