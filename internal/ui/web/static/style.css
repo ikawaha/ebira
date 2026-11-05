@@ -183,6 +183,8 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu button:hover, .menu button:focus-visible { background: var(--bg-hover); outline: none; }
 .menu .menu-sep { height: 1px; margin: 4px 0; background: var(--border); }
 .menu .menu-label { padding: 4px 10px 2px; font-size: 12px; color: var(--fg-muted); }
+/* A long version (a pseudo-version) wraps in the width of the other items, not widening the menu. */
+.menu .menu-version { width: 0; min-width: 100%; font-size: 12px; color: var(--fg-muted); white-space: normal; overflow-wrap: anywhere; }
 .menu .body-size { display: flex; align-items: center; gap: 2px; padding: 2px 6px; }
 .menu .body-size button { flex: 1; padding: 4px 6px; text-align: center; font-variant-numeric: tabular-nums; }
 .menu .body-size button:disabled { opacity: 0.35; cursor: default; }

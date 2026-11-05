@@ -48,3 +48,21 @@ func versionText(bi *debug.BuildInfo, build string) string {
 	return fmt.Sprintf("version:   %s\ncommit:    %s\nbuild:     %s\ngo:        %s %s/%s\n",
 		version, commit, build, goVersion, runtime.GOOS, runtime.GOARCH)
 }
+
+// versionLabel tells the version in short, for the web UI: the version of
+// the module, with the commit when it is (devel), which tells nothing.
+func versionLabel(bi *debug.BuildInfo) string {
+	if bi == nil {
+		return "unknown"
+	}
+	version := bi.Main.Version
+	if version != "" && version != "(devel)" {
+		return version
+	}
+	for _, s := range bi.Settings {
+		if s.Key == "vcs.revision" && s.Value != "" {
+			return "devel " + s.Value[:min(12, len(s.Value))]
+		}
+	}
+	return "devel"
+}

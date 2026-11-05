@@ -36,3 +36,19 @@ func TestVersionText(t *testing.T) {
 		t.Errorf("versionText(nil) = %q", got)
 	}
 }
+
+func TestVersionLabel(t *testing.T) {
+	for _, tt := range []struct {
+		bi   *debug.BuildInfo
+		want string
+	}{
+		{&debug.BuildInfo{Main: debug.Module{Version: "v0.1.0"}}, "v0.1.0"},
+		{&debug.BuildInfo{Main: debug.Module{Version: "(devel)"}, Settings: []debug.BuildSetting{{Key: "vcs.revision", Value: "4cf9701c0123456789abcdef"}}}, "devel 4cf9701c0123"},
+		{&debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}, "devel"},
+		{nil, "unknown"},
+	} {
+		if got := versionLabel(tt.bi); got != tt.want {
+			t.Errorf("versionLabel(%v) = %q, want %q", tt.bi, got, tt.want)
+		}
+	}
+}

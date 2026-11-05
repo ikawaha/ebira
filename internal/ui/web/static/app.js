@@ -4171,6 +4171,7 @@ $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
 $("guide-add").addEventListener("click", () => addGuide());
 $("issue-open").addEventListener("click", () => openIssue());
+$("version-copy").addEventListener("click", () => copyVersion());
 
 // ISSUE_URL is where requests and bug reports of ebira go.
 const ISSUE_URL = "https://github.com/ikawaha/ebira/issues/new";
@@ -4179,6 +4180,25 @@ const ISSUE_URL = "https://github.com/ikawaha/ebira/issues/new";
 // app, the default browser).
 function openIssue() {
   window.open(ISSUE_URL, "_blank", "noopener");
+}
+
+// The version of ebira, which the server gives the page, at the bottom of
+// the settings menu; choosing it copies all that ebira version prints, to
+// tell in a report.
+function showVersion() {
+  const { version } = document.documentElement.dataset;
+  $("version-copy").hidden = !version;
+  if (version) $("version-copy").textContent = t("versionLabel", { version });
+}
+
+async function copyVersion() {
+  try {
+    await navigator.clipboard.writeText(document.documentElement.dataset.versionText || "");
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(t("versionCopied"));
 }
 
 // addGuide adds the guide of ebira, in the language of the UI, as a new
@@ -4921,6 +4941,7 @@ $("logout").addEventListener("click", async () => {
     authState = await api("/auth");
   } catch (_) { /* an older server: no passkeys */ }
   showAuthState();
+  showVersion();
   const reg = location.hash.match(/^#register\/([\w-]+)$/);
   if (reg) {
     history.replaceState(null, "", location.pathname + location.search);
