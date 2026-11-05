@@ -591,6 +591,14 @@ func (m *Model) askAssistant(q string) tea.Cmd {
 	}
 }
 
+// closeAskPrompt closes the question prompt, if it is open.
+func (m *Model) closeAskPrompt() {
+	if m.prompt == promptAsk {
+		m.prompt = promptNone
+		m.promptIn.Blur()
+	}
+}
+
 // closeAnswer shows the note again in the preview.
 func (m *Model) closeAnswer() {
 	if m.answerOn {
@@ -1004,6 +1012,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case assistantStatusMsg:
 		if errorName(msg.err) == "unauthorized" {
+			m.closeAskPrompt() // for the keys of the sign-in
 			return m, m.checkAuth()
 		}
 		// When the status is unknown, such as with an older server, the
@@ -1011,8 +1020,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil || msg.res.Available || m.prompt != promptAsk {
 			return m, nil
 		}
-		m.prompt = promptNone
-		m.promptIn.Blur()
+		m.closeAskPrompt()
 		var reason string
 		if msg.res.Reason != nil {
 			reason = *msg.res.Reason
@@ -1028,6 +1036,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.answerOn = true // show it even if the user moved on meanwhile
 		m.renderPreview(false)
 		if errorName(msg.err) == "unauthorized" {
+			m.closeAskPrompt() // for the keys of the sign-in
 			return m, m.checkAuth()
 		}
 		if msg.err != nil {
