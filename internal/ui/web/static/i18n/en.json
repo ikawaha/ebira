@@ -264,6 +264,8 @@
   "guideAdd": "Add the guide",
   "guideAddTitle": "Add the guide of ebira, notes that tell how to use it, as a new notebook",
   "guideAdded": "Added the guide as {name}",
+  "issueOpen": "Report an issue",
+  "issueOpenTitle": "Open the page to post a request or a bug of ebira on GitHub",
   "guideFailed": "Cannot add the guide: {error}",
   "markNamesHint": "Say what each mark means, such as important for red. The names are kept with the notes, and mark:name finds the notes with one.",
   "searchHelpMark": "Notes with the mark, by its color or symbol (red, star…) or its name",

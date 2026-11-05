@@ -4170,6 +4170,16 @@ $("mark-names-open").addEventListener("click", () => openMarkNames());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
 $("guide-add").addEventListener("click", () => addGuide());
+$("issue-open").addEventListener("click", () => openIssue());
+
+// ISSUE_URL is where requests and bug reports of ebira go.
+const ISSUE_URL = "https://github.com/ikawaha/ebira/issues/new";
+
+// openIssue opens the page to post a new issue of ebira in another tab (in the
+// app, the default browser).
+function openIssue() {
+  window.open(ISSUE_URL, "_blank", "noopener");
+}
 
 // addGuide adds the guide of ebira, in the language of the UI, as a new
 // notebook, and shows it.
