@@ -1,0 +1,60 @@
+# Updates of the dependencies, each week. Minor and patch updates come in one
+# pull request for each ecosystem; a major one comes alone.
+#
+# Some need a hand before they merge, as CI checks what is generated:
+# - Goa (goa.design/...), in a pull request of its own: run
+#   go run goa.design/goa/v3/cmd/goa gen github.com/ikawaha/ebira/design
+#   and commit gen/.
+# - CodeMirror (npm): run npm ci && npm run build in
+#   internal/ui/web/codemirror and commit static/vendor/, and update the
+#   versions in the licenses note of the guide.
+# - Wails (apps/desktop): try the app, as dialogs_darwin.m relies on a class
+#   inside Wails.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      goa:
+        patterns:
+          - "goa.design/*"
+      go:
+        update-types: [minor, patch]
+
+  - package-ecosystem: gomod
+    directory: /apps/desktop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      desktop:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /internal/ui/web/codemirror
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      codemirror:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        update-types: [minor, patch]
