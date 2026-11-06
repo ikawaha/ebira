@@ -23,13 +23,19 @@ const toApp = `(window.webkit?.messageHandlers?.external ?? window.chrome?.webvi
 // On Windows, Wails puts its runtime in each page, which tells it.
 const ready = toApp + `?.postMessage("wails:runtime:ready");`
 
-// leave asks the page to close its editor, which confirms unsaved changes, and
-// reports the answer to the raw message handler. Pages of servers built before
-// window.ebira have leaveEditor alone.
-const leave = toApp + `.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:left" : "ebira:stay");`
+// leaves asks the page to close its editor, which confirms unsaved changes:
+// true when it may go. Pages of servers built before window.ebira have
+// leaveEditor alone, and a page that is not the web UI, as when the server is
+// gone, has neither and nothing to keep, so it may go: else the app could
+// never quit nor close its window.
+const leaves = `(window.ebira?.leave ?? window.leaveEditor ?? (() => true))()`
+
+// leave asks the page to leave and reports the answer to the raw message
+// handler.
+const leave = toApp + `.postMessage(` + leaves + ` ? "ebira:left" : "ebira:stay");`
 
 // leaveFor is leave, for changing the server instead of ending the app.
-const leaveFor = toApp + `.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:switch" : "ebira:stay");`
+const leaveFor = toApp + `.postMessage(` + leaves + ` ? "ebira:switch" : "ebira:stay");`
 
 // shell holds the windows of the app.
 type shell struct {
@@ -42,7 +48,9 @@ type shell struct {
 	win      *application.WebviewWindow // the Web UI; nil until a server answers
 	settings *application.WebviewWindow // nil while closed
 	current  target                     // what the Web UI shows, or what failed
+	chosen   target                     // current as the user gave it: see target
 	next     *target                    // connected, waiting for the page to agree
+	nextAs   target                     // next as the user gave it
 }
 
 func main() {
@@ -59,6 +67,7 @@ func main() {
 	if *addr != "" {
 		s.current.Addr = *addr
 	}
+	s.chosen = s.current
 	translateDialogs(s.messages)
 	s.app = application.New(application.Options{
 		Name:              "ebira",
@@ -136,6 +145,8 @@ func (s *shell) onMessage(from application.Window, message string, _ *applicatio
 		go s.finishSwitch()
 	case "ebira:restart":
 		go s.restartServer()
+	case "ebira:stay":
+		go s.stayed()
 	}
 }
 

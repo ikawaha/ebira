@@ -135,10 +135,11 @@ func showMain(win *application.WebviewWindow) {
 	win.Show()
 }
 
-// saveFrame keeps the frame of the main window as the app ends. A maximised or
-// full screen window keeps the frame it had before.
+// saveFrame keeps the frame of the main window as the app ends. A minimised,
+// maximised or full screen window keeps the frame it had before: a minimised
+// one is far off the screen.
 func saveFrame(win *application.WebviewWindow) {
-	if win == nil || win.IsMaximised() || win.IsFullscreen() {
+	if win == nil || win.IsMinimised() || win.IsMaximised() || win.IsFullscreen() {
 		return
 	}
 	x, y := win.Position()

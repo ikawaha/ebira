@@ -55,7 +55,7 @@ func (s *shell) text(english string) string {
 // show if there is one.
 func (s *shell) openSettings(problem string) {
 	s.mu.Lock()
-	win, current := s.settings, s.current
+	win, current, chosen := s.settings, s.current, s.chosen
 	s.mu.Unlock()
 	if win != nil {
 		win.Focus()
@@ -66,7 +66,9 @@ func (s *shell) openSettings(problem string) {
 	}
 	var page bytes.Buffer
 	tmpl := template.Must(template.New("settings").Funcs(template.FuncMap{"t": s.text}).Parse(settingsHTML))
-	if err := tmpl.Execute(&page, map[string]string{"Notes": current.Notes, "Addr": current.Addr, "Problem": problem}); err != nil {
+	// The folder as chosen: empty follows the config file of ebira, which the
+	// placeholder shows as the server found it.
+	if err := tmpl.Execute(&page, map[string]string{"Notes": chosen.Notes, "NotesFound": current.Notes, "Addr": chosen.Addr, "Problem": problem}); err != nil {
 		panic(err) // embedded: a broken file is a broken build
 	}
 	win = s.app.Window.NewWithOptions(application.WebviewWindowOptions{
@@ -161,9 +163,10 @@ func (s *shell) apply(t target) {
 		s.showProblem(err.Error())
 		return
 	}
+	chosen := t
 	t.Notes = h.NotesDir
 	s.mu.Lock()
-	s.next = &t
+	s.next, s.nextAs = &t, chosen
 	win := s.win
 	s.mu.Unlock()
 	if win == nil {
@@ -174,18 +177,31 @@ func (s *shell) apply(t target) {
 	win.Focus()
 }
 
+// stayed drops the server that apply connected to when the page keeps its
+// editor instead, and tells the settings window why nothing changed.
+func (s *shell) stayed() {
+	s.mu.Lock()
+	switching := s.next != nil
+	s.next = nil
+	s.mu.Unlock()
+	if switching {
+		s.showProblem(s.text("The note being edited was kept, so the server was not changed."))
+	}
+}
+
 // finishSwitch shows the server that apply connected to.
 func (s *shell) finishSwitch() {
 	s.mu.Lock()
-	t, win, settings := s.next, s.win, s.settings
+	t, chosen, win, settings := s.next, s.nextAs, s.win, s.settings
 	if t == nil {
 		s.mu.Unlock()
 		return
 	}
 	s.next = nil
-	s.current = *t
+	s.current, s.chosen = *t, chosen
 	s.mu.Unlock()
-	t.save()
+	// As chosen, so that an empty folder keeps following the config file.
+	chosen.save()
 	s.notes.reset() // until the page of the server tells its state
 	if win == nil {
 		s.openMain(t.url())

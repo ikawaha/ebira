@@ -11,7 +11,7 @@ import (
 const markID = "ebira-app-restart"
 
 // leaveRestart is leave, for starting the server again: the page reloads.
-const leaveRestart = toApp + `.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:restart" : "ebira:stay");`
+const leaveRestart = toApp + `.postMessage(` + leaves + ` ? "ebira:restart" : "ebira:stay");`
 
 // outdated reports whether the server lacks something this app relies on.
 // A newer one is fine: the page comes from it.

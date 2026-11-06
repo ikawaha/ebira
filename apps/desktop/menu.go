@@ -214,7 +214,9 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(note.Add("Copy Link").OnClick(on(func() { s.call("copyLink", false) })), shown)
 	n.add(note.Add("Copy Markdown Link").OnClick(on(func() { s.call("copyLink", true) })), shown)
 	note.AddSeparator()
-	n.trash = key(note.Add("Move to Trash"), "cmd+backspace", "").OnClick(on(func() { s.call("trash") }))
+	// No shortcut: the menu would take ⌘⌫ (Ctrl+Backspace) from the text
+	// fields of the page, which delete with it, and trash the note shown.
+	n.trash = note.Add("Move to Trash").OnClick(on(func() { s.call("trash") }))
 	n.add(n.trash, shown)
 	n.add(note.Add("Restore").OnClick(on(func() { s.call("restore") })), shownInTrash)
 

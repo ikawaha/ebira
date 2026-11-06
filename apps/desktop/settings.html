@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <style>
   :root { color-scheme: light dark; }
-  body { font: 13px -apple-system, sans-serif; margin: 20px; }
+  body { font: 13px -apple-system, "Segoe UI", sans-serif; margin: 20px; }
   label { display: block; margin-bottom: 4px; font-weight: 600; }
   .row { display: flex; gap: 8px; margin-bottom: 14px; }
   input { flex: 1; min-width: 0; padding: 4px 6px; font: inherit; }
@@ -18,7 +18,7 @@
 <form id="form">
   <label for="notes">{{t "Notes folder"}}</label>
   <div class="row">
-    <input id="notes" value="{{.Notes}}" spellcheck="false">
+    <input id="notes" value="{{.Notes}}" placeholder="{{.NotesFound}}" spellcheck="false">
     <button type="button" id="choose">{{t "Choose…"}}</button>
   </div>
   <p class="hint">{{t "Folders in it become notebooks."}}</p>
@@ -31,7 +31,8 @@
   </div>
 </form>
 <script>
-  const post = (m) => window.webkit.messageHandlers.external.postMessage("ebira:settings:" + m);
+  // To the app through WebKit on macOS, WebView2 on Windows (toApp in main.go).
+  const post = (m) => (window.webkit?.messageHandlers?.external ?? window.chrome?.webview)?.postMessage("ebira:settings:" + m);
   const byId = (id) => document.getElementById(id);
   function setNotes(dir) { byId("notes").value = dir; }
   function showProblem(text) { byId("problem").textContent = text; }

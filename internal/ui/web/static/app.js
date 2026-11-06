@@ -1401,9 +1401,7 @@ async function trashNotebook(nb) {
 // on their own and the notebooks with their notes, after asking, as it cannot
 // be undone.
 async function emptyTrash() {
-  const single = state.notebooks.find((n) => n.id === "trash")?.count ?? 0;
-  const notes = single + state.trashed.reduce((a, n) => a + n.count, 0);
-  if (!confirm(t("confirmEmptyTrash", { n: notes, m: state.trashed.length }))) return;
+  if (!confirm(t("confirmEmptyTrash", { n: trashCount(), m: state.trashed.length }))) return;
   try {
     await api("/trash", { method: "DELETE" });
   } catch (e) {
@@ -1725,17 +1723,22 @@ function enableDrag(li, reorder, list) {
     li.classList.add("dragging");
   });
   li.addEventListener("dragend", () => {
-    // Let go over the list without a drop: say why the list did not take it.
-    const why = !dropped && overList && noReorder(li, reorder);
-    if (why) showToast(why);
     dragID = null;
     li.classList.remove("dragging");
     for (const x of $("notes").children) x.classList.remove("drop-above", "drop-below", "drop-into");
     for (const x of $("notebooks").children) x.classList.remove("drop-into");
   });
-  if (!reorder) return;
-  const within = () => dragID && dragID !== rowID(li) && !draggedNotes() && list.some((it) => it.id === dragID);
+  const within = () => reorder && dragID && dragID !== rowID(li) && !draggedNotes() && list.some((it) => it.id === dragID);
+  // A row of the list dragged where the list does not put it takes the drop
+  // too, so as to say why nothing moves: only on a drop, not when the drag is
+  // cancelled or let go elsewhere, which end alike.
+  const refused = () => !!dragID && !within() && list.some((it) => it.id === dragID) && !!noReorder(li, reorder);
   li.addEventListener("dragover", (e) => {
+    if (refused()) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      return;
+    }
     if (!within()) return;
     e.preventDefault();
     // As for the notebooks: a drop effect that the move of dragstart does not
@@ -1747,6 +1750,11 @@ function enableDrag(li, reorder, list) {
   });
   li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below"));
   li.addEventListener("drop", (e) => {
+    if (refused()) {
+      e.preventDefault();
+      showToast(noReorder(li, reorder));
+      return;
+    }
     if (!within()) return;
     e.preventDefault();
     const id = dragID;
@@ -1756,17 +1764,6 @@ function enableDrag(li, reorder, list) {
     else moveNote(id, after);
   });
 }
-
-// overList tells whether the drag is over the note list, and dropped whether
-// something took the drop: a drop is sent only to what takes it, while the
-// drop effect at the end differs between browsers.
-let overList = false, dropped = false;
-document.addEventListener("dragstart", () => { overList = false; dropped = false; }, true);
-document.addEventListener("dragover", (e) => {
-  const at = e.target.nodeType === Node.ELEMENT_NODE ? e.target : e.target.parentElement;
-  overList = !!at?.closest("#notes");
-}, true);
-document.addEventListener("drop", () => { dropped = true; }, true);
 
 // noReorder returns why the row li, dragged in its list, cannot be put in
 // another place there; empty when it can.
@@ -4075,13 +4072,27 @@ function trashCount() {
   return state.trashed.reduce((a, n) => a + n.count, state.notebooks.find((n) => n.id === "trash")?.count ?? 0);
 }
 
-// openGuide opens the notebook of the guide added last, known by the names
-// the server gives (guide.Names), or adds the guide when there is none.
+// openGuide opens the notebook of the guide added last, or adds the guide when
+// there is none. The notebooks of the guide are named by the server (see
+// guide.Install): a name of the guide (guide.Names), its version, and " (2)"
+// and on for one of the same version added again.
 function openGuide() {
   const names = (document.documentElement.dataset.guideNames || "").split("\n").filter(Boolean);
-  const guides = state.notebooks.filter((n) => !n.parent && names.some((g) => n.name === g || n.name.startsWith(g + " ")));
-  if (guides.length) showNotebook(guides.at(-1).id);
-  else addGuide();
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // The version is a date, as 2026-11-07, or 2026-11 before (guide.Version).
+  const pattern = new RegExp(`^(?:${names.map(escape).join("|")}) (\\d[\\d.-]*)(?: \\((\\d+)\\))?$`);
+  const guides = [];
+  for (const n of state.notebooks) {
+    const m = !n.parent && names.length && n.name.match(pattern);
+    if (m) guides.push({ id: n.id, version: m[1], again: Number(m[2] || 1) });
+  }
+  if (!guides.length) {
+    addGuide();
+    return;
+  }
+  // Dates of the same form sort as text.
+  guides.sort((a, b) => a.version.localeCompare(b.version) || a.again - b.again);
+  showNotebook(guides.at(-1).id);
 }
 
 // appChannel returns where the page sends the desktop app its messages, as

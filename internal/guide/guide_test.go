@@ -257,3 +257,11 @@ func TestNames(t *testing.T) {
 		}
 	}
 }
+
+// TestVersion checks the form of Version, which the web UI reads in the names
+// of the notebooks of the guide to open the newest (openGuide).
+func TestVersion(t *testing.T) {
+	if _, err := time.Parse(time.DateOnly, Version); err != nil {
+		t.Errorf("Version %q is not a date as YYYY-MM-DD: %v", Version, err)
+	}
+}
