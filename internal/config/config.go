@@ -29,6 +29,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -107,20 +109,58 @@ func Load() (Config, error) {
 	if err != nil {
 		return c, err
 	}
+	return Parse(b, p)
+}
+
+// Parse reads b as the settings file at path p, as Load does.
+func Parse(b []byte, p string) (Config, error) {
+	var c Config
 	dec := yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(true)
 	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) { // io.EOF: an empty file
-		return c, fmt.Errorf("%s: %w", p, err)
+		return c, fmt.Errorf("%s: %w", p, plainError(err))
 	}
 	if c.LegacyDataDir != "" {
 		return c, fmt.Errorf("%s: data_dir is replaced by notes_dir, the notes directory itself: write notes_dir: %s", p, filepath.Join(c.LegacyDataDir, "notes"))
 	}
 	if c.NotesDir != "" {
+		var err error
 		if c.NotesDir, err = resolve(c.NotesDir, filepath.Dir(p)); err != nil {
 			return c, fmt.Errorf("%s: notes_dir: %w", p, err)
 		}
 	}
 	return c, nil
+}
+
+// notesKeys are keys of the settings shared with the notes, in _ebira.yaml
+// of the notes directory (see internal/store), which a settings file may be
+// given by mistake.
+var notesKeys = []string{"search", "stop_words", "stop_tags", "marks"}
+
+// unknownField matches an error of yaml for an unknown key, which names the
+// Go type.
+var unknownField = regexp.MustCompile(`^line (\d+): field (\S+) not found in type \S+$`)
+
+// plainError says the errors of yaml for unknown keys without the Go type,
+// telling where a key of the settings shared with the notes goes.
+func plainError(err error) error {
+	var te *yaml.TypeError
+	if !errors.As(err, &te) {
+		return err
+	}
+	msgs := make([]string, len(te.Errors))
+	for i, e := range te.Errors {
+		m := unknownField.FindStringSubmatch(e)
+		switch {
+		case m == nil:
+			msgs[i] = e
+		case slices.Contains(notesKeys, m[2]):
+			msgs[i] = fmt.Sprintf("line %s: %s is not a key of the settings file; write it in _ebira.yaml of the notes directory, shared with the notes", m[1], m[2])
+		default:
+			msgs[i] = fmt.Sprintf("line %s: unknown key %s", m[1], m[2])
+		}
+	}
+	return errors.New(strings.Join(msgs, "; "))
 }
 
 // resolve expands a leading ~ of path and makes it absolute against dir.
@@ -238,6 +278,46 @@ func Save(c Config) (string, error) {
 	return p, os.WriteFile(p, append(b, add...), 0o644)
 }
 
+// Write replaces the settings file with b, creating the file when it does
+// not exist. The file is replaced at once, so that a command reading it
+// meanwhile reads the old or the new content.
+func Write(b []byte) (string, error) {
+	p, err := Path()
+	if err != nil {
+		return "", err
+	}
+	// A link, such as to a repository of dotfiles, stays a link.
+	target := p
+	if t, err := filepath.EvalSymlinks(p); err == nil {
+		target = t
+	}
+	dir := filepath.Dir(target)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	mode := fs.FileMode(0o644)
+	if fi, err := os.Stat(target); err == nil {
+		mode = fi.Mode().Perm()
+	}
+	f, err := os.CreateTemp(dir, ".config-*.yaml")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(f.Name()) // after a failure; renamed otherwise
+	if _, err := f.Write(b); err != nil {
+		f.Close()
+		return "", err
+	}
+	if err := f.Chmod(mode); err != nil {
+		f.Close()
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	return p, os.Rename(f.Name(), target)
+}
+
 // homeRel returns path with the home directory written as ~.
 func homeRel(path string) string {
 	home, err := os.UserHomeDir()
@@ -300,4 +380,109 @@ func Set(key, value string) (string, error) {
 		return "", err
 	}
 	return p, os.WriteFile(p, []byte(out), 0o644)
+}
+
+// UpdatedKeys are the keys of the settings file that Update writes, those
+// the web UI shows to change: not notes_dir and addr, which a restart of the
+// server keeps.
+var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview"}
+
+// Update writes the values of c for UpdatedKeys to the settings file, and
+// keeps the rest of it, with its comments. A zero value is left out, for the
+// default. The file is created when it does not exist.
+func Update(c Config) (string, error) {
+	p, err := Path()
+	if err != nil {
+		return "", err
+	}
+	old, err := os.ReadFile(p)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+	var doc yaml.Node
+	if len(bytes.TrimSpace(old)) > 0 {
+		if err := yaml.Unmarshal(old, &doc); err != nil {
+			return "", fmt.Errorf("%s: %w", p, err)
+		}
+	}
+	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		doc = yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}}
+	}
+	m := doc.Content[0]
+	values := map[string]string{"lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview}
+	for _, k := range UpdatedKeys {
+		var v *yaml.Node
+		switch {
+		case k == "watch":
+			if c.Watch != nil {
+				v = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: fmt.Sprint(*c.Watch)}
+			}
+		case values[k] != "":
+			v = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: values[k]}
+		}
+		setKey(m, k, v)
+	}
+	var buf bytes.Buffer
+	if len(m.Content) > 0 {
+		enc := yaml.NewEncoder(&buf)
+		enc.SetIndent(2)
+		if err := enc.Encode(&doc); err != nil {
+			return "", err
+		}
+		if err := enc.Close(); err != nil {
+			return "", err
+		}
+	}
+	return Write(buf.Bytes())
+}
+
+// setKey sets key of the mapping node m to v, keeping the comments of the old
+// value, or removes it for nil.
+func setKey(m *yaml.Node, key string, v *yaml.Node) {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value != key {
+			continue
+		}
+		if v == nil {
+			removePair(m, i)
+			return
+		}
+		old := m.Content[i+1]
+		v.HeadComment, v.LineComment, v.FootComment = old.HeadComment, old.LineComment, old.FootComment
+		m.Content[i+1] = v
+		return
+	}
+	if v != nil {
+		m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key}, v)
+	}
+}
+
+// removePair removes the pair at i of the mapping node m, keeping its
+// comments, such as lines commented out after it: they go before the next
+// key, or to the end of m.
+func removePair(m *yaml.Node, i int) {
+	k, v := m.Content[i], m.Content[i+1]
+	var kept []string
+	for _, c := range []string{k.HeadComment, v.HeadComment, v.FootComment, k.FootComment} {
+		if c != "" {
+			kept = append(kept, c)
+		}
+	}
+	m.Content = append(m.Content[:i], m.Content[i+2:]...)
+	if len(kept) == 0 {
+		return
+	}
+	c := strings.Join(kept, "\n")
+	if i < len(m.Content) {
+		next := m.Content[i]
+		if next.HeadComment != "" {
+			c += "\n" + next.HeadComment
+		}
+		next.HeadComment = c
+		return
+	}
+	if m.FootComment != "" {
+		c = m.FootComment + "\n" + c
+	}
+	m.FootComment = c
 }

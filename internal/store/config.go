@@ -56,3 +56,59 @@ func (s *Store) Config() (Config, error) {
 
 // ConfigPath returns the path of ConfigFile.
 func (s *Store) ConfigPath() string { return filepath.Join(s.dir, ConfigFile) }
+
+// SaveSearch writes the search settings of c to ConfigFile, its search mode
+// and stop lists, and keeps the rest of the file, such as the names of the
+// marks and comments. An empty mode and a nil list are left out, for the
+// defaults; an empty list is written as [], for none.
+func (s *Store) SaveSearch(c Config) error {
+	p := s.ConfigPath()
+	old, err := os.ReadFile(p)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	var doc yaml.Node
+	if len(bytes.TrimSpace(old)) > 0 {
+		if err := yaml.Unmarshal(old, &doc); err != nil {
+			return fmt.Errorf("%s: %w", p, err)
+		}
+	}
+	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		doc = yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}}
+	}
+	m := doc.Content[0]
+	if c.Search != "" {
+		set(m, "search", str(c.Search, 0))
+	} else {
+		unset(m, "search")
+	}
+	for _, l := range []struct {
+		key   string
+		words []string
+	}{{"stop_words", c.StopWords}, {"stop_tags", c.StopTags}} {
+		if l.words == nil {
+			unset(m, l.key)
+			continue
+		}
+		seq := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		if len(l.words) == 0 {
+			seq.Style = yaml.FlowStyle // []
+		}
+		for _, w := range l.words {
+			seq.Content = append(seq.Content, str(w, 0))
+		}
+		set(m, l.key, seq)
+	}
+	var buf bytes.Buffer
+	if len(m.Content) > 0 {
+		enc := yaml.NewEncoder(&buf)
+		enc.SetIndent(2)
+		if err := enc.Encode(&doc); err != nil {
+			return err
+		}
+		if err := enc.Close(); err != nil {
+			return err
+		}
+	}
+	return writeFileAtomic(p, buf.Bytes())
+}

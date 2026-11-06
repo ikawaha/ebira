@@ -13,7 +13,7 @@ The bottom line shows the keys that work. The main ones:
 | Enter | Open |
 | `n` | New note |
 | `e` / `E` | Edit / edit in `$EDITOR` |
-| `v` | Switch between rendered and Markdown source |
+| `v` | Switch between the preview and the Markdown source |
 | `z` | Zoom the document column |
 | `f` | Find in the note |
 | `T` | Switch between notebooks and tags |

@@ -65,6 +65,9 @@ type State struct {
 	APIRev    int       `json:"api_rev"`
 	NotesDir  string    `json:"notes_dir"`
 	StartedAt time.Time `json:"started_at"`
+	// Instance is random for each start, also when the process starts again
+	// as itself (Reexec), with the same PID.
+	Instance string `json:"instance,omitempty"`
 	// Flags are the flags of ebira serve other than -notes, so that
 	// ebira server restart starts the server again in the same way.
 	Flags []string `json:"flags,omitempty"`

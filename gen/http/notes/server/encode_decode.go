@@ -4509,6 +4509,293 @@ func EncodeSetPreviewStyleError(encoder func(context.Context, http.ResponseWrite
 	}
 }
 
+// EncodeSettingsResponse returns an encoder for responses returned by the
+// notes settings endpoint.
+func EncodeSettingsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.Settings)
+		enc := encoder(ctx, w)
+		body := NewSettingsResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeSettingsRequest returns a decoder for requests sent to the notes
+// settings endpoint.
+func DecodeSettingsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SettingsPayload, error) {
+	return func(r *http.Request) (*notes.SettingsPayload, error) {
+		var payload *notes.SettingsPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewSettingsPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSettingsError returns an encoder for errors returned by the settings
+// notes endpoint.
+func EncodeSettingsError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSettingsUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSettingsVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeSaveSettingsResponse returns an encoder for responses returned by the
+// notes save_settings endpoint.
+func EncodeSaveSettingsResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.Settings)
+		enc := encoder(ctx, w)
+		body := NewSaveSettingsResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeSaveSettingsRequest returns a decoder for requests sent to the notes
+// save_settings endpoint.
+func DecodeSaveSettingsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.SaveSettingsPayload, error) {
+	return func(r *http.Request) (*notes.SaveSettingsPayload, error) {
+		var payload *notes.SaveSettingsPayload
+		var (
+			body SaveSettingsRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateSaveSettingsRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewSaveSettingsPayload(&body, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeSaveSettingsError returns an encoder for errors returned by the
+// save_settings notes endpoint.
+func EncodeSaveSettingsError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "precondition_failed":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsPreconditionFailedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusPreconditionFailed)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeRestartServerResponse returns an encoder for responses returned by the
+// notes restart_server endpoint.
+func EncodeRestartServerResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusAccepted)
+		return nil
+	}
+}
+
+// DecodeRestartServerRequest returns a decoder for requests sent to the notes
+// restart_server endpoint.
+func DecodeRestartServerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.RestartServerPayload, error) {
+	return func(r *http.Request) (*notes.RestartServerPayload, error) {
+		var payload *notes.RestartServerPayload
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewRestartServerPayload(session)
+
+		return payload, nil
+	}
+}
+
+// EncodeRestartServerError returns an encoder for errors returned by the
+// restart_server notes endpoint.
+func EncodeRestartServerError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unavailable":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestartServerUnavailableResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestartServerUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewRestartServerVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeSyncResponse returns an encoder for responses returned by the notes
 // sync endpoint.
 func EncodeSyncResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -4832,6 +5119,101 @@ func marshalNotesGitConflictToGitConflictResponseBody(v *notes.GitConflict) *Git
 		Path:   v.Path,
 		NoteID: v.NoteID,
 		CopyID: v.CopyID,
+	}
+
+	return res
+}
+
+// marshalNotesMachineSettingsToMachineSettingsResponseBody builds a value of
+// type *MachineSettingsResponseBody from a value of type
+// *notes.MachineSettings.
+func marshalNotesMachineSettingsToMachineSettingsResponseBody(v *notes.MachineSettings) *MachineSettingsResponseBody {
+	res := &MachineSettingsResponseBody{
+		Lang:       v.Lang,
+		Theme:      v.Theme,
+		Auth:       v.Auth,
+		GitSync:    v.GitSync,
+		Watch:      v.Watch,
+		Provider:   v.Provider,
+		Model:      v.Model,
+		TuiPreview: v.TuiPreview,
+	}
+
+	return res
+}
+
+// marshalNotesNotesSettingsToNotesSettingsResponseBody builds a value of type
+// *NotesSettingsResponseBody from a value of type *notes.NotesSettings.
+func marshalNotesNotesSettingsToNotesSettingsResponseBody(v *notes.NotesSettings) *NotesSettingsResponseBody {
+	res := &NotesSettingsResponseBody{
+		Search: v.Search,
+	}
+	if v.StopWords != nil {
+		res.StopWords = marshalNotesStopListToStopListResponseBody(v.StopWords)
+	}
+	if v.StopTags != nil {
+		res.StopTags = marshalNotesStopListToStopListResponseBody(v.StopTags)
+	}
+
+	return res
+}
+
+// marshalNotesStopListToStopListResponseBody builds a value of type
+// *StopListResponseBody from a value of type *notes.StopList.
+func marshalNotesStopListToStopListResponseBody(v *notes.StopList) *StopListResponseBody {
+	res := &StopListResponseBody{
+		Use: v.Use,
+	}
+	if v.Words != nil {
+		res.Words = make([]string, len(v.Words))
+		for i, val := range v.Words {
+			res.Words[i] = val
+		}
+	}
+
+	return res
+}
+
+// unmarshalMachineSettingsRequestBodyToNotesMachineSettings builds a value of
+// type *notes.MachineSettings from a value of type *MachineSettingsRequestBody.
+func unmarshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsRequestBody) *notes.MachineSettings {
+	res := &notes.MachineSettings{
+		Lang:       v.Lang,
+		Theme:      v.Theme,
+		Auth:       v.Auth,
+		GitSync:    v.GitSync,
+		Watch:      v.Watch,
+		Provider:   v.Provider,
+		Model:      v.Model,
+		TuiPreview: v.TuiPreview,
+	}
+
+	return res
+}
+
+// unmarshalNotesSettingsRequestBodyToNotesNotesSettings builds a value of type
+// *notes.NotesSettings from a value of type *NotesSettingsRequestBody.
+func unmarshalNotesSettingsRequestBodyToNotesNotesSettings(v *NotesSettingsRequestBody) *notes.NotesSettings {
+	res := &notes.NotesSettings{
+		Search: v.Search,
+	}
+	res.StopWords = unmarshalStopListRequestBodyToNotesStopList(v.StopWords)
+	res.StopTags = unmarshalStopListRequestBodyToNotesStopList(v.StopTags)
+
+	return res
+}
+
+// unmarshalStopListRequestBodyToNotesStopList builds a value of type
+// *notes.StopList from a value of type *StopListRequestBody.
+func unmarshalStopListRequestBodyToNotesStopList(v *StopListRequestBody) *notes.StopList {
+	res := &notes.StopList{
+		Use: *v.Use,
+	}
+	if v.Words != nil {
+		res.Words = make([]string, len(v.Words))
+		for i, val := range v.Words {
+			res.Words[i] = val
+		}
 	}
 
 	return res
