@@ -273,16 +273,20 @@ function fitColumns() {
   loadColumnWidths();
   if (getComputedStyle(document.querySelector(".resizer")).display === "none") return; // one column
   // The columns may be wider than the window in all, leaving the preview no
-  // width at all: count from the width of the window.
-  const width = (col) => (columnPane(col).hidden ? 0 : columnPane(col).getBoundingClientRect().width);
-  let short = PREVIEW_MIN - (document.querySelector(".panes").clientWidth - width("side") - width("list") - width("ask"));
+  // width at all: count from the width of the window. The widths are the ones
+  // the columns are set to, not the ones drawn: a page drawn for another width,
+  // as in a window of the desktop app that is still opening, has columns of
+  // other widths, which narrowed would make a column wider than it was.
+  const panes = document.querySelector(".panes");
+  const width = (col) => (columnPane(col).hidden ? 0 : parseFloat(getComputedStyle(panes).getPropertyValue(COLUMNS[col].prop)) || 0);
+  let short = PREVIEW_MIN - (panes.clientWidth - width("side") - width("list") - width("ask"));
   for (const col of ["list", "ask", "side"]) {
     if (short <= 0) return;
     if (columnPane(col).hidden) continue;
     const w = width(col);
     const cut = Math.min(short, w - COLUMNS[col].min);
     if (cut <= 0) continue;
-    document.querySelector(".panes").style.setProperty(COLUMNS[col].prop, `${Math.round(w - cut)}px`);
+    panes.style.setProperty(COLUMNS[col].prop, `${Math.round(w - cut)}px`);
     short -= cut;
   }
 }
@@ -332,8 +336,9 @@ for (const r of document.querySelectorAll(".resizer")) {
     }
   });
 }
-fitColumns();
-window.addEventListener("resize", fitColumns);
+// The panes, not the window: the page may be drawn before the window has its
+// width, and the panes change their width without the window telling it.
+new ResizeObserver(() => fitColumns()).observe(document.querySelector(".panes"));
 
 // Messages: the text of the UI is in i18n/<lang>.json, keyed by name, so that
 // the code holds no text of a language. {name} in a message is replaced with
