@@ -2781,6 +2781,7 @@ func DecodeDeleteAiSeparatorPayload(data []byte) (out *notes.DeleteAiSeparatorPa
 }
 
 // ValidateGetInputValue checks a service value against its declared field validation.
+
 func ValidateGetInputValue(in *notes.GetPayload) error {
 
 	if in == nil {
@@ -2948,6 +2949,7 @@ func EncodeImportAiNoteResult(in *notes.ImportResult) ([]byte, error) {
 }
 
 // ValidateListInputValue checks a service value against its declared field validation.
+
 func ValidateListInputValue(in *notes.ListPayload) error {
 
 	if in == nil {
@@ -3074,6 +3076,7 @@ func DecodeMakeNotebookPrivatePayload(data []byte) (out *notes.MakeNotebookPriva
 }
 
 // ValidateMarksInputValue checks a service value against its declared field validation.
+
 func ValidateMarksInputValue(in *notes.MarksPayload) error {
 
 	if in == nil {
@@ -3272,6 +3275,7 @@ func EncodeMoveAiSeparatorResult(in *notes.Separator) ([]byte, error) {
 }
 
 // ValidateNotebooksInputValue checks a service value against its declared field validation.
+
 func ValidateNotebooksInputValue(in *notes.NotebooksPayload) error {
 
 	if in == nil {
@@ -3337,6 +3341,7 @@ func EncodeNotebooksResult(in []*notes.Notebook) ([]byte, error) {
 }
 
 // ValidateSearchInputValue checks a service value against its declared field validation.
+
 func ValidateSearchInputValue(in *notes.SearchPayload) error {
 
 	if in == nil {
@@ -3420,6 +3425,7 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 }
 
 // ValidateTagsInputValue checks a service value against its declared field validation.
+
 func ValidateTagsInputValue(in *notes.TagsPayload) error {
 
 	if in == nil {

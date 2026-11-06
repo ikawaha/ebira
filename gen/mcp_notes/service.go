@@ -702,19 +702,24 @@ func validatejsonInputRequestTransport(value *jsonInputRequestTransport) (err er
 		}
 	}
 	if value.Params != nil {
-		switch string(value.Params.Kind()) {
-		case "form":
-			actual, _ := value.Params.AsForm()
-			if actual != nil {
-				if err2 := validatejsonElicitationFormParamsTransport(actual); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+
+		if err2 := value.Params.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		} else {
+			switch string(value.Params.Kind()) {
+			case "form":
+				actual, _ := value.Params.AsForm()
+				if actual != nil {
+					if err2 := validatejsonElicitationFormParamsTransport(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
-			}
-		case "url":
-			actual, _ := value.Params.AsURL()
-			if actual != nil {
-				if err2 := validatejsonElicitationURLParamsTransport(actual); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+			case "url":
+				actual, _ := value.Params.AsURL()
+				if actual != nil {
+					if err2 := validatejsonElicitationURLParamsTransport(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
 			}
 		}
@@ -1025,26 +1030,31 @@ func validatejsonToolsCallResultTransport(value *jsonToolsCallResultTransport) (
 		err = goa.MergeErrors(err, goa.MissingFieldError("outcome", "body"))
 	}
 	if value.Outcome != nil {
-		switch string(value.Outcome.Kind()) {
-		case "complete":
-			actual, _ := value.Outcome.AsComplete()
-			if actual != nil {
-				if err2 := validatejsonToolsCallCompleteResultTransport(actual); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+
+		if err2 := value.Outcome.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		} else {
+			switch string(value.Outcome.Kind()) {
+			case "complete":
+				actual, _ := value.Outcome.AsComplete()
+				if actual != nil {
+					if err2 := validatejsonToolsCallCompleteResultTransport(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
-			}
-		case "input_required":
-			actual, _ := value.Outcome.AsInputRequired()
-			if actual != nil {
-				if err2 := validatejsonInputRequiredResultTransport(actual); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+			case "input_required":
+				actual, _ := value.Outcome.AsInputRequired()
+				if actual != nil {
+					if err2 := validatejsonInputRequiredResultTransport(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
-			}
-		case "task":
-			actual, _ := value.Outcome.AsTask()
-			if actual != nil {
-				if err2 := validatejsonTaskCreatedTransport(actual); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+			case "task":
+				actual, _ := value.Outcome.AsTask()
+				if actual != nil {
+					if err2 := validatejsonTaskCreatedTransport(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
 			}
 		}
@@ -1309,19 +1319,24 @@ func validateInputRequestOriginal(value *InputRequest) (err error) {
 	if !(value.Method == "elicitation/create") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.method", value.Method, []any{"elicitation/create"}))
 	}
-	switch string(value.Params.Kind()) {
-	case "form":
-		actual, _ := value.Params.AsForm()
-		if actual != nil {
-			if err2 := validateElicitationFormParamsOriginal(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
+
+	if err2 := value.Params.Validate(); err2 != nil {
+		err = goa.MergeErrors(err, err2)
+	} else {
+		switch string(value.Params.Kind()) {
+		case "form":
+			actual, _ := value.Params.AsForm()
+			if actual != nil {
+				if err2 := validateElicitationFormParamsOriginal(actual); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
 			}
-		}
-	case "url":
-		actual, _ := value.Params.AsURL()
-		if actual != nil {
-			if err2 := validateElicitationURLParamsOriginal(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
+		case "url":
+			actual, _ := value.Params.AsURL()
+			if actual != nil {
+				if err2 := validateElicitationURLParamsOriginal(actual); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
 			}
 		}
 	}
@@ -1388,26 +1403,31 @@ func validateToolsCallResultOriginal(value *ToolsCallResult) (err error) {
 	if value.Outcome.Kind() == "" {
 		err = goa.MergeErrors(err, goa.MissingFieldError("outcome", "value"))
 	}
-	switch string(value.Outcome.Kind()) {
-	case "complete":
-		actual, _ := value.Outcome.AsComplete()
-		if actual != nil {
-			if err2 := validateToolsCallCompleteResultOriginal(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
+
+	if err2 := value.Outcome.Validate(); err2 != nil {
+		err = goa.MergeErrors(err, err2)
+	} else {
+		switch string(value.Outcome.Kind()) {
+		case "complete":
+			actual, _ := value.Outcome.AsComplete()
+			if actual != nil {
+				if err2 := validateToolsCallCompleteResultOriginal(actual); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
 			}
-		}
-	case "input_required":
-		actual, _ := value.Outcome.AsInputRequired()
-		if actual != nil {
-			if err2 := validateInputRequiredResultOriginal(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
+		case "input_required":
+			actual, _ := value.Outcome.AsInputRequired()
+			if actual != nil {
+				if err2 := validateInputRequiredResultOriginal(actual); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
 			}
-		}
-	case "task":
-		actual, _ := value.Outcome.AsTask()
-		if actual != nil {
-			if err2 := validateTaskCreatedOriginal(actual); err2 != nil {
-				err = goa.MergeErrors(err, err2)
+		case "task":
+			actual, _ := value.Outcome.AsTask()
+			if actual != nil {
+				if err2 := validateTaskCreatedOriginal(actual); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
 			}
 		}
 	}
@@ -1836,6 +1856,28 @@ func EncodeCompletionsCapability(in *CompletionsCapability) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateCompletionsCapabilityValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateCompletionsCapabilityValue(in *CompletionsCapability) error {
+	if err := checkCompletionsCapabilityValue(in); err != nil {
+		return fmt.Errorf("validate CompletionsCapability value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "CompletionsCapability")
+	}
+
+	var body *jsonCompletionsCapabilityTransport
+	{
+		body = &jsonCompletionsCapabilityTransport{}
+	}
+	if err := validatejsonCompletionsCapabilityTransport(body); err != nil {
+		return fmt.Errorf("validate CompletionsCapability value: %w", err)
+	}
+	return nil
+}
+
 // DecodeCompletionsCapability checks JSON field names from the Goa design and returns a service value.
 func DecodeCompletionsCapability(data []byte) (out *CompletionsCapability, err error) {
 	root, err := readStrictJSON(data)
@@ -1895,6 +1937,40 @@ func EncodeContentAnnotations(in *ContentAnnotations) ([]byte, error) {
 		return nil, fmt.Errorf("encode ContentAnnotations JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateContentAnnotationsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateContentAnnotationsValue(in *ContentAnnotations) error {
+	if err := checkContentAnnotationsValue(in); err != nil {
+		return fmt.Errorf("validate ContentAnnotations value: %w", err)
+	}
+	if err := validateContentAnnotationsOriginal(in); err != nil {
+		return fmt.Errorf("validate ContentAnnotations value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ContentAnnotations")
+	}
+
+	var body *jsonContentAnnotationsTransport
+	{
+		body = &jsonContentAnnotationsTransport{
+			Priority:     in.Priority,
+			LastModified: in.LastModified,
+		}
+		if in.Audience != nil {
+			body.Audience = make([]string, len(in.Audience))
+			for i, val := range in.Audience {
+				body.Audience[i] = val
+			}
+		}
+	}
+	if err := validatejsonContentAnnotationsTransport(body); err != nil {
+		return fmt.Errorf("validate ContentAnnotations value: %w", err)
+	}
+	return nil
 }
 
 // DecodeContentAnnotations checks JSON field names from the Goa design and returns a service value.
@@ -1966,6 +2042,41 @@ func EncodeContentIcon(in *ContentIcon) ([]byte, error) {
 		return nil, fmt.Errorf("encode ContentIcon JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateContentIconValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateContentIconValue(in *ContentIcon) error {
+	if err := checkContentIconValue(in); err != nil {
+		return fmt.Errorf("validate ContentIcon value: %w", err)
+	}
+	if err := validateContentIconOriginal(in); err != nil {
+		return fmt.Errorf("validate ContentIcon value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ContentIcon")
+	}
+
+	var body *jsonContentIconTransport
+	{
+		body = &jsonContentIconTransport{
+			Src:      &in.Src,
+			MIMEType: in.MIMEType,
+			Theme:    in.Theme,
+		}
+		if in.Sizes != nil {
+			body.Sizes = make([]string, len(in.Sizes))
+			for i, val := range in.Sizes {
+				body.Sizes[i] = val
+			}
+		}
+	}
+	if err := validatejsonContentIconTransport(body); err != nil {
+		return fmt.Errorf("validate ContentIcon value: %w", err)
+	}
+	return nil
 }
 
 // DecodeContentIcon checks JSON field names from the Goa design and returns a service value.
@@ -2057,6 +2168,58 @@ func EncodeContentItem(in *ContentItem) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateContentItemValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateContentItemValue(in *ContentItem) error {
+	if err := checkContentItemValue(in); err != nil {
+		return fmt.Errorf("validate ContentItem value: %w", err)
+	}
+	if err := validateContentItemOriginal(in); err != nil {
+		return fmt.Errorf("validate ContentItem value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ContentItem")
+	}
+
+	var body *jsonContentItemTransport
+	{
+		body = &jsonContentItemTransport{
+			Type:        &in.Type,
+			Text:        in.Text,
+			Data:        in.Data,
+			MimeType:    in.MimeType,
+			Name:        in.Name,
+			URI:         in.URI,
+			Title:       in.Title,
+			Description: in.Description,
+			Size:        in.Size,
+			Meta:        in.Meta,
+		}
+		if in.Icons != nil {
+			body.Icons = make([]*jsonContentIconTransport, len(in.Icons))
+			for i, val := range in.Icons {
+				if val == nil {
+					body.Icons[i] = nil
+					continue
+				}
+				body.Icons[i] = encodeContentIconToContentIconTransport(val)
+			}
+		}
+		if in.Resource != nil {
+			body.Resource = encodeResourceContentToResourceContentTransport(in.Resource)
+		}
+		if in.Annotations != nil {
+			body.Annotations = encodeContentAnnotationsToContentAnnotationsTransport(in.Annotations)
+		}
+	}
+	if err := validatejsonContentItemTransport(body); err != nil {
+		return fmt.Errorf("validate ContentItem value: %w", err)
+	}
+	return nil
+}
+
 // DecodeContentItem checks JSON field names from the Goa design and returns a service value.
 func DecodeContentItem(data []byte) (out *ContentItem, err error) {
 	root, err := readStrictJSON(data)
@@ -2138,6 +2301,33 @@ func EncodeDiscoverPayload(in *DiscoverPayload) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateDiscoverPayloadValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateDiscoverPayloadValue(in *DiscoverPayload) error {
+	if err := checkDiscoverPayloadValue(in); err != nil {
+		return fmt.Errorf("validate DiscoverPayload value: %w", err)
+	}
+	if err := validateDiscoverPayloadOriginal(in); err != nil {
+		return fmt.Errorf("validate DiscoverPayload value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "DiscoverPayload")
+	}
+
+	var body *jsonDiscoverPayloadTransport
+	{
+		body = &jsonDiscoverPayloadTransport{
+			Meta: in.Meta,
+		}
+	}
+	if err := validatejsonDiscoverPayloadTransport(body); err != nil {
+		return fmt.Errorf("validate DiscoverPayload value: %w", err)
+	}
+	return nil
+}
+
 // DecodeDiscoverPayload checks JSON field names from the Goa design and returns a service value.
 func DecodeDiscoverPayload(data []byte) (out *DiscoverPayload, err error) {
 	root, err := readStrictJSON(data)
@@ -2201,6 +2391,42 @@ func EncodeDiscoverResult(in *DiscoverResult) ([]byte, error) {
 		return nil, fmt.Errorf("encode DiscoverResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateDiscoverResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateDiscoverResultValue(in *DiscoverResult) error {
+	if err := checkDiscoverResultValue(in); err != nil {
+		return fmt.Errorf("validate DiscoverResult value: %w", err)
+	}
+	if err := validateDiscoverResultOriginal(in); err != nil {
+		return fmt.Errorf("validate DiscoverResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "DiscoverResult")
+	}
+
+	var body *jsonDiscoverResultTransport
+	{
+		body = &jsonDiscoverResultTransport{
+			Meta:       in.Meta,
+			ResultType: &in.ResultType,
+			CacheScope: &in.CacheScope,
+		}
+		ttlMs := discoverResultInt64Transport(in.TTLMs)
+		body.TTLMs = &ttlMs
+		body.SupportedVersions = make([]string, len(in.SupportedVersions))
+		for i, val := range in.SupportedVersions {
+			body.SupportedVersions[i] = val
+		}
+		body.Capabilities = encodeServerCapabilitiesToServerCapabilitiesTransport(in.Capabilities)
+	}
+	if err := validatejsonDiscoverResultTransport(body); err != nil {
+		return fmt.Errorf("validate DiscoverResult value: %w", err)
+	}
+	return nil
 }
 
 // DecodeDiscoverResult checks JSON field names from the Goa design and returns a service value.
@@ -2268,6 +2494,36 @@ func EncodeElicitationCapabilities(in *ElicitationCapabilities) ([]byte, error) 
 		return nil, fmt.Errorf("encode ElicitationCapabilities JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateElicitationCapabilitiesValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateElicitationCapabilitiesValue(in *ElicitationCapabilities) error {
+	if err := checkElicitationCapabilitiesValue(in); err != nil {
+		return fmt.Errorf("validate ElicitationCapabilities value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ElicitationCapabilities")
+	}
+
+	var body *jsonElicitationCapabilitiesTransport
+	{
+		body = &jsonElicitationCapabilitiesTransport{}
+		if in.Form != nil {
+			body.Form = &struct {
+			}{}
+		}
+		if in.URL != nil {
+			body.URL = &struct {
+			}{}
+		}
+	}
+	if err := validatejsonElicitationCapabilitiesTransport(body); err != nil {
+		return fmt.Errorf("validate ElicitationCapabilities value: %w", err)
+	}
+	return nil
 }
 
 // DecodeElicitationCapabilities checks JSON field names from the Goa design and returns a service value.
@@ -2339,6 +2595,42 @@ func EncodeElicitationFormParams(in *ElicitationFormParams) ([]byte, error) {
 		return nil, fmt.Errorf("encode ElicitationFormParams JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateElicitationFormParamsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateElicitationFormParamsValue(in *ElicitationFormParams) error {
+	if err := checkElicitationFormParamsValue(in); err != nil {
+		return fmt.Errorf("validate ElicitationFormParams value: %w", err)
+	}
+	if err := validateElicitationFormParamsOriginal(in); err != nil {
+		return fmt.Errorf("validate ElicitationFormParams value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ElicitationFormParams")
+	}
+
+	var body *jsonElicitationFormParamsTransport
+	{
+		body = &jsonElicitationFormParamsTransport{
+			Message:         &in.Message,
+			RequestedSchema: in.RequestedSchema,
+		}
+		if in.Extensions != nil {
+			body.Extensions = make(map[string]json.RawMessage, len(in.Extensions))
+			for key, val := range in.Extensions {
+				tk := key
+				tv := val
+				body.Extensions[tk] = tv
+			}
+		}
+	}
+	if err := validatejsonElicitationFormParamsTransport(body); err != nil {
+		return fmt.Errorf("validate ElicitationFormParams value: %w", err)
+	}
+	return nil
 }
 
 // DecodeElicitationFormParams checks JSON field names from the Goa design and returns a service value.
@@ -2413,6 +2705,42 @@ func EncodeElicitationURLParams(in *ElicitationURLParams) ([]byte, error) {
 		return nil, fmt.Errorf("encode ElicitationURLParams JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateElicitationURLParamsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateElicitationURLParamsValue(in *ElicitationURLParams) error {
+	if err := checkElicitationURLParamsValue(in); err != nil {
+		return fmt.Errorf("validate ElicitationURLParams value: %w", err)
+	}
+	if err := validateElicitationURLParamsOriginal(in); err != nil {
+		return fmt.Errorf("validate ElicitationURLParams value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ElicitationURLParams")
+	}
+
+	var body *jsonElicitationURLParamsTransport
+	{
+		body = &jsonElicitationURLParamsTransport{
+			Message: &in.Message,
+			URL:     &in.URL,
+		}
+		if in.Extensions != nil {
+			body.Extensions = make(map[string]json.RawMessage, len(in.Extensions))
+			for key, val := range in.Extensions {
+				tk := key
+				tv := val
+				body.Extensions[tk] = tv
+			}
+		}
+	}
+	if err := validatejsonElicitationURLParamsTransport(body); err != nil {
+		return fmt.Errorf("validate ElicitationURLParams value: %w", err)
+	}
+	return nil
 }
 
 // DecodeElicitationURLParams checks JSON field names from the Goa design and returns a service value.
@@ -2500,6 +2828,55 @@ func EncodeInputRequest(in *InputRequest) ([]byte, error) {
 		return nil, fmt.Errorf("encode InputRequest JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateInputRequestValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateInputRequestValue(in *InputRequest) error {
+	if err := checkInputRequestValue(in); err != nil {
+		return fmt.Errorf("validate InputRequest value: %w", err)
+	}
+	if err := validateInputRequestOriginal(in); err != nil {
+		return fmt.Errorf("validate InputRequest value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "InputRequest")
+	}
+
+	var body *jsonInputRequestTransport
+	{
+		body = &jsonInputRequestTransport{
+			Method: &in.Method,
+		}
+		var paramsValue jsonElicitationParamsTransport
+		switch string(in.Params.Kind()) {
+		case "form":
+			actual, _ := in.Params.AsForm()
+			var obj *jsonElicitationFormParamsTransport
+			if actual != nil {
+				obj = encodeElicitationFormParamsToElicitationFormParamsTransport(actual)
+			}
+			u := paramsValue
+			u.SetForm((*jsonElicitationFormParamsTransport)(obj))
+			paramsValue = u
+		case "url":
+			actual, _ := in.Params.AsURL()
+			var obj *jsonElicitationURLParamsTransport
+			if actual != nil {
+				obj = encodeElicitationURLParamsToElicitationURLParamsTransport(actual)
+			}
+			u := paramsValue
+			u.SetURL((*jsonElicitationURLParamsTransport)(obj))
+			paramsValue = u
+		}
+		body.Params = &paramsValue
+	}
+	if err := validatejsonInputRequestTransport(body); err != nil {
+		return fmt.Errorf("validate InputRequest value: %w", err)
+	}
+	return nil
 }
 
 // DecodeInputRequest checks JSON field names from the Goa design and returns a service value.
@@ -2590,6 +2967,45 @@ func EncodeInputRequiredResult(in *InputRequiredResult) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateInputRequiredResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateInputRequiredResultValue(in *InputRequiredResult) error {
+	if err := checkInputRequiredResultValue(in); err != nil {
+		return fmt.Errorf("validate InputRequiredResult value: %w", err)
+	}
+	if err := validateInputRequiredResultOriginal(in); err != nil {
+		return fmt.Errorf("validate InputRequiredResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "InputRequiredResult")
+	}
+
+	var body *jsonInputRequiredResultTransport
+	{
+		body = &jsonInputRequiredResultTransport{
+			RequestState: in.RequestState,
+			Meta:         in.Meta,
+		}
+		if in.InputRequests != nil {
+			body.InputRequests = make(map[string]*jsonInputRequestTransport, len(in.InputRequests))
+			for key, val := range in.InputRequests {
+				tk := key
+				if val == nil {
+					body.InputRequests[tk] = nil
+					continue
+				}
+				body.InputRequests[tk] = encodeInputRequestToInputRequestTransport(val)
+			}
+		}
+	}
+	if err := validatejsonInputRequiredResultTransport(body); err != nil {
+		return fmt.Errorf("validate InputRequiredResult value: %w", err)
+	}
+	return nil
+}
+
 // DecodeInputRequiredResult checks JSON field names from the Goa design and returns a service value.
 func DecodeInputRequiredResult(data []byte) (out *InputRequiredResult, err error) {
 	root, err := readStrictJSON(data)
@@ -2657,6 +3073,32 @@ func EncodeMissingClientCapabilityError(in *MissingClientCapabilityError) ([]byt
 	return data, nil
 }
 
+// ValidateMissingClientCapabilityErrorValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateMissingClientCapabilityErrorValue(in *MissingClientCapabilityError) error {
+	if err := checkMissingClientCapabilityErrorValue(in); err != nil {
+		return fmt.Errorf("validate MissingClientCapabilityError value: %w", err)
+	}
+	if err := validateMissingClientCapabilityErrorOriginal(in); err != nil {
+		return fmt.Errorf("validate MissingClientCapabilityError value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "MissingClientCapabilityError")
+	}
+
+	var body *jsonMissingClientCapabilityErrorTransport
+	{
+		body = &jsonMissingClientCapabilityErrorTransport{}
+		body.RequiredCapabilities = encodeRequiredClientCapabilitiesToRequiredClientCapabilitiesTransport(in.RequiredCapabilities)
+	}
+	if err := validatejsonMissingClientCapabilityErrorTransport(body); err != nil {
+		return fmt.Errorf("validate MissingClientCapabilityError value: %w", err)
+	}
+	return nil
+}
+
 // DecodeMissingClientCapabilityError checks JSON field names from the Goa design and returns a service value.
 func DecodeMissingClientCapabilityError(data []byte) (out *MissingClientCapabilityError, err error) {
 	root, err := readStrictJSON(data)
@@ -2707,6 +3149,30 @@ func EncodePromptsCapability(in *PromptsCapability) ([]byte, error) {
 		return nil, fmt.Errorf("encode PromptsCapability JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidatePromptsCapabilityValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidatePromptsCapabilityValue(in *PromptsCapability) error {
+	if err := checkPromptsCapabilityValue(in); err != nil {
+		return fmt.Errorf("validate PromptsCapability value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "PromptsCapability")
+	}
+
+	var body *jsonPromptsCapabilityTransport
+	{
+		body = &jsonPromptsCapabilityTransport{
+			ListChanged: in.ListChanged,
+		}
+	}
+	if err := validatejsonPromptsCapabilityTransport(body); err != nil {
+		return fmt.Errorf("validate PromptsCapability value: %w", err)
+	}
+	return nil
 }
 
 // DecodePromptsCapability checks JSON field names from the Goa design and returns a service value.
@@ -2774,6 +3240,42 @@ func EncodeRequiredClientCapabilities(in *RequiredClientCapabilities) ([]byte, e
 	return data, nil
 }
 
+// ValidateRequiredClientCapabilitiesValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateRequiredClientCapabilitiesValue(in *RequiredClientCapabilities) error {
+	if err := checkRequiredClientCapabilitiesValue(in); err != nil {
+		return fmt.Errorf("validate RequiredClientCapabilities value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "RequiredClientCapabilities")
+	}
+
+	var body *jsonRequiredClientCapabilitiesTransport
+	{
+		body = &jsonRequiredClientCapabilitiesTransport{}
+		if in.Elicitation != nil {
+			body.Elicitation = encodeElicitationCapabilitiesToElicitationCapabilitiesTransport(in.Elicitation)
+		}
+		if in.Extensions != nil {
+			body.Extensions = make(map[string]*jsonRequiredExtensionTransport, len(in.Extensions))
+			for key, val := range in.Extensions {
+				tk := key
+				if val == nil {
+					body.Extensions[tk] = nil
+					continue
+				}
+				body.Extensions[tk] = encodeRequiredExtensionToRequiredExtensionTransport(val)
+			}
+		}
+	}
+	if err := validatejsonRequiredClientCapabilitiesTransport(body); err != nil {
+		return fmt.Errorf("validate RequiredClientCapabilities value: %w", err)
+	}
+	return nil
+}
+
 // DecodeRequiredClientCapabilities checks JSON field names from the Goa design and returns a service value.
 func DecodeRequiredClientCapabilities(data []byte) (out *RequiredClientCapabilities, err error) {
 	root, err := readStrictJSON(data)
@@ -2837,6 +3339,28 @@ func EncodeRequiredExtension(in *RequiredExtension) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateRequiredExtensionValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateRequiredExtensionValue(in *RequiredExtension) error {
+	if err := checkRequiredExtensionValue(in); err != nil {
+		return fmt.Errorf("validate RequiredExtension value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "RequiredExtension")
+	}
+
+	var body *jsonRequiredExtensionTransport
+	{
+		body = &jsonRequiredExtensionTransport{}
+	}
+	if err := validatejsonRequiredExtensionTransport(body); err != nil {
+		return fmt.Errorf("validate RequiredExtension value: %w", err)
+	}
+	return nil
+}
+
 // DecodeRequiredExtension checks JSON field names from the Goa design and returns a service value.
 func DecodeRequiredExtension(data []byte) (out *RequiredExtension, err error) {
 	root, err := readStrictJSON(data)
@@ -2895,6 +3419,37 @@ func EncodeResourceContent(in *ResourceContent) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateResourceContentValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateResourceContentValue(in *ResourceContent) error {
+	if err := checkResourceContentValue(in); err != nil {
+		return fmt.Errorf("validate ResourceContent value: %w", err)
+	}
+	if err := validateResourceContentOriginal(in); err != nil {
+		return fmt.Errorf("validate ResourceContent value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ResourceContent")
+	}
+
+	var body *jsonResourceContentTransport
+	{
+		body = &jsonResourceContentTransport{
+			URI:      &in.URI,
+			MimeType: in.MimeType,
+			Text:     in.Text,
+			Blob:     in.Blob,
+			Meta:     in.Meta,
+		}
+	}
+	if err := validatejsonResourceContentTransport(body); err != nil {
+		return fmt.Errorf("validate ResourceContent value: %w", err)
+	}
+	return nil
+}
+
 // DecodeResourceContent checks JSON field names from the Goa design and returns a service value.
 func DecodeResourceContent(data []byte) (out *ResourceContent, err error) {
 	root, err := readStrictJSON(data)
@@ -2951,6 +3506,31 @@ func EncodeResourcesCapability(in *ResourcesCapability) ([]byte, error) {
 		return nil, fmt.Errorf("encode ResourcesCapability JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateResourcesCapabilityValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateResourcesCapabilityValue(in *ResourcesCapability) error {
+	if err := checkResourcesCapabilityValue(in); err != nil {
+		return fmt.Errorf("validate ResourcesCapability value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ResourcesCapability")
+	}
+
+	var body *jsonResourcesCapabilityTransport
+	{
+		body = &jsonResourcesCapabilityTransport{
+			ListChanged: in.ListChanged,
+			Subscribe:   in.Subscribe,
+		}
+	}
+	if err := validatejsonResourcesCapabilityTransport(body); err != nil {
+		return fmt.Errorf("validate ResourcesCapability value: %w", err)
+	}
+	return nil
 }
 
 // DecodeResourcesCapability checks JSON field names from the Goa design and returns a service value.
@@ -3017,6 +3597,42 @@ func EncodeServerCapabilities(in *ServerCapabilities) ([]byte, error) {
 		return nil, fmt.Errorf("encode ServerCapabilities JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateServerCapabilitiesValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateServerCapabilitiesValue(in *ServerCapabilities) error {
+	if err := checkServerCapabilitiesValue(in); err != nil {
+		return fmt.Errorf("validate ServerCapabilities value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ServerCapabilities")
+	}
+
+	var body *jsonServerCapabilitiesTransport
+	{
+		body = &jsonServerCapabilitiesTransport{
+			Extensions: in.Extensions,
+		}
+		if in.Completions != nil {
+			body.Completions = encodeCompletionsCapabilityToCompletionsCapabilityTransport(in.Completions)
+		}
+		if in.Tools != nil {
+			body.Tools = encodeToolsCapabilityToToolsCapabilityTransport(in.Tools)
+		}
+		if in.Resources != nil {
+			body.Resources = encodeResourcesCapabilityToResourcesCapabilityTransport(in.Resources)
+		}
+		if in.Prompts != nil {
+			body.Prompts = encodePromptsCapabilityToPromptsCapabilityTransport(in.Prompts)
+		}
+	}
+	if err := validatejsonServerCapabilitiesTransport(body); err != nil {
+		return fmt.Errorf("validate ServerCapabilities value: %w", err)
+	}
+	return nil
 }
 
 // DecodeServerCapabilities checks JSON field names from the Goa design and returns a service value.
@@ -3100,6 +3716,46 @@ func EncodeTaskCreated(in *TaskCreated) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateTaskCreatedValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateTaskCreatedValue(in *TaskCreated) error {
+	if err := checkTaskCreatedValue(in); err != nil {
+		return fmt.Errorf("validate TaskCreated value: %w", err)
+	}
+	if err := validateTaskCreatedOriginal(in); err != nil {
+		return fmt.Errorf("validate TaskCreated value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "TaskCreated")
+	}
+
+	var body *jsonTaskCreatedTransport
+	{
+		body = &jsonTaskCreatedTransport{
+			TaskID:        &in.TaskID,
+			CreatedAt:     &in.CreatedAt,
+			LastUpdatedAt: &in.LastUpdatedAt,
+			StatusMessage: in.StatusMessage,
+			Status:        &in.Status,
+			Meta:          in.Meta,
+		}
+		if in.TTLMs != nil {
+			ttlMs := taskCreatedInt64Transport(*in.TTLMs)
+			body.TTLMs = &ttlMs
+		}
+		if in.PollIntervalMs != nil {
+			pollIntervalMs := taskCreatedInt64Transport(*in.PollIntervalMs)
+			body.PollIntervalMs = &pollIntervalMs
+		}
+	}
+	if err := validatejsonTaskCreatedTransport(body); err != nil {
+		return fmt.Errorf("validate TaskCreated value: %w", err)
+	}
+	return nil
+}
+
 // DecodeTaskCreated checks JSON field names from the Goa design and returns a service value.
 func DecodeTaskCreated(data []byte) (out *TaskCreated, err error) {
 	root, err := readStrictJSON(data)
@@ -3170,6 +3826,34 @@ func EncodeToolAnnotations(in *ToolAnnotations) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateToolAnnotationsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolAnnotationsValue(in *ToolAnnotations) error {
+	if err := checkToolAnnotationsValue(in); err != nil {
+		return fmt.Errorf("validate ToolAnnotations value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolAnnotations")
+	}
+
+	var body *jsonToolAnnotationsTransport
+	{
+		body = &jsonToolAnnotationsTransport{
+			Title:           in.Title,
+			ReadOnlyHint:    in.ReadOnlyHint,
+			DestructiveHint: in.DestructiveHint,
+			IdempotentHint:  in.IdempotentHint,
+			OpenWorldHint:   in.OpenWorldHint,
+		}
+	}
+	if err := validatejsonToolAnnotationsTransport(body); err != nil {
+		return fmt.Errorf("validate ToolAnnotations value: %w", err)
+	}
+	return nil
+}
+
 // DecodeToolAnnotations checks JSON field names from the Goa design and returns a service value.
 func DecodeToolAnnotations(data []byte) (out *ToolAnnotations, err error) {
 	root, err := readStrictJSON(data)
@@ -3235,6 +3919,40 @@ func EncodeToolInfo(in *ToolInfo) ([]byte, error) {
 		return nil, fmt.Errorf("encode ToolInfo JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateToolInfoValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolInfoValue(in *ToolInfo) error {
+	if err := checkToolInfoValue(in); err != nil {
+		return fmt.Errorf("validate ToolInfo value: %w", err)
+	}
+	if err := validateToolInfoOriginal(in); err != nil {
+		return fmt.Errorf("validate ToolInfo value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolInfo")
+	}
+
+	var body *jsonToolInfoTransport
+	{
+		body = &jsonToolInfoTransport{
+			Name:         &in.Name,
+			Description:  in.Description,
+			Meta:         in.Meta,
+			InputSchema:  in.InputSchema,
+			OutputSchema: in.OutputSchema,
+		}
+		if in.Annotations != nil {
+			body.Annotations = encodeToolAnnotationsToToolAnnotationsTransport(in.Annotations)
+		}
+	}
+	if err := validatejsonToolInfoTransport(body); err != nil {
+		return fmt.Errorf("validate ToolInfo value: %w", err)
+	}
+	return nil
 }
 
 // DecodeToolInfo checks JSON field names from the Goa design and returns a service value.
@@ -3308,6 +4026,43 @@ func EncodeToolsCallCompleteResult(in *ToolsCallCompleteResult) ([]byte, error) 
 		return nil, fmt.Errorf("encode ToolsCallCompleteResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateToolsCallCompleteResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolsCallCompleteResultValue(in *ToolsCallCompleteResult) error {
+	if err := checkToolsCallCompleteResultValue(in); err != nil {
+		return fmt.Errorf("validate ToolsCallCompleteResult value: %w", err)
+	}
+	if err := validateToolsCallCompleteResultOriginal(in); err != nil {
+		return fmt.Errorf("validate ToolsCallCompleteResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolsCallCompleteResult")
+	}
+
+	var body *jsonToolsCallCompleteResultTransport
+	{
+		body = &jsonToolsCallCompleteResultTransport{
+			IsError:           in.IsError,
+			StructuredContent: in.StructuredContent,
+			Meta:              in.Meta,
+		}
+		body.Content = make([]*jsonContentItemTransport, len(in.Content))
+		for i, val := range in.Content {
+			if val == nil {
+				body.Content[i] = nil
+				continue
+			}
+			body.Content[i] = encodeContentItemToContentItemTransport(val)
+		}
+	}
+	if err := validatejsonToolsCallCompleteResultTransport(body); err != nil {
+		return fmt.Errorf("validate ToolsCallCompleteResult value: %w", err)
+	}
+	return nil
 }
 
 // DecodeToolsCallCompleteResult checks JSON field names from the Goa design and returns a service value.
@@ -3405,6 +4160,62 @@ func EncodeToolsCallResult(in *ToolsCallResult) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateToolsCallResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolsCallResultValue(in *ToolsCallResult) error {
+	if err := checkToolsCallResultValue(in); err != nil {
+		return fmt.Errorf("validate ToolsCallResult value: %w", err)
+	}
+	if err := validateToolsCallResultOriginal(in); err != nil {
+		return fmt.Errorf("validate ToolsCallResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolsCallResult")
+	}
+
+	var body *jsonToolsCallResultTransport
+	{
+		body = &jsonToolsCallResultTransport{}
+		var outcomeValue jsonToolsCallOutcomeTransport
+		switch string(in.Outcome.Kind()) {
+		case "complete":
+			actual, _ := in.Outcome.AsComplete()
+			var obj *jsonToolsCallCompleteResultTransport
+			if actual != nil {
+				obj = encodeToolsCallCompleteResultToToolsCallCompleteResultTransport(actual)
+			}
+			u := outcomeValue
+			u.SetComplete((*jsonToolsCallCompleteResultTransport)(obj))
+			outcomeValue = u
+		case "input_required":
+			actual, _ := in.Outcome.AsInputRequired()
+			var obj *jsonInputRequiredResultTransport
+			if actual != nil {
+				obj = encodeInputRequiredResultToInputRequiredResultTransport(actual)
+			}
+			u := outcomeValue
+			u.SetInputRequired((*jsonInputRequiredResultTransport)(obj))
+			outcomeValue = u
+		case "task":
+			actual, _ := in.Outcome.AsTask()
+			var obj *jsonTaskCreatedTransport
+			if actual != nil {
+				obj = encodeTaskCreatedToTaskCreatedTransport(actual)
+			}
+			u := outcomeValue
+			u.SetTask((*jsonTaskCreatedTransport)(obj))
+			outcomeValue = u
+		}
+		body.Outcome = &outcomeValue
+	}
+	if err := validatejsonToolsCallResultTransport(body); err != nil {
+		return fmt.Errorf("validate ToolsCallResult value: %w", err)
+	}
+	return nil
+}
+
 // DecodeToolsCallResult checks JSON field names from the Goa design and returns a service value.
 func DecodeToolsCallResult(data []byte) (out *ToolsCallResult, err error) {
 	root, err := readStrictJSON(data)
@@ -3485,6 +4296,30 @@ func EncodeToolsCapability(in *ToolsCapability) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateToolsCapabilityValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolsCapabilityValue(in *ToolsCapability) error {
+	if err := checkToolsCapabilityValue(in); err != nil {
+		return fmt.Errorf("validate ToolsCapability value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolsCapability")
+	}
+
+	var body *jsonToolsCapabilityTransport
+	{
+		body = &jsonToolsCapabilityTransport{
+			ListChanged: in.ListChanged,
+		}
+	}
+	if err := validatejsonToolsCapabilityTransport(body); err != nil {
+		return fmt.Errorf("validate ToolsCapability value: %w", err)
+	}
+	return nil
+}
+
 // DecodeToolsCapability checks JSON field names from the Goa design and returns a service value.
 func DecodeToolsCapability(data []byte) (out *ToolsCapability, err error) {
 	root, err := readStrictJSON(data)
@@ -3540,6 +4375,34 @@ func EncodeToolsListPayload(in *ToolsListPayload) ([]byte, error) {
 		return nil, fmt.Errorf("encode ToolsListPayload JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateToolsListPayloadValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolsListPayloadValue(in *ToolsListPayload) error {
+	if err := checkToolsListPayloadValue(in); err != nil {
+		return fmt.Errorf("validate ToolsListPayload value: %w", err)
+	}
+	if err := validateToolsListPayloadOriginal(in); err != nil {
+		return fmt.Errorf("validate ToolsListPayload value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolsListPayload")
+	}
+
+	var body *jsonToolsListPayloadTransport
+	{
+		body = &jsonToolsListPayloadTransport{
+			Cursor: in.Cursor,
+			Meta:   in.Meta,
+		}
+	}
+	if err := validatejsonToolsListPayloadTransport(body); err != nil {
+		return fmt.Errorf("validate ToolsListPayload value: %w", err)
+	}
+	return nil
 }
 
 // DecodeToolsListPayload checks JSON field names from the Goa design and returns a service value.
@@ -3610,6 +4473,46 @@ func EncodeToolsListResult(in *ToolsListResult) ([]byte, error) {
 		return nil, fmt.Errorf("encode ToolsListResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateToolsListResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolsListResultValue(in *ToolsListResult) error {
+	if err := checkToolsListResultValue(in); err != nil {
+		return fmt.Errorf("validate ToolsListResult value: %w", err)
+	}
+	if err := validateToolsListResultOriginal(in); err != nil {
+		return fmt.Errorf("validate ToolsListResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolsListResult")
+	}
+
+	var body *jsonToolsListResultTransport
+	{
+		body = &jsonToolsListResultTransport{
+			NextCursor: in.NextCursor,
+			Meta:       in.Meta,
+			ResultType: &in.ResultType,
+			CacheScope: &in.CacheScope,
+		}
+		ttlMs := toolsListResultInt64Transport(in.TTLMs)
+		body.TTLMs = &ttlMs
+		body.Tools = make([]*jsonToolInfoTransport, len(in.Tools))
+		for i, val := range in.Tools {
+			if val == nil {
+				body.Tools[i] = nil
+				continue
+			}
+			body.Tools[i] = encodeToolInfoToToolInfoTransport(val)
+		}
+	}
+	if err := validatejsonToolsListResultTransport(body); err != nil {
+		return fmt.Errorf("validate ToolsListResult value: %w", err)
+	}
+	return nil
 }
 
 // DecodeToolsListResult checks JSON field names from the Goa design and returns a service value.
