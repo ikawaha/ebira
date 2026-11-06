@@ -3470,6 +3470,35 @@ func EncodeAIImportFile(in *AIImportFile) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateAIImportFileValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateAIImportFileValue(in *AIImportFile) error {
+	if err := checkAIImportFileValue(in); err != nil {
+		return fmt.Errorf("validate AIImportFile value: %w", err)
+	}
+	if err := validateAIImportFileOriginal(in); err != nil {
+		return fmt.Errorf("validate AIImportFile value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "AIImportFile")
+	}
+
+	var body *jsonAIImportFileTransport
+	{
+		body = &jsonAIImportFileTransport{
+			Ref:     &in.Ref,
+			Name:    &in.Name,
+			Content: in.Content,
+		}
+	}
+	if err := validatejsonAIImportFileTransport(body); err != nil {
+		return fmt.Errorf("validate AIImportFile value: %w", err)
+	}
+	return nil
+}
+
 // DecodeAIImportFile checks JSON field names from the Goa design and returns a service value.
 func DecodeAIImportFile(data []byte) (out *AIImportFile, err error) {
 	root, err := readStrictJSON(data)
@@ -3528,6 +3557,35 @@ func EncodeBrokenFileRef(in *BrokenFileRef) ([]byte, error) {
 		return nil, fmt.Errorf("encode BrokenFileRef JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateBrokenFileRefValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateBrokenFileRefValue(in *BrokenFileRef) error {
+	if err := checkBrokenFileRefValue(in); err != nil {
+		return fmt.Errorf("validate BrokenFileRef value: %w", err)
+	}
+	if err := validateBrokenFileRefOriginal(in); err != nil {
+		return fmt.Errorf("validate BrokenFileRef value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "BrokenFileRef")
+	}
+
+	var body *jsonBrokenFileRefTransport
+	{
+		body = &jsonBrokenFileRefTransport{
+			NoteID: &in.NoteID,
+			Title:  &in.Title,
+			Path:   &in.Path,
+		}
+	}
+	if err := validatejsonBrokenFileRefTransport(body); err != nil {
+		return fmt.Errorf("validate BrokenFileRef value: %w", err)
+	}
+	return nil
 }
 
 // DecodeBrokenFileRef checks JSON field names from the Goa design and returns a service value.
@@ -3602,6 +3660,47 @@ func EncodeFileCheck(in *FileCheck) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateFileCheckValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateFileCheckValue(in *FileCheck) error {
+	if err := checkFileCheckValue(in); err != nil {
+		return fmt.Errorf("validate FileCheck value: %w", err)
+	}
+	if err := validateFileCheckOriginal(in); err != nil {
+		return fmt.Errorf("validate FileCheck value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "FileCheck")
+	}
+
+	var body *jsonFileCheckTransport
+	{
+		body = &jsonFileCheckTransport{}
+		body.Unused = make([]*jsonUnusedFileTransport, len(in.Unused))
+		for i, val := range in.Unused {
+			if val == nil {
+				body.Unused[i] = nil
+				continue
+			}
+			body.Unused[i] = encodeUnusedFileToUnusedFileTransport(val)
+		}
+		body.Broken = make([]*jsonBrokenFileRefTransport, len(in.Broken))
+		for i, val := range in.Broken {
+			if val == nil {
+				body.Broken[i] = nil
+				continue
+			}
+			body.Broken[i] = encodeBrokenFileRefToBrokenFileRefTransport(val)
+		}
+	}
+	if err := validatejsonFileCheckTransport(body); err != nil {
+		return fmt.Errorf("validate FileCheck value: %w", err)
+	}
+	return nil
+}
+
 // DecodeFileCheck checks JSON field names from the Goa design and returns a service value.
 func DecodeFileCheck(data []byte) (out *FileCheck, err error) {
 	root, err := readStrictJSON(data)
@@ -3674,6 +3773,35 @@ func EncodeGitConflict(in *GitConflict) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateGitConflictValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateGitConflictValue(in *GitConflict) error {
+	if err := checkGitConflictValue(in); err != nil {
+		return fmt.Errorf("validate GitConflict value: %w", err)
+	}
+	if err := validateGitConflictOriginal(in); err != nil {
+		return fmt.Errorf("validate GitConflict value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "GitConflict")
+	}
+
+	var body *jsonGitConflictTransport
+	{
+		body = &jsonGitConflictTransport{
+			Path:   &in.Path,
+			NoteID: in.NoteID,
+			CopyID: in.CopyID,
+		}
+	}
+	if err := validatejsonGitConflictTransport(body); err != nil {
+		return fmt.Errorf("validate GitConflict value: %w", err)
+	}
+	return nil
+}
+
 // DecodeGitConflict checks JSON field names from the Goa design and returns a service value.
 func DecodeGitConflict(data []byte) (out *GitConflict, err error) {
 	root, err := readStrictJSON(data)
@@ -3728,6 +3856,31 @@ func EncodeGitStatus(in *GitStatus) ([]byte, error) {
 		return nil, fmt.Errorf("encode GitStatus JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateGitStatusValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateGitStatusValue(in *GitStatus) error {
+	if err := checkGitStatusValue(in); err != nil {
+		return fmt.Errorf("validate GitStatus value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "GitStatus")
+	}
+
+	var body *jsonGitStatusTransport
+	{
+		body = &jsonGitStatusTransport{
+			Repository: &in.Repository,
+			Upstream:   in.Upstream,
+		}
+	}
+	if err := validatejsonGitStatusTransport(body); err != nil {
+		return fmt.Errorf("validate GitStatus value: %w", err)
+	}
+	return nil
 }
 
 // DecodeGitStatus checks JSON field names from the Goa design and returns a service value.
@@ -3804,6 +3957,50 @@ func EncodeGitSyncResult(in *GitSyncResult) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateGitSyncResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateGitSyncResultValue(in *GitSyncResult) error {
+	if err := checkGitSyncResultValue(in); err != nil {
+		return fmt.Errorf("validate GitSyncResult value: %w", err)
+	}
+	if err := validateGitSyncResultOriginal(in); err != nil {
+		return fmt.Errorf("validate GitSyncResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "GitSyncResult")
+	}
+
+	var body *jsonGitSyncResultTransport
+	{
+		body = &jsonGitSyncResultTransport{
+			Upstream: in.Upstream,
+			Pushed:   &in.Pushed,
+		}
+		committed := gitSyncResultIntTransport(in.Committed)
+		body.Committed = &committed
+		merged := gitSyncResultIntTransport(in.Merged)
+		body.Merged = &merged
+		body.Conflicts = make([]*jsonGitConflictTransport, len(in.Conflicts))
+		for i, val := range in.Conflicts {
+			if val == nil {
+				body.Conflicts[i] = nil
+				continue
+			}
+			body.Conflicts[i] = encodeGitConflictToGitConflictTransport(val)
+		}
+		body.Errors = make([]string, len(in.Errors))
+		for i, val := range in.Errors {
+			body.Errors[i] = val
+		}
+	}
+	if err := validatejsonGitSyncResultTransport(body); err != nil {
+		return fmt.Errorf("validate GitSyncResult value: %w", err)
+	}
+	return nil
+}
+
 // DecodeGitSyncResult checks JSON field names from the Goa design and returns a service value.
 func DecodeGitSyncResult(data []byte) (out *GitSyncResult, err error) {
 	root, err := readStrictJSON(data)
@@ -3877,6 +4074,35 @@ func EncodeImportFile(in *ImportFile) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateImportFileValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateImportFileValue(in *ImportFile) error {
+	if err := checkImportFileValue(in); err != nil {
+		return fmt.Errorf("validate ImportFile value: %w", err)
+	}
+	if err := validateImportFileOriginal(in); err != nil {
+		return fmt.Errorf("validate ImportFile value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ImportFile")
+	}
+
+	var body *jsonImportFileTransport
+	{
+		body = &jsonImportFileTransport{
+			Ref:     &in.Ref,
+			Name:    &in.Name,
+			Content: in.Content,
+		}
+	}
+	if err := validatejsonImportFileTransport(body); err != nil {
+		return fmt.Errorf("validate ImportFile value: %w", err)
+	}
+	return nil
+}
+
 // DecodeImportFile checks JSON field names from the Goa design and returns a service value.
 func DecodeImportFile(data []byte) (out *ImportFile, err error) {
 	root, err := readStrictJSON(data)
@@ -3941,6 +4167,41 @@ func EncodeImportResult(in *ImportResult) ([]byte, error) {
 		return nil, fmt.Errorf("encode ImportResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateImportResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateImportResultValue(in *ImportResult) error {
+	if err := checkImportResultValue(in); err != nil {
+		return fmt.Errorf("validate ImportResult value: %w", err)
+	}
+	if err := validateImportResultOriginal(in); err != nil {
+		return fmt.Errorf("validate ImportResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ImportResult")
+	}
+
+	var body *jsonImportResultTransport
+	{
+		body = &jsonImportResultTransport{
+			Status:      &in.Status,
+			DuplicateOf: in.DuplicateOf,
+		}
+		if in.Note != nil {
+			body.Note = encodeNoteToNoteTransport(in.Note)
+		}
+		body.Warnings = make([]string, len(in.Warnings))
+		for i, val := range in.Warnings {
+			body.Warnings[i] = val
+		}
+	}
+	if err := validatejsonImportResultTransport(body); err != nil {
+		return fmt.Errorf("validate ImportResult value: %w", err)
+	}
+	return nil
 }
 
 // DecodeImportResult checks JSON field names from the Goa design and returns a service value.
@@ -4014,6 +4275,40 @@ func EncodeMachineSettings(in *MachineSettings) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateMachineSettingsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateMachineSettingsValue(in *MachineSettings) error {
+	if err := checkMachineSettingsValue(in); err != nil {
+		return fmt.Errorf("validate MachineSettings value: %w", err)
+	}
+	if err := validateMachineSettingsOriginal(in); err != nil {
+		return fmt.Errorf("validate MachineSettings value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "MachineSettings")
+	}
+
+	var body *jsonMachineSettingsTransport
+	{
+		body = &jsonMachineSettingsTransport{
+			Lang:       in.Lang,
+			Theme:      in.Theme,
+			Auth:       in.Auth,
+			GitSync:    in.GitSync,
+			Watch:      in.Watch,
+			Provider:   in.Provider,
+			Model:      in.Model,
+			TuiPreview: in.TuiPreview,
+		}
+	}
+	if err := validatejsonMachineSettingsTransport(body); err != nil {
+		return fmt.Errorf("validate MachineSettings value: %w", err)
+	}
+	return nil
+}
+
 // DecodeMachineSettings checks JSON field names from the Goa design and returns a service value.
 func DecodeMachineSettings(data []byte) (out *MachineSettings, err error) {
 	root, err := readStrictJSON(data)
@@ -4077,6 +4372,35 @@ func EncodeMarkInfo(in *MarkInfo) ([]byte, error) {
 		return nil, fmt.Errorf("encode MarkInfo JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateMarkInfoValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateMarkInfoValue(in *MarkInfo) error {
+	if err := checkMarkInfoValue(in); err != nil {
+		return fmt.Errorf("validate MarkInfo value: %w", err)
+	}
+	if err := validateMarkInfoOriginal(in); err != nil {
+		return fmt.Errorf("validate MarkInfo value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "MarkInfo")
+	}
+
+	var body *jsonMarkInfoTransport
+	{
+		body = &jsonMarkInfoTransport{
+			ID:   &in.ID,
+			Kind: &in.Kind,
+			Name: in.Name,
+		}
+	}
+	if err := validatejsonMarkInfoTransport(body); err != nil {
+		return fmt.Errorf("validate MarkInfo value: %w", err)
+	}
+	return nil
 }
 
 // DecodeMarkInfo checks JSON field names from the Goa design and returns a service value.
@@ -4176,6 +4500,72 @@ func EncodeNote(in *Note) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNoteValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteValue(in *Note) error {
+	if err := checkNoteValue(in); err != nil {
+		return fmt.Errorf("validate Note value: %w", err)
+	}
+	if err := validateNoteOriginal(in); err != nil {
+		return fmt.Errorf("validate Note value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "Note")
+	}
+
+	var body *jsonNoteTransport
+	{
+		body = &jsonNoteTransport{
+			ID:              &in.ID,
+			Notebook:        &in.Notebook,
+			Title:           &in.Title,
+			CreatedAt:       &in.CreatedAt,
+			UpdatedAt:       &in.UpdatedAt,
+			TrashedNotebook: in.TrashedNotebook,
+			CreatedBy:       in.CreatedBy,
+			Body:            &in.Body,
+			Version:         &in.Version,
+			TrashedFrom:     in.TrashedFrom,
+		}
+		body.Tags = make([]string, len(in.Tags))
+		for i, val := range in.Tags {
+			body.Tags[i] = val
+		}
+		if in.Marks != nil {
+			body.Marks = make([]string, len(in.Marks))
+			for i, val := range in.Marks {
+				body.Marks[i] = val
+			}
+		}
+		if in.TitleHighlights != nil {
+			body.TitleHighlights = make([]*jsonTextRangeTransport, len(in.TitleHighlights))
+			for i, val := range in.TitleHighlights {
+				if val == nil {
+					body.TitleHighlights[i] = nil
+					continue
+				}
+				body.TitleHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+			}
+		}
+		if in.BodyHighlights != nil {
+			body.BodyHighlights = make([]*jsonTextRangeTransport, len(in.BodyHighlights))
+			for i, val := range in.BodyHighlights {
+				if val == nil {
+					body.BodyHighlights[i] = nil
+					continue
+				}
+				body.BodyHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+			}
+		}
+	}
+	if err := validatejsonNoteTransport(body); err != nil {
+		return fmt.Errorf("validate Note value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNote checks JSON field names from the Goa design and returns a service value.
 func DecodeNote(data []byte) (out *Note, err error) {
 	root, err := readStrictJSON(data)
@@ -4272,6 +4662,34 @@ func EncodeNoteEdit(in *NoteEdit) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNoteEditValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteEditValue(in *NoteEdit) error {
+	if err := checkNoteEditValue(in); err != nil {
+		return fmt.Errorf("validate NoteEdit value: %w", err)
+	}
+	if err := validateNoteEditOriginal(in); err != nil {
+		return fmt.Errorf("validate NoteEdit value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteEdit")
+	}
+
+	var body *jsonNoteEditTransport
+	{
+		body = &jsonNoteEditTransport{
+			Old: &in.Old,
+			New: &in.New,
+		}
+	}
+	if err := validatejsonNoteEditTransport(body); err != nil {
+		return fmt.Errorf("validate NoteEdit value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNoteEdit checks JSON field names from the Goa design and returns a service value.
 func DecodeNoteEdit(data []byte) (out *NoteEdit, err error) {
 	root, err := readStrictJSON(data)
@@ -4330,6 +4748,34 @@ func EncodeNoteEvent(in *NoteEvent) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNoteEventValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteEventValue(in *NoteEvent) error {
+	if err := checkNoteEventValue(in); err != nil {
+		return fmt.Errorf("validate NoteEvent value: %w", err)
+	}
+	if err := validateNoteEventOriginal(in); err != nil {
+		return fmt.Errorf("validate NoteEvent value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteEvent")
+	}
+
+	var body *jsonNoteEventTransport
+	{
+		body = &jsonNoteEventTransport{
+			Type: &in.Type,
+			ID:   in.ID,
+		}
+	}
+	if err := validatejsonNoteEventTransport(body); err != nil {
+		return fmt.Errorf("validate NoteEvent value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNoteEvent checks JSON field names from the Goa design and returns a service value.
 func DecodeNoteEvent(data []byte) (out *NoteEvent, err error) {
 	root, err := readStrictJSON(data)
@@ -4383,6 +4829,31 @@ func EncodeNoteFile(in *NoteFile) ([]byte, error) {
 		return nil, fmt.Errorf("encode NoteFile JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateNoteFileValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteFileValue(in *NoteFile) error {
+	if err := checkNoteFileValue(in); err != nil {
+		return fmt.Errorf("validate NoteFile value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteFile")
+	}
+
+	var body *jsonNoteFileTransport
+	{
+		body = &jsonNoteFileTransport{
+			Name: &in.Name,
+			Path: &in.Path,
+		}
+	}
+	if err := validatejsonNoteFileTransport(body); err != nil {
+		return fmt.Errorf("validate NoteFile value: %w", err)
+	}
+	return nil
 }
 
 // DecodeNoteFile checks JSON field names from the Goa design and returns a service value.
@@ -4458,6 +4929,51 @@ func EncodeNoteList(in *NoteList) ([]byte, error) {
 		return nil, fmt.Errorf("encode NoteList JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateNoteListValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteListValue(in *NoteList) error {
+	if err := checkNoteListValue(in); err != nil {
+		return fmt.Errorf("validate NoteList value: %w", err)
+	}
+	if err := validateNoteListOriginal(in); err != nil {
+		return fmt.Errorf("validate NoteList value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteList")
+	}
+
+	var body *jsonNoteListTransport
+	{
+		body = &jsonNoteListTransport{}
+		total := noteListIntTransport(in.Total)
+		body.Total = &total
+		body.Notes = make([]*jsonNoteSummaryTransport, len(in.Notes))
+		for i, val := range in.Notes {
+			if val == nil {
+				body.Notes[i] = nil
+				continue
+			}
+			body.Notes[i] = encodeNoteSummaryToNoteSummaryTransport(val)
+		}
+		if in.Separators != nil {
+			body.Separators = make([]*jsonSeparatorTransport, len(in.Separators))
+			for i, val := range in.Separators {
+				if val == nil {
+					body.Separators[i] = nil
+					continue
+				}
+				body.Separators[i] = encodeSeparatorToSeparatorTransport(val)
+			}
+		}
+	}
+	if err := validatejsonNoteListTransport(body); err != nil {
+		return fmt.Errorf("validate NoteList value: %w", err)
+	}
+	return nil
 }
 
 // DecodeNoteList checks JSON field names from the Goa design and returns a service value.
@@ -4571,6 +5087,70 @@ func EncodeNoteSummary(in *NoteSummary) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNoteSummaryValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteSummaryValue(in *NoteSummary) error {
+	if err := checkNoteSummaryValue(in); err != nil {
+		return fmt.Errorf("validate NoteSummary value: %w", err)
+	}
+	if err := validateNoteSummaryOriginal(in); err != nil {
+		return fmt.Errorf("validate NoteSummary value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteSummary")
+	}
+
+	var body *jsonNoteSummaryTransport
+	{
+		body = &jsonNoteSummaryTransport{
+			ID:              &in.ID,
+			Notebook:        &in.Notebook,
+			Title:           &in.Title,
+			CreatedAt:       &in.CreatedAt,
+			UpdatedAt:       &in.UpdatedAt,
+			TrashedNotebook: in.TrashedNotebook,
+			CreatedBy:       in.CreatedBy,
+			Snippet:         in.Snippet,
+		}
+		body.Tags = make([]string, len(in.Tags))
+		for i, val := range in.Tags {
+			body.Tags[i] = val
+		}
+		if in.Marks != nil {
+			body.Marks = make([]string, len(in.Marks))
+			for i, val := range in.Marks {
+				body.Marks[i] = val
+			}
+		}
+		if in.TitleHighlights != nil {
+			body.TitleHighlights = make([]*jsonTextRangeTransport, len(in.TitleHighlights))
+			for i, val := range in.TitleHighlights {
+				if val == nil {
+					body.TitleHighlights[i] = nil
+					continue
+				}
+				body.TitleHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+			}
+		}
+		if in.SnippetHighlights != nil {
+			body.SnippetHighlights = make([]*jsonTextRangeTransport, len(in.SnippetHighlights))
+			for i, val := range in.SnippetHighlights {
+				if val == nil {
+					body.SnippetHighlights[i] = nil
+					continue
+				}
+				body.SnippetHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+			}
+		}
+	}
+	if err := validatejsonNoteSummaryTransport(body); err != nil {
+		return fmt.Errorf("validate NoteSummary value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNoteSummary checks JSON field names from the Goa design and returns a service value.
 func DecodeNoteSummary(data []byte) (out *NoteSummary, err error) {
 	root, err := readStrictJSON(data)
@@ -4672,6 +5252,41 @@ func EncodeNoteVersion(in *NoteVersion) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNoteVersionValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteVersionValue(in *NoteVersion) error {
+	if err := checkNoteVersionValue(in); err != nil {
+		return fmt.Errorf("validate NoteVersion value: %w", err)
+	}
+	if err := validateNoteVersionOriginal(in); err != nil {
+		return fmt.Errorf("validate NoteVersion value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteVersion")
+	}
+
+	var body *jsonNoteVersionTransport
+	{
+		body = &jsonNoteVersionTransport{
+			Rev:        &in.Rev,
+			Title:      &in.Title,
+			UpdatedAt:  &in.UpdatedAt,
+			ReplacedAt: &in.ReplacedAt,
+			Body:       &in.Body,
+		}
+		body.Tags = make([]string, len(in.Tags))
+		for i, val := range in.Tags {
+			body.Tags[i] = val
+		}
+	}
+	if err := validatejsonNoteVersionTransport(body); err != nil {
+		return fmt.Errorf("validate NoteVersion value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNoteVersion checks JSON field names from the Goa design and returns a service value.
 func DecodeNoteVersion(data []byte) (out *NoteVersion, err error) {
 	root, err := readStrictJSON(data)
@@ -4737,6 +5352,36 @@ func EncodeNoteVersionSummary(in *NoteVersionSummary) ([]byte, error) {
 		return nil, fmt.Errorf("encode NoteVersionSummary JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateNoteVersionSummaryValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNoteVersionSummaryValue(in *NoteVersionSummary) error {
+	if err := checkNoteVersionSummaryValue(in); err != nil {
+		return fmt.Errorf("validate NoteVersionSummary value: %w", err)
+	}
+	if err := validateNoteVersionSummaryOriginal(in); err != nil {
+		return fmt.Errorf("validate NoteVersionSummary value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NoteVersionSummary")
+	}
+
+	var body *jsonNoteVersionSummaryTransport
+	{
+		body = &jsonNoteVersionSummaryTransport{
+			Rev:        &in.Rev,
+			Title:      &in.Title,
+			UpdatedAt:  &in.UpdatedAt,
+			ReplacedAt: &in.ReplacedAt,
+		}
+	}
+	if err := validatejsonNoteVersionSummaryTransport(body); err != nil {
+		return fmt.Errorf("validate NoteVersionSummary value: %w", err)
+	}
+	return nil
 }
 
 // DecodeNoteVersionSummary checks JSON field names from the Goa design and returns a service value.
@@ -4808,6 +5453,43 @@ func EncodeNotebook(in *Notebook) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNotebookValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNotebookValue(in *Notebook) error {
+	if err := checkNotebookValue(in); err != nil {
+		return fmt.Errorf("validate Notebook value: %w", err)
+	}
+	if err := validateNotebookOriginal(in); err != nil {
+		return fmt.Errorf("validate Notebook value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "Notebook")
+	}
+
+	var body *jsonNotebookTransport
+	{
+		body = &jsonNotebookTransport{
+			ID:       &in.ID,
+			Parent:   in.Parent,
+			Name:     &in.Name,
+			Reserved: &in.Reserved,
+			Kind:     &in.Kind,
+			OwnKind:  in.OwnKind,
+			Sort:     &in.Sort,
+		}
+		order := notebookIntTransport(in.Order)
+		body.Order = &order
+		count := notebookIntTransport(in.Count)
+		body.Count = &count
+	}
+	if err := validatejsonNotebookTransport(body); err != nil {
+		return fmt.Errorf("validate Notebook value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNotebook checks JSON field names from the Goa design and returns a service value.
 func DecodeNotebook(data []byte) (out *Notebook, err error) {
 	root, err := readStrictJSON(data)
@@ -4874,6 +5556,35 @@ func EncodeNotesSettings(in *NotesSettings) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateNotesSettingsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateNotesSettingsValue(in *NotesSettings) error {
+	if err := checkNotesSettingsValue(in); err != nil {
+		return fmt.Errorf("validate NotesSettings value: %w", err)
+	}
+	if err := validateNotesSettingsOriginal(in); err != nil {
+		return fmt.Errorf("validate NotesSettings value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "NotesSettings")
+	}
+
+	var body *jsonNotesSettingsTransport
+	{
+		body = &jsonNotesSettingsTransport{
+			Search: in.Search,
+		}
+		body.StopWords = encodeStopListToStopListTransport2(in.StopWords)
+		body.StopTags = encodeStopListToStopListTransport(in.StopTags)
+	}
+	if err := validatejsonNotesSettingsTransport(body); err != nil {
+		return fmt.Errorf("validate NotesSettings value: %w", err)
+	}
+	return nil
+}
+
 // DecodeNotesSettings checks JSON field names from the Goa design and returns a service value.
 func DecodeNotesSettings(data []byte) (out *NotesSettings, err error) {
 	root, err := readStrictJSON(data)
@@ -4933,6 +5644,36 @@ func EncodePreviewStyle(in *PreviewStyle) ([]byte, error) {
 		return nil, fmt.Errorf("encode PreviewStyle JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidatePreviewStyleValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidatePreviewStyleValue(in *PreviewStyle) error {
+	if err := checkPreviewStyleValue(in); err != nil {
+		return fmt.Errorf("validate PreviewStyle value: %w", err)
+	}
+	if err := validatePreviewStyleOriginal(in); err != nil {
+		return fmt.Errorf("validate PreviewStyle value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "PreviewStyle")
+	}
+
+	var body *jsonPreviewStyleTransport
+	{
+		body = &jsonPreviewStyleTransport{
+			Style:    &in.Style,
+			Modified: &in.Modified,
+			Path:     &in.Path,
+			Backup:   in.Backup,
+		}
+	}
+	if err := validatejsonPreviewStyleTransport(body); err != nil {
+		return fmt.Errorf("validate PreviewStyle value: %w", err)
+	}
+	return nil
 }
 
 // DecodePreviewStyle checks JSON field names from the Goa design and returns a service value.
@@ -5004,6 +5745,43 @@ func EncodeSearchResult(in *SearchResult) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateSearchResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSearchResultValue(in *SearchResult) error {
+	if err := checkSearchResultValue(in); err != nil {
+		return fmt.Errorf("validate SearchResult value: %w", err)
+	}
+	if err := validateSearchResultOriginal(in); err != nil {
+		return fmt.Errorf("validate SearchResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "SearchResult")
+	}
+
+	var body *jsonSearchResultTransport
+	{
+		body = &jsonSearchResultTransport{
+			Mode: &in.Mode,
+		}
+		total := searchResultIntTransport(in.Total)
+		body.Total = &total
+		body.Notes = make([]*jsonNoteSummaryTransport, len(in.Notes))
+		for i, val := range in.Notes {
+			if val == nil {
+				body.Notes[i] = nil
+				continue
+			}
+			body.Notes[i] = encodeNoteSummaryToNoteSummaryTransport(val)
+		}
+	}
+	if err := validatejsonSearchResultTransport(body); err != nil {
+		return fmt.Errorf("validate SearchResult value: %w", err)
+	}
+	return nil
+}
+
 // DecodeSearchResult checks JSON field names from the Goa design and returns a service value.
 func DecodeSearchResult(data []byte) (out *SearchResult, err error) {
 	root, err := readStrictJSON(data)
@@ -5072,6 +5850,38 @@ func EncodeSeparator(in *Separator) ([]byte, error) {
 		return nil, fmt.Errorf("encode Separator JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateSeparatorValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSeparatorValue(in *Separator) error {
+	if err := checkSeparatorValue(in); err != nil {
+		return fmt.Errorf("validate Separator value: %w", err)
+	}
+	if err := validateSeparatorOriginal(in); err != nil {
+		return fmt.Errorf("validate Separator value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "Separator")
+	}
+
+	var body *jsonSeparatorTransport
+	{
+		body = &jsonSeparatorTransport{
+			ID:       &in.ID,
+			Notebook: &in.Notebook,
+			Title:    in.Title,
+			Date:     in.Date,
+			Color:    in.Color,
+			Before:   in.Before,
+		}
+	}
+	if err := validatejsonSeparatorTransport(body); err != nil {
+		return fmt.Errorf("validate Separator value: %w", err)
+	}
+	return nil
 }
 
 // DecodeSeparator checks JSON field names from the Goa design and returns a service value.
@@ -5152,6 +5962,52 @@ func EncodeSettings(in *Settings) ([]byte, error) {
 		return nil, fmt.Errorf("encode Settings JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateSettingsValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSettingsValue(in *Settings) error {
+	if err := checkSettingsValue(in); err != nil {
+		return fmt.Errorf("validate Settings value: %w", err)
+	}
+	if err := validateSettingsOriginal(in); err != nil {
+		return fmt.Errorf("validate Settings value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "Settings")
+	}
+
+	var body *jsonSettingsTransport
+	{
+		body = &jsonSettingsTransport{
+			MachinePath:        &in.MachinePath,
+			NotesPath:          &in.NotesPath,
+			NotesDir:           &in.NotesDir,
+			Addr:               &in.Addr,
+			Version:            &in.Version,
+			Restart:            &in.Restart,
+			RestartUnavailable: in.RestartUnavailable,
+			Passkeys:           &in.Passkeys,
+		}
+		body.Machine = encodeMachineSettingsToMachineSettingsTransport(in.Machine)
+		body.Notes = encodeNotesSettingsToNotesSettingsTransport(in.Notes)
+		body.Overridden = make([]string, len(in.Overridden))
+		for i, val := range in.Overridden {
+			body.Overridden[i] = val
+		}
+		body.DefaultModels = make(map[string]string, len(in.DefaultModels))
+		for key, val := range in.DefaultModels {
+			tk := key
+			tv := val
+			body.DefaultModels[tk] = tv
+		}
+	}
+	if err := validatejsonSettingsTransport(body); err != nil {
+		return fmt.Errorf("validate Settings value: %w", err)
+	}
+	return nil
 }
 
 // DecodeSettings checks JSON field names from the Goa design and returns a service value.
@@ -5235,6 +6091,39 @@ func EncodeStopList(in *StopList) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateStopListValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateStopListValue(in *StopList) error {
+	if err := checkStopListValue(in); err != nil {
+		return fmt.Errorf("validate StopList value: %w", err)
+	}
+	if err := validateStopListOriginal(in); err != nil {
+		return fmt.Errorf("validate StopList value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "StopList")
+	}
+
+	var body *jsonStopListTransport
+	{
+		body = &jsonStopListTransport{
+			Use: &in.Use,
+		}
+		if in.Words != nil {
+			body.Words = make([]string, len(in.Words))
+			for i, val := range in.Words {
+				body.Words[i] = val
+			}
+		}
+	}
+	if err := validatejsonStopListTransport(body); err != nil {
+		return fmt.Errorf("validate StopList value: %w", err)
+	}
+	return nil
+}
+
 // DecodeStopList checks JSON field names from the Goa design and returns a service value.
 func DecodeStopList(data []byte) (out *StopList, err error) {
 	root, err := readStrictJSON(data)
@@ -5305,6 +6194,41 @@ func EncodeSyncResult(in *SyncResult) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateSyncResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSyncResultValue(in *SyncResult) error {
+	if err := checkSyncResultValue(in); err != nil {
+		return fmt.Errorf("validate SyncResult value: %w", err)
+	}
+	if err := validateSyncResultOriginal(in); err != nil {
+		return fmt.Errorf("validate SyncResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "SyncResult")
+	}
+
+	var body *jsonSyncResultTransport
+	{
+		body = &jsonSyncResultTransport{}
+		added := syncResultIntTransport(in.Added)
+		body.Added = &added
+		updated := syncResultIntTransport(in.Updated)
+		body.Updated = &updated
+		removed := syncResultIntTransport(in.Removed)
+		body.Removed = &removed
+		body.Errors = make([]string, len(in.Errors))
+		for i, val := range in.Errors {
+			body.Errors[i] = val
+		}
+	}
+	if err := validatejsonSyncResultTransport(body); err != nil {
+		return fmt.Errorf("validate SyncResult value: %w", err)
+	}
+	return nil
+}
+
 // DecodeSyncResult checks JSON field names from the Goa design and returns a service value.
 func DecodeSyncResult(data []byte) (out *SyncResult, err error) {
 	root, err := readStrictJSON(data)
@@ -5366,6 +6290,32 @@ func EncodeTagCount(in *TagCount) ([]byte, error) {
 	return data, nil
 }
 
+// ValidateTagCountValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateTagCountValue(in *TagCount) error {
+	if err := checkTagCountValue(in); err != nil {
+		return fmt.Errorf("validate TagCount value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "TagCount")
+	}
+
+	var body *jsonTagCountTransport
+	{
+		body = &jsonTagCountTransport{
+			Name: &in.Name,
+		}
+		count := tagCountIntTransport(in.Count)
+		body.Count = &count
+	}
+	if err := validatejsonTagCountTransport(body); err != nil {
+		return fmt.Errorf("validate TagCount value: %w", err)
+	}
+	return nil
+}
+
 // DecodeTagCount checks JSON field names from the Goa design and returns a service value.
 func DecodeTagCount(data []byte) (out *TagCount, err error) {
 	root, err := readStrictJSON(data)
@@ -5420,6 +6370,32 @@ func EncodeTextRange(in *TextRange) ([]byte, error) {
 		return nil, fmt.Errorf("encode TextRange JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateTextRangeValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateTextRangeValue(in *TextRange) error {
+	if err := checkTextRangeValue(in); err != nil {
+		return fmt.Errorf("validate TextRange value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "TextRange")
+	}
+
+	var body *jsonTextRangeTransport
+	{
+		body = &jsonTextRangeTransport{}
+		start := importResultIntTransport(in.Start)
+		body.Start = &start
+		end := importResultIntTransport(in.End)
+		body.End = &end
+	}
+	if err := validatejsonTextRangeTransport(body); err != nil {
+		return fmt.Errorf("validate TextRange value: %w", err)
+	}
+	return nil
 }
 
 // DecodeTextRange checks JSON field names from the Goa design and returns a service value.
@@ -5482,6 +6458,38 @@ func EncodeTrashedNotebook(in *TrashedNotebook) ([]byte, error) {
 		return nil, fmt.Errorf("encode TrashedNotebook JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateTrashedNotebookValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateTrashedNotebookValue(in *TrashedNotebook) error {
+	if err := checkTrashedNotebookValue(in); err != nil {
+		return fmt.Errorf("validate TrashedNotebook value: %w", err)
+	}
+	if err := validateTrashedNotebookOriginal(in); err != nil {
+		return fmt.Errorf("validate TrashedNotebook value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "TrashedNotebook")
+	}
+
+	var body *jsonTrashedNotebookTransport
+	{
+		body = &jsonTrashedNotebookTransport{
+			ID:     &in.ID,
+			Parent: in.Parent,
+			Name:   &in.Name,
+			Kind:   &in.Kind,
+		}
+		count := trashedNotebookIntTransport(in.Count)
+		body.Count = &count
+	}
+	if err := validatejsonTrashedNotebookTransport(body); err != nil {
+		return fmt.Errorf("validate TrashedNotebook value: %w", err)
+	}
+	return nil
 }
 
 // DecodeTrashedNotebook checks JSON field names from the Goa design and returns a service value.
@@ -5549,6 +6557,40 @@ func EncodeUnusedFile(in *UnusedFile) ([]byte, error) {
 		return nil, fmt.Errorf("encode UnusedFile JSON: %w", err)
 	}
 	return data, nil
+}
+
+// ValidateUnusedFileValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateUnusedFileValue(in *UnusedFile) error {
+	if err := checkUnusedFileValue(in); err != nil {
+		return fmt.Errorf("validate UnusedFile value: %w", err)
+	}
+	if err := validateUnusedFileOriginal(in); err != nil {
+		return fmt.Errorf("validate UnusedFile value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "UnusedFile")
+	}
+
+	var body *jsonUnusedFileTransport
+	{
+		body = &jsonUnusedFileTransport{
+			NoteID:  &in.NoteID,
+			Title:   &in.Title,
+			Name:    &in.Name,
+			Path:    &in.Path,
+			AddedAt: &in.AddedAt,
+			Recent:  &in.Recent,
+		}
+		size := fileCheckInt64Transport(in.Size)
+		body.Size = &size
+	}
+	if err := validatejsonUnusedFileTransport(body); err != nil {
+		return fmt.Errorf("validate UnusedFile value: %w", err)
+	}
+	return nil
 }
 
 // DecodeUnusedFile checks JSON field names from the Goa design and returns a service value.
