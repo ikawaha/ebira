@@ -8,6 +8,8 @@
 # - CodeMirror (npm): run npm ci && npm run build in
 #   internal/ui/web/codemirror and commit static/vendor/, and update the
 #   versions in the licenses note of the guide.
+# - GitHub Actions are pinned to commit SHAs in the workflows, with the
+#   version in a comment, which Dependabot keeps up to date.
 # - Wails (apps/desktop): try the app, as dialogs_darwin.m relies on a class
 #   inside Wails.
 version: 2
