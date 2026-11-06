@@ -418,26 +418,31 @@ func DecodeToolsCallResponse(decoder func(*http.Response) goahttp.Decoder, resto
 		if err != nil {
 			return nil, goahttp.ErrDecodingError("mcp_notes", "tools/call", err)
 		}
-		switch string(body.Kind()) {
-		case "complete":
-			actual, _ := body.AsComplete()
-			if actual != nil {
-				if err2 := validateToolsCallCompleteResultResponse(actual, "body.value"); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+
+		if err2 := body.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		} else {
+			switch string(body.Kind()) {
+			case "complete":
+				actual, _ := body.AsComplete()
+				if actual != nil {
+					if err2 := validateToolsCallCompleteResultResponse(actual, "body.value"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
-			}
-		case "input_required":
-			actual, _ := body.AsInputRequired()
-			if actual != nil {
-				if err2 := validateInputRequiredResultResponse(actual, "body.value"); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+			case "input_required":
+				actual, _ := body.AsInputRequired()
+				if actual != nil {
+					if err2 := validateInputRequiredResultResponse(actual, "body.value"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
-			}
-		case "task":
-			actual, _ := body.AsTask()
-			if actual != nil {
-				if err2 := validateTaskCreatedResponse(actual, "body.value"); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+			case "task":
+				actual, _ := body.AsTask()
+				if actual != nil {
+					if err2 := validateTaskCreatedResponse(actual, "body.value"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
 			}
 		}

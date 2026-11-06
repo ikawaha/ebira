@@ -304,6 +304,35 @@ func EncodePasskeyInfo(in *PasskeyInfo) ([]byte, error) {
 	return data, nil
 }
 
+// ValidatePasskeyInfoValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidatePasskeyInfoValue(in *PasskeyInfo) error {
+	if err := checkPasskeyInfoValue(in); err != nil {
+		return fmt.Errorf("validate PasskeyInfo value: %w", err)
+	}
+	if err := validatePasskeyInfoOriginal(in); err != nil {
+		return fmt.Errorf("validate PasskeyInfo value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "PasskeyInfo")
+	}
+
+	var body *jsonPasskeyInfoTransport
+	{
+		body = &jsonPasskeyInfoTransport{
+			ID:        &in.ID,
+			CreatedAt: &in.CreatedAt,
+			UsedAt:    in.UsedAt,
+		}
+	}
+	if err := validatejsonPasskeyInfoTransport(body); err != nil {
+		return fmt.Errorf("validate PasskeyInfo value: %w", err)
+	}
+	return nil
+}
+
 // DecodePasskeyInfo checks JSON field names from the Goa design and returns a service value.
 func DecodePasskeyInfo(data []byte) (out *PasskeyInfo, err error) {
 	root, err := readStrictJSON(data)
