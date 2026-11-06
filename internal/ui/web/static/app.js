@@ -1724,6 +1724,9 @@ function enableDrag(li, reorder, list) {
     li.classList.add("dragging");
   });
   li.addEventListener("dragend", () => {
+    // Let go over the list without a drop: say why the list did not take it.
+    const why = !dropped && overList && noReorder(li, reorder);
+    if (why) showToast(why);
     dragID = null;
     li.classList.remove("dragging");
     for (const x of $("notes").children) x.classList.remove("drop-above", "drop-below", "drop-into");
@@ -1751,6 +1754,29 @@ function enableDrag(li, reorder, list) {
     if (sep) moveSeparator(sep, after);
     else moveNote(id, after);
   });
+}
+
+// overList tells whether the drag is over the note list, and dropped whether
+// something took the drop: a drop is sent only to what takes it, while the
+// drop effect at the end differs between browsers.
+let overList = false, dropped = false;
+document.addEventListener("dragstart", () => { overList = false; dropped = false; }, true);
+document.addEventListener("dragover", (e) => {
+  const at = e.target.nodeType === Node.ELEMENT_NODE ? e.target : e.target.parentElement;
+  overList = !!at?.closest("#notes");
+}, true);
+document.addEventListener("drop", () => { dropped = true; }, true);
+
+// noReorder returns why the row li, dragged in its list, cannot be put in
+// another place there; empty when it can.
+function noReorder(li, reorder) {
+  if (draggedNotes()) return t("reorderChosen");
+  if (reorder) return "";
+  if (state.notebook === "trash") return t("reorderTrash");
+  // The open sub notebooks of a notebook, and the notebook itself, follow
+  // their sort; the other lists mix notebooks.
+  if (li.classList.contains("in-sub") || (state.notebook && !state.query)) return t("reorderSorted", { sort: t("sortOrder") });
+  return t("reorderNotebook");
 }
 
 // draggedNotes returns the IDs of the chosen notes when one of them is being
