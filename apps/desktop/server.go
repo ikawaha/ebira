@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -36,23 +37,63 @@ func readHealth(addr string) (*health, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
+	// What answers at addr may be no ebira server, as an error page.
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s answers %s, not as an ebira server", addr, res.Status)
+	}
 	var h health
 	if err := json.NewDecoder(res.Body).Decode(&h); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s answers, not as an ebira server: %w", addr, err)
+	}
+	if h.Addr == "" || h.NotesDir == "" {
+		return nil, fmt.Errorf("%s answers, not as an ebira server", addr)
 	}
 	return &h, nil
+}
+
+// configuredNotes asks the ebira of the app for the notes directory of
+// notes_dir in the config file of ebira, which an empty notes folder follows.
+func configuredNotes() (string, error) {
+	bin, err := helper()
+	if err != nil {
+		return "", err
+	}
+	out, err := helperCommand(bin, "server", "status", "-json").Output()
+	if err != nil {
+		// As an ebira on the PATH older than -json says.
+		var exit *exec.ExitError
+		if errors.As(err, &exit) && len(exit.Stderr) > 0 {
+			err = fmt.Errorf("%w: %s", err, strings.TrimSpace(string(exit.Stderr)))
+		}
+		return "", fmt.Errorf("find the notes folder of the config file of ebira: %w", err)
+	}
+	var st struct {
+		NotesDir string `json:"notes_dir"`
+	}
+	if err := json.Unmarshal(out, &st); err != nil || st.NotesDir == "" {
+		return "", fmt.Errorf("find the notes folder of the config file of ebira: %s", out)
+	}
+	return st.NotesDir, nil
 }
 
 // connect finds the server of t, starting it if nothing answers. The server
 // stays up after the app ends, shared with the TUI and the MCP clients.
 func connect(t target) (*health, error) {
 	notes, addr := t.Notes, t.Addr
+	if !local(addr) {
+		return connectRemote(t)
+	}
+	if notes == "" {
+		// Checked as if chosen, so that the server of another folder at addr
+		// is not taken for the one of the config file.
+		var err error
+		if notes, err = configuredNotes(); err != nil {
+			return nil, err
+		}
+	}
 	h, err := readHealth(addr)
 	if err != nil {
-		args := []string{"server", "start", "-addr", addr}
-		if notes != "" {
-			args = append(args, "-notes", notes)
-		}
+		args := []string{"server", "start", "-addr", addr, "-notes", notes}
 		bin, err := helper()
 		if err != nil {
 			return nil, err
@@ -64,17 +105,40 @@ func connect(t target) (*health, error) {
 			return nil, fmt.Errorf("read the server at %s: %w", addr, err)
 		}
 	}
-	if h.API > api {
-		return nil, fmt.Errorf("the server at %s has API version %d, newer than %d", addr, h.API, api)
+	if err := h.usable(addr); err != nil {
+		return nil, err
 	}
-	if notes != "" {
-		if want, err := realPath(notes); err != nil {
-			return nil, err
-		} else if got, err := realPath(h.NotesDir); err != nil || got != want {
-			return nil, fmt.Errorf("the server at %s serves %s, not %s", addr, h.NotesDir, want)
-		}
+	if want, err := realPath(notes); err != nil {
+		return nil, err
+	} else if got, err := realPath(h.NotesDir); err != nil || got != want {
+		return nil, fmt.Errorf("the server at %s serves %s, not %s", addr, h.NotesDir, want)
 	}
 	return h, nil
+}
+
+// connectRemote takes the server at the address of another host as it is:
+// the app neither starts it nor sees its files, nor the config file there. A
+// notes folder chosen is the path on that host.
+func connectRemote(t target) (*health, error) {
+	h, err := readHealth(t.Addr)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.usable(t.Addr); err != nil {
+		return nil, err
+	}
+	if t.Notes != "" && filepath.Clean(t.Notes) != filepath.Clean(h.NotesDir) {
+		return nil, fmt.Errorf("the server at %s serves %s, not %s", t.Addr, h.NotesDir, t.Notes)
+	}
+	return h, nil
+}
+
+// usable refuses a server whose API is newer than this app knows.
+func (h *health) usable(addr string) error {
+	if h.API > api {
+		return fmt.Errorf("the server at %s has API version %d, newer than %d", addr, h.API, api)
+	}
+	return nil
 }
 
 func realPath(p string) (string, error) {

@@ -4281,13 +4281,19 @@ window.ebira = {
   searchHelp: () => toggleSearchHelp(true),
   newNotebook: () => openNewNotebook(),
   renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
-  emptyTrash: () => { if (trashCount()) emptyTrash(); },
+  emptyTrash: () => { if (trashFull()) emptyTrash(); },
 };
 
 // canRenameNotebook reports whether the notebook shown can be renamed in its
 // row, as with F2.
 function canRenameNotebook() {
   return state.side === "notebooks" && !!state.notebook && state.notebook !== "trash" && !state.trashedNotebook;
+}
+
+// trashFull reports whether the trash has anything to empty: notes, or
+// notebooks, which may have no notes (as the menu of the trash row).
+function trashFull() {
+  return trashCount() > 0 || state.trashed.length > 0;
 }
 
 // trashCount returns the number of notes in the trash, with those of the
@@ -4361,7 +4367,7 @@ let toldState = "";
 function tellState() {
   const s = JSON.stringify({
     note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing,
-    notebook: canRenameNotebook(), trashFull: trashCount() > 0, git: !$("git-sync-open").hidden,
+    notebook: canRenameNotebook(), trashFull: trashFull(), git: !$("git-sync-open").hidden,
   });
   if (s === toldState) return;
   toldState = s;

@@ -158,14 +158,25 @@ func (s *shell) apply(t target) {
 		s.showProblem(s.text("Write the address as host:port."))
 		return
 	}
+	// Each Apply connects on its own, and may take its time: only the last
+	// one counts, and the ones before it are dropped as they end.
+	s.mu.Lock()
+	s.applies++
+	this := s.applies
+	s.mu.Unlock()
 	h, err := connect(t)
+	s.mu.Lock()
+	if this != s.applies {
+		s.mu.Unlock()
+		return
+	}
 	if err != nil {
+		s.mu.Unlock()
 		s.showProblem(err.Error())
 		return
 	}
 	chosen := t
 	t.Notes = h.NotesDir
-	s.mu.Lock()
 	s.next, s.nextAs = &t, chosen
 	win := s.win
 	s.mu.Unlock()

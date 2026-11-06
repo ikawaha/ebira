@@ -51,6 +51,7 @@ type shell struct {
 	chosen   target                     // current as the user gave it: see target
 	next     *target                    // connected, waiting for the page to agree
 	nextAs   target                     // next as the user gave it
+	applies  uint64                     // the Applies of the settings so far: the last counts
 }
 
 func main() {

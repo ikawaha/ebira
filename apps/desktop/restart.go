@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 )
 
@@ -12,6 +13,21 @@ const markID = "ebira-app-restart"
 
 // leaveRestart is leave, for starting the server again: the page reloads.
 const leaveRestart = toApp + `.postMessage(` + leaves + ` ? "ebira:restart" : "ebira:stay");`
+
+// local reports whether the server at addr is on this machine, where the
+// ebira of the app can start it again: not one of another host, whose notes
+// directory may be the path of another server here.
+func local(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
 
 // outdated reports whether the server lacks something this app relies on.
 // A newer one is fine: the page comes from it.
@@ -26,6 +42,9 @@ func (s *shell) markOutdated() {
 	s.mu.Lock()
 	addr, win := s.current.Addr, s.win
 	s.mu.Unlock()
+	if !local(addr) {
+		return // the ebira of the app starts only the servers of this machine
+	}
 	h, err := readHealth(addr)
 	if win == nil || err != nil || !h.outdated() {
 		return
@@ -74,6 +93,9 @@ func (s *shell) restartServer() {
 	s.mu.Lock()
 	t, win := s.current, s.win
 	s.mu.Unlock()
+	if !local(t.Addr) {
+		return // see markOutdated
+	}
 	bin, err := helper()
 	if err == nil {
 		var out []byte
