@@ -50,6 +50,9 @@ type State struct {
 	PID     int    `json:"pid"`
 	Addr    string `json:"addr"`
 	Version string `json:"version"`
+	// VersionLabel is the version as the web UI shows it, such as v0.1.0, or
+	// a pseudo-version for a build of a checkout; empty for earlier builds.
+	VersionLabel string `json:"version_label,omitempty"`
 	// API is the version of the REST API (see API); 0 for earlier builds.
 	API       int       `json:"api"`
 	NotesDir  string    `json:"notes_dir"`

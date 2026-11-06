@@ -25,16 +25,18 @@ import (
 const ready = `window.webkit.messageHandlers.external.postMessage("wails:runtime:ready");`
 
 // leave asks the page to close its editor, which confirms unsaved changes, and
-// reports the answer to the raw message handler.
-const leave = `window.webkit.messageHandlers.external.postMessage(leaveEditor() ? "ebira:left" : "ebira:stay");`
+// reports the answer to the raw message handler. Pages of servers built before
+// window.ebira have leaveEditor alone.
+const leave = `window.webkit.messageHandlers.external.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:left" : "ebira:stay");`
 
 // leaveFor is leave, for changing the server instead of ending the app.
-const leaveFor = `window.webkit.messageHandlers.external.postMessage(leaveEditor() ? "ebira:switch" : "ebira:stay");`
+const leaveFor = `window.webkit.messageHandlers.external.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:switch" : "ebira:stay");`
 
 // shell holds the windows of the app.
 type shell struct {
 	app      *application.App
 	messages map[string]string
+	notes    *noteMenu   // the items of the menus that depend on the page
 	leaving  atomic.Bool // the page agreed to go: closing goes through
 
 	mu       sync.Mutex
@@ -106,6 +108,10 @@ func (s *shell) onMessage(from application.Window, message string, _ *applicatio
 	if win := s.main(); win == nil || from.ID() != win.ID() {
 		return
 	}
+	if data, ok := strings.CutPrefix(message, "ebira:{"); ok {
+		s.onPageMessage("{" + data)
+		return
+	}
 	switch message {
 	case "ebira:left":
 		s.leaving.Store(true)
@@ -133,41 +139,4 @@ func (s *shell) openMain(url string) {
 	s.mu.Lock()
 	s.win = win
 	s.mu.Unlock()
-}
-
-// appMenu is the menu bar. It has no reload: WebKit would drop unsaved edits,
-// since Wails does not ask about the page's beforeunload.
-func (s *shell) appMenu() *application.Menu {
-	menu := s.app.Menu.New()
-	about := menu.AddSubmenu("ebira")
-	about.AddRole(application.About)
-	about.AddSeparator()
-	about.Add("Settings…").SetAccelerator("cmd+,").OnClick(func(*application.Context) {
-		s.openSettings("")
-	})
-	about.AddSeparator()
-	about.AddRole(application.ServicesMenu)
-	about.AddSeparator()
-	about.AddRole(application.Hide)
-	about.AddRole(application.HideOthers)
-	about.AddRole(application.UnHide)
-	about.AddSeparator()
-	about.AddRole(application.Quit)
-	file := menu.AddSubmenu("File")
-	file.Add("New Note").SetAccelerator("cmd+n").OnClick(func(*application.Context) {
-		if win := s.main(); win != nil {
-			win.ExecJS(`document.getElementById("new-note").click();`)
-		}
-	})
-	file.AddSeparator()
-	file.AddRole(application.CloseWindow)
-	menu.AddRole(application.EditMenu)
-	view := menu.AddSubmenu("View")
-	view.AddRole(application.ResetZoom)
-	view.AddRole(application.ZoomIn)
-	view.AddRole(application.ZoomOut)
-	view.AddSeparator()
-	view.AddRole(application.ToggleFullscreen)
-	menu.AddRole(application.WindowMenu)
-	return menu
 }

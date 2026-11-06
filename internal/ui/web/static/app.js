@@ -1032,6 +1032,7 @@ function enableNotebookDrag(li, id) {
     const { into, before, below } = notebookDrop(li, e);
     if (into === null) return; // a sub notebook that cannot go there
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move"; // as for the notes (enableDrag)
     li.classList.toggle("drop-into", !!into);
     li.classList.toggle("drop-below", !into && below);
     li.classList.toggle("drop-above", !into && !below && before !== undefined);
@@ -1728,6 +1729,9 @@ function enableDrag(li, reorder, list) {
   li.addEventListener("dragover", (e) => {
     if (!within()) return;
     e.preventDefault();
+    // As for the notebooks: a drop effect that the move of dragstart does not
+    // allow drops nothing, and browsers differ in the one they take by default.
+    e.dataTransfer.dropEffect = "move";
     const { below } = dropAfter(li, e, list);
     li.classList.toggle("drop-below", below);
     li.classList.toggle("drop-above", !below);
@@ -2623,7 +2627,7 @@ async function copyNote() {
   const n = state.note;
   if (!n) return;
   try {
-    await navigator.clipboard.writeText(noteMarkdown(n));
+    await writeClipboard(noteMarkdown(n));
   } catch (e) {
     alert(t("copyFailed", { error: e.message }));
     return;
@@ -2708,7 +2712,7 @@ async function copyLink(markdown) {
   const title = n.title || t("untitled");
   const text = markdown ? `[${title.replace(/[\\[\]]/g, "\\$&")}](${notePageURL(n.id)})` : notePageURL(n.id);
   try {
-    await navigator.clipboard.writeText(text);
+    await writeClipboard(text);
   } catch (e) {
     alert(t("copyFailed", { error: e.message }));
     return;
@@ -2763,6 +2767,7 @@ function showPreview(...children) {
   showNoteHash(null);
   marks = [];
   markIndex = -1;
+  tellState();
 }
 
 function jumpMark(delta) {
@@ -3052,6 +3057,7 @@ function startEdit(note) {
   };
   state.editing = ed;
   noteSeq++; // drop a preview being loaded
+  tellState();
 
   const f = ed.elems;
   f.title = el("input", "title");
@@ -3152,6 +3158,7 @@ function endEdit() {
   if (ed.note) rememberHistory(ed, ed.note.id, ed.version, ed.note.body);
   ed.view.destroy();
   state.editing = null;
+  tellState();
 }
 
 function cancelEdit() {
@@ -3982,6 +3989,64 @@ window.addEventListener("beforeunload", (e) => {
 $("new-note").addEventListener("click", () => {
   if (leaveEditor()) startEdit(null);
 });
+
+// The desktop app shows this page in a window of its own, and drives it from
+// its menus through window.ebira. These functions and the messages of tellApp
+// are part of the API version of the server (daemon.API): the page comes from
+// the server, which may be of another build than the app. Each one does what
+// the same key or button does, and nothing where that does nothing.
+window.ebira = {
+  create: () => { if (leaveEditor()) startEdit(null); },
+  edit: () => { if (state.note && !state.editing) startEdit(state.note); },
+  save: () => { if (state.editing) saveNote(); },
+  // leave closes the editor, asking first if it has unsaved changes, as before
+  // the app quits; false when the user keeps editing.
+  leave: () => leaveEditor(),
+  // trash moves the note to the trash, or deletes it for good in the trash.
+  trash: () => { if (state.note && !state.editing) deleteNote(); },
+  restore: () => { if (!state.editing) restoreNote(); },
+  mark: () => { if (state.note && !state.editing && $("mark-open")) openMarkMenu(state.note, $("mark-open")); },
+  history: () => { if (state.note && !state.editing) openHistory(); },
+  copy: () => { if (state.note && !state.editing) copyNote(); },
+  copyLink: (markdown) => { if (state.note && !state.editing) copyLink(markdown); },
+  find: () => { if (state.note && !state.editing) openFind(); },
+  search: () => { $("q").focus(); $("q").select(); },
+  previewStyle: () => openPreviewStyle(),
+};
+
+// tellApp sends a message to the desktop app, if the page is in one: the app
+// of WebKit reads the messages it is sent as text starting with "ebira:".
+function tellApp(type, data = {}) {
+  window.webkit?.messageHandlers?.external?.postMessage("ebira:" + JSON.stringify({ type, ...data }));
+}
+
+// inApp reports whether the page is in the desktop app.
+function inApp() {
+  return !!window.webkit?.messageHandlers?.external;
+}
+
+let toldState = "";
+
+// tellState tells the app what its menus can do now: whether a note is shown,
+// whether it is in the trash, and whether it is being edited.
+function tellState() {
+  const s = JSON.stringify({ note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing });
+  if (s === toldState) return;
+  toldState = s;
+  tellApp("state", JSON.parse(s));
+}
+
+// writeClipboard writes text to the clipboard. WebKit lets a page write it only
+// in answer to the user's input, which a menu of the app is not, so the app
+// writes it then.
+async function writeClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    if (!inApp()) throw e;
+    tellApp("copy", { text });
+  }
+}
 
 // Assistant: questions to POST /ask. Each question is answered on its own; the
 // questions and answers are kept in the page only.

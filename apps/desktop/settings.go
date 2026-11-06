@@ -209,6 +209,7 @@ func (s *shell) finishSwitch() {
 	s.current = *t
 	s.mu.Unlock()
 	t.save()
+	s.notes.reset() // until the page of the server tells its state
 	if win == nil {
 		s.openMain(t.url())
 	} else {

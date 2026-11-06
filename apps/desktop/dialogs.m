@@ -69,3 +69,33 @@ void installDelegate(void) {
     class_addMethod(delegate, @selector(webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:), (IMP)alertPanel, "v@:@@@@?");
     class_addMethod(delegate, @selector(webView:createWebViewWithConfiguration:forNavigationAction:windowFeatures:), (IMP)openWindow, "@@:@@@@");
 }
+
+char *bundleString(const char *key) {
+    id value = NSBundle.mainBundle.infoDictionary[[NSString stringWithUTF8String:key]];
+    return strdup([value isKindOfClass:NSString.class] ? [value UTF8String] : "");
+}
+
+// showAbout shows the standard about panel, with the icon of the web UI and
+// with credits under the version of the bundle.
+void showAbout(const char *credits) {
+    NSString *text = [NSString stringWithUTF8String:credits];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSMutableParagraphStyle *centered = [NSMutableParagraphStyle new];
+        centered.alignment = NSTextAlignmentCenter;
+        NSDictionary *attrs = @{
+            NSFontAttributeName : [NSFont systemFontOfSize:NSFont.smallSystemFontSize],
+            NSForegroundColorAttributeName : NSColor.labelColor,
+            NSParagraphStyleAttributeName : centered,
+        };
+        NSAttributedString *c = [[NSAttributedString alloc] initWithString:text attributes:attrs];
+        NSMutableDictionary *options = [@{NSAboutPanelOptionCredits : c} mutableCopy];
+        NSURL *url = [NSBundle.mainBundle URLForResource:@"favicon" withExtension:@"svg"];
+        NSImage *icon = url ? [[NSImage alloc] initWithContentsOfURL:url] : nil;
+        if (icon != nil) {
+            icon.size = NSMakeSize(128, 128);
+            options[NSAboutPanelOptionApplicationIcon] = icon;
+        }
+        [NSApp orderFrontStandardAboutPanelWithOptions:options];
+        [NSApp activateIgnoringOtherApps:YES];
+    });
+}

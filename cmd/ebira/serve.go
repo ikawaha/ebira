@@ -309,7 +309,8 @@ func runServe(args []string) error {
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(gate), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
-	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), API: daemon.API, NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
+	bi, _ := debug.ReadBuildInfo()
+	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), VersionLabel: versionLabel(bi), API: daemon.API, NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
 	root.Handle("GET /debug/stats", statsHandler(ix, state.StartedAt, rest.Session))
@@ -318,7 +319,6 @@ func runServe(args []string) error {
 		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)
 	}
 	svc.SetPreviewCSS(previewCSS)
-	bi, _ := debug.ReadBuildInfo()
 	ui := web.Handler(web.Options{
 		Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS,
 		Version: versionLabel(bi), VersionText: versionText(bi, daemon.Version()),

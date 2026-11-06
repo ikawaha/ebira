@@ -17,9 +17,11 @@ import (
 const api = 1
 
 type health struct {
-	Addr     string `json:"addr"`
-	NotesDir string `json:"notes_dir"`
-	API      int    `json:"api"`
+	Addr         string `json:"addr"`
+	NotesDir     string `json:"notes_dir"`
+	API          int    `json:"api"`
+	Version      string `json:"version"`       // the build: a hash of the executable
+	VersionLabel string `json:"version_label"` // as the web UI shows it
 }
 
 func readHealth(addr string) (*health, error) {
