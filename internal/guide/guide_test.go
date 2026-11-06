@@ -245,3 +245,15 @@ func TestIsNew(t *testing.T) {
 		t.Error("a directory with the inbox is new")
 	}
 }
+
+func TestNames(t *testing.T) {
+	names := Names()
+	if len(names) != len(Langs()) {
+		t.Fatalf("Names() = %q, want one for each of %q", names, Langs())
+	}
+	for _, n := range names {
+		if n == "" {
+			t.Errorf("an empty name in %q", names)
+		}
+	}
+}

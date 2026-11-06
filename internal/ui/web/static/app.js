@@ -915,6 +915,7 @@ const withSubs = (list, nb) => list.reduce((a, n) => (n.parent === nb.id ? a + n
 // below "all notes".
 function renderNotebooks() {
   if (renaming) return; // drawn again when the new name is saved or dropped
+  tellState();
   for (const b of document.querySelectorAll("#side-tabs button")) {
     b.setAttribute("aria-selected", String(b.dataset.side === state.side));
   }
@@ -3970,6 +3971,7 @@ async function showGitSync() {
   try {
     $("git-sync-open").hidden = !(await api("/git/status")).repository;
   } catch (_) { /* left hidden */ }
+  tellState();
 }
 
 // syncGit syncs the notes with their git repository (POST /git/sync) and
@@ -4043,7 +4045,44 @@ window.ebira = {
   find: () => { if (state.note && !state.editing) openFind(); },
   search: () => { $("q").focus(); $("q").select(); },
   previewStyle: () => openPreviewStyle(),
+  // textSize makes the text of the body a size larger (1), smaller (-1), or
+  // the default (0), as the minus and plus of the settings menu.
+  textSize: (step) => {
+    const i = BODY_SIZES.indexOf(bodySize());
+    setBodySize(step ? BODY_SIZES[Math.min(Math.max(i + step, 0), BODY_SIZES.length - 1)] : 100);
+  },
+  importFiles: () => $("import-input").click(),
+  checkFiles: () => openFilesCheck(),
+  serverStats: () => openServerStats(),
+  syncGit: () => { if (!$("git-sync-open").hidden) syncGit(); },
+  addGuide: () => addGuide(),
+  openGuide: () => openGuide(),
+  searchHelp: () => toggleSearchHelp(true),
+  newNotebook: () => openNewNotebook(),
+  renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
+  emptyTrash: () => { if (trashCount()) emptyTrash(); },
 };
+
+// canRenameNotebook reports whether the notebook shown can be renamed in its
+// row, as with F2.
+function canRenameNotebook() {
+  return state.side === "notebooks" && !!state.notebook && state.notebook !== "trash" && !state.trashedNotebook;
+}
+
+// trashCount returns the number of notes in the trash, with those of the
+// notebooks in it.
+function trashCount() {
+  return state.trashed.reduce((a, n) => a + n.count, state.notebooks.find((n) => n.id === "trash")?.count ?? 0);
+}
+
+// openGuide opens the notebook of the guide added last, known by the names
+// the server gives (guide.Names), or adds the guide when there is none.
+function openGuide() {
+  const names = (document.documentElement.dataset.guideNames || "").split("\n").filter(Boolean);
+  const guides = state.notebooks.filter((n) => !n.parent && names.some((g) => n.name === g || n.name.startsWith(g + " ")));
+  if (guides.length) showNotebook(guides.at(-1).id);
+  else addGuide();
+}
 
 // tellApp sends a message to the desktop app, if the page is in one: the app
 // of WebKit reads the messages it is sent as text starting with "ebira:".
@@ -4059,9 +4098,14 @@ function inApp() {
 let toldState = "";
 
 // tellState tells the app what its menus can do now: whether a note is shown,
-// whether it is in the trash, and whether it is being edited.
+// whether it is in the trash, whether it is being edited, whether the notebook
+// shown can be renamed, whether the trash has notes, and whether the notes are
+// in git.
 function tellState() {
-  const s = JSON.stringify({ note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing });
+  const s = JSON.stringify({
+    note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing,
+    notebook: canRenameNotebook(), trashFull: trashCount() > 0, git: !$("git-sync-open").hidden,
+  });
   if (s === toldState) return;
   toldState = s;
   tellApp("state", JSON.parse(s));
@@ -4280,10 +4324,10 @@ function openIssue() {
 
 // The version of ebira, which the server gives the page, at the bottom of
 // the settings menu; choosing it copies all that ebira version prints, to
-// tell in a report.
+// tell in a report. The desktop app shows it in its about panel instead.
 function showVersion() {
   const { version } = document.documentElement.dataset;
-  $("version-copy").hidden = !version;
+  $("version-sep").hidden = $("version-copy").hidden = !version || inApp();
   if (version) $("version-copy").textContent = t("versionLabel", { version });
 }
 

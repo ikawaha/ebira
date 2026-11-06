@@ -11,9 +11,12 @@ import (
 // pageState is what the Web UI tells the app with its "state" message: what
 // its menus can do now.
 type pageState struct {
-	Note    bool `json:"note"`    // a note is shown
-	Trash   bool `json:"trash"`   // the note shown is in the trash
-	Editing bool `json:"editing"` // a note is being edited
+	Note      bool `json:"note"`      // a note is shown
+	Trash     bool `json:"trash"`     // the note shown is in the trash
+	Editing   bool `json:"editing"`   // a note is being edited
+	Notebook  bool `json:"notebook"`  // the notebook shown can be renamed
+	TrashFull bool `json:"trashFull"` // the trash has notes
+	Git       bool `json:"git"`       // the notes are in a git repository
 }
 
 // noteMenu holds the items that depend on the state of the page.
@@ -35,6 +38,9 @@ func shownInTrash(p pageState) bool { return shown(p) && p.Trash }
 func editing(p pageState) bool      { return p.Editing }
 func notEditing(p pageState) bool   { return !p.Editing }
 func always(pageState) bool         { return true }
+func renamable(p pageState) bool    { return p.Notebook && !p.Editing }
+func trashFull(p pageState) bool    { return p.TrashFull && !p.Editing }
+func inGit(p pageState) bool        { return p.Git }
 
 func (n *noteMenu) add(item *application.MenuItem, enabled func(pageState) bool) {
 	n.items = append(n.items, stateItem{item, enabled})
@@ -109,6 +115,10 @@ func (s *shell) onPageMessage(data string) {
 	}
 }
 
+// issueURL is where requests and bug reports of ebira go (ISSUE_URL of the web
+// UI).
+const issueURL = "https://github.com/ikawaha/ebira/issues/new"
+
 // appMenu is the menu bar. It has no reload: WebKit would drop unsaved edits,
 // since Wails does not ask about the page's beforeunload.
 func (s *shell) appMenu() *application.Menu {
@@ -122,6 +132,7 @@ func (s *shell) appMenu() *application.Menu {
 	about.Add("About ebira").OnClick(on(func() { go s.showAbout() }))
 	about.AddSeparator()
 	about.Add("Settings…").SetAccelerator("cmd+,").OnClick(on(func() { s.openSettings("") }))
+	n.add(about.Add("Server Status…").OnClick(on(func() { s.call("serverStats") })), always)
 	about.AddSeparator()
 	about.AddRole(application.ServicesMenu)
 	about.AddSeparator()
@@ -133,6 +144,11 @@ func (s *shell) appMenu() *application.Menu {
 
 	file := menu.AddSubmenu("File")
 	n.add(file.Add("New Note").SetAccelerator("cmd+n").OnClick(on(func() { s.call("create") })), always)
+	n.add(file.Add("New Notebook…").SetAccelerator("cmd+shift+n").OnClick(on(func() { s.call("newNotebook") })), notEditing)
+	file.AddSeparator()
+	n.add(file.Add("Import Markdown…").OnClick(on(func() { s.call("importFiles") })), notEditing)
+	n.add(file.Add("Check Images…").OnClick(on(func() { s.call("checkFiles") })), always)
+	n.add(file.Add("Sync with Git").OnClick(on(func() { s.call("syncGit") })), inGit)
 	file.AddSeparator()
 	file.AddRole(application.CloseWindow)
 
@@ -156,14 +172,34 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(n.trash, shown)
 	n.add(note.Add("Restore").OnClick(on(func() { s.call("restore") })), shownInTrash)
 
+	notebook := menu.AddSubmenu("Notebook")
+	n.add(notebook.Add("Rename Notebook").OnClick(on(func() { s.call("renameNotebook") })), renamable)
+	notebook.AddSeparator()
+	n.add(notebook.Add("Empty Trash…").SetAccelerator("cmd+shift+backspace").OnClick(on(func() { s.call("emptyTrash") })), trashFull)
+
 	view := menu.AddSubmenu("View")
 	n.add(view.Add("Preview Style…").OnClick(on(func() { s.call("previewStyle") })), notEditing)
 	view.AddSeparator()
-	view.AddRole(application.ResetZoom)
-	view.AddRole(application.ZoomIn)
-	view.AddRole(application.ZoomOut)
+	// The size of the text of notes, as the minus and plus of the settings
+	// menu, rather than a zoom of the whole page.
+	n.add(view.Add("Larger Text").SetAccelerator("cmd+plus").OnClick(on(func() { s.call("textSize", 1) })), always)
+	n.add(view.Add("Smaller Text").SetAccelerator("cmd+-").OnClick(on(func() { s.call("textSize", -1) })), always)
+	n.add(view.Add("Default Text Size").SetAccelerator("cmd+0").OnClick(on(func() { s.call("textSize", 0) })), always)
 	view.AddSeparator()
 	view.AddRole(application.ToggleFullscreen)
 	menu.AddRole(application.WindowMenu)
+
+	help := menu.AddSubmenu("Help")
+	n.add(help.Add("ebira Guide").OnClick(on(func() { s.call("openGuide") })), always)
+	n.add(help.Add("How to Search").OnClick(on(func() { s.call("searchHelp") })), always)
+	n.add(help.Add("Add the Guide").OnClick(on(func() { s.call("addGuide") })), always)
+	help.AddSeparator()
+	help.Add("Requests and Bug Reports…").OnClick(on(func() {
+		// The browser, as WebKit opens no window for a page that the user did
+		// not click.
+		if err := s.app.Browser.OpenURL(issueURL); err != nil {
+			log.Print("open the issues: ", err)
+		}
+	}))
 	return menu
 }

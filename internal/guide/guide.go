@@ -68,6 +68,23 @@ func Langs() []string {
 	return langs
 }
 
+// Names returns the name of the guide in each language: the names of its
+// notebooks are these, followed by the version.
+func Names() []string {
+	var names []string
+	for _, lang := range Langs() {
+		b, err := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+		if err != nil {
+			continue
+		}
+		var m manifest
+		if yaml.Unmarshal(b, &m) == nil && m.Name != "" {
+			names = append(names, m.Name)
+		}
+	}
+	return names
+}
+
 // IsNew reports whether dir is a notes directory to be made: missing, or
 // with no files other than the settings shared with the notes (which the
 // setup writes first) and .DS_Store. The guide goes only to such a

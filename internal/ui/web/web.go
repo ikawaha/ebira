@@ -84,6 +84,10 @@ type Options struct {
 	// ebira version prints, given as data-version-text, which the menu
 	// copies. Empty tells none.
 	Version, VersionText string
+	// GuideNames are the names of the guide (guide.Names), given as the
+	// data-guide-names attribute, one a line, by which the page knows the
+	// notebooks of the guide.
+	GuideNames []string
 }
 
 // stylesDir is where the built-in styles of the preview are served, under
@@ -115,6 +119,9 @@ func Handler(o Options) http.Handler {
 	}
 	if o.Version != "" {
 		attrs += ` data-version="` + html.EscapeString(o.Version) + `" data-version-text="` + html.EscapeString(o.VersionText) + `"`
+	}
+	if len(o.GuideNames) > 0 {
+		attrs += ` data-guide-names="` + html.EscapeString(strings.Join(o.GuideNames, "\n")) + `"`
 	}
 	page = bytes.Replace(page, []byte("<html>"), []byte("<html"+attrs+">"), 1)
 	files := http.StripPrefix(AssetsPrefix, http.FileServerFS(sub))

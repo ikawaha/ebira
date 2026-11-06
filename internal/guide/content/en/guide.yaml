@@ -37,6 +37,7 @@ items:
   - note: passkey.md
   - separator: Look and settings
   - note: settings.md
+  - note: licenses.md
   - sub: terminal
     name: Terminal
     items:

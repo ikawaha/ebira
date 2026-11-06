@@ -17,6 +17,7 @@ ebira は、Markdown でノートを書き、すばやく探すためのノー�
 - [AI と使う](ai.md)・[同期](sync.md)・[パスキー](passkey.md)
 - [設定](settings.md)
 - ターミナル: [TUI](tui.md)・[コマンド](cli.md)
+- [ライセンス](licenses.md)
 
 ## 自由に試してください
 

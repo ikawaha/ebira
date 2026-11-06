@@ -12,10 +12,6 @@ import (
 	"unsafe"
 )
 
-// iconCredit is the attribution CC BY 4.0 asks for the icon. The catalogs give
-// the title of the original, and favicon.LICENSE in the bundle tells the rest.
-const iconCredit = "Icon: changed from a chidori pattern by Pneuma01 (Wikimedia Commons), CC BY 4.0. See favicon.LICENSE in the app."
-
 // appVersion is the version of ebira the app was built with, which build.sh
 // writes to Info.plist: the version of the server in the bundle.
 func appVersion() string {
@@ -43,7 +39,7 @@ func (s *shell) showAbout() {
 		}
 		server = fmt.Sprintf(s.text("Server: %s, API %d"), version, h.API) + "\n" + h.Addr + "\n" + h.NotesDir
 	}
-	credits := C.CString(fmt.Sprintf(s.text("App: %s"), appVersion()) + "\n" + server + "\n\n" + s.text(iconCredit))
+	credits := C.CString(fmt.Sprintf(s.text("App: %s"), appVersion()) + "\n" + server)
 	defer C.free(unsafe.Pointer(credits))
 	C.showAbout(credits)
 }

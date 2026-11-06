@@ -9,9 +9,21 @@ app="build/ebira.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
 cp Info.plist "$app/Contents/"
-# The icon of the about panel is the one of the web UI, with its license (CC BY
-# 4.0, not the license of ebira).
-cp ../../internal/ui/web/static/favicon.svg ../../internal/ui/web/static/favicon.LICENSE "$app/Contents/Resources/"
+# The icon of the app is the one of the web UI, with its license (CC BY 4.0, not
+# the license of ebira). The picture of the favicon fills its square; a Mac icon
+# keeps a margin, 824 of 1024 pixels, so the view of the SVG is widened by it.
+static=../../internal/ui/web/static
+cp "$static/favicon.LICENSE" "$app/Contents/Resources/"
+icons=$(mktemp -d)
+trap 'rm -rf "$icons"' EXIT
+sed 's/viewBox="0 0 140 140"/viewBox="-17 -17 174 174"/' "$static/favicon.svg" >"$icons/icon.svg"
+grep -q 'viewBox="-17 -17 174 174"' "$icons/icon.svg" # the favicon changed its view
+mkdir "$icons/icon.iconset"
+for size in 16 32 128 256 512; do
+	sips -s format png -Z "$size" "$icons/icon.svg" --out "$icons/icon.iconset/icon_${size}x${size}.png" >/dev/null
+	sips -s format png -Z "$((size * 2))" "$icons/icon.svg" --out "$icons/icon.iconset/icon_${size}x${size}@2x.png" >/dev/null
+done
+iconutil -c icns -o "$app/Contents/Resources/icon.icns" "$icons/icon.iconset"
 go build -o "$app/Contents/MacOS/ebira-desktop" .
 (cd ../.. && go build -o "apps/desktop/$app/Contents/Helpers/ebira" ./cmd/ebira)
 

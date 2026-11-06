@@ -75,8 +75,8 @@ char *bundleString(const char *key) {
     return strdup([value isKindOfClass:NSString.class] ? [value UTF8String] : "");
 }
 
-// showAbout shows the standard about panel, with the icon of the web UI and
-// with credits under the version of the bundle.
+// showAbout shows the standard about panel, with credits under the version of
+// the bundle.
 void showAbout(const char *credits) {
     NSString *text = [NSString stringWithUTF8String:credits];
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -88,14 +88,7 @@ void showAbout(const char *credits) {
             NSParagraphStyleAttributeName : centered,
         };
         NSAttributedString *c = [[NSAttributedString alloc] initWithString:text attributes:attrs];
-        NSMutableDictionary *options = [@{NSAboutPanelOptionCredits : c} mutableCopy];
-        NSURL *url = [NSBundle.mainBundle URLForResource:@"favicon" withExtension:@"svg"];
-        NSImage *icon = url ? [[NSImage alloc] initWithContentsOfURL:url] : nil;
-        if (icon != nil) {
-            icon.size = NSMakeSize(128, 128);
-            options[NSAboutPanelOptionApplicationIcon] = icon;
-        }
-        [NSApp orderFrontStandardAboutPanelWithOptions:options];
+        [NSApp orderFrontStandardAboutPanelWithOptions:@{NSAboutPanelOptionCredits : c}];
         [NSApp activateIgnoringOtherApps:YES];
     });
 }

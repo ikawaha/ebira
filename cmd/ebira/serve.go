@@ -322,6 +322,7 @@ func runServe(args []string) error {
 	ui := web.Handler(web.Options{
 		Lang: *o.lang, Theme: *o.theme, Search: string(mode), PreviewCSS: previewCSS,
 		Version: versionLabel(bi), VersionText: versionText(bi, daemon.Version()),
+		GuideNames: guide.Names(),
 	})
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)

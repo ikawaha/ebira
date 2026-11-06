@@ -36,6 +36,7 @@ items:
   - note: passkey.md
   - separator: 見た目と設定
   - note: settings.md
+  - note: licenses.md
   - sub: terminal
     name: ターミナル
     items:
