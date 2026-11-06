@@ -1,17 +1,8 @@
 package main
 
-/*
-#include <stdlib.h>
-char *preferredLanguage(void);
-void setDialogLabels(const char *ok, const char *cancel);
-*/
-import "C"
-
 import (
 	"embed"
 	"encoding/json"
-	"strings"
-	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -21,13 +12,6 @@ import (
 //
 //go:embed i18n/*.json
 var catalogs embed.FS
-
-func language() string {
-	p := C.preferredLanguage()
-	defer C.free(unsafe.Pointer(p))
-	lang, _, _ := strings.Cut(C.GoString(p), "-")
-	return lang
-}
 
 func catalog(lang string) map[string]string {
 	messages := map[string]string{}
@@ -54,14 +38,4 @@ func translateMenu(menu *application.Menu, messages map[string]string) {
 			translateMenu(sub, messages)
 		}
 	}
-}
-
-func translateDialogs(messages map[string]string) {
-	text := func(s string) *C.char {
-		if t, ok := messages[s]; ok {
-			s = t
-		}
-		return C.CString(s) // kept by the dialogs for the life of the app
-	}
-	C.setDialogLabels(text("OK"), text("Cancel"))
 }

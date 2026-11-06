@@ -4084,16 +4084,38 @@ function openGuide() {
   else addGuide();
 }
 
-// tellApp sends a message to the desktop app, if the page is in one: the app
-// of WebKit reads the messages it is sent as text starting with "ebira:".
+// appChannel returns where the page sends the desktop app its messages, as
+// Wails takes them: the handler of WebKit on macOS, WebView2 on Windows; null
+// in a browser.
+function appChannel() {
+  return window.webkit?.messageHandlers?.external ?? window.chrome?.webview ?? null;
+}
+
+// tellApp sends a message to the desktop app, if the page is in one, as text
+// starting with "ebira:".
 function tellApp(type, data = {}) {
-  window.webkit?.messageHandlers?.external?.postMessage("ebira:" + JSON.stringify({ type, ...data }));
+  appChannel()?.postMessage("ebira:" + JSON.stringify({ type, ...data }));
 }
 
 // inApp reports whether the page is in the desktop app.
 function inApp() {
-  return !!window.webkit?.messageHandlers?.external;
+  return !!appChannel();
 }
+
+// openOutside opens url in the browser: in the desktop app, which opens no
+// windows of its own for the page, the app opens it.
+function openOutside(url) {
+  if (inApp()) tellApp("openURL", { url });
+  else window.open(url, "_blank", "noopener");
+}
+
+// In the desktop app, links that open a new tab go to the browser.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.("a[target=_blank]");
+  if (!a || !inApp() || e.defaultPrevented) return;
+  e.preventDefault();
+  tellApp("openURL", { url: a.href });
+}, true);
 
 let toldState = "";
 
@@ -4319,7 +4341,7 @@ const ISSUE_URL = "https://github.com/ikawaha/ebira/issues/new";
 // openIssue opens the page to post a new issue of ebira in another tab (in the
 // app, the default browser).
 function openIssue() {
-  window.open(ISSUE_URL, "_blank", "noopener");
+  openOutside(ISSUE_URL);
 }
 
 // The version of ebira, which the server gives the page, at the bottom of

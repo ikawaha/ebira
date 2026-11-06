@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os/exec"
 	"strings"
 )
 
@@ -12,7 +11,7 @@ import (
 const markID = "ebira-app-restart"
 
 // leaveRestart is leave, for starting the server again: the page reloads.
-const leaveRestart = `window.webkit.messageHandlers.external.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:restart" : "ebira:stay");`
+const leaveRestart = toApp + `.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:restart" : "ebira:stay");`
 
 // outdated reports whether the server lacks something this app relies on.
 // A newer one is fine: the page comes from it.
@@ -45,7 +44,7 @@ func (s *shell) markOutdated() {
   b.title = ` + string(title) + `;
   b.setAttribute("aria-label", b.title);
   b.style.cssText = "border: none; background: none; padding: 0 2px; margin-left: 6px; color: var(--fg-muted); font-size: 15px; line-height: 1; cursor: pointer;";
-  b.addEventListener("click", () => window.webkit.messageHandlers.external.postMessage('ebira:{"type":"restart"}'));
+  b.addEventListener("click", () => ` + toApp + `.postMessage('ebira:{"type":"restart"}'));
   status.after(b);
 })();`)
 }
@@ -78,7 +77,7 @@ func (s *shell) restartServer() {
 	bin, err := helper()
 	if err == nil {
 		var out []byte
-		if out, err = exec.Command(bin, "server", "restart", "-notes", t.Notes).CombinedOutput(); err != nil {
+		if out, err = helperCommand(bin, "server", "restart", "-notes", t.Notes).CombinedOutput(); err != nil {
 			err = fmt.Errorf("%w\n%s", err, strings.TrimSpace(string(out)))
 		}
 	}

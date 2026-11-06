@@ -1,12 +1,5 @@
 package main
 
-/*
-#include <stdlib.h>
-char *loadSetting(const char *key);
-void saveSetting(const char *key, const char *value);
-*/
-import "C"
-
 import (
 	"bytes"
 	_ "embed"
@@ -15,7 +8,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -50,21 +42,6 @@ func saved() target {
 func (t target) save() {
 	setSetting("notesDir", t.Notes)
 	setSetting("addr", t.Addr)
-}
-
-func setting(key string) string {
-	k := C.CString(key)
-	defer C.free(unsafe.Pointer(k))
-	v := C.loadSetting(k)
-	defer C.free(unsafe.Pointer(v))
-	return C.GoString(v)
-}
-
-func setSetting(key, value string) {
-	k, v := C.CString(key), C.CString(value)
-	defer C.free(unsafe.Pointer(k))
-	defer C.free(unsafe.Pointer(v))
-	C.saveSetting(k, v)
 }
 
 func (s *shell) text(english string) string {

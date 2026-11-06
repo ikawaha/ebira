@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -98,6 +100,7 @@ func (s *shell) onPageMessage(data string) {
 		Type string `json:"type"`
 		pageState
 		Text string `json:"text"`
+		URL  string `json:"url"`
 	}
 	if err := json.Unmarshal([]byte(data), &m); err != nil {
 		log.Print("a message of the page: ", err)
@@ -106,6 +109,8 @@ func (s *shell) onPageMessage(data string) {
 	switch m.Type {
 	case "state":
 		s.notes.update(m.pageState)
+	case "openURL": // a link to open in the browser
+		s.openURL(m.URL)
 	case "restart": // the mark of an outdated server (markOutdated)
 		go s.askRestart()
 	case "copy":
@@ -119,75 +124,118 @@ func (s *shell) onPageMessage(data string) {
 // UI).
 const issueURL = "https://github.com/ikawaha/ebira/issues/new"
 
-// appMenu is the menu bar. It has no reload: WebKit would drop unsaved edits,
-// since Wails does not ask about the page's beforeunload.
+// openURL opens url in the browser. The schemes are limited because the link
+// may come from a note, which AI can write too.
+func (s *shell) openURL(url string) {
+	scheme, _, _ := strings.Cut(url, ":")
+	switch strings.ToLower(scheme) {
+	case "http", "https", "mailto":
+		if err := s.app.Browser.OpenURL(url); err != nil {
+			log.Print("open a link: ", err)
+		}
+	}
+}
+
+// appMenu is the menu bar: of the app on macOS, of the main window on Windows.
+// It has no reload: WebKit would drop unsaved edits, since Wails does not ask
+// about the page's beforeunload.
 func (s *shell) appMenu() *application.Menu {
 	n := &noteMenu{text: s.text}
 	s.notes = n
+	mac := runtime.GOOS == "darwin"
 	on := func(f func()) func(*application.Context) {
 		return func(*application.Context) { f() }
 	}
+	// key is the shortcut of an item: the one of macOS (⌘), or of Windows
+	// (Ctrl), where some of macOS mean something else, as Ctrl+Y redoes and
+	// Ctrl+Backspace deletes a word. Empty is none.
+	key := func(item *application.MenuItem, macKey, windowsKey string) *application.MenuItem {
+		k := windowsKey
+		if mac {
+			k = macKey
+		}
+		if k != "" {
+			item.SetAccelerator(k)
+		}
+		return item
+	}
+	settingsItem := func(m *application.Menu) {
+		key(m.Add("Settings…"), "cmd+,", "ctrl+,").OnClick(on(func() { s.openSettings("") }))
+		n.add(m.Add("Server Status…").OnClick(on(func() { s.call("serverStats") })), always)
+	}
+	about := func() { go s.showAbout() }
+
 	menu := s.app.Menu.New()
-	about := menu.AddSubmenu("ebira")
-	about.Add("About ebira").OnClick(on(func() { go s.showAbout() }))
-	about.AddSeparator()
-	about.Add("Settings…").SetAccelerator("cmd+,").OnClick(on(func() { s.openSettings("") }))
-	n.add(about.Add("Server Status…").OnClick(on(func() { s.call("serverStats") })), always)
-	about.AddSeparator()
-	about.AddRole(application.ServicesMenu)
-	about.AddSeparator()
-	about.AddRole(application.Hide)
-	about.AddRole(application.HideOthers)
-	about.AddRole(application.UnHide)
-	about.AddSeparator()
-	about.AddRole(application.Quit)
+	if mac {
+		app := menu.AddSubmenu("ebira")
+		app.Add("About ebira").OnClick(on(about))
+		app.AddSeparator()
+		settingsItem(app)
+		app.AddSeparator()
+		app.AddRole(application.ServicesMenu)
+		app.AddSeparator()
+		app.AddRole(application.Hide)
+		app.AddRole(application.HideOthers)
+		app.AddRole(application.UnHide)
+		app.AddSeparator()
+		app.AddRole(application.Quit)
+	}
 
 	file := menu.AddSubmenu("File")
-	n.add(file.Add("New Note").SetAccelerator("cmd+n").OnClick(on(func() { s.call("create") })), always)
-	n.add(file.Add("New Notebook…").SetAccelerator("cmd+shift+n").OnClick(on(func() { s.call("newNotebook") })), notEditing)
+	n.add(key(file.Add("New Note"), "cmd+n", "ctrl+n").OnClick(on(func() { s.call("create") })), always)
+	n.add(key(file.Add("New Notebook…"), "cmd+shift+n", "ctrl+shift+n").OnClick(on(func() { s.call("newNotebook") })), notEditing)
 	file.AddSeparator()
 	n.add(file.Add("Import Markdown…").OnClick(on(func() { s.call("importFiles") })), notEditing)
 	n.add(file.Add("Check Images…").OnClick(on(func() { s.call("checkFiles") })), always)
 	n.add(file.Add("Sync with Git").OnClick(on(func() { s.call("syncGit") })), inGit)
 	file.AddSeparator()
-	file.AddRole(application.CloseWindow)
+	if mac {
+		file.AddRole(application.CloseWindow)
+	} else {
+		settingsItem(file)
+		file.AddSeparator()
+		file.AddRole(application.Quit)
+	}
 
 	menu.AddRole(application.EditMenu)
 
 	note := menu.AddSubmenu("Note")
-	n.add(note.Add("Edit Note").SetAccelerator("cmd+e").OnClick(on(func() { s.call("edit") })), shownOutside)
-	n.add(note.Add("Save").SetAccelerator("cmd+s").OnClick(on(func() { s.call("save") })), editing)
+	n.add(key(note.Add("Edit Note"), "cmd+e", "ctrl+e").OnClick(on(func() { s.call("edit") })), shownOutside)
+	n.add(key(note.Add("Save"), "cmd+s", "ctrl+s").OnClick(on(func() { s.call("save") })), editing)
 	note.AddSeparator()
-	n.add(note.Add("Find in Note").SetAccelerator("cmd+f").OnClick(on(func() { s.call("find") })), shown)
-	n.add(note.Add("Search Notes").SetAccelerator("cmd+alt+f").OnClick(on(func() { s.call("search") })), always)
+	n.add(key(note.Add("Find in Note"), "cmd+f", "ctrl+f").OnClick(on(func() { s.call("find") })), shown)
+	// Ctrl+Alt is AltGr on many keyboards of Windows.
+	n.add(key(note.Add("Search Notes"), "cmd+alt+f", "ctrl+shift+f").OnClick(on(func() { s.call("search") })), always)
 	note.AddSeparator()
 	n.add(note.Add("Mark…").OnClick(on(func() { s.call("mark") })), shownOutside)
-	n.add(note.Add("History…").SetAccelerator("cmd+y").OnClick(on(func() { s.call("history") })), shown)
+	n.add(key(note.Add("History…"), "cmd+y", "ctrl+h").OnClick(on(func() { s.call("history") })), shown)
 	note.AddSeparator()
-	n.add(note.Add("Copy as Markdown").SetAccelerator("cmd+shift+c").OnClick(on(func() { s.call("copy") })), shown)
+	n.add(key(note.Add("Copy as Markdown"), "cmd+shift+c", "ctrl+shift+c").OnClick(on(func() { s.call("copy") })), shown)
 	n.add(note.Add("Copy Link").OnClick(on(func() { s.call("copyLink", false) })), shown)
 	n.add(note.Add("Copy Markdown Link").OnClick(on(func() { s.call("copyLink", true) })), shown)
 	note.AddSeparator()
-	n.trash = note.Add("Move to Trash").SetAccelerator("cmd+backspace").OnClick(on(func() { s.call("trash") }))
+	n.trash = key(note.Add("Move to Trash"), "cmd+backspace", "").OnClick(on(func() { s.call("trash") }))
 	n.add(n.trash, shown)
 	n.add(note.Add("Restore").OnClick(on(func() { s.call("restore") })), shownInTrash)
 
 	notebook := menu.AddSubmenu("Notebook")
 	n.add(notebook.Add("Rename Notebook").OnClick(on(func() { s.call("renameNotebook") })), renamable)
 	notebook.AddSeparator()
-	n.add(notebook.Add("Empty Trash…").SetAccelerator("cmd+shift+backspace").OnClick(on(func() { s.call("emptyTrash") })), trashFull)
+	n.add(key(notebook.Add("Empty Trash…"), "cmd+shift+backspace", "").OnClick(on(func() { s.call("emptyTrash") })), trashFull)
 
 	view := menu.AddSubmenu("View")
 	n.add(view.Add("Preview Style…").OnClick(on(func() { s.call("previewStyle") })), notEditing)
 	view.AddSeparator()
 	// The size of the text of notes, as the minus and plus of the settings
 	// menu, rather than a zoom of the whole page.
-	n.add(view.Add("Larger Text").SetAccelerator("cmd+plus").OnClick(on(func() { s.call("textSize", 1) })), always)
-	n.add(view.Add("Smaller Text").SetAccelerator("cmd+-").OnClick(on(func() { s.call("textSize", -1) })), always)
-	n.add(view.Add("Default Text Size").SetAccelerator("cmd+0").OnClick(on(func() { s.call("textSize", 0) })), always)
+	n.add(key(view.Add("Larger Text"), "cmd+plus", "ctrl+plus").OnClick(on(func() { s.call("textSize", 1) })), always)
+	n.add(key(view.Add("Smaller Text"), "cmd+-", "ctrl+-").OnClick(on(func() { s.call("textSize", -1) })), always)
+	n.add(key(view.Add("Default Text Size"), "cmd+0", "ctrl+0").OnClick(on(func() { s.call("textSize", 0) })), always)
 	view.AddSeparator()
 	view.AddRole(application.ToggleFullscreen)
-	menu.AddRole(application.WindowMenu)
+	if mac {
+		menu.AddRole(application.WindowMenu)
+	}
 
 	help := menu.AddSubmenu("Help")
 	n.add(help.Add("ebira Guide").OnClick(on(func() { s.call("openGuide") })), always)
@@ -195,11 +243,13 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(help.Add("Add the Guide").OnClick(on(func() { s.call("addGuide") })), always)
 	help.AddSeparator()
 	help.Add("Requests and Bug Reports…").OnClick(on(func() {
-		// The browser, as WebKit opens no window for a page that the user did
-		// not click.
-		if err := s.app.Browser.OpenURL(issueURL); err != nil {
-			log.Print("open the issues: ", err)
-		}
+		// The browser, as the web view opens no window for a page that the
+		// user did not click.
+		s.openURL(issueURL)
 	}))
+	if !mac {
+		help.AddSeparator()
+		help.Add("About ebira").OnClick(on(about))
+	}
 	return menu
 }

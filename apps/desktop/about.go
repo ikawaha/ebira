@@ -1,29 +1,6 @@
 package main
 
-/*
-#include <stdlib.h>
-char *bundleString(const char *key);
-void showAbout(const char *credits);
-*/
-import "C"
-
-import (
-	"fmt"
-	"unsafe"
-)
-
-// appVersion is the version of ebira the app was built with, which build.sh
-// writes to Info.plist: the version of the server in the bundle.
-func appVersion() string {
-	k := C.CString("EbiraVersion")
-	defer C.free(unsafe.Pointer(k))
-	v := C.bundleString(k)
-	defer C.free(unsafe.Pointer(v))
-	if s := C.GoString(v); s != "" {
-		return s
-	}
-	return "devel"
-}
+import "fmt"
 
 // showAbout shows the about panel: the version of the app from Info.plist, and
 // the version of the server it shows, which may be of another build.
@@ -39,7 +16,5 @@ func (s *shell) showAbout() {
 		}
 		server = fmt.Sprintf(s.text("Server: %s, API %d"), version, h.API) + "\n" + h.Addr + "\n" + h.NotesDir
 	}
-	credits := C.CString(fmt.Sprintf(s.text("App: %s"), appVersion()) + "\n" + server)
-	defer C.free(unsafe.Pointer(credits))
-	C.showAbout(credits)
+	s.showAboutPanel(fmt.Sprintf(s.text("App: %s"), appVersion()) + "\n" + server)
 }

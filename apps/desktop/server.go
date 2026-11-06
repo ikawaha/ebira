@@ -57,7 +57,7 @@ func connect(t target) (*health, error) {
 		if err != nil {
 			return nil, err
 		}
-		if out, err := exec.Command(bin, args...).CombinedOutput(); err != nil {
+		if out, err := helperCommand(bin, args...).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("start the server: %w\n%s", err, out)
 		}
 		if h, err = readHealth(addr); err != nil {
@@ -85,13 +85,16 @@ func realPath(p string) (string, error) {
 	return filepath.EvalSymlinks(abs)
 }
 
-// helper finds the server: in the app bundle, or else on the PATH.
+// helper finds the server: in the app bundle on macOS, beside the app on
+// Windows, or else on the PATH.
 func helper() (string, error) {
 	exe, err := os.Executable()
 	if err == nil {
-		bin := filepath.Join(filepath.Dir(exe), "..", "Helpers", "ebira")
-		if _, err := os.Stat(bin); err == nil {
-			return bin, nil
+		dir := filepath.Dir(exe)
+		for _, bin := range []string{filepath.Join(dir, "..", "Helpers", "ebira"), filepath.Join(dir, "ebira.exe")} {
+			if _, err := os.Stat(bin); err == nil {
+				return bin, nil
+			}
 		}
 	}
 	if bin, err := exec.LookPath("ebira"); err == nil {

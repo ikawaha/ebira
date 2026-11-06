@@ -2,15 +2,6 @@
 // of the ebira server.
 package main
 
-/*
-#cgo CFLAGS: -x objective-c -fobjc-arc
-#cgo LDFLAGS: -framework Cocoa -framework WebKit
-#include <stdlib.h>
-void installDelegate(void);
-void keepFrame(void *window, const char *name);
-*/
-import "C"
-
 import (
 	"flag"
 	"log"
@@ -18,23 +9,27 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-// ready tells Wails the page is up. The Web UI does not load the Wails runtime,
-// and ExecJS holds its scripts back until this message arrives.
-const ready = `window.webkit.messageHandlers.external.postMessage("wails:runtime:ready");`
+// toApp is where the JS the app runs in the page sends the app messages: the
+// handler of WebKit on macOS, WebView2 on Windows (appChannel of the page).
+const toApp = `(window.webkit?.messageHandlers?.external ?? window.chrome?.webview)`
+
+// ready tells Wails the page is up on macOS, where the Web UI does not load the
+// Wails runtime and ExecJS holds its scripts back until this message arrives.
+// On Windows, Wails puts its runtime in each page, which tells it.
+const ready = toApp + `?.postMessage("wails:runtime:ready");`
 
 // leave asks the page to close its editor, which confirms unsaved changes, and
 // reports the answer to the raw message handler. Pages of servers built before
 // window.ebira have leaveEditor alone.
-const leave = `window.webkit.messageHandlers.external.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:left" : "ebira:stay");`
+const leave = toApp + `.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:left" : "ebira:stay");`
 
 // leaveFor is leave, for changing the server instead of ending the app.
-const leaveFor = `window.webkit.messageHandlers.external.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:switch" : "ebira:stay");`
+const leaveFor = toApp + `.postMessage((window.ebira?.leave ?? leaveEditor)() ? "ebira:switch" : "ebira:stay");`
 
 // shell holds the windows of the app.
 type shell struct {
@@ -55,9 +50,7 @@ func main() {
 	addr := flag.String("addr", "", "address of the server (default: the one saved in the app, or localhost:13579)")
 	flag.CommandLine.Parse(appArgs(os.Args[1:])) // exits on an error
 
-	// WebKit reads the methods of its delegate when the web view is created, so
-	// this has to come before the first window.
-	C.installDelegate()
+	platformInit()
 
 	s := &shell{messages: catalog(language()), current: saved()}
 	if *notes != "" {
@@ -87,19 +80,6 @@ func main() {
 	if err := s.app.Run(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// frameName is the name the frame of the main window is saved under, in the
-// user defaults as "NSWindow Frame <name>".
-const frameName = "ebira"
-
-// showMain shows the main window, once its page is up as Wails would, with the
-// frame it had when the app last ended.
-func showMain(win *application.WebviewWindow) {
-	name := C.CString(frameName)
-	defer C.free(unsafe.Pointer(name))
-	application.InvokeSync(func() { C.keepFrame(win.NativeWindow(), name) })
-	win.Show()
 }
 
 // appArgs drops the arguments meant for Cocoa, which flag would refuse:
@@ -149,6 +129,7 @@ func (s *shell) onMessage(from application.Window, message string, _ *applicatio
 	}
 	switch message {
 	case "ebira:left":
+		saveFrame(s.main())
 		s.leaving.Store(true)
 		go s.app.Quit()
 	case "ebira:switch":
@@ -168,12 +149,16 @@ func (s *shell) openMain(url string) {
 		JS:     ready,
 		// Shown by showMain, where it was, rather than moved there in sight.
 		Hidden: true,
+		// The menu of the app is the menu bar of the window on Windows.
+		UseApplicationMenu: true,
 		// The page shows the name; the title stays for the Window menu and
 		// Mission Control.
 		Mac: application.MacWindow{TitleBar: application.MacTitleBar{HideTitle: true}},
 	})
 	var shown sync.Once
-	win.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(*application.WindowEvent) {
+	// The runtime is ready once a page is up: on macOS when the JS of the window
+	// tells it (ready), on Windows when Wails has put its runtime in the page.
+	win.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		shown.Do(func() { go showMain(win) })
 		// Each page, as after a change of the server, is checked for its server.
 		go s.markOutdated()
