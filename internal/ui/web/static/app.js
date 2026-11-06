@@ -273,16 +273,20 @@ function fitColumns() {
   loadColumnWidths();
   if (getComputedStyle(document.querySelector(".resizer")).display === "none") return; // one column
   // The columns may be wider than the window in all, leaving the preview no
-  // width at all: count from the width of the window.
-  const width = (col) => (columnPane(col).hidden ? 0 : columnPane(col).getBoundingClientRect().width);
-  let short = PREVIEW_MIN - (document.querySelector(".panes").clientWidth - width("side") - width("list") - width("ask"));
+  // width at all: count from the width of the window. The widths are the ones
+  // the columns are set to, not the ones drawn: a page drawn for another width,
+  // as in a window of the desktop app that is still opening, has columns of
+  // other widths, which narrowed would make a column wider than it was.
+  const panes = document.querySelector(".panes");
+  const width = (col) => (columnPane(col).hidden ? 0 : parseFloat(getComputedStyle(panes).getPropertyValue(COLUMNS[col].prop)) || 0);
+  let short = PREVIEW_MIN - (panes.clientWidth - width("side") - width("list") - width("ask"));
   for (const col of ["list", "ask", "side"]) {
     if (short <= 0) return;
     if (columnPane(col).hidden) continue;
     const w = width(col);
     const cut = Math.min(short, w - COLUMNS[col].min);
     if (cut <= 0) continue;
-    document.querySelector(".panes").style.setProperty(COLUMNS[col].prop, `${Math.round(w - cut)}px`);
+    panes.style.setProperty(COLUMNS[col].prop, `${Math.round(w - cut)}px`);
     short -= cut;
   }
 }
@@ -332,8 +336,9 @@ for (const r of document.querySelectorAll(".resizer")) {
     }
   });
 }
-fitColumns();
-window.addEventListener("resize", fitColumns);
+// The panes, not the window: the page may be drawn before the window has its
+// width, and the panes change their width without the window telling it.
+new ResizeObserver(() => fitColumns()).observe(document.querySelector(".panes"));
 
 // Messages: the text of the UI is in i18n/<lang>.json, keyed by name, so that
 // the code holds no text of a language. {name} in a message is replaced with
@@ -912,6 +917,7 @@ const withSubs = (list, nb) => list.reduce((a, n) => (n.parent === nb.id ? a + n
 // below "all notes".
 function renderNotebooks() {
   if (renaming) return; // drawn again when the new name is saved or dropped
+  tellState();
   for (const b of document.querySelectorAll("#side-tabs button")) {
     b.setAttribute("aria-selected", String(b.dataset.side === state.side));
   }
@@ -1034,6 +1040,7 @@ function enableNotebookDrag(li, id) {
     const { into, before, below } = notebookDrop(li, e);
     if (into === null) return; // a sub notebook that cannot go there
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move"; // as for the notes (enableDrag)
     li.classList.toggle("drop-into", !!into);
     li.classList.toggle("drop-below", !into && below);
     li.classList.toggle("drop-above", !into && !below && before !== undefined);
@@ -1396,9 +1403,7 @@ async function trashNotebook(nb) {
 // on their own and the notebooks with their notes, after asking, as it cannot
 // be undone.
 async function emptyTrash() {
-  const single = state.notebooks.find((n) => n.id === "trash")?.count ?? 0;
-  const notes = single + state.trashed.reduce((a, n) => a + n.count, 0);
-  if (!confirm(t("confirmEmptyTrash", { n: notes, m: state.trashed.length }))) return;
+  if (!confirm(t("confirmEmptyTrash", { n: trashCount(), m: state.trashed.length }))) return;
   try {
     await api("/trash", { method: "DELETE" });
   } catch (e) {
@@ -1725,17 +1730,33 @@ function enableDrag(li, reorder, list) {
     for (const x of $("notes").children) x.classList.remove("drop-above", "drop-below", "drop-into");
     for (const x of $("notebooks").children) x.classList.remove("drop-into");
   });
-  if (!reorder) return;
-  const within = () => dragID && dragID !== rowID(li) && !draggedNotes() && list.some((it) => it.id === dragID);
+  const within = () => reorder && dragID && dragID !== rowID(li) && !draggedNotes() && list.some((it) => it.id === dragID);
+  // A row of the list dragged where the list does not put it takes the drop
+  // too, so as to say why nothing moves: only on a drop, not when the drag is
+  // cancelled or let go elsewhere, which end alike.
+  const refused = () => !!dragID && !within() && list.some((it) => it.id === dragID) && !!noReorder(li, reorder);
   li.addEventListener("dragover", (e) => {
+    if (refused()) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      return;
+    }
     if (!within()) return;
     e.preventDefault();
+    // As for the notebooks: a drop effect that the move of dragstart does not
+    // allow drops nothing, and browsers differ in the one they take by default.
+    e.dataTransfer.dropEffect = "move";
     const { below } = dropAfter(li, e, list);
     li.classList.toggle("drop-below", below);
     li.classList.toggle("drop-above", !below);
   });
   li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below"));
   li.addEventListener("drop", (e) => {
+    if (refused()) {
+      e.preventDefault();
+      showToast(noReorder(li, reorder));
+      return;
+    }
     if (!within()) return;
     e.preventDefault();
     const id = dragID;
@@ -1744,6 +1765,18 @@ function enableDrag(li, reorder, list) {
     if (sep) moveSeparator(sep, after);
     else moveNote(id, after);
   });
+}
+
+// noReorder returns why the row li, dragged in its list, cannot be put in
+// another place there; empty when it can.
+function noReorder(li, reorder) {
+  if (draggedNotes()) return t("reorderChosen");
+  if (reorder) return "";
+  if (state.notebook === "trash") return t("reorderTrash");
+  // The open sub notebooks of a notebook, and the notebook itself, follow
+  // their sort; the other lists mix notebooks.
+  if (li.classList.contains("in-sub") || (state.notebook && !state.query)) return t("reorderSorted", { sort: t("sortOrder") });
+  return t("reorderNotebook");
 }
 
 // draggedNotes returns the IDs of the chosen notes when one of them is being
@@ -2846,7 +2879,7 @@ async function copyNote() {
   const n = state.note;
   if (!n) return;
   try {
-    await navigator.clipboard.writeText(noteMarkdown(n));
+    await writeClipboard(noteMarkdown(n));
   } catch (e) {
     alert(t("copyFailed", { error: e.message }));
     return;
@@ -2931,7 +2964,7 @@ async function copyLink(markdown) {
   const title = n.title || t("untitled");
   const text = markdown ? `[${title.replace(/[\\[\]]/g, "\\$&")}](${notePageURL(n.id)})` : notePageURL(n.id);
   try {
-    await navigator.clipboard.writeText(text);
+    await writeClipboard(text);
   } catch (e) {
     alert(t("copyFailed", { error: e.message }));
     return;
@@ -2986,6 +3019,7 @@ function showPreview(...children) {
   showNoteHash(null);
   marks = [];
   markIndex = -1;
+  tellState();
 }
 
 function jumpMark(delta) {
@@ -3275,6 +3309,7 @@ function startEdit(note) {
   };
   state.editing = ed;
   noteSeq++; // drop a preview being loaded
+  tellState();
 
   const f = ed.elems;
   f.title = el("input", "title");
@@ -3375,6 +3410,7 @@ function endEdit() {
   if (ed.note) rememberHistory(ed, ed.note.id, ed.version, ed.note.body);
   ed.view.destroy();
   state.editing = null;
+  tellState();
 }
 
 function cancelEdit() {
@@ -4155,6 +4191,7 @@ async function showGitSync() {
   try {
     $("git-sync-open").hidden = !(await api("/git/status")).repository;
   } catch (_) { /* left hidden */ }
+  tellState();
 }
 
 // syncGit syncs the notes with their git repository (POST /git/sync) and
@@ -4205,6 +4242,149 @@ window.addEventListener("beforeunload", (e) => {
 $("new-note").addEventListener("click", () => {
   if (leaveEditor()) startEdit(null);
 });
+
+// The desktop app shows this page in a window of its own, and drives it from
+// its menus through window.ebira. These functions and the messages of tellApp
+// are part of the API version of the server (daemon.API): the page comes from
+// the server, which may be of another build than the app. Each one does what
+// the same key or button does, and nothing where that does nothing.
+window.ebira = {
+  create: () => { if (leaveEditor()) startEdit(null); },
+  edit: () => { if (state.note && !state.editing) startEdit(state.note); },
+  save: () => { if (state.editing) saveNote(); },
+  // leave closes the editor, asking first if it has unsaved changes, as before
+  // the app quits; false when the user keeps editing.
+  leave: () => leaveEditor(),
+  // trash moves the note to the trash, or deletes it for good in the trash.
+  trash: () => { if (state.note && !state.editing) deleteNote(); },
+  restore: () => { if (!state.editing) restoreNote(); },
+  mark: () => { if (state.note && !state.editing && $("mark-open")) openMarkMenu(state.note, $("mark-open")); },
+  history: () => { if (state.note && !state.editing) openHistory(); },
+  copy: () => { if (state.note && !state.editing) copyNote(); },
+  copyLink: (markdown) => { if (state.note && !state.editing) copyLink(markdown); },
+  find: () => { if (state.note && !state.editing) openFind(); },
+  search: () => { $("q").focus(); $("q").select(); },
+  previewStyle: () => openPreviewStyle(),
+  // textSize makes the text of the body a size larger (1), smaller (-1), or
+  // the default (0), as the minus and plus of the settings menu.
+  textSize: (step) => {
+    const i = BODY_SIZES.indexOf(bodySize());
+    setBodySize(step ? BODY_SIZES[Math.min(Math.max(i + step, 0), BODY_SIZES.length - 1)] : 100);
+  },
+  importFiles: () => $("import-input").click(),
+  checkFiles: () => openFilesCheck(),
+  serverStats: () => openServerStats(),
+  serverSettings: () => openServerSettings(),
+  syncGit: () => { if (!$("git-sync-open").hidden) syncGit(); },
+  addGuide: () => addGuide(),
+  openGuide: () => openGuide(),
+  searchHelp: () => toggleSearchHelp(true),
+  newNotebook: () => openNewNotebook(),
+  renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
+  emptyTrash: () => { if (trashFull()) emptyTrash(); },
+};
+
+// canRenameNotebook reports whether the notebook shown can be renamed in its
+// row, as with F2.
+function canRenameNotebook() {
+  return state.side === "notebooks" && !!state.notebook && state.notebook !== "trash" && !state.trashedNotebook;
+}
+
+// trashFull reports whether the trash has anything to empty: notes, or
+// notebooks, which may have no notes (as the menu of the trash row).
+function trashFull() {
+  return trashCount() > 0 || state.trashed.length > 0;
+}
+
+// trashCount returns the number of notes in the trash, with those of the
+// notebooks in it.
+function trashCount() {
+  return state.trashed.reduce((a, n) => a + n.count, state.notebooks.find((n) => n.id === "trash")?.count ?? 0);
+}
+
+// openGuide opens the notebook of the guide added last, or adds the guide when
+// there is none. The notebooks of the guide are named by the server (see
+// guide.Install): a name of the guide (guide.Names), its version, and " (2)"
+// and on for one of the same version added again.
+function openGuide() {
+  const names = (document.documentElement.dataset.guideNames || "").split("\n").filter(Boolean);
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // The version is a date, as 2026-11-07, or 2026-11 before (guide.Version).
+  const pattern = new RegExp(`^(?:${names.map(escape).join("|")}) (\\d[\\d.-]*)(?: \\((\\d+)\\))?$`);
+  const guides = [];
+  for (const n of state.notebooks) {
+    const m = !n.parent && names.length && n.name.match(pattern);
+    if (m) guides.push({ id: n.id, version: m[1], again: Number(m[2] || 1) });
+  }
+  if (!guides.length) {
+    addGuide();
+    return;
+  }
+  // Dates of the same form sort as text.
+  guides.sort((a, b) => a.version.localeCompare(b.version) || a.again - b.again);
+  showNotebook(guides.at(-1).id);
+}
+
+// appChannel returns where the page sends the desktop app its messages, as
+// Wails takes them: the handler of WebKit on macOS, WebView2 on Windows; null
+// in a browser.
+function appChannel() {
+  return window.webkit?.messageHandlers?.external ?? window.chrome?.webview ?? null;
+}
+
+// tellApp sends a message to the desktop app, if the page is in one, as text
+// starting with "ebira:".
+function tellApp(type, data = {}) {
+  appChannel()?.postMessage("ebira:" + JSON.stringify({ type, ...data }));
+}
+
+// inApp reports whether the page is in the desktop app.
+function inApp() {
+  return !!appChannel();
+}
+
+// openOutside opens url in the browser: in the desktop app, which opens no
+// windows of its own for the page, the app opens it.
+function openOutside(url) {
+  if (inApp()) tellApp("openURL", { url });
+  else window.open(url, "_blank", "noopener");
+}
+
+// In the desktop app, links that open a new tab go to the browser.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.("a[target=_blank]");
+  if (!a || !inApp() || e.defaultPrevented) return;
+  e.preventDefault();
+  tellApp("openURL", { url: a.href });
+}, true);
+
+let toldState = "";
+
+// tellState tells the app what its menus can do now: whether a note is shown,
+// whether it is in the trash, whether it is being edited, whether the notebook
+// shown can be renamed, whether the trash has notes, and whether the notes are
+// in git.
+function tellState() {
+  const s = JSON.stringify({
+    note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing,
+    notebook: canRenameNotebook(), trashFull: trashFull(), git: !$("git-sync-open").hidden,
+  });
+  if (s === toldState) return;
+  toldState = s;
+  tellApp("state", JSON.parse(s));
+}
+
+// writeClipboard writes text to the clipboard. WebKit lets a page write it only
+// in answer to the user's input, which a menu of the app is not, so the app
+// writes it then.
+async function writeClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    if (!inApp()) throw e;
+    tellApp("copy", { text });
+  }
+}
 
 // Assistant: questions to POST /ask. Each question is answered on its own; the
 // questions and answers are kept in the page only.
@@ -4402,15 +4582,15 @@ const ISSUE_URL = "https://github.com/ikawaha/ebira/issues/new";
 // openIssue opens the page to post a new issue of ebira in another tab (in the
 // app, the default browser).
 function openIssue() {
-  window.open(ISSUE_URL, "_blank", "noopener");
+  openOutside(ISSUE_URL);
 }
 
 // The version of ebira, which the server gives the page, at the bottom of
 // the settings menu; choosing it copies all that ebira version prints, to
-// tell in a report.
+// tell in a report. The desktop app shows it in its about panel instead.
 function showVersion() {
   const { version } = document.documentElement.dataset;
-  $("version-copy").hidden = !version;
+  $("version-sep").hidden = $("version-copy").hidden = !version || inApp();
   if (version) $("version-copy").textContent = t("versionLabel", { version });
 }
 

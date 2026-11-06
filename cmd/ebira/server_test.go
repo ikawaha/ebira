@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ikawaha/ebira/internal/config"
@@ -128,5 +130,21 @@ func TestRemoveLegacyDirs(t *testing.T) {
 	}
 	if gone(cd) {
 		t.Error("with another file: removed")
+	}
+}
+
+func TestServerStatusJSON(t *testing.T) {
+	setStateHome(t)
+	dir := t.TempDir()
+	var out strings.Builder
+	if err := serverStatusJSON(dir, &out); err != nil {
+		t.Fatal(err)
+	}
+	var got statusJSON
+	if err := json.Unmarshal([]byte(out.String()), &got); err != nil {
+		t.Fatalf("%v in %q", err, out.String())
+	}
+	if got.NotesDir != dir || got.Running || got.State != nil {
+		t.Errorf("serverStatusJSON(%q) = %+v, want the directory, not running, without a state", dir, got)
 	}
 }

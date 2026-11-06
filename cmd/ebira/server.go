@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -40,6 +41,10 @@ func runServer(args []string) error {
 	case "stop", "status":
 		fs := flag.NewFlagSet("server "+args[0], flag.ContinueOnError)
 		notesDir := fs.String("notes", defaultNotesDir(), "notes directory of the server")
+		var asJSON *bool
+		if args[0] == "status" {
+			asJSON = fs.Bool("json", false, "print the notes directory, whether its server runs, and its state as JSON, for programs such as the desktop app")
+		}
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -49,6 +54,9 @@ func runServer(args []string) error {
 		}
 		if args[0] == "stop" {
 			return stopServer(ctx, dir, os.Stdout)
+		}
+		if *asJSON {
+			return serverStatusJSON(dir, os.Stdout)
 		}
 		return serverStatus(ctx, dir, os.Stdout)
 	}
@@ -251,6 +259,34 @@ func stopServer(ctx context.Context, dir string, out io.Writer) error {
 	}
 }
 
+// statusJSON is what ebira server status -json prints.
+type statusJSON struct {
+	// NotesDir is the notes directory: of -notes, or else of notes_dir in the
+	// config file, absolute.
+	NotesDir string `json:"notes_dir"`
+	Running  bool   `json:"running"`
+	// State is the state of the server, when it runs and has written it.
+	State *daemon.State `json:"state,omitempty"`
+}
+
+// serverStatusJSON prints the notes directory dir, whether its server runs,
+// and its state, as JSON.
+func serverStatusJSON(dir string, out io.Writer) error {
+	sd, running, err := serverDir(dir)
+	if err != nil {
+		return err
+	}
+	st := statusJSON{NotesDir: dir, Running: running}
+	if running {
+		if s, err := daemon.ReadState(sd); err == nil {
+			st.State = &s
+		}
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(st)
+}
+
 // serverStatus prints the state of the server of dir.
 func serverStatus(ctx context.Context, dir string, out io.Writer) error {
 	sd, running, err := serverDir(dir)
@@ -274,8 +310,8 @@ func serverStatus(ctx context.Context, dir string, out io.Writer) error {
 	if st.Version != daemon.Version() {
 		build = "another build than this ebira (" + daemon.Version() + ")"
 	}
-	fmt.Fprintf(out, "notes:     %s\naddress:   http://%s\npid:       %d\nstarted:   %s\nversion:   %s, %s\nanswers:   %s\nlog:       %s\n",
-		cmp.Or(st.NotesDir, dir), st.Addr, st.PID, st.StartedAt.Local().Format(time.DateTime), st.Version, build, answers, filepath.Join(sd, daemon.LogFile))
+	fmt.Fprintf(out, "notes:     %s\naddress:   http://%s\npid:       %d\nstarted:   %s\nversion:   %s, %s\napi:       %d (rev %d)\nanswers:   %s\nlog:       %s\n",
+		cmp.Or(st.NotesDir, dir), st.Addr, st.PID, st.StartedAt.Local().Format(time.DateTime), st.Version, build, st.API, st.APIRev, answers, filepath.Join(sd, daemon.LogFile))
 	return nil
 }
 

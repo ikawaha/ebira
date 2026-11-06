@@ -441,5 +441,9 @@
   "revokeSessions": "End other sessions",
   "revokeSessionsText": "Ending the sessions signs out the other browsers and the TUI; this page stays signed in.",
   "confirmRevokeSessions": "Sign out every other browser and the TUI?",
-  "passkeyAlreadyHere": "This browser or password manager already has a passkey of this server. Add the new one on another device or password manager."
+  "passkeyAlreadyHere": "This browser or password manager already has a passkey of this server. Add the new one on another device or password manager.",
+  "reorderNotebook": "Notes are reordered in a notebook.",
+  "reorderSorted": "Notes are reordered in {sort}.",
+  "reorderTrash": "Notes in the trash are not reordered.",
+  "reorderChosen": "Chosen notes are not reordered; drag them to a notebook to move them."
 }

@@ -245,3 +245,23 @@ func TestIsNew(t *testing.T) {
 		t.Error("a directory with the inbox is new")
 	}
 }
+
+func TestNames(t *testing.T) {
+	names := Names()
+	if len(names) != len(Langs()) {
+		t.Fatalf("Names() = %q, want one for each of %q", names, Langs())
+	}
+	for _, n := range names {
+		if n == "" {
+			t.Errorf("an empty name in %q", names)
+		}
+	}
+}
+
+// TestVersion checks the form of Version, which the web UI reads in the names
+// of the notebooks of the guide to open the newest (openGuide).
+func TestVersion(t *testing.T) {
+	if _, err := time.Parse(time.DateOnly, Version); err != nil {
+		t.Errorf("Version %q is not a date as YYYY-MM-DD: %v", Version, err)
+	}
+}

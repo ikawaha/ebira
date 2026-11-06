@@ -31,9 +31,10 @@ import (
 )
 
 // Version is the version of the guide, in the name of its notebook, so that
-// guides added at different times tell apart. Raise it when the content
+// guides added at different times tell apart: the date the content changed,
+// as YYYY-MM-DD (YYYY-MM before 2026-11-07). Raise it when the content
 // changes, not with each version of ebira.
-const Version = "2026-11"
+const Version = "2026-11-07"
 
 // DefaultLang is the language of the guide for a language without one.
 const DefaultLang = "en"
@@ -66,6 +67,23 @@ func Langs() []string {
 		langs = append(langs, e.Name())
 	}
 	return langs
+}
+
+// Names returns the name of the guide in each language: the names of its
+// notebooks are these, followed by the version.
+func Names() []string {
+	var names []string
+	for _, lang := range Langs() {
+		b, err := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+		if err != nil {
+			continue
+		}
+		var m manifest
+		if yaml.Unmarshal(b, &m) == nil && m.Name != "" {
+			names = append(names, m.Name)
+		}
+	}
+	return names
 }
 
 // IsNew reports whether dir is a notes directory to be made: missing, or

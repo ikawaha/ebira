@@ -17,6 +17,7 @@ Read from the top to learn the whole of it, or pick what you need.
 - [Using AI](ai.md) · [Syncing](sync.md) · [Passkeys](passkey.md)
 - [Settings](settings.md)
 - Terminal: [TUI](tui.md) · [Commands](cli.md)
+- [Licenses](licenses.md)
 
 ## Try anything
 

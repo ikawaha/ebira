@@ -131,3 +131,18 @@ func TestHandlerVersion(t *testing.T) {
 		t.Errorf("no %q in the page", want)
 	}
 }
+
+func TestHandlerGuideNames(t *testing.T) {
+	srv := httptest.NewServer(Handler(Options{GuideNames: []string{"ebira Guide", `a"b`}}))
+	defer srv.Close()
+	res, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	want := `<html data-guide-names="ebira Guide` + "\n" + `a&#34;b">`
+	if !strings.Contains(string(body), want) {
+		t.Errorf("no %q in the page", want)
+	}
+}

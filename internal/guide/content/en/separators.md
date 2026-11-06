@@ -23,4 +23,4 @@ Change the order with the menu above the list, or `s`.
 | Updated | Newest first |
 | Title | By the letters |
 
-In the manual order, drag notes, or press `J` / `K`, to reorder them. Each notebook keeps its order.
+In the manual order, drag notes, or press `J` / `K`, to reorder them. Each notebook keeps its order. The lists of All, of a tag, of a search and of the trash are not reordered (dropped in the list, a note says why at the bottom).
