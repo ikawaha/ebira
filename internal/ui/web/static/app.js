@@ -4274,6 +4274,7 @@ window.ebira = {
   importFiles: () => $("import-input").click(),
   checkFiles: () => openFilesCheck(),
   serverStats: () => openServerStats(),
+  serverSettings: () => openServerSettings(),
   syncGit: () => { if (!$("git-sync-open").hidden) syncGit(); },
   addGuide: () => addGuide(),
   openGuide: () => openGuide(),

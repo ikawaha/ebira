@@ -162,6 +162,9 @@ func (s *shell) appMenu() *application.Menu {
 	settingsItem := func(m *application.Menu) {
 		key(m.Add("Settings…"), "cmd+,", "ctrl+,").OnClick(on(func() { s.openSettings("") }))
 		n.add(m.Add("Server Status…").OnClick(on(func() { s.call("serverStats") })), always)
+		// The settings of the server, as the settings menu of the page has them;
+		// Settings… above are those of the app.
+		n.add(m.Add("Server Settings…").OnClick(on(func() { s.call("serverSettings") })), always)
 	}
 	about := func() { go s.showAbout() }
 

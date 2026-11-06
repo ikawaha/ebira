@@ -77,5 +77,6 @@
   "Add the Guide": "ガイドを追加",
   "Requests and Bug Reports…": "要望・不具合を報告…",
   "Quit": "終了",
-  "The note being edited was kept, so the server was not changed.": "編集中のノートを残したので、サーバーは替えていません。"
+  "The note being edited was kept, so the server was not changed.": "編集中のノートを残したので、サーバーは替えていません。",
+  "Server Settings…": "サーバーの設定…"
 }
