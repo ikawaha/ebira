@@ -59,5 +59,10 @@
   "App: %s": "アプリ: %s",
   "Server: %s, API %d": "サーバー: %s、API %d",
   "Server: not connected (%s)": "サーバー: つながっていません（%s）",
-  "Icon: changed from a chidori pattern by Pneuma01 (Wikimedia Commons), CC BY 4.0. See favicon.LICENSE in the app.": "アイコン: Pneuma01 による「日本文様-千鳥模様.svg」（Wikimedia Commons、CC BY 4.0）を改変。詳しくはアプリの中の favicon.LICENSE。"
+  "Icon: changed from a chidori pattern by Pneuma01 (Wikimedia Commons), CC BY 4.0. See favicon.LICENSE in the app.": "アイコン: Pneuma01 による「日本文様-千鳥模様.svg」（Wikimedia Commons、CC BY 4.0）を改変。詳しくはアプリの中の favicon.LICENSE。",
+  "The server is older than this app. Click to start it again with the version in the app.": "サーバーがこのアプリより古い版です。押すと、アプリに入っている版で起動し直します。",
+  "Start the server again?": "サーバーを起動し直しますか？",
+  "The server at %s is older than this app, and some menus do nothing. It is started again with the version in the app. Its environment variables, such as the API keys of the assistant, are not carried over: a server started with them is better started again the same way.": "%s のサーバーはこのアプリより古い版で、メニューの一部が働きません。アプリに入っている版で起動し直します。アシスタントの API キーなどの環境変数は引き継がれません。環境変数を付けて起動したサーバーなら、同じ方法で起動し直してください。",
+  "Start Again": "起動し直す",
+  "Could not start the server again": "サーバーを起動し直せませんでした"
 }

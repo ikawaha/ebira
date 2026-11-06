@@ -41,6 +41,12 @@ const (
 // endpoint or a field; adding ones does not.
 const API = 1
 
+// APIRev is the revision of the API within its version: raise it when adding
+// something such clients may rely on, as a function of window.ebira in the page
+// or a field of GET /health, so that they tell a server without it. Set it back
+// to 0 when API is raised.
+const APIRev = 1
+
 // ErrRunning is returned by Lock when a server holds the lock.
 var ErrRunning = errors.New("a server is already running for this notes directory")
 
@@ -54,7 +60,9 @@ type State struct {
 	// a pseudo-version for a build of a checkout; empty for earlier builds.
 	VersionLabel string `json:"version_label,omitempty"`
 	// API is the version of the REST API (see API); 0 for earlier builds.
-	API       int       `json:"api"`
+	API int `json:"api"`
+	// APIRev is the revision within API (see APIRev); 0 for earlier builds.
+	APIRev    int       `json:"api_rev"`
 	NotesDir  string    `json:"notes_dir"`
 	StartedAt time.Time `json:"started_at"`
 	// Flags are the flags of ebira serve other than -notes, so that

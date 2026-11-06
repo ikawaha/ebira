@@ -274,8 +274,8 @@ func serverStatus(ctx context.Context, dir string, out io.Writer) error {
 	if st.Version != daemon.Version() {
 		build = "another build than this ebira (" + daemon.Version() + ")"
 	}
-	fmt.Fprintf(out, "notes:     %s\naddress:   http://%s\npid:       %d\nstarted:   %s\nversion:   %s, %s\napi:       %d\nanswers:   %s\nlog:       %s\n",
-		cmp.Or(st.NotesDir, dir), st.Addr, st.PID, st.StartedAt.Local().Format(time.DateTime), st.Version, build, st.API, answers, filepath.Join(sd, daemon.LogFile))
+	fmt.Fprintf(out, "notes:     %s\naddress:   http://%s\npid:       %d\nstarted:   %s\nversion:   %s, %s\napi:       %d (rev %d)\nanswers:   %s\nlog:       %s\n",
+		cmp.Or(st.NotesDir, dir), st.Addr, st.PID, st.StartedAt.Local().Format(time.DateTime), st.Version, build, st.API, st.APIRev, answers, filepath.Join(sd, daemon.LogFile))
 	return nil
 }
 

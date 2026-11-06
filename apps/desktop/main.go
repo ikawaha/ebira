@@ -118,6 +118,8 @@ func (s *shell) onMessage(from application.Window, message string, _ *applicatio
 		go s.app.Quit()
 	case "ebira:switch":
 		go s.finishSwitch()
+	case "ebira:restart":
+		go s.restartServer()
 	}
 }
 
@@ -129,6 +131,10 @@ func (s *shell) openMain(url string) {
 		Height: 800,
 		URL:    url,
 		JS:     ready,
+	})
+	// Each page, as after a change of the server, is checked for its server.
+	win.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(*application.WindowEvent) {
+		go s.markOutdated()
 	})
 	win.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		if !s.leaving.Load() {

@@ -16,10 +16,15 @@ import (
 // servers are fine: earlier builds report no version, read as 0.
 const api = 1
 
+// apiRev is the revision within api this app relies on (daemon.APIRev): an
+// older server lacks some of window.ebira, and the app offers to start it again.
+const apiRev = 1
+
 type health struct {
 	Addr         string `json:"addr"`
 	NotesDir     string `json:"notes_dir"`
 	API          int    `json:"api"`
+	APIRev       int    `json:"api_rev"`
 	Version      string `json:"version"`       // the build: a hash of the executable
 	VersionLabel string `json:"version_label"` // as the web UI shows it
 }

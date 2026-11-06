@@ -100,6 +100,8 @@ func (s *shell) onPageMessage(data string) {
 	switch m.Type {
 	case "state":
 		s.notes.update(m.pageState)
+	case "restart": // the mark of an outdated server (markOutdated)
+		go s.askRestart()
 	case "copy":
 		if !s.app.Clipboard.SetText(m.Text) {
 			log.Printf("the clipboard took no text of %d bytes", len(m.Text))

@@ -310,7 +310,7 @@ func runServe(args []string) error {
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
 	bi, _ := debug.ReadBuildInfo()
-	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), VersionLabel: versionLabel(bi), API: daemon.API, NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
+	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), VersionLabel: versionLabel(bi), API: daemon.API, APIRev: daemon.APIRev, NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Flags: setFlags(fs)}
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(state))
 	root.Handle("GET /debug/stats", statsHandler(ix, state.StartedAt, rest.Session))
