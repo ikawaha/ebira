@@ -99,3 +99,12 @@ void showAbout(const char *credits) {
         [NSApp activateIgnoringOtherApps:YES];
     });
 }
+
+// keepFrame puts window where it was when the app last ended, if it was saved
+// under name, and has AppKit save its frame there as it moves and resizes.
+void keepFrame(void *window, const char *name) {
+    NSWindow *w = (__bridge NSWindow *)window;
+    NSString *n = [NSString stringWithUTF8String:name];
+    [w setFrameUsingName:n];
+    [w setFrameAutosaveName:n];
+}
