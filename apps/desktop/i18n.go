@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -31,7 +32,12 @@ func translateMenu(menu *application.Menu, messages map[string]string) {
 		if item == nil {
 			return
 		}
-		if label, ok := messages[item.Label()]; ok {
+		// A label may show a key after a tab (editMenu).
+		text, key, hasKey := strings.Cut(item.Label(), "\t")
+		if label, ok := messages[text]; ok {
+			if hasKey {
+				label += "\t" + key
+			}
 			item.SetLabel(label)
 		}
 		if sub := item.GetSubmenu(); sub != nil {
