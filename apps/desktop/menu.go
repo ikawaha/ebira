@@ -21,6 +21,33 @@ type pageState struct {
 	Git       bool `json:"git"`       // the notes are in a git repository
 }
 
+// editMenu fills the edit menu of Windows with the items of the roles of Wails,
+// which edit the page on a click, but without their shortcuts. Wails hands the
+// keys of its menu on to WebView2 too, which handles them itself, so the page
+// pasted, undid or redid twice. The keys are left to WebView2, and the labels
+// show them as the shortcuts would.
+func editMenu(edit *application.Menu) {
+	add := func(role application.Role, key string) {
+		edit.AddRole(role)
+		item := edit.FindByRole(role)
+		item.RemoveAccelerator()
+		if key != "" {
+			item.SetLabel(item.Label() + "\t" + key)
+		}
+	}
+	add(application.Undo, "Ctrl+Z")
+	add(application.Redo, "Ctrl+Y")
+	edit.AddSeparator()
+	add(application.Cut, "Ctrl+X")
+	add(application.Copy, "Ctrl+C")
+	add(application.Paste, "Ctrl+V")
+	// The Delete key deletes after the caret, where the item deletes before it,
+	// as Backspace does: the label shows no key.
+	add(application.Delete, "")
+	edit.AddSeparator()
+	add(application.SelectAll, "Ctrl+A")
+}
+
 // noteMenu holds the items that depend on the state of the page.
 type noteMenu struct {
 	mu    sync.Mutex
@@ -200,7 +227,11 @@ func (s *shell) appMenu() *application.Menu {
 		file.AddRole(application.Quit)
 	}
 
-	menu.AddRole(application.EditMenu)
+	if mac {
+		menu.AddRole(application.EditMenu)
+	} else {
+		editMenu(menu.AddSubmenu("Edit"))
+	}
 
 	note := menu.AddSubmenu("Note")
 	n.add(key(note.Add("Edit Note"), "cmd+e", "ctrl+e").OnClick(on(func() { s.call("edit") })), shownOutside)
