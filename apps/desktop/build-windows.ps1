@@ -37,7 +37,21 @@ try {
 	# same checkout: the mod line of go version -m, "<tab>mod<tab>path<tab>version".
 	$mod = Invoke-Go version -m "$out/ebira.exe" | Where-Object { $_ -match '^\s*mod\s' } | Select-Object -First 1
 	$version = ($mod.Trim() -split '\s+')[2]
-	Invoke-Go build -ldflags "-H windowsgui -X main.buildVersion=$version" -o "$out/ebira-desktop.exe" .
+	# The icon of the app, the one of the web UI (see winicon), as a resource the
+	# build links in. It is made for the build and not kept in the repository.
+	# winicon runs on this machine, so not for GOOS and GOARCH.
+	$syso = "icon_windows_$arch.syso"
+	$env:GOOS = $null; $env:GOARCH = $null
+	try {
+		Invoke-Go run ./winicon -arch $arch -o $syso ../../internal/ui/web/static/favicon.svg
+	} finally {
+		$env:GOOS = 'windows'; $env:GOARCH = $arch
+	}
+	try {
+		Invoke-Go build -ldflags "-H windowsgui -X main.buildVersion=$version" -o "$out/ebira-desktop.exe" .
+	} finally {
+		Remove-Item -Force -ErrorAction SilentlyContinue $syso
+	}
 	# The license of the icon of the web UI, which is not the license of ebira.
 	Copy-Item ../../internal/ui/web/static/favicon.LICENSE $out
 } finally {

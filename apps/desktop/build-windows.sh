@@ -15,6 +15,11 @@ mkdir -p "$out"
 # The version of the app is the one of the server beside it, built from the
 # same checkout (see build.sh).
 version=$(go version -m "$out/ebira.exe" | awk '$1 == "mod" { print $3; exit }')
+# The icon of the app, the one of the web UI (see winicon), as a resource the
+# build links in. It is made for the build and not kept in the repository.
+syso="icon_windows_$arch.syso"
+trap 'rm -f "$syso"' EXIT
+GOOS= GOARCH= go run ./winicon -arch "$arch" -o "$syso" ../../internal/ui/web/static/favicon.svg
 GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -ldflags "-H windowsgui -X main.buildVersion=$version" -o "$out/ebira-desktop.exe" .
 # The license of the icon of the web UI, which is not the license of ebira.
 cp ../../internal/ui/web/static/favicon.LICENSE "$out/"
