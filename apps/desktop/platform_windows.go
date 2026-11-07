@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"golang.org/x/sys/windows"
 )
 
@@ -123,6 +124,27 @@ func helperCommand(bin string, args ...string) *exec.Cmd {
 // frameKey is the setting the frame of the main window is kept in, as
 // "x,y,width,height".
 const frameKey = "frame"
+
+// logPath is the log of the app: %LocalAppData%\ebira\desktop.log, on the
+// machine rather than with the roaming settings.
+func logPath() (string, error) {
+	dir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "ebira", "desktop.log"), nil
+}
+
+// watchReady tells Wails that each page of win is up, as ready does on macOS.
+// Wails on Windows drops the JS of a window opened at a URL, and only puts
+// the core of its runtime in the page, which does not tell it: the full
+// runtime, which the Web UI does not load, would. Without this, the window
+// created hidden is never shown, and ExecJS holds its scripts back.
+func watchReady(win *application.WebviewWindow) {
+	win.OnWindowEvent(events.Windows.WebViewNavigationCompleted, func(*application.WindowEvent) {
+		win.HandleMessage("wails:runtime:ready")
+	})
+}
 
 // showMain shows the main window, once its page is up, with the frame it had
 // when the app last ended.

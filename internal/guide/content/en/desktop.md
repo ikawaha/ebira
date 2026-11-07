@@ -52,3 +52,10 @@ Editing, saving, finding, marks, history, copying and more are in the menus too,
 When the server is older than the app, a ↻ mark shows beside the connection status at the top right. Click it to restart the server with the one inside the app.
 
 "About ebira" shows the version of the app, and the version, address and notes directory of the server it is connected to.
+
+## Logs
+
+When something goes wrong, look at the log of the app and the log of the server.
+
+- The app: `~/Library/Logs/ebira/desktop.log` on macOS, `%LocalAppData%\ebira\desktop.log` on Windows. Past 1 MiB it moves to `desktop.log.1` and starts over, so the two stay at about 2 MiB.
+- The server: `server.log` in the state directory of the notes directory (`ebira server status` tells where).
