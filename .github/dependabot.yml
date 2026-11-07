@@ -27,6 +27,10 @@ updates:
           - "goa.design/*"
       go:
         update-types: [minor, patch]
+        # Goa may be pulled in here by an update of Goa-AI; keep it in the
+        # goa group, as it needs gen/ regenerated.
+        exclude-patterns:
+          - "goa.design/*"
 
   - package-ecosystem: gomod
     directory: /apps/desktop
