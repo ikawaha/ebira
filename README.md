@@ -105,6 +105,20 @@ go install github.com/ikawaha/ebira/cmd/ebira@latest
 
 ebira runs on macOS and Linux.
 
+### Desktop app
+
+The desktop app shows the web UI in a window of its own, with menus, on macOS (26 or later) and Windows. It is not distributed yet; build it from a clone of this repository:
+
+```bash
+apps/desktop/build.sh                # macOS: makes apps/desktop/build/ebira.app
+open apps/desktop/build/ebira.app
+
+apps/desktop/build-windows.sh        # Windows, built on macOS or Linux:
+                                     # makes apps/desktop/build/windows-amd64/ebira/
+```
+
+The macOS build needs the Xcode Command Line Tools, and the app is signed for that Mac only. For Windows, copy the folder over and open `ebira-desktop.exe`; Windows 10 may need the WebView2 runtime. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. Cmd+, (the File menu on Windows) sets the notes folder and the address.
+
 ## Quick Start
 
 1. **Start ebira.** The first time, it asks where to keep your notes, the git repository to sync them with (if any), how to search them and the language of the web UI and the TUI, and saves the answers to `~/.config/ebira/config.yaml`, with the address of the server (`localhost:13579`), so that the URL you give to MCP clients stays the same. To share the notes among machines, answer a folder synced by Dropbox or the like, such as `~/Dropbox/notes`, or give the same git repository on every machine (see [Sync with git](#sync-with-git) and [Sync with Dropbox, iCloud Drive and others](#sync-with-dropbox-icloud-drive-and-others)).
