@@ -147,7 +147,10 @@ func watchReady(win *application.WebviewWindow) {
 }
 
 // showMain shows the main window, once its page is up, with the frame it had
-// when the app last ended.
+// when the app last ended, and gives the keys to its page. A window created
+// hidden and shown later does not pass them on to WebView2 by itself: the page
+// takes no typing and draws no caret, and the IME shows its candidates in a
+// corner of the screen, until the window is clicked or switched to.
 func showMain(win *application.WebviewWindow) {
 	var x, y, w, h int
 	if _, err := fmt.Sscanf(setting(frameKey), "%d,%d,%d,%d", &x, &y, &w, &h); err == nil && w >= 400 && h >= 300 {
@@ -155,6 +158,7 @@ func showMain(win *application.WebviewWindow) {
 		win.SetPosition(x, y)
 	}
 	win.Show()
+	win.Focus()
 }
 
 // saveFrame keeps the frame of the main window as the app ends. A minimised,
