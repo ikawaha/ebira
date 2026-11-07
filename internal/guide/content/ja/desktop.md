@@ -19,13 +19,19 @@ open apps/desktop/build/ebira.app
 
 `apps/desktop/build/ebira.app` ができます。中にサーバー（`ebira`）が入っていて、この Mac のためだけに署名してあります。アプリケーションのフォルダに移して使えます。
 
-**Windows**（macOS や Linux の上で作ります）:
+**Windows**（PowerShell で作ります）:
 
-```sh
-apps/desktop/build-windows.sh
+1. Go を https://go.dev/dl/ から入れる
+2. ebira のソースを手に入れる（`git clone https://github.com/ikawaha/ebira.git`。git が無ければ、GitHub のページの「Code」→「Download ZIP」で落として展開する）
+3. PowerShell でそのフォルダに移り、次を実行する
+
+```powershell
+powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
 ```
 
-`apps/desktop/build/windows-amd64/ebira/` ができます（ARM なら `GOARCH=arm64` を付けて実行）。フォルダごと Windows に写し、`ebira-desktop.exe` を開きます。Windows 10 では WebView2 ランタイムを入れる必要があることがあります。
+`apps\desktop\build\windows-amd64\ebira\` ができます（ARM の Windows なら、先に `$env:GOARCH = "arm64"`）。中の `ebira-desktop.exe` を開きます。フォルダごと別の場所や別の PC に写しても使えます。Windows 10 では WebView2 ランタイムを入れる必要があることがあります。
+
+macOS や Linux の上でも、`apps/desktop/build-windows.sh` で Windows 用のフォルダを作れます。
 
 ## 起動したとき
 

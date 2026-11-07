@@ -110,14 +110,17 @@ ebira runs on macOS and Linux.
 The desktop app shows the web UI in a window of its own, with menus, on macOS (26 or later) and Windows. It is not distributed yet; build it from a clone of this repository:
 
 ```bash
-apps/desktop/build.sh                # macOS: makes apps/desktop/build/ebira.app
+# macOS: makes apps/desktop/build/ebira.app
+apps/desktop/build.sh
 open apps/desktop/build/ebira.app
-
-apps/desktop/build-windows.sh        # Windows, built on macOS or Linux:
-                                     # makes apps/desktop/build/windows-amd64/ebira/
 ```
 
-The macOS build needs the Xcode Command Line Tools, and the app is signed for that Mac only. For Windows, copy the folder over and open `ebira-desktop.exe`; Windows 10 may need the WebView2 runtime. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. Cmd+, (the File menu on Windows) sets the notes folder and the address.
+```powershell
+# Windows, in PowerShell: makes apps\desktop\build\windows-amd64\ebira\
+powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
+```
+
+The macOS build needs the Xcode Command Line Tools, and the app is signed for that Mac only. On Windows, open `ebira-desktop.exe` in the folder; Windows 10 may need the WebView2 runtime. Without git, get the source with "Code" → "Download ZIP" on GitHub. `apps/desktop/build-windows.sh` makes the same folder on macOS or Linux. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. Cmd+, (the File menu on Windows) sets the notes folder and the address.
 
 ## Quick Start
 
