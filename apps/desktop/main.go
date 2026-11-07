@@ -18,9 +18,10 @@ import (
 // handler of WebKit on macOS, WebView2 on Windows (appChannel of the page).
 const toApp = `(window.webkit?.messageHandlers?.external ?? window.chrome?.webview)`
 
-// ready tells Wails the page is up on macOS, where the Web UI does not load the
-// Wails runtime and ExecJS holds its scripts back until this message arrives.
-// On Windows, Wails puts its runtime in each page, which tells it.
+// ready tells Wails the page is up, as the Web UI does not load the Wails
+// runtime and ExecJS holds its scripts back until this message arrives. Wails
+// on Windows runs it for the settings window, opened with HTML, but drops it
+// for the main window, opened at a URL (watchReady).
 const ready = toApp + `?.postMessage("wails:runtime:ready");`
 
 // leaves asks the page to close its editor, which confirms unsaved changes:
@@ -60,6 +61,7 @@ func main() {
 	flag.CommandLine.Parse(appArgs(os.Args[1:])) // exits on an error
 
 	platformInit()
+	logger := setupLog()
 
 	s := &shell{messages: catalog(language()), current: saved()}
 	if *notes != "" {
@@ -74,6 +76,7 @@ func main() {
 		Name:              "ebira",
 		ShouldQuit:        s.shouldQuit,
 		RawMessageHandler: s.onMessage,
+		Logger:            logger,
 	})
 	menu := s.appMenu()
 	translateMenu(menu, s.messages)
@@ -169,7 +172,8 @@ func (s *shell) openMain(url string) {
 	})
 	var shown sync.Once
 	// The runtime is ready once a page is up: on macOS when the JS of the window
-	// tells it (ready), on Windows when Wails has put its runtime in the page.
+	// tells it (ready), on Windows when the page has loaded (watchReady).
+	watchReady(win)
 	win.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		shown.Do(func() { go showMain(win) })
 		// Each page, as after a change of the server, is checked for its server.

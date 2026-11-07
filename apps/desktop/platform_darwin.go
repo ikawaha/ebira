@@ -16,7 +16,9 @@ void showAbout(const char *credits);
 import "C"
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"unsafe"
 
@@ -98,6 +100,20 @@ func showMain(win *application.WebviewWindow) {
 	application.InvokeSync(func() { C.keepFrame(win.NativeWindow(), name) })
 	win.Show()
 }
+
+// logPath is the log of the app: ~/Library/Logs/ebira/desktop.log, where
+// Console finds the logs of apps.
+func logPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "Library", "Logs", "ebira", "desktop.log"), nil
+}
+
+// watchReady is left to the JS of the window on macOS (ready), which WebKit
+// runs in each page.
+func watchReady(*application.WebviewWindow) {}
 
 // saveFrame is left to AppKit on macOS (showMain).
 func saveFrame(*application.WebviewWindow) {}
