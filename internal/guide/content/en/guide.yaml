@@ -8,6 +8,7 @@ items:
   - note: welcome.md
     mark: star
   - note: screen.md
+  - note: desktop.md
   - note: notes.md
   - separator: Writing
     color: green
