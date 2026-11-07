@@ -1,4 +1,4 @@
-@codemirror/autocomplete 6.20.3 (MIT)
+@codemirror/autocomplete 6.20.4 (MIT)
 
 MIT License
 
@@ -388,7 +388,7 @@ THE SOFTWARE.
 
 ------------------------------------------------------------------------
 
-@codemirror/view 6.43.14 (MIT)
+@codemirror/view 6.43.15 (MIT)
 
 MIT License
 
