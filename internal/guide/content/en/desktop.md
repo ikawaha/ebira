@@ -19,13 +19,19 @@ open apps/desktop/build/ebira.app
 
 This makes `apps/desktop/build/ebira.app`, with the server (`ebira`) inside, signed for this Mac only. Move it to the Applications folder if you like.
 
-**Windows** (built on macOS or Linux):
+**Windows** (built with PowerShell):
 
-```sh
-apps/desktop/build-windows.sh
+1. Install Go from https://go.dev/dl/
+2. Get the source of ebira (`git clone https://github.com/ikawaha/ebira.git`; without git, "Code" → "Download ZIP" on the GitHub page, and extract it)
+3. In PowerShell, go to that folder and run
+
+```powershell
+powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
 ```
 
-This makes `apps/desktop/build/windows-amd64/ebira/` (run it with `GOARCH=arm64` for ARM). Copy the folder to Windows and open `ebira-desktop.exe`. Windows 10 may need the WebView2 runtime installed.
+This makes `apps\desktop\build\windows-amd64\ebira\` (for Windows on ARM, set `$env:GOARCH = "arm64"` first). Open `ebira-desktop.exe` in it. The folder works when copied elsewhere or to another PC too. Windows 10 may need the WebView2 runtime installed.
+
+On macOS or Linux, `apps/desktop/build-windows.sh` makes the folder for Windows as well.
 
 ## On start
 

@@ -105,6 +105,23 @@ go install github.com/ikawaha/ebira/cmd/ebira@latest
 
 macOS と Linux で動きます。
 
+### デスクトップアプリ
+
+Web UI を自分のウインドウとメニューで使うアプリで、macOS（26 以降）と Windows で動きます。まだ配布していないので、このリポジトリから作ります:
+
+```bash
+# macOS: apps/desktop/build/ebira.app ができる
+apps/desktop/build.sh
+open apps/desktop/build/ebira.app
+```
+
+```powershell
+# Windows（PowerShell）: apps\desktop\build\windows-amd64\ebira\ ができる
+powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
+```
+
+macOS では Xcode の Command Line Tools が要り、アプリはその Mac だけのために署名されます。Windows ではできたフォルダの `ebira-desktop.exe` を開きます（Windows 10 では WebView2 ランタイムが要ることがあります）。git が無ければ、GitHub の「Code」→「Download ZIP」でソースを手に入れます。macOS や Linux の上でも、`apps/desktop/build-windows.sh` で同じフォルダを作れます。アプリは ebira のサーバーを中に持ち、同じノートのサーバーが動いていればそれを使い、無ければ起動するので、TUI・コマンド・MCP とノートを共有します。ノートのフォルダとアドレスは ⌘,（Windows はファイルのメニュー）で決めます。
+
 ## はじめかた
 
 1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI と TUI の言語を聞かれ、答えは、サーバーのアドレス（`localhost:13579`）と一緒に `~/.config/ebira/config.yaml` に保存されます（MCP のクライアントに登録する URL が変わらないように）。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。

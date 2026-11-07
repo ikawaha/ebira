@@ -107,6 +107,30 @@ jobs:
           go mod tidy
           git diff --exit-code -- go.mod go.sum
 
+  desktop-windows:
+    # build-windows.ps1, for Windows with PowerShell alone, run by Windows
+    # PowerShell 5.1 as it comes with Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/desktop/go.mod
+          cache-dependency-path: |
+            go.sum
+            apps/desktop/go.sum
+      - name: build-windows.ps1
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $out = 'apps\desktop\build\windows-amd64\ebira'
+          foreach ($f in 'ebira.exe', 'ebira-desktop.exe', 'favicon.LICENSE') {
+            if (-not (Test-Path "$out\$f")) { throw "$f is missing" }
+          }
+          & "$out\ebira.exe" version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
   codemirror:
     runs-on: ubuntu-latest
     defaults:
