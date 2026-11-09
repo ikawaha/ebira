@@ -635,7 +635,7 @@ paths:
             tags:
                 - notes
             summary: check_files notes
-            description: 'Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.'
+            description: 'Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited, and files that only earlier versions of notes refer to are marked in_history, as putting such a version back would need them.'
             operationId: notes#check_files
             responses:
                 "200":
@@ -657,6 +657,7 @@ paths:
                                       title: Aut eligendi aperiam soluta sunt impedit nihil.
                                 unused:
                                     - added_at: "2026-10-16T09:30:00Z"
+                                      in_history: true
                                       name: screenshot.png
                                       note_id: be4c1193735ee1
                                       path: be4c1193735ee1.assets/screenshot.png
@@ -664,6 +665,7 @@ paths:
                                       size: 4123840254599638639
                                       title: Nesciunt nisi velit sed.
                                     - added_at: "2026-10-16T09:30:00Z"
+                                      in_history: true
                                       name: screenshot.png
                                       note_id: be4c1193735ee1
                                       path: be4c1193735ee1.assets/screenshot.png
@@ -2433,7 +2435,7 @@ paths:
             tags:
                 - notes
             summary: add_file notes
-            description: 'Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.'
+            description: 'Add a file to a note. The request body is the file, of any type, at most 50 MB. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path: ![description](path) shows an image, and [name](path) links to a file.'
             operationId: notes#add_file
             parameters:
                 - name: name
@@ -2469,7 +2471,7 @@ paths:
                                 name: screenshot.png
                                 path: be4c1193735ee1.assets/screenshot.png
                 "400":
-                    description: 'bad_request: The file is not a supported image, or the note ID is used in more than one notebook'
+                    description: 'bad_request: The note ID is used in more than one notebook'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -2521,7 +2523,7 @@ paths:
                                 temporary: false
                                 timeout: false
                 "413":
-                    description: 'too_large: The file is larger than 10 MB'
+                    description: 'too_large: The file is larger than 50 MB'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -2623,7 +2625,7 @@ paths:
             tags:
                 - notes
             summary: get_file notes
-            description: Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.
+            description: Get a file of a note. The response body is the file. Images (PNG, JPEG, GIF and WebP, told by their content) and PDF files are served as their type to be shown; other files, which might run scripts if shown, as application/octet-stream to be downloaded.
             operationId: notes#get_file
             parameters:
                 - name: id
@@ -2649,6 +2651,13 @@ paths:
                 "200":
                     description: OK response.
                     headers:
+                        Content-Disposition:
+                            description: Whether the file is shown (inline) or downloaded (attachment), with its name
+                            schema:
+                                type: string
+                                description: Whether the file is shown (inline) or downloaded (attachment), with its name
+                                example: attachment; filename=report.zip
+                            example: attachment; filename=report.zip
                         Content-Length:
                             description: Size of the file in bytes
                             schema:
@@ -2709,7 +2718,7 @@ paths:
                                 temporary: false
                                 timeout: false
                 "404":
-                    description: 'not_found: The note or the file does not exist, or the file is not of an accepted type'
+                    description: 'not_found: The note or the file does not exist'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -5052,6 +5061,7 @@ components:
                     description: Files that no note body, including those in the trash, refers to, sorted by note and name
                     example:
                         - added_at: "2026-10-16T09:30:00Z"
+                          in_history: true
                           name: screenshot.png
                           note_id: be4c1193735ee1
                           path: be4c1193735ee1.assets/screenshot.png
@@ -5059,6 +5069,7 @@ components:
                           size: 4123840254599638639
                           title: Nesciunt nisi velit sed.
                         - added_at: "2026-10-16T09:30:00Z"
+                          in_history: true
                           name: screenshot.png
                           note_id: be4c1193735ee1
                           path: be4c1193735ee1.assets/screenshot.png
@@ -5078,6 +5089,7 @@ components:
                       title: Aut eligendi aperiam soluta sunt impedit nihil.
                 unused:
                     - added_at: "2026-10-16T09:30:00Z"
+                      in_history: true
                       name: screenshot.png
                       note_id: be4c1193735ee1
                       path: be4c1193735ee1.assets/screenshot.png
@@ -5085,6 +5097,7 @@ components:
                       size: 4123840254599638639
                       title: Nesciunt nisi velit sed.
                     - added_at: "2026-10-16T09:30:00Z"
+                      in_history: true
                       name: screenshot.png
                       note_id: be4c1193735ee1
                       path: be4c1193735ee1.assets/screenshot.png
@@ -5227,7 +5240,7 @@ components:
             properties:
                 content:
                     type: string
-                    description: 'The image: PNG, JPEG, GIF or WebP, at most 10 MB'
+                    description: The image, at most 50 MB
                     example: Tm9iaXMgbm9zdHJ1bS4=
                     format: binary
                 name:
@@ -7233,6 +7246,10 @@ components:
                     description: Last modification time of the file, usually when it was added
                     example: "2026-10-16T09:30:00Z"
                     format: date-time
+                in_history:
+                    type: boolean
+                    description: Whether an earlier version of a note, kept on this device, refers to the file, which putting that version back would need
+                    example: true
                 name:
                     type: string
                     description: File name
@@ -7261,6 +7278,7 @@ components:
                     example: Nesciunt nisi velit sed.
             example:
                 added_at: "2026-10-16T09:30:00Z"
+                in_history: true
                 name: screenshot.png
                 note_id: be4c1193735ee1
                 path: be4c1193735ee1.assets/screenshot.png
@@ -7275,6 +7293,7 @@ components:
                 - size
                 - added_at
                 - recent
+                - in_history
         UpdateRequestBody:
             type: object
             properties:

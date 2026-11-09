@@ -35,6 +35,8 @@ func main() {
 }
 ```
 
+In the preview, the bar above a code block, with its language and number of lines, folds and unfolds it. A folded block opens when you go to a match inside it.
+
 ## Links
 
 `[text](https://example.com)` links out. To link to another note, copy its link with the chain button after its title (or `Y`) and paste it. For example: [Welcome to ebira](welcome.md)

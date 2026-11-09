@@ -535,10 +535,18 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
     node.setAttribute("target", "_blank");
     node.setAttribute("rel", "noopener noreferrer");
   }
-  // The files of notes are served by the API.
+  // The files of notes are served by the API: images to show, and other
+  // files to open in a new tab (PDF) or to download.
   if (node.tagName === "IMG" && node.hasAttribute("src")) {
     const url = fileURL(node.getAttribute("src"));
     if (url) node.setAttribute("src", url);
+  }
+  if (node.tagName === "A" && node.hasAttribute("href")) {
+    const url = fileURL(node.getAttribute("href"));
+    if (url) {
+      node.setAttribute("href", url);
+      node.classList.add("attachment");
+    }
   }
 });
 
@@ -2335,6 +2343,7 @@ async function loadNote() {
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
   addSectionCopy(body, n.body || "");
+  addCodeFolds(body, n.id);
   const title = el("h2", "", ...noteMarks(n), highlighted(n.title || t("untitled"), n.title_highlights));
   if (n.title) {
     const copy = button(kindSVG("copy"), copyTitle, { title: t("copyNoteTitle"), cls: "title-copy" });
@@ -2823,8 +2832,9 @@ function runFind(scroll) {
   const q = find.q.normalize("NFKC").toLowerCase().trim();
   if (body && q) {
     const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
-      // Not inside math, diagrams or code drawn by scripts.
-      acceptNode: (n) => (n.parentElement?.closest(".katex, .math, .mermaid, svg") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+      // Not inside math, diagrams or code drawn by scripts, nor in the bars
+      // of the code blocks, which are no text of the note.
+      acceptNode: (n) => (n.parentElement?.closest(".katex, .math, .mermaid, svg, .code-fold > summary") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
     });
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -2858,6 +2868,7 @@ function jumpFind(delta) {
   find.index = (find.index + delta + find.marks.length) % find.marks.length;
   const m = find.marks[find.index];
   m.classList.add("current");
+  unfold(m);
   m.scrollIntoView({ block: "center" });
   updateFindCount();
 }
@@ -2930,6 +2941,42 @@ function addSectionCopy(el, body) {
     copy.setAttribute("aria-label", t("copySectionTitle"));
     h.append(copy);
   });
+}
+
+// The code blocks folded in the preview, by note: the indexes of the blocks,
+// kept in the page only, so that drawing the note again keeps them.
+const codeFolds = new Map();
+
+// addCodeFolds puts each code block of a rendered body under a bar that folds
+// and unfolds it, open at first. A block with a match of the search opens
+// again, so that a match is never hidden. Math and diagrams are no code blocks.
+function addCodeFolds(body, id) {
+  const folded = codeFolds.get(id);
+  [...body.querySelectorAll("pre")].forEach((pre, i) => {
+    const code = pre.querySelector(":scope > code");
+    const lang = /(?:^|\s)language-(\S+)/.exec(code?.className || "")?.[1];
+    const lines = pre.textContent.replace(/\n$/, "").split("\n").length;
+    const label = t("codeLines", { n: lines });
+    const fold = el("details", "code-fold");
+    fold.open = !folded?.has(i) || !!pre.querySelector("mark");
+    pre.replaceWith(fold);
+    const bar = el("summary", "", kindSVG("chevron"), el("span", "code-lines", label));
+    if (lang) bar.insertBefore(el("span", "code-lang", lang), bar.lastChild);
+    fold.append(bar, pre);
+    fold.addEventListener("toggle", () => {
+      const set = codeFolds.get(id) || new Set();
+      if (fold.open) set.delete(i);
+      else set.add(i);
+      if (set.size) codeFolds.set(id, set);
+      else codeFolds.delete(id);
+    });
+  });
+}
+
+// unfold opens the folded code block that holds node, to show it.
+function unfold(node) {
+  const fold = node.closest("details.code-fold");
+  if (fold) fold.open = true;
 }
 
 // copySection copies a section of the note in the preview to the clipboard.
@@ -3028,6 +3075,7 @@ function jumpMark(delta) {
   markIndex = (markIndex + delta + marks.length) % marks.length;
   const m = marks[markIndex];
   m.classList.add("current");
+  unfold(m);
   m.scrollIntoView({ block: "center" });
   updateMarkCount();
 }
@@ -3177,7 +3225,7 @@ function bodyExtensions() {
     CM.EditorView.contentAttributes.of({ spellcheck: "false", "aria-label": t("bodyPlaceholder") }),
     CM.EditorView.domEventHandlers({
       paste(e) {
-        if (!hasFiles(e.clipboardData) || !addImages(e.clipboardData.files)) return false;
+        if (!hasFiles(e.clipboardData) || !addFiles(e.clipboardData.files)) return false;
         e.preventDefault();
         return true;
       },
@@ -3192,7 +3240,7 @@ function bodyExtensions() {
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
         if (pos !== null) view.dispatch({ selection: { anchor: pos } });
         view.focus();
-        addImages(e.dataTransfer.files);
+        addFiles(e.dataTransfer.files);
         return true;
       },
     }),
@@ -3435,34 +3483,38 @@ function hasFiles(dt) {
   return !!dt && [...dt.types].includes("Files");
 }
 
-// addImages uploads the images among files to the note being edited and
-// inserts references to them at the cursor. It returns false when there is no
-// image, so that the paste goes on as usual. A new note has no files until it
-// is saved.
-function addImages(files) {
+// IMAGE_FILE matches the names the server gives to the images it accepts,
+// which the body shows; it links to other files.
+const IMAGE_FILE = /\.(png|jpg|gif|webp)$/;
+
+// addFiles uploads files to the note being edited and inserts references to
+// them at the cursor: images to show, and links to other files. It returns
+// false when there is no file, so that the paste goes on as usual. A new note
+// has no files until it is saved.
+function addFiles(files) {
   const ed = state.editing;
-  const images = [...files].filter((f) => f.type.startsWith("image/"));
-  if (!ed || !images.length) return false;
+  const list = [...files];
+  if (!ed || !list.length) return false;
   if (!ed.note) {
-    editorMessage(t("imageSaveFirst"), true);
+    editorMessage(t("fileSaveFirst"), true);
     return true;
   }
-  uploadImages(ed, images);
+  uploadFiles(ed, list);
   return true;
 }
 
-async function uploadImages(ed, images) {
-  editorMessage(t("imageUploading", { n: images.length }));
+async function uploadFiles(ed, files) {
+  editorMessage(t("fileUploading", { n: files.length }));
   const refs = [];
   const errors = [];
-  for (const file of images) {
+  for (const file of files) {
     const name = file.name || "image.png";
     try {
       const res = await api(`${noteURL(ed.note.id)}/files`, { method: "POST", params: { name }, raw: file });
-      const alt = res.name.replace(/\.[^.]+$/, "");
-      refs.push(`![${alt}](${res.path})`);
+      if (IMAGE_FILE.test(res.name)) refs.push(`![${res.name.replace(/\.[^.]+$/, "")}](${res.path})`);
+      else refs.push(`[${res.name}](${res.path})`);
     } catch (e) {
-      errors.push(t("imageFailed", { name, error: e.message }));
+      errors.push(t("fileFailed", { name, error: e.message }));
     }
   }
   if (state.editing !== ed) return; // closed meanwhile; the files stay with the note
@@ -3473,7 +3525,7 @@ async function uploadImages(ed, images) {
     const insert = sep + refs.join("\n") + "\n";
     view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true });
   }
-  editorMessage(errors.join(" ") || t("imageAdded", { n: refs.length }), errors.length > 0);
+  editorMessage(errors.join(" ") || t("fileAdded", { n: refs.length }), errors.length > 0);
 }
 
 function editorMessage(text, isError) {
@@ -3736,7 +3788,8 @@ function renderFilesCheck(d, res, message) {
   const parts = [filesCheckHead(d)];
   if (message) parts.push(el("p", message.error ? "error" : "msg", message.text));
 
-  const unused = el("section", "", el("h3", "", t("filesUnused", { n: res.unused.length })));
+  const total = res.unused.reduce((sum, f) => sum + f.size, 0);
+  const unused = el("section", "", el("h3", "", t("filesUnused", { n: res.unused.length, size: formatSize(total) })));
   const boxes = [];
   if (!res.unused.length) {
     unused.append(el("p", "empty", t("filesNoUnused")));
@@ -3745,17 +3798,32 @@ function renderFilesCheck(d, res, message) {
     for (const f of res.unused) {
       const cb = el("input");
       cb.type = "checkbox";
-      cb.checked = !f.recent; // a recent file may belong to a note being edited
+      // A recent file may belong to a note being edited, and putting back an
+      // earlier version of a note may need a file in the history.
+      cb.checked = !f.recent && !f.in_history;
       boxes.push({ cb, f });
-      const img = el("img", "thumb");
-      img.src = `${noteURL(f.note_id)}/files/${encodeURIComponent(f.name)}`;
-      img.alt = f.name;
-      img.loading = "lazy";
+      let img;
+      if (IMAGE_FILE.test(f.name)) {
+        img = el("img", "thumb");
+        img.src = `${noteURL(f.note_id)}/files/${encodeURIComponent(f.name)}`;
+        img.alt = f.name;
+        img.loading = "lazy";
+      } else {
+        img = el("span", "thumb", /\.([^.]+)$/.exec(f.name)?.[1] || "");
+      }
       const meta = el("span", "files-meta", `${formatSize(f.size)} · ${formatTime(f.added_at)} · `, noteAnchor(f.note_id, f.title, d));
       if (f.recent) meta.append(" · ", el("span", "recent", t("filesRecent")));
+      if (f.in_history) meta.append(" · ", el("span", "recent", t("filesInHistory")));
       ul.append(el("li", "", el("label", "", cb, img, el("span", "files-info", el("span", "files-name", f.name), meta))));
     }
-    unused.append(ul, el("div", "files-actions", button(t("filesDelete"), () => deleteUnusedFiles(boxes), { cls: "primary" })));
+    const del = button("", () => deleteUnusedFiles(boxes), { cls: "primary" });
+    const count = () => {
+      const size = boxes.filter((b) => b.cb.checked).reduce((sum, b) => sum + b.f.size, 0);
+      del.textContent = t("filesDelete", { size: formatSize(size) });
+    };
+    for (const b of boxes) b.cb.addEventListener("change", count);
+    count();
+    unused.append(ul, el("div", "files-actions", del));
   }
   parts.push(unused);
 
@@ -4282,6 +4350,12 @@ window.ebira = {
   newNotebook: () => openNewNotebook(),
   renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
   emptyTrash: () => { if (trashFull()) emptyTrash(); },
+  // downloaded tells how saving a file of a note went (downloadFile): the name
+  // the file took, or the error.
+  downloaded: (name, error) => {
+    if (error) alert(t("downloadFailed", { name, error }));
+    else showToast(t("downloaded", { name }));
+  },
 };
 
 // canRenameNotebook reports whether the notebook shown can be renamed in its
@@ -4350,13 +4424,46 @@ function openOutside(url) {
   else window.open(url, "_blank", "noopener");
 }
 
-// In the desktop app, links that open a new tab go to the browser.
+// In the desktop app, links that open a new tab go to the browser, and the
+// files of notes to the downloads folder.
 document.addEventListener("click", (e) => {
   const a = e.target.closest?.("a[target=_blank]");
   if (!a || !inApp() || e.defaultPrevented) return;
   e.preventDefault();
-  tellApp("openURL", { url: a.href });
+  if (a.classList.contains("attachment")) downloadFile(a.href);
+  else tellApp("openURL", { url: a.href });
 }, true);
+
+// DOWNLOAD_PART is the most of a file sent to the app in one message.
+const DOWNLOAD_PART = 4 << 20;
+let downloadSeq = 0;
+
+// downloadFile has the desktop app save the file of a note at url in the
+// downloads folder. The page reads it, as the browser the app would open has
+// no session of this page under passkey sign-in, and sends it in parts; the
+// app answers with window.ebira.downloaded.
+async function downloadFile(url) {
+  const name = decodeURIComponent(new URL(url).pathname.split("/").pop());
+  let blob;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    blob = await res.blob();
+  } catch (e) {
+    alert(t("downloadFailed", { name, error: e.message }));
+    return;
+  }
+  const id = `${Date.now()}-${++downloadSeq}`;
+  for (let at = 0; at === 0 || at < blob.size; at += DOWNLOAD_PART) {
+    const part = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob.slice(at, at + DOWNLOAD_PART));
+    });
+    tellApp("download", { id, name, data: part.slice(part.indexOf(",") + 1), end: at + DOWNLOAD_PART >= blob.size });
+  }
+}
 
 let toldState = "";
 

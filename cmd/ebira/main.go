@@ -56,7 +56,7 @@ const usage = `usage:
   ebira server restart [flags]  restart the server in the background (flags of serve;
                                 without them, the flags of the running server)
   ebira server status [flags]   show the server's state
-  ebira files check [flags]     list the unused files of notes, such as images, and the
+  ebira files check [flags]     list the unused files of notes, images and attachments, and the
                                 broken references to files (-delete deletes the unused ones)
   ebira import [flags] path...  import Markdown files, and the images they refer to, as notes
   ebira sync [flags]            sync the notes with their git repository: commit, merge the

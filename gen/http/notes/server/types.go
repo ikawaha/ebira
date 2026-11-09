@@ -3851,6 +3851,9 @@ type UnusedFileResponseBody struct {
 	// Whether the file was added within the last hour, such as to a note still
 	// being edited, whose body does not refer to it until saved
 	Recent bool `form:"recent" json:"recent" xml:"recent"`
+	// Whether an earlier version of a note, kept on this device, refers to the
+	// file, which putting that version back would need
+	InHistory bool `form:"in_history" json:"in_history" xml:"in_history"`
 }
 
 // BrokenFileRefResponseBody is used to define fields on response body types.
@@ -3924,7 +3927,7 @@ type ImportFileRequestBody struct {
 	Ref *string `form:"ref,omitempty" json:"ref,omitempty" xml:"ref,omitempty"`
 	// File name
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	// The image, at most 50 MB
 	Content []byte `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
 }
 

@@ -16,13 +16,16 @@ void showAbout(const char *credits);
 import "C"
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"golang.org/x/sys/unix"
 )
 
 // What the app does on macOS through Cocoa (dialogs_darwin.m); see
@@ -109,6 +112,21 @@ func logPath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, "Library", "Logs", "ebira", "desktop.log"), nil
+}
+
+// downloadsDir is where the files of notes are saved: ~/Downloads.
+func downloadsDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "Downloads"), nil
+}
+
+// markDownloaded puts a saved file in quarantine, as browsers do, so that
+// Gatekeeper checks it when it is opened.
+func markDownloaded(path string) error {
+	return unix.Setxattr(path, "com.apple.quarantine", fmt.Appendf(nil, "0083;%x;ebira;", time.Now().Unix()), 0)
 }
 
 // watchReady is left to the JS of the window on macOS (ready), which WebKit

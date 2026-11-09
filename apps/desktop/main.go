@@ -40,10 +40,11 @@ const leaveFor = toApp + `.postMessage(` + leaves + ` ? "ebira:switch" : "ebira:
 
 // shell holds the windows of the app.
 type shell struct {
-	app      *application.App
-	messages map[string]string
-	notes    *noteMenu   // the items of the menus that depend on the page
-	leaving  atomic.Bool // the page agreed to go: closing goes through
+	app       *application.App
+	messages  map[string]string
+	notes     *noteMenu   // the items of the menus that depend on the page
+	leaving   atomic.Bool // the page agreed to go: closing goes through
+	downloads downloads   // the files the page is sending to save
 
 	mu       sync.Mutex
 	win      *application.WebviewWindow // the Web UI; nil until a server answers
