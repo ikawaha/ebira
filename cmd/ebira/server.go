@@ -207,10 +207,11 @@ func waitServer(ctx context.Context, dir string, out io.Writer) (daemon.State, e
 		if err != nil {
 			return daemon.State{}, err
 		}
-		// server.json appears once the server listens.
+		// server.json appears once the server listens. Its state is returned,
+		// not the answer, which leaves out the flags with passkeys.
 		if st, err := daemon.ReadState(sd); err == nil {
 			if s, err := daemon.Health(ctx, st.Addr); err == nil && s.PID == st.PID {
-				return s, nil
+				return st, nil
 			}
 		}
 		if !running {

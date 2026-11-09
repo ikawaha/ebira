@@ -64,7 +64,7 @@ type State struct {
 	// APIRev is the revision within API (see APIRev); 0 for earlier builds.
 	APIRev    int       `json:"api_rev"`
 	NotesDir  string    `json:"notes_dir"`
-	StartedAt time.Time `json:"started_at"`
+	StartedAt time.Time `json:"started_at,omitzero"`
 	// Instance is random for each start, also when the process starts again
 	// as itself (Reexec), with the same PID.
 	Instance string `json:"instance,omitempty"`

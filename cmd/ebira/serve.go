@@ -316,7 +316,7 @@ func runServe(args []string) error {
 	bi, _ := debug.ReadBuildInfo()
 	state := daemon.State{PID: os.Getpid(), Addr: *addr, Version: daemon.Version(), VersionLabel: versionLabel(bi), API: daemon.API, APIRev: daemon.APIRev, NotesDir: *notesDir, StartedAt: time.Now().UTC().Truncate(time.Second), Instance: rand.Text(), Flags: setFlags(fs)}
 	root := http.NewServeMux()
-	root.Handle("GET /health", daemon.HealthHandler(state))
+	root.Handle("GET /health", daemon.HealthHandler(healthState(state, *o.auth)))
 	root.Handle("GET /debug/stats", statsHandler(ix, state.StartedAt, rest.Session))
 	previewCSS := ""
 	if p, err := config.Path(); err == nil {
