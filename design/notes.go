@@ -306,10 +306,11 @@ var SearchResult = Type("SearchResult", func() {
 
 // NoteEvent notifies that a note was changed by the API, a file edit or a git pull.
 var NoteEvent = Type("NoteEvent", func() {
-	RequiredAttribute("type", String, "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook", func() {
-		Enum("ready", "created", "updated", "deleted", "notebooks")
+	RequiredAttribute("type", String, "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it", func() {
+		Enum("ready", "created", "updated", "deleted", "notebooks", "private_lost")
 	})
-	Attribute("id", String, "Note ID (absent for ready and notebooks)", noteIDDSL)
+	Attribute("id", String, "Note ID (absent for ready, notebooks and private_lost)", noteIDDSL)
+	Attribute("notebook", String, "Notebook ID, for private_lost", notebookIDDSL)
 })
 
 var SyncResult = Type("SyncResult", func() {

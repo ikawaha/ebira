@@ -940,10 +940,14 @@ type NoteEdit struct {
 type NoteEvent struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook
+	// order changed, or the separators of a notebook. private_lost means that a
+	// notebook was private and is no longer, as files changed outside the API,
+	// such as by a sync, so that AI clients may now see it
 	Type string
-	// Note ID (absent for ready and notebooks)
+	// Note ID (absent for ready, notebooks and private_lost)
 	ID *string
+	// Notebook ID, for private_lost
+	Notebook *string
 }
 
 // NoteFile is the result type of the notes service add_ai_file method.
@@ -1978,10 +1982,14 @@ func validatejsonNoteEditTransport(value *jsonNoteEditTransport) (err error) {
 type jsonNoteEventTransport struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook
+	// order changed, or the separators of a notebook. private_lost means that a
+	// notebook was private and is no longer, as files changed outside the API,
+	// such as by a sync, so that AI clients may now see it
 	Type *string `json:"type"`
-	// Note ID (absent for ready and notebooks)
+	// Note ID (absent for ready, notebooks and private_lost)
 	ID *string `json:"id,omitempty"`
+	// Notebook ID, for private_lost
+	Notebook *string `json:"notebook,omitempty"`
 }
 
 // validatejsonNoteEventTransport checks decoded JSON before it becomes a service value.
@@ -1993,12 +2001,15 @@ func validatejsonNoteEventTransport(value *jsonNoteEventTransport) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("type", "body"))
 	}
 	if value.Type != nil {
-		if !(*value.Type == "ready" || *value.Type == "created" || *value.Type == "updated" || *value.Type == "deleted" || *value.Type == "notebooks") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"ready", "created", "updated", "deleted", "notebooks"}))
+		if !(*value.Type == "ready" || *value.Type == "created" || *value.Type == "updated" || *value.Type == "deleted" || *value.Type == "notebooks" || *value.Type == "private_lost") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost"}))
 		}
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return err
 }
@@ -3234,11 +3245,14 @@ func validateNoteEditOriginal(value *NoteEdit) (err error) {
 
 // validateNoteEventOriginal checks the original typed value before JSON conversion.
 func validateNoteEventOriginal(value *NoteEvent) (err error) {
-	if !(value.Type == "ready" || value.Type == "created" || value.Type == "updated" || value.Type == "deleted" || value.Type == "notebooks") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", value.Type, []any{"ready", "created", "updated", "deleted", "notebooks"}))
+	if !(value.Type == "ready" || value.Type == "created" || value.Type == "updated" || value.Type == "deleted" || value.Type == "notebooks" || value.Type == "private_lost") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", value.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost"}))
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return err
 }
@@ -4752,8 +4766,9 @@ func EncodeNoteEvent(in *NoteEvent) ([]byte, error) {
 	var body *jsonNoteEventTransport
 	{
 		body = &jsonNoteEventTransport{
-			Type: &in.Type,
-			ID:   in.ID,
+			Type:     &in.Type,
+			ID:       in.ID,
+			Notebook: in.Notebook,
 		}
 	}
 	if err := validatejsonNoteEventTransport(body); err != nil {
@@ -4784,8 +4799,9 @@ func ValidateNoteEventValue(in *NoteEvent) error {
 	var body *jsonNoteEventTransport
 	{
 		body = &jsonNoteEventTransport{
-			Type: &in.Type,
-			ID:   in.ID,
+			Type:     &in.Type,
+			ID:       in.ID,
+			Notebook: in.Notebook,
 		}
 	}
 	if err := validatejsonNoteEventTransport(body); err != nil {
@@ -4820,8 +4836,9 @@ func DecodeNoteEvent(data []byte) (out *NoteEvent, err error) {
 	}
 	{
 		out = &NoteEvent{
-			Type: *body.Type,
-			ID:   body.ID,
+			Type:     *body.Type,
+			ID:       body.ID,
+			Notebook: body.Notebook,
 		}
 	}
 	return out, nil
@@ -8274,20 +8291,28 @@ func validateNoteEventJSONValue(path string, value any, description string) erro
 		case "id":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID (absent for ready and notebooks)",
+				typed[key], "Note ID (absent for ready, notebooks and private_lost)",
+			); err != nil {
+				return err
+			}
+		case "notebook":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook ID, for private_lost",
 			); err != nil {
 				return err
 			}
 		case "type":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook",
+				typed[key], "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it",
 			); err != nil {
 				return err
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"id",
+				"notebook",
 				"type",
 			})
 		}
@@ -10400,6 +10425,11 @@ func checkNoteEventNoteEventValue(in *NoteEvent, field string, active map[any]bo
 		if in.ID != nil {
 			if !utf8.ValidString(string(*in.ID)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
+			}
+		}
+		if in.Notebook != nil {
+			if !utf8.ValidString(string(*in.Notebook)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "notebook", false))
 			}
 		}
 	}

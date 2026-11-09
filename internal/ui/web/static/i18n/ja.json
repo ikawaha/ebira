@@ -245,6 +245,7 @@
   "historyRestoreConfirm": "{time} まで使っていた版に戻しますか？今の内容は履歴に残ります。",
   "historyLoading": "読み込んでいます…",
   "undo": "元に戻す",
+  "privateLost": "同期などでファイルが外から変わり、非公開ではなくなりました（AI から見えます）: {names}。「元に戻す」で非公開に戻します。",
   "undoTitle": "元に戻す（⌘Z / Ctrl+Z）",
   "undone": "元に戻しました。",
   "undoFailed": "元に戻せませんでした: {error}",
