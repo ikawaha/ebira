@@ -692,18 +692,31 @@ function renderBody(el, body, ranges) {
   // A single newline is a line break, as in GitHub comments and Quiver.
   const html = marked.parse(markSource(body, ranges), { gfm: true, breaks: true });
   // No CSS from notes: the CSP allows inline styles for KaTeX and Mermaid.
-  el.innerHTML = DOMPurify.sanitize(html, { FORBID_TAGS: ["style"], FORBID_ATTR: ["style"] });
+  const purify = { FORBID_TAGS: ["style"], FORBID_ATTR: ["style"] };
+  let clean = DOMPurify.sanitize(html, purify);
+  if (ranges && ranges.length) {
+    // Markers that ended up in attributes, such as a highlighted URL, which
+    // marked percent-encodes, are dropped, and the result is sanitized again:
+    // without them, a URL may read otherwise, such as with another scheme.
+    const t = document.createElement("template");
+    t.innerHTML = clean;
+    let dropped = false;
+    for (const node of t.content.querySelectorAll("*")) {
+      for (const a of node.attributes) {
+        const v = a.value.replace(MARKERS_IN_ATTR, "");
+        if (v !== a.value) {
+          a.value = v;
+          dropped = true;
+        }
+      }
+    }
+    if (dropped) clean = DOMPurify.sanitize(t.innerHTML, purify);
+  }
+  el.innerHTML = clean;
   renderMath(el);
   renderDiagrams(el);
   if (!ranges || !ranges.length) return;
-  // Markers that ended up in attributes, such as a highlighted URL, which
-  // marked percent-encodes, are dropped; those in text become <mark> elements.
-  for (const node of el.querySelectorAll("*")) {
-    for (const a of node.attributes) {
-      const v = a.value.replace(MARKERS_IN_ATTR, "");
-      if (v !== a.value) a.value = v;
-    }
-  }
+  // The markers in text become <mark> elements.
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   const texts = [];
   while (walker.nextNode()) texts.push(walker.currentNode);
