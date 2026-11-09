@@ -354,6 +354,7 @@
   "bodySizeLarger": "Larger text",
   "bodySizeReset": "Back to 100%",
   "copySectionTitle": "Copy this section as Markdown",
+  "codeLines": "Lines: {n}",
   "copiedSection": "Copied the section {title}.",
   "copyLinkTitle": "Copy a link to the note (Y)",
   "copyURL": "Copy the URL",

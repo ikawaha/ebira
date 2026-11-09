@@ -354,6 +354,7 @@
   "bodySizeLarger": "文字を大きく",
   "bodySizeReset": "100% に戻す",
   "copySectionTitle": "この節を Markdown でコピー",
+  "codeLines": "{n} 行",
   "copiedSection": "節「{title}」をコピーしました。",
   "copyLinkTitle": "ノートへのリンクをコピー（Y）",
   "copyURL": "URL をコピー",
