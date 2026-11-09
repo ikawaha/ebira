@@ -32,7 +32,7 @@ type Notes struct {
 	history *history.Store // earlier versions of notes; nil keeps none (see SetHistory)
 	events  *broker
 	now     func() time.Time
-	nbState string // last known notebook list, for notebooks events
+	nbState string          // last known notebook list, for notebooks events
 	private map[string]bool // the private notebooks of nbState, for private_lost events
 	// previewCSS is the path of the CSS file for the preview of the web UI
 	// (see SetPreviewCSS).
