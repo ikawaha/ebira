@@ -19,7 +19,10 @@ const (
 	// with its characters escaped in JSON, as < for <, six times as long.
 	maxBody = 64 << 20
 	// maxImportBody fits an import by people, whose images, each up to
-	// store.MaxFileSize, are sent with the Markdown file in base64.
+	// store.MaxFileSize, are sent with the Markdown file in base64: about
+	// 190 MB of images in all, a few of the largest. It does not grow with
+	// the number of images, which is not limited, so that a request is
+	// still bounded before its session is checked.
 	maxImportBody = 256 << 20
 	// maxFileBody fits one file added to a note, sent as is.
 	maxFileBody = store.MaxFileSize + 1<<20
