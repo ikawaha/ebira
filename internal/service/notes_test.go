@@ -1121,6 +1121,11 @@ func TestVerification(t *testing.T) {
 			_, err := e.MoveNotebook(ai, &gennotes.MoveNotebookPayload{Session: s, ID: vault.ID, Parent: &work.ID})
 			return err
 		},
+		// The test server cannot start again: unavailable once verified.
+		"restart_server": func(e *gennotes.Endpoints) error {
+			_, err := e.RestartServer(ai, &gennotes.RestartServerPayload{Session: s})
+			return err
+		},
 	}
 	for name, call := range calls {
 		if err := call(endpoints(false)); errorName(err) != "verification_required" {
