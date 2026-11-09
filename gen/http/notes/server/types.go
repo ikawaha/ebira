@@ -756,10 +756,14 @@ type CheckFilesResponseBody struct {
 type EventsResponseBody struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook
+	// order changed, or the separators of a notebook. private_lost means that a
+	// notebook was private and is no longer, as files changed outside the API,
+	// such as by a sync, so that AI clients may now see it
 	Type string `form:"type" json:"type" xml:"type"`
-	// Note ID (absent for ready and notebooks)
+	// Note ID (absent for ready, notebooks and private_lost)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook ID, for private_lost
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
 }
 
 // GitStatusResponseBody is the type of the "notes" service "git_status"
@@ -4614,8 +4618,9 @@ func NewCheckFilesResponseBody(res *notes.FileCheck) *CheckFilesResponseBody {
 // "events" endpoint of the "notes" service.
 func NewEventsResponseBody(res *notes.NoteEvent) *EventsResponseBody {
 	body := &EventsResponseBody{
-		Type: res.Type,
-		ID:   res.ID,
+		Type:     res.Type,
+		ID:       res.ID,
+		Notebook: res.Notebook,
 	}
 	return body
 }

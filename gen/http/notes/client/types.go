@@ -732,10 +732,14 @@ type CheckFilesResponseBody struct {
 type EventsResponseBody struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook
+	// order changed, or the separators of a notebook. private_lost means that a
+	// notebook was private and is no longer, as files changed outside the API,
+	// such as by a sync, so that AI clients may now see it
 	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
-	// Note ID (absent for ready and notebooks)
+	// Note ID (absent for ready, notebooks and private_lost)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Notebook ID, for private_lost
+	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
 }
 
 // GitStatusResponseBody is the type of the "notes" service "git_status"
@@ -6668,8 +6672,9 @@ func NewCheckFilesVerificationRequired(body *CheckFilesVerificationRequiredRespo
 // a HTTP "OK" response.
 func NewEventsNoteEventOK(body *EventsResponseBody) *notes.NoteEvent {
 	v := &notes.NoteEvent{
-		Type: *body.Type,
-		ID:   body.ID,
+		Type:     *body.Type,
+		ID:       body.ID,
+		Notebook: body.Notebook,
 	}
 
 	return v
@@ -8064,12 +8069,15 @@ func ValidateEventsResponseBody(body *EventsResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("type", "body"))
 	}
 	if body.Type != nil {
-		if !(*body.Type == "ready" || *body.Type == "created" || *body.Type == "updated" || *body.Type == "deleted" || *body.Type == "notebooks") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"ready", "created", "updated", "deleted", "notebooks"}))
+		if !(*body.Type == "ready" || *body.Type == "created" || *body.Type == "updated" || *body.Type == "deleted" || *body.Type == "notebooks" || *body.Type == "private_lost") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost"}))
 		}
 	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Notebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return
 }

@@ -689,7 +689,8 @@ paths:
                                 $ref: '#/components/schemas/NoteEvent'
                             example:
                                 id: be4c1193735ee1
-                                type: updated
+                                notebook: inbox
+                                type: notebooks
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     content:
@@ -5982,22 +5983,29 @@ components:
             properties:
                 id:
                     type: string
-                    description: Note ID (absent for ready and notebooks)
+                    description: Note ID (absent for ready, notebooks and private_lost)
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                notebook:
+                    type: string
+                    description: Notebook ID, for private_lost
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 type:
                     type: string
-                    description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook
-                    example: updated
+                    description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it
+                    example: notebooks
                     enum:
                         - ready
                         - created
                         - updated
                         - deleted
                         - notebooks
+                        - private_lost
             example:
                 id: be4c1193735ee1
-                type: updated
+                notebook: inbox
+                type: notebooks
             required:
                 - type
         NoteFile:

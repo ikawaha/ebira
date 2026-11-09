@@ -4158,14 +4158,40 @@ let undoAction = null;
 let undoTimer = 0;
 const UNDO_MS = 10000;
 
-function offerUndo(message, fn) {
+function offerUndo(message, fn, ms = UNDO_MS) {
   undoAction = fn;
   const bar = $("toast");
   bar.querySelector(".toast-msg").textContent = message;
   bar.querySelector("button").hidden = false;
   bar.hidden = false;
   clearTimeout(undoTimer);
-  undoTimer = setTimeout(hideToast, UNDO_MS);
+  undoTimer = setTimeout(hideToast, ms);
+}
+
+// Notebooks that stopped being private as their files changed outside, as
+// by a sync (private_lost events), so that AI clients may now see them: the
+// bar tells which, and its button makes them private again. The events of
+// one sync are told together.
+const PRIVATE_LOST_MS = 60000;
+const privateLost = new Set();
+let privateLostTimer = 0;
+
+function notePrivateLost(id) {
+  privateLost.add(id);
+  clearTimeout(privateLostTimer);
+  privateLostTimer = setTimeout(async () => {
+    const ids = [...privateLost];
+    privateLost.clear();
+    await loadNotebooks().catch(() => {}); // for their names
+    offerUndo(t("privateLost", { names: ids.map(notebookName).join(", ") }), async () => {
+      // A sub notebook whose parent is made private too takes its kind
+      // again, as before, rather than one of its own.
+      for (const id of ids.filter((id) => !ids.includes(parentOf(id)))) {
+        await api(`/notebooks/${nbPath(id)}`, { method: "PUT", body: { kind: "private" } });
+      }
+      loadNotebooks().catch(() => {});
+    }, PRIVATE_LOST_MS);
+  }, 300);
 }
 
 // showToast shows message in the bar for a moment, without an undo.
@@ -5210,6 +5236,11 @@ function connect() {
   es.addEventListener("error", () => show("ng", "statusOffline", "eventsReconnecting"));
   es.addEventListener("ready", () => scheduleReload());
   es.addEventListener("notebooks", () => scheduleReload({ type: "notebooks", id: null }));
+  es.addEventListener("private_lost", (e) => {
+    let nb = null;
+    try { nb = JSON.parse(e.data).notebook ?? null; } catch (_) { /* no notebook */ }
+    if (nb) notePrivateLost(nb);
+  });
   for (const type of ["created", "updated", "deleted"]) {
     es.addEventListener(type, (e) => {
       let id = null;

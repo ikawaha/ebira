@@ -61,6 +61,23 @@ func (b *broker) publish(typ string, ids ...string) {
 }
 
 // publishAll sends an event that is not about a single note.
+// publishNotebooks sends an event of typ for each notebook of nbs.
+func (b *broker) publishNotebooks(typ string, nbs ...string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, nb := range nbs {
+		ev := &gennotes.NoteEvent{Type: typ, Notebook: &nb}
+		for c := range b.subs {
+			select {
+			case c <- ev:
+			default:
+				delete(b.subs, c)
+				close(c)
+			}
+		}
+	}
+}
+
 func (b *broker) publishAll(typ string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

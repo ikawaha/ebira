@@ -32,7 +32,8 @@ type Notes struct {
 	history *history.Store // earlier versions of notes; nil keeps none (see SetHistory)
 	events  *broker
 	now     func() time.Time
-	nbState string // last known notebook list, for notebooks events
+	nbState string          // last known notebook list, for notebooks events
+	private map[string]bool // the private notebooks of nbState, for private_lost events
 	// previewCSS is the path of the CSS file for the preview of the web UI
 	// (see SetPreviewCSS).
 	previewCSS string
@@ -53,6 +54,9 @@ const (
 	eventUpdated   = "updated"
 	eventDeleted   = "deleted"
 	eventNotebooks = "notebooks"
+	// eventPrivateLost tells of a notebook that was private and is no longer,
+	// as files changed outside the API, such as by a sync.
+	eventPrivateLost = "private_lost"
 )
 
 var errVersionMismatch = errors.New("note was changed since it was read")
@@ -1350,6 +1354,27 @@ func (s *Notes) notifyNotebooks(nbs []*gennotes.Notebook) {
 		s.events.publishAll(eventNotebooks)
 	}
 	s.nbState = state
+	s.private = map[string]bool{}
+	for _, nb := range nbs {
+		if nb.Kind == store.KindPrivate {
+			s.private[nb.ID] = true
+		}
+	}
+}
+
+// privateLost returns the notebooks of nbs that were private when the list
+// was last told (notifyNotebooks) and are no longer. Changes through the API
+// tell the list as they make them, so these are changes from outside, such
+// as a sync that changed _notebook.yaml. A notebook gone, or with another
+// ID, is none of them.
+func (s *Notes) privateLost(nbs []*gennotes.Notebook) []string {
+	var lost []string
+	for _, nb := range nbs {
+		if s.private[nb.ID] && nb.Kind != store.KindPrivate {
+			lost = append(lost, nb.ID)
+		}
+	}
+	return lost
 }
 
 func (s *Notes) Search(ctx context.Context, p *gennotes.SearchPayload) (*gennotes.SearchResult, error) {
@@ -1397,7 +1422,12 @@ func (s *Notes) sync(ctx context.Context) (*gennotes.SyncResult, error) {
 	s.events.publish(eventDeleted, r.Removed...)
 	s.forgetHistory(r.Removed...) // deleted for good, here or elsewhere
 	if nbs, err := s.notebooks(ctx); err == nil {
+		lost := s.privateLost(nbs)
 		s.notifyNotebooks(nbs) // picks up edits of _notebook.yaml and new or removed notebooks
+		for _, nb := range lost {
+			slog.Warn("a notebook is no longer private, as its files changed outside", "notebook", nb)
+		}
+		s.events.publishNotebooks(eventPrivateLost, lost...)
 	}
 	return &gennotes.SyncResult{Added: len(r.Added), Updated: len(r.Updated), Removed: len(r.Removed), Errors: r.Errors}, nil
 }
