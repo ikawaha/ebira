@@ -1029,7 +1029,7 @@ func notesGetUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get --id \"be4c1193735ee1\" --q \"Magni consequatur iste quisquam qui.\" --session \"Et non facere et.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes get --id \"be4c1193735ee1\" --q \"yja\" --session \"Et non facere et.\"")
 }
 
 func notesCreateUsage() {

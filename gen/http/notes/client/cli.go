@@ -128,6 +128,12 @@ func BuildGetPayload(notesGetID *string, notesGetQ *string, notesGetSession *str
 	{
 		if notesGetQ != nil {
 			q = notesGetQ
+			if utf8.RuneCountInString(*notesGetQ) > 1000 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q", *notesGetQ, utf8.RuneCountInString(*notesGetQ), 1000, false))
+			}
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	var session *string
@@ -407,6 +413,9 @@ func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notes
 		q = *notesSearchQ
 		if utf8.RuneCountInString(q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, utf8.RuneCountInString(q), 1, true))
+		}
+		if utf8.RuneCountInString(q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, utf8.RuneCountInString(q), 1000, false))
 		}
 		if err != nil {
 			return nil, err

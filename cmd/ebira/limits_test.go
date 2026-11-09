@@ -11,6 +11,7 @@ import (
 
 	goahttp "goa.design/goa/v3/http"
 
+	notessvr "github.com/ikawaha/ebira/gen/http/notes/server"
 	mcpnotessvr "github.com/ikawaha/ebira/gen/jsonrpc/mcp_notes/server"
 	mcpnotes "github.com/ikawaha/ebira/gen/mcp_notes"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
@@ -78,5 +79,18 @@ func TestMCPTooLarge(t *testing.T) {
 	limitBodies(mux).ServeHTTP(w, r)
 	if w.Code != http.StatusRequestEntityTooLarge {
 		t.Errorf("status = %d, want 413", w.Code)
+	}
+}
+
+// A search query past its length is refused before it reaches the index.
+func TestSearchQueryLimit(t *testing.T) {
+	mux := goahttp.NewMuxer()
+	notessvr.Mount(mux, notessvr.New(gennotes.NewEndpoints(service.REST{Notes: &service.Notes{}}), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, nil, nil))
+	for _, path := range []string{"/search?q=", "/notes/a?q="} {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", path+strings.Repeat("a", 1001), nil))
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("%s with a long query: status = %d, want 400", path, w.Code)
+		}
 	}
 }

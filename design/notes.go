@@ -248,6 +248,12 @@ var NoteList = Type("NoteList", func() {
 	Attribute("separators", ArrayOf(Separator), "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset")
 })
 
+// searchQueryDSL limits the length of a search query, which the index parses
+// and matches against every note.
+var searchQueryDSL = func() {
+	MaxLength(1000)
+}
+
 // separatorIDDSL is the pattern and an example of a separator ID. It fits
 // the pattern of note IDs, so that after takes a note or a separator.
 var separatorIDDSL = func() {
@@ -530,7 +536,7 @@ var _ = Service("notes", func() {
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
-			Attribute("q", String, "Search query to highlight, as search takes it; its tags are not highlighted")
+			Attribute("q", String, "Search query to highlight, as search takes it; its tags are not highlighted", searchQueryDSL)
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from the client")
@@ -664,6 +670,7 @@ var _ = Service("notes", func() {
 			sessionDSL()
 			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first", func() {
 				MinLength(1)
+				searchQueryDSL()
 			})
 			notebookTreeFilter()
 			Attribute("tag", String, "Only notes with this tag")

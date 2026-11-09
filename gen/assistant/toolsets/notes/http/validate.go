@@ -107,6 +107,9 @@ func ValidateSearchPayloadTransport(body *SearchPayloadTransport) (err error) {
 		if utf8.RuneCountInString(*body.Q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *body.Q, utf8.RuneCountInString(*body.Q), 1, true))
 		}
+		if utf8.RuneCountInString(*body.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *body.Q, utf8.RuneCountInString(*body.Q), 1000, false))
+		}
 	}
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
