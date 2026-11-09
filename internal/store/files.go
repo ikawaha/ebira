@@ -156,6 +156,11 @@ func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
+	// MkdirAll takes a link to a folder for the folder: files are not
+	// written through one (see ErrLink).
+	if fi, err := os.Lstat(dir); err != nil || !fi.IsDir() {
+		return "", &fs.PathError{Op: "add", Path: dir, Err: ErrLink}
+	}
 	clean := CleanFileName(name, ext)
 	stem := strings.TrimSuffix(clean, ext)
 	for i := 1; ; i++ {

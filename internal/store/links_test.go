@@ -116,4 +116,17 @@ func TestLinks(t *testing.T) {
 	if _, err := s.File("d", "x.txt"); !errors.Is(err, ErrFileNotFound) {
 		t.Errorf("File in a linked folder = %v, want ErrFileNotFound", err)
 	}
+	// Nor is a file added through a linked folder.
+	if _, err := s.AddFile("d", "new.txt", []byte("new")); !errors.Is(err, ErrLink) {
+		t.Errorf("AddFile through a linked folder = %v, want ErrLink", err)
+	}
+	if _, err := os.Stat(filepath.Join(assets, "new.txt")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("AddFile wrote outside the notes directory")
+	}
+	if err := s.DeleteFile("d", "x.txt"); err == nil {
+		t.Error("DeleteFile removed a file through a linked folder")
+	}
+	if _, err := os.Stat(filepath.Join(assets, "x.txt")); err != nil {
+		t.Errorf("the file outside: %v", err)
+	}
 }
