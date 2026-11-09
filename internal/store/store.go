@@ -238,7 +238,7 @@ func (s *Store) locate(id string) (string, error) {
 	}
 	var nbs []string
 	for _, nb := range all {
-		if fi, err := os.Stat(s.path(nb, id)); err == nil && fi.Mode().IsRegular() {
+		if fi, err := os.Lstat(s.path(nb, id)); err == nil && fi.Mode().IsRegular() {
 			nbs = append(nbs, nb)
 		}
 	}
@@ -257,7 +257,7 @@ func (s *Store) Stat(id string) (File, error) {
 	if err != nil {
 		return File{}, err
 	}
-	fi, err := os.Stat(s.path(nb, id))
+	fi, err := os.Lstat(s.path(nb, id))
 	if errors.Is(err, fs.ErrNotExist) {
 		return File{}, ErrNotFound
 	}
@@ -291,7 +291,7 @@ func (s *Store) LoadFile(f File) (*Note, error) {
 }
 
 func (s *Store) load(nb, id string) (*Note, error) {
-	b, err := os.ReadFile(s.path(nb, id))
+	b, err := readFile(s.path(nb, id))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, ErrNotFound
 	}
@@ -400,7 +400,7 @@ func (s *Store) Version(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	b, err := os.ReadFile(s.path(nb, id))
+	b, err := readFile(s.path(nb, id))
 	if errors.Is(err, fs.ErrNotExist) {
 		return "", ErrNotFound
 	}
@@ -460,7 +460,7 @@ func (s *Store) Save(n *Note) error {
 		return err
 	}
 	p := s.path(nb, n.ID)
-	old, err := os.ReadFile(p)
+	old, err := readFile(p)
 	if errors.Is(err, fs.ErrNotExist) {
 		return ErrNotFound
 	}
@@ -648,7 +648,7 @@ func SubKind(own *string, parent string) string {
 // readNotebookMeta reads the settings file p of notebook nb.
 func (s *Store) readNotebookMeta(p, nb string) (NotebookMeta, error) {
 	m := NotebookMeta{Kind: DefaultKind(nb)}
-	b, err := os.ReadFile(p)
+	b, err := readFile(p)
 	if errors.Is(err, fs.ErrNotExist) {
 		return m, nil
 	}
@@ -698,7 +698,7 @@ func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 	}
 	p := filepath.Join(dir, NotebookFile)
 	var doc yaml.Node
-	old, err := os.ReadFile(p)
+	old, err := readFile(p)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
@@ -773,7 +773,7 @@ func (s *Store) notebooksIn(dir string, valid func(string) bool) ([]string, erro
 	var nbs []string
 	for _, e := range entries {
 		name := e.Name()
-		if !e.IsDir() || !valid(name) {
+		if !notebookDir(dir, e) || !valid(name) {
 			continue
 		}
 		nbs = append(nbs, name)
@@ -785,7 +785,7 @@ func (s *Store) notebooksIn(dir string, valid func(string) bool) ([]string, erro
 			return nil, err
 		}
 		for _, sub := range subs {
-			if sub.IsDir() && nameRe.MatchString(sub.Name()) {
+			if notebookDir(filepath.Join(dir, name), sub) && nameRe.MatchString(sub.Name()) {
 				nbs = append(nbs, name+"/"+sub.Name())
 			}
 		}
@@ -809,7 +809,8 @@ func (s *Store) Scan() ([]File, error) {
 		notebook, trashed := splitPlace(nb)
 		for _, e := range entries {
 			name := e.Name()
-			if e.IsDir() || !strings.HasSuffix(name, Ext) {
+			// Not a link either: a note is a regular file (see ErrLink).
+			if !e.Type().IsRegular() || !strings.HasSuffix(name, Ext) {
 				continue
 			}
 			id := strings.TrimSuffix(name, Ext)
