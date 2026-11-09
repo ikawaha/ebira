@@ -145,10 +145,12 @@ func (s *Service) DeviceToken(_ context.Context, p *genauth.DeviceTokenPayload) 
 }
 
 // DeviceApprove approves a request of a client, for people signed in with a
-// passkey.
+// passkey recently. The session the client then gets lasts SessionMaxAge, so
+// a session that is not verified, such as one of a client itself, would
+// otherwise renew itself without the passkey ever being used again.
 func (s *Service) DeviceApprove(_ context.Context, p *genauth.DeviceApprovePayload) error {
-	if valid, _ := s.check(p.Session); !valid {
-		return genauth.MakeUnauthorized(errors.New("sign in with a passkey to approve the request"))
+	if err := s.verify(p.Session); err != nil {
+		return err
 	}
 	if err := s.passkeys.ApproveDevice(p.UserCode); err != nil {
 		return genauth.MakeNotFound(err)

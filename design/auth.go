@@ -132,18 +132,20 @@ var _ = Service("auth", func() {
 	})
 
 	Method("device_approve", func() {
-		Description("Approve the request of device_start with its user code, from the web UI signed in with a passkey.")
+		Description("Approve the request of device_start with its user code, from the web UI signed in with a passkey recently, as the session it gives lasts as long as one of a sign-in.")
 		Payload(func() {
 			Attribute("session", String, "Session cookie of the web UI")
 			RequiredAttribute("user_code", String, "User code shown by the client")
 		})
 		Error("unauthorized", ErrorResult, "The request is not signed in with a passkey")
+		Error("verification_required", ErrorResult, "The session is not signed in with a passkey recently: sign in again")
 		Error("not_found", ErrorResult, "The user code is unknown or expired")
 		HTTP(func() {
 			POST("/auth/device/approve")
 			Cookie("session:" + sessionCookie)
 			Response(StatusNoContent)
 			Response("unauthorized", StatusUnauthorized)
+			Response("verification_required", StatusForbidden)
 			Response("not_found", StatusNotFound)
 		})
 	})

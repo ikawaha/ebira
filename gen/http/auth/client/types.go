@@ -221,6 +221,25 @@ type DeviceApproveUnauthorizedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// DeviceApproveVerificationRequiredResponseBody is the type of the "auth"
+// service "device_approve" endpoint HTTP response body for the
+// "verification_required" error.
+type DeviceApproveVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // DeviceApproveNotFoundResponseBody is the type of the "auth" service
 // "device_approve" endpoint HTTP response body for the "not_found" error.
 type DeviceApproveNotFoundResponseBody struct {
@@ -571,6 +590,21 @@ func NewDeviceTokenResultOK(body *DeviceTokenResponseBody) *auth.DeviceTokenResu
 // NewDeviceApproveUnauthorized builds a auth service device_approve endpoint
 // unauthorized error.
 func NewDeviceApproveUnauthorized(body *DeviceApproveUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeviceApproveVerificationRequired builds a auth service device_approve
+// endpoint verification_required error.
+func NewDeviceApproveVerificationRequired(body *DeviceApproveVerificationRequiredResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -937,6 +971,30 @@ func ValidateLoginFinishUnauthorizedResponseBody(body *LoginFinishUnauthorizedRe
 // ValidateDeviceApproveUnauthorizedResponseBody runs the validations defined
 // on DeviceApproveUnauthorizedResponseBody
 func ValidateDeviceApproveUnauthorizedResponseBody(body *DeviceApproveUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeviceApproveVerificationRequiredResponseBody runs the validations
+// defined on DeviceApproveVerificationRequiredResponseBody
+func ValidateDeviceApproveVerificationRequiredResponseBody(body *DeviceApproveVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

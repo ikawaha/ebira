@@ -129,6 +129,7 @@ func (c *Client) DeviceToken(ctx context.Context, p *DeviceTokenPayload) (res *D
 // DeviceApprove calls the "device_approve" endpoint of the "auth" service.
 // DeviceApprove may return the following errors:
 //   - "unauthorized" (type *goa.ServiceError): The request is not signed in with a passkey
+//   - "verification_required" (type *goa.ServiceError): The session is not signed in with a passkey recently: sign in again
 //   - "not_found" (type *goa.ServiceError): The user code is unknown or expired
 //   - error: internal error
 func (c *Client) DeviceApprove(ctx context.Context, p *DeviceApprovePayload) (err error) {

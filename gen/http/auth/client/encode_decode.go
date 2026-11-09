@@ -690,6 +690,7 @@ func EncodeDeviceApproveRequest(encoder func(*http.Request) goahttp.Encoder) fun
 // should be restored after having been read.
 // DecodeDeviceApproveResponse may return the following errors:
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - error: internal error
 func DecodeDeviceApproveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
@@ -729,6 +730,20 @@ func DecodeDeviceApproveResponse(decoder func(*http.Response) goahttp.Decoder, r
 				return nil, goahttp.ErrValidationError("auth", "device_approve", err)
 			}
 			return nil, NewDeviceApproveUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body DeviceApproveVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("auth", "device_approve", err)
+			}
+			err = ValidateDeviceApproveVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("auth", "device_approve", err)
+			}
+			return nil, NewDeviceApproveVerificationRequired(&body)
 		case http.StatusNotFound:
 			var (
 				body DeviceApproveNotFoundResponseBody

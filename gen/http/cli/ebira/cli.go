@@ -1950,7 +1950,7 @@ func authUsage() {
 	fmt.Fprintln(os.Stderr, `    login-finish: Finish signing in with the passkey the browser used. The response sets the session cookie.`)
 	fmt.Fprintln(os.Stderr, `    device-start: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.`)
 	fmt.Fprintln(os.Stderr, `    device-token: Ask whether people approved the request of device_start. Once approved, the result has the session, which the client keeps in memory only and sends as the session cookie; the request is then gone.`)
-	fmt.Fprintln(os.Stderr, `    device-approve: Approve the request of device_start with its user code, from the web UI signed in with a passkey.`)
+	fmt.Fprintln(os.Stderr, `    device-approve: Approve the request of device_start with its user code, from the web UI signed in with a passkey recently, as the session it gives lasts as long as one of a sign-in.`)
 	fmt.Fprintln(os.Stderr, `    passkeys: List the registered passkeys, for the web UI signed in with a passkey.`)
 	fmt.Fprintln(os.Stderr, `    delete-passkey: Delete a registered passkey, from the web UI signed in and verified with a passkey. The only passkey cannot be deleted; ebira auth reset removes every passkey.`)
 	fmt.Fprintln(os.Stderr, `    revoke-sessions: End every session, such as those of other browsers and of the TUI, from the web UI signed in and verified with a passkey. The response sets a new session for the request.`)
@@ -2092,7 +2092,7 @@ func authDeviceApproveUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Approve the request of device_start with its user code, from the web UI signed in with a passkey.`)
+	fmt.Fprintln(os.Stderr, `Approve the request of device_start with its user code, from the web UI signed in with a passkey recently, as the session it gives lasts as long as one of a sign-in.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)

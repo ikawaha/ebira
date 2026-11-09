@@ -155,7 +155,7 @@ paths:
             tags:
                 - auth
             summary: device_approve auth
-            description: Approve the request of device_start with its user code, from the web UI signed in with a passkey.
+            description: Approve the request of device_start with its user code, from the web UI signed in with a passkey recently, as the session it gives lasts as long as one of a sign-in.
             operationId: auth#device_approve
             parameters:
                 - name: ebira_session
@@ -189,6 +189,19 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: The session is not signed in with a passkey recently: sign in again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
                                 temporary: false
                                 timeout: false
                 "404":
