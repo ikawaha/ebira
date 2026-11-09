@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 func TestAppArgs(t *testing.T) {
@@ -21,6 +23,38 @@ func TestAppArgs(t *testing.T) {
 	} {
 		if got := appArgs(tc.args); !slices.Equal(got, tc.want) {
 			t.Errorf("appArgs(%q) = %q, want %q", tc.args, got, tc.want)
+		}
+	}
+}
+
+// TestFromServer checks that the app takes messages only from the page of
+// its server (or of the one it switches to), with the URLs the webviews give.
+func TestFromServer(t *testing.T) {
+	s := &shell{current: target{Addr: "localhost:13579"}}
+	next := target{Addr: "localhost:13600"}
+	for _, tc := range []struct {
+		name   string
+		origin *application.OriginInfo
+		next   bool
+		want   bool
+	}{
+		{"page (macOS)", &application.OriginInfo{Origin: "http://localhost:13579/#note/abc", IsMainFrame: true}, false, true},
+		{"page (Windows)", &application.OriginInfo{Origin: "http://localhost:13579/", TopOrigin: "http://localhost:13579/"}, false, true},
+		{"another site", &application.OriginInfo{Origin: "https://example.com/p.html", IsMainFrame: true}, false, false},
+		{"another port", &application.OriginInfo{Origin: "http://localhost:13580/"}, false, false},
+		{"another host", &application.OriginInfo{Origin: "http://127.0.0.1:13579/"}, false, false},
+		{"frame of another site", &application.OriginInfo{Origin: "http://localhost:13579/", TopOrigin: "https://example.com/"}, false, false},
+		{"no URL", &application.OriginInfo{}, false, false},
+		{"no origin", nil, false, false},
+		{"the next server", &application.OriginInfo{Origin: "http://localhost:13600/"}, true, true},
+		{"the next server not chosen", &application.OriginInfo{Origin: "http://localhost:13600/"}, false, false},
+	} {
+		s.next = nil
+		if tc.next {
+			s.next = &next
+		}
+		if got := s.fromServer(tc.origin); got != tc.want {
+			t.Errorf("%s: fromServer(%+v) = %v, want %v", tc.name, tc.origin, got, tc.want)
 		}
 	}
 }

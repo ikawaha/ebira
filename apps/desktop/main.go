@@ -5,7 +5,9 @@ package main
 import (
 	"flag"
 	"log"
+	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -129,12 +131,16 @@ func (s *shell) shouldQuit() bool {
 	return false
 }
 
-func (s *shell) onMessage(from application.Window, message string, _ *application.OriginInfo) {
+func (s *shell) onMessage(from application.Window, message string, origin *application.OriginInfo) {
 	if rest, ok := strings.CutPrefix(message, settingsPrefix); ok {
 		s.onSettingsMessage(from, rest)
 		return
 	}
 	if win := s.main(); win == nil || from.ID() != win.ID() {
+		return
+	}
+	if !s.fromServer(origin) {
+		log.Printf("a message from another page than the server's is ignored: %+v", origin)
 		return
 	}
 	if data, ok := strings.CutPrefix(message, "ebira:{"); ok {
@@ -153,6 +159,41 @@ func (s *shell) onMessage(from application.Window, message string, _ *applicatio
 	case "ebira:stay":
 		go s.stayed()
 	}
+}
+
+// fromServer reports whether a message in the main window comes from the page
+// of the server, or of the one it switches to: a link could take the window
+// to another site, whose page could send the app messages too. The webview
+// gives the URL of the frame that sent it (and on Windows of the top one),
+// which the page of the server always has.
+func (s *shell) fromServer(origin *application.OriginInfo) bool {
+	if origin == nil {
+		return false
+	}
+	s.mu.Lock()
+	servers := []string{s.current.url()}
+	if s.next != nil {
+		servers = append(servers, s.next.url())
+	}
+	s.mu.Unlock()
+	from := func(u string) bool {
+		return slices.ContainsFunc(servers, func(server string) bool { return sameOrigin(u, server) })
+	}
+	return from(origin.Origin) && (origin.TopOrigin == "" || from(origin.TopOrigin))
+}
+
+// sameOrigin reports whether the URLs a and b have the same scheme, host and
+// port.
+func sameOrigin(a, b string) bool {
+	u, err := url.Parse(a)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	v, err := url.Parse(b)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(u.Scheme, v.Scheme) && strings.EqualFold(u.Host, v.Host)
 }
 
 // openMain opens the window of the Web UI.
