@@ -1502,7 +1502,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("restart_server", func() {
-		Description("Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.")
+		Description("Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.")
 		Payload(sessionDSL)
 		Error("unavailable", ErrorResult, "The server cannot start itself again")
 		HTTP(func() {

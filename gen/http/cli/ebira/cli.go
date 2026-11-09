@@ -974,7 +974,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
 	fmt.Fprintln(os.Stderr, `    settings: Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.`)
 	fmt.Fprintln(os.Stderr, `    save-settings: Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.`)
-	fmt.Fprintln(os.Stderr, `    restart-server: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.`)
+	fmt.Fprintln(os.Stderr, `    restart-server: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.`)
 	fmt.Fprintln(os.Stderr, `    sync: Scan the notes directory and bring the SQLite index in line with the YAML files. Not needed while the server watches files.`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
@@ -1860,7 +1860,7 @@ func notesRestartServerUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.`)
+	fmt.Fprintln(os.Stderr, `Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
