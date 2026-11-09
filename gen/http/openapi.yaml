@@ -147,7 +147,7 @@ paths:
             tags:
                 - auth
             summary: device_approve auth
-            description: Approve the request of device_start with its user code, from the web UI signed in with a passkey.
+            description: Approve the request of device_start with its user code, from the web UI signed in with a passkey recently, as the session it gives lasts as long as one of a sign-in.
             operationId: auth#device_approve
             parameters:
                 - name: device_approve_request_body
@@ -170,6 +170,18 @@ paths:
                             id: 123abc
                             message: parameter 'p' must be an integer
                             name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: The session is not signed in with a passkey recently: sign in again'
+                    schema:
+                        $ref: '#/definitions/AuthDeviceApproveVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
                             temporary: false
                             timeout: false
                 "404":
@@ -4000,6 +4012,49 @@ definitions:
             name: bad_request
             temporary: false
             timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeviceApproveVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
         required:
             - name
             - id

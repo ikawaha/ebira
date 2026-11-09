@@ -49,7 +49,8 @@ type Service interface {
 	// the session cookie; the request is then gone.
 	DeviceToken(context.Context, *DeviceTokenPayload) (res *DeviceTokenResult, err error)
 	// Approve the request of device_start with its user code, from the web UI
-	// signed in with a passkey.
+	// signed in with a passkey recently, as the session it gives lasts as long as
+	// one of a sign-in.
 	DeviceApprove(context.Context, *DeviceApprovePayload) (err error)
 	// List the registered passkeys, for the web UI signed in with a passkey.
 	Passkeys(context.Context, *PasskeysPayload) (res []*PasskeyInfo, err error)
