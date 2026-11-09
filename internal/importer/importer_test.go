@@ -23,6 +23,27 @@ func parse(t *testing.T, name, content string, mod time.Time) *Note {
 	return n
 }
 
+// A merge key or an alias as a key in the front matter could set the keys of
+// ebira when the note is read; they are dropped with a warning.
+func TestMergeKeyDropped(t *testing.T) {
+	src := "---\n" +
+		"title: hi\n" +
+		"base: &b {order: 9, marks: [red]}\n" +
+		"<<: *b\n" +
+		"name: &k order\n" +
+		"*k : 7\n" +
+		"---\n" +
+		"body\n"
+	n := parse(t, "m.md", src, mtime)
+	if got := extraKeys(n); len(got) != 2 || !strings.HasPrefix(got[0], "base=") || got[1] != "name=order" {
+		t.Errorf("Extra = %q, want base and name only", got)
+	}
+	w := strings.Join(n.Warnings, " ")
+	if !strings.Contains(w, "<<") || !strings.Contains(w, "*k") {
+		t.Errorf("Warnings = %q", n.Warnings)
+	}
+}
+
 func extraKeys(n *Note) []string {
 	var keys []string
 	for i := 0; i+1 < len(n.Extra); i += 2 {

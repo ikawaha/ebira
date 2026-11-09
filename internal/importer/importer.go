@@ -64,6 +64,24 @@ var (
 	reservedKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "trashed_from", "order", "created_by", "body", "imported_from", "import_hash"}
 )
 
+// plainKey reports whether k is a key that stands for itself: a scalar that
+// is not the merge key (<<), which YAML expands into the keys of the mapping
+// it refers to. An alias or another kind of node is not one either.
+func plainKey(k *yaml.Node) bool {
+	return k.Kind == yaml.ScalarNode && k.Tag != "!!merge" && k.Value != "<<"
+}
+
+// keyName names key k in a warning.
+func keyName(k *yaml.Node) string {
+	if k.Kind == yaml.AliasNode {
+		return "*" + k.Value
+	}
+	if k.Value == "" {
+		return "(not a plain key)"
+	}
+	return k.Value
+}
+
 // Parse converts a Markdown file into a note.
 func Parse(in Input) (*Note, error) {
 	if len(in.Content) > MaxSize {
@@ -117,6 +135,10 @@ func Parse(in Input) (*Note, error) {
 				} else if !ok {
 					n.Warnings = append(n.Warnings, fmt.Sprintf("the time %s: %q could not be read", key, v.Value))
 				}
+			case !plainKey(k):
+				// A merge key or an alias as a key would set the keys of
+				// ebira when the note is read, whatever their name here.
+				dropped = append(dropped, keyName(k))
 			case slices.Contains(reservedKeys, key):
 				dropped = append(dropped, key)
 			default:

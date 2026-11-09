@@ -425,6 +425,39 @@ func TestInboxDefaultKind(t *testing.T) {
 	}
 }
 
+// Extra keys that are not plain keys, such as a merge key, are not written:
+// they would set the note's own keys when the file is read.
+func TestCreateExtraNoMerge(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fm yaml.Node
+	if err := yaml.Unmarshal([]byte("<<: {order: 9, marks: [red], trashed_from: x}\nname: &k order\n*k : 7\nkept: yes\n"), &fm); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	n := &Note{ID: "m", Notebook: Inbox, Title: "m", CreatedAt: at, UpdatedAt: at, Body: "x\n", Extra: fm.Content[0].Content}
+	if err := s.Create(n); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, Inbox, "m.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "<<") || strings.Contains(string(b), "*k") || !strings.Contains(string(b), "kept: yes") {
+		t.Errorf("file:\n%s", b)
+	}
+	got, err := s.Load("m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Order != nil || len(got.Marks) != 0 || got.TrashedFrom != "" {
+		t.Errorf("Load = order %v, marks %v, trashed_from %q; want none", got.Order, got.Marks, got.TrashedFrom)
+	}
+}
+
 func TestCreateWithExtra(t *testing.T) {
 	dir := t.TempDir()
 	s, err := New(dir)
