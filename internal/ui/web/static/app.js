@@ -2824,8 +2824,9 @@ function runFind(scroll) {
   const q = find.q.normalize("NFKC").toLowerCase().trim();
   if (body && q) {
     const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
-      // Not inside math, diagrams or code drawn by scripts.
-      acceptNode: (n) => (n.parentElement?.closest(".katex, .math, .mermaid, svg") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+      // Not inside math, diagrams or code drawn by scripts, nor in the bars
+      // of the code blocks, which are no text of the note.
+      acceptNode: (n) => (n.parentElement?.closest(".katex, .math, .mermaid, svg, .code-fold > summary") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
     });
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
