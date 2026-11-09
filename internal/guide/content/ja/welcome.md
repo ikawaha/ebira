@@ -10,7 +10,7 @@ ebira は、Markdown でノートを書き、すばやく探すためのノー�
 
 - [画面の見方](screen.md)
 - [ノートとノートブック](notes.md)
-- [Markdown の書き方](markdown.md)・[数式と図](math.md)・[画像](images.md)・[編集欄の便利な操作](editor.md)
+- [Markdown の書き方](markdown.md)・[数式と図](math.md)・[画像とファイル](images.md)・[編集欄の便利な操作](editor.md)
 - [タグ](tags.md)・[マーク](marks.md)・[区切り線と並び順](separators.md)
 - [検索の書き方](search.md)・[ノートの中を探す](find.md)
 - [履歴](history.md)・[ノートブックの種別と AI](kinds.md)

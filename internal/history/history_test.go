@@ -135,3 +135,30 @@ func TestSweepAge(t *testing.T) {
 		t.Errorf("after MaxAge: %d versions, the newest %q; want the %d newest", len(vs), vs[0].Title, MinKeep)
 	}
 }
+
+func TestEach(t *testing.T) {
+	s, now := newStore(t)
+	for _, id := range []string{"n1", "n1", "n2"} {
+		if err := s.Add(id, Version{Title: id, Body: "body of " + id}); err != nil {
+			t.Fatal(err)
+		}
+		*now = now.Add(time.Minute)
+	}
+	got := map[string]int{}
+	if err := s.Each(func(id string, v *Version) error {
+		if v.Body != "body of "+id {
+			t.Errorf("%s: body %q", id, v.Body)
+		}
+		got[id]++
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got["n1"] != 2 || got["n2"] != 1 || len(got) != 2 {
+		t.Errorf("Each visited %v", got)
+	}
+	stop := errors.New("stop")
+	if err := s.Each(func(string, *Version) error { return stop }); !errors.Is(err, stop) {
+		t.Errorf("Each = %v, want the error of fn", err)
+	}
+}

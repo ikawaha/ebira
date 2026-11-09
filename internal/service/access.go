@@ -93,7 +93,9 @@ func (r REST) APIKeyAuth(ctx context.Context, session string, _ *security.APIKey
 // hiddenNotebooks returns the notebooks whose notes the request cannot see:
 // for AI, the trash and the drop and private notebooks; for people, none. A
 // notebook whose settings cannot be read is hidden too, to fail on the safe
-// side. Drop notebooks still appear in the notebook list (see listed).
+// side, and so is a notebook the index still has notes of but that is not on
+// disk, such as one renamed outside ebira before the index syncs: its kind is
+// not known. Drop notebooks still appear in the notebook list (see listed).
 func (s *Notes) hiddenNotebooks(ctx context.Context) ([]string, error) {
 	if fromPerson(ctx) {
 		return nil, nil
@@ -106,6 +108,15 @@ func (s *Notes) hiddenNotebooks(ctx context.Context) ([]string, error) {
 	for _, id := range ids {
 		if m, err := s.store.NotebookMeta(id); err != nil || m.Kind == store.KindPrivate || m.Kind == store.KindDrop {
 			hidden = append(hidden, id)
+		}
+	}
+	indexed, err := s.index.Counts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for nb := range indexed {
+		if nb != store.Trash && !slices.Contains(ids, nb) {
+			hidden = append(hidden, nb)
 		}
 	}
 	return hidden, nil

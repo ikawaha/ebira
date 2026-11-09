@@ -128,6 +128,11 @@ func (s *shell) onPageMessage(data string) {
 		pageState
 		Text string `json:"text"`
 		URL  string `json:"url"`
+		// download: a part of a file to save
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Data string `json:"data"`
+		End  bool   `json:"end"`
 	}
 	if err := json.Unmarshal([]byte(data), &m); err != nil {
 		log.Print("a message of the page: ", err)
@@ -140,6 +145,8 @@ func (s *shell) onPageMessage(data string) {
 		s.openURL(m.URL)
 	case "restart": // the mark of an outdated server (markOutdated)
 		go s.askRestart()
+	case "download": // a file of a note (downloadFile)
+		s.download(m.ID, m.Name, m.Data, m.End)
 	case "copy":
 		if !s.app.Clipboard.SetText(m.Text) {
 			log.Printf("the clipboard took no text of %d bytes", len(m.Text))
@@ -216,7 +223,7 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(key(file.Add("New Notebook…"), "cmd+shift+n", "ctrl+shift+n").OnClick(on(func() { s.call("newNotebook") })), notEditing)
 	file.AddSeparator()
 	n.add(file.Add("Import Markdown…").OnClick(on(func() { s.call("importFiles") })), notEditing)
-	n.add(file.Add("Check Images…").OnClick(on(func() { s.call("checkFiles") })), always)
+	n.add(file.Add("Check Files…").OnClick(on(func() { s.call("checkFiles") })), always)
 	n.add(file.Add("Sync with Git").OnClick(on(func() { s.call("syncGit") })), inGit)
 	file.AddSeparator()
 	if mac {

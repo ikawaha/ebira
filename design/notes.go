@@ -173,6 +173,7 @@ var UnusedFile = Type("UnusedFile", func() {
 	RequiredAttribute("size", Int64, "Size in bytes")
 	RequiredAttribute("added_at", String, "Last modification time of the file, usually when it was added", timeDSL)
 	RequiredAttribute("recent", Boolean, "Whether the file was added within the last hour, such as to a note still being edited, whose body does not refer to it until saved")
+	RequiredAttribute("in_history", Boolean, "Whether an earlier version of a note, kept on this device, refers to the file, which putting that version back would need")
 })
 
 // BrokenFileRef is a reference in a note body to a file that does not exist.
@@ -201,7 +202,7 @@ var ImportFile = Type("ImportFile", func() {
 		MaxLength(255)
 		Example("photo.png")
 	})
-	RequiredAttribute("content", Bytes, "The image: PNG, JPEG, GIF or WebP, at most 10 MB")
+	RequiredAttribute("content", Bytes, "The image, at most 50 MB")
 })
 
 // AIImportFile is an image sent with a Markdown file by an AI client, which
@@ -459,8 +460,8 @@ var _ = Service("notes", func() {
 	//     (make_notebook_private), which only takes access away from them.
 	//   - They may set the marks of notes in notebooks of the collab kind
 	//     (update_ai_note), and read the names of the marks (list_marks).
-	//   - They may add images to notes in notebooks of the collab kind
-	//     (add_ai_file), and send images with a new note (import_ai_note),
+	//   - They may add images and other files to notes in notebooks of the
+	//     collab kind (add_ai_file), and send images with a new note (import_ai_note),
 	//     in smaller sizes than people.
 	// Never add Tool to create_notebook or save_notebook, which set any kind,
 	// or to create, update, delete and import, which are for people. Reading,
@@ -1086,7 +1087,7 @@ var _ = Service("notes", func() {
 
 	Method("add_ai_file", func() {
 		NoSecurity()
-		Description("Add an image to a note in a notebook of the collab kind: a PNG, JPEG, GIF or WebP image of at most 5 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path, with update_ai_note. Notes in other notebooks are read-only for AI clients; to add a note with images to a notebook of the drop kind, use import_ai_note.")
+		Description("Add a file of at most 5 MB to a note in a notebook of the collab kind: an image, which the body shows, or another file, such as a PDF, which the body links to. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path, with update_ai_note: ![description](path) for an image and [name](path) for another file. Notes in other notebooks are read-only for AI clients; to add a note with images to a notebook of the drop kind, use import_ai_note.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
@@ -1094,14 +1095,14 @@ var _ = Service("notes", func() {
 				MaxLength(255)
 				Example("chart.png")
 			})
-			RequiredAttribute("content", Bytes, "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB")
+			RequiredAttribute("content", Bytes, "The file, base64-encoded, at most 5 MB")
 		})
 		Result(NoteFile)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "The file is not a supported image")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
 		Error("too_large", ErrorResult, "The file is larger than 5 MB")
-		Tool("add_ai_file", "Add an image (PNG, JPEG, GIF or WebP, at most 5 MB) to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note")
+		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note")
 	})
 
 	Method("update_ai_note", func() {
@@ -1246,10 +1247,10 @@ var _ = Service("notes", func() {
 		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this")
 	})
 
-	// The files of a note, such as images, are kept next to the note file in
-	// notes/<notebook>/<id>.assets/ and move with the note.
+	// The files of a note, images and other attachments, are kept next to the
+	// note file in notes/<notebook>/<id>.assets/ and move with the note.
 	Method("add_file", func() {
-		Description("Add an image to a note. The request body is the file: a PNG, JPEG, GIF or WebP image of at most 10 MB, told by its content. The name is cleaned up (letters, digits, - and _), gets the extension of the type, and a suffix such as -2 when it is taken. Refer to the file from the body with the returned path.")
+		Description("Add a file to a note. The request body is the file, of any type, at most 50 MB. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path: ![description](path) shows an image, and [name](path) links to a file.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
@@ -1261,8 +1262,8 @@ var _ = Service("notes", func() {
 		})
 		Result(NoteFile)
 		Error("not_found", ErrorResult, "The note does not exist")
-		Error("bad_request", ErrorResult, "The file is not a supported image, or the note ID is used in more than one notebook")
-		Error("too_large", ErrorResult, "The file is larger than 10 MB")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		Error("too_large", ErrorResult, "The file is larger than 50 MB")
 		HTTP(func() {
 			POST("/notes/{id}/files")
 			Param("name")
@@ -1275,7 +1276,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("get_file", func() {
-		Description("Get a file of a note. The response body is the file. Only files of the accepted image types are served, told by their content.")
+		Description("Get a file of a note. The response body is the file. Images (PNG, JPEG, GIF and WebP, told by their content) and PDF files are served as their type to be shown; other files, which might run scripts if shown, as application/octet-stream to be downloaded.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
@@ -1288,8 +1289,11 @@ var _ = Service("notes", func() {
 				Example("image/png")
 			})
 			RequiredAttribute("length", Int64, "Size of the file in bytes")
+			RequiredAttribute("disposition", String, "Whether the file is shown (inline) or downloaded (attachment), with its name", func() {
+				Example("attachment; filename=report.zip")
+			})
 		})
-		Error("not_found", ErrorResult, "The note or the file does not exist, or the file is not of an accepted type")
+		Error("not_found", ErrorResult, "The note or the file does not exist")
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		HTTP(func() {
 			GET("/notes/{id}/files/{name}")
@@ -1297,6 +1301,7 @@ var _ = Service("notes", func() {
 			Response(StatusOK, func() {
 				Header("content_type:Content-Type")
 				Header("length:Content-Length")
+				Header("disposition:Content-Disposition")
 			})
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
@@ -1362,7 +1367,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("check_files", func() {
-		Description("Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited.")
+		Description("Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited, and files that only earlier versions of notes refer to are marked in_history, as putting such a version back would need them.")
 		Payload(sessionDSL)
 		Result(FileCheck)
 		HTTP(func() {

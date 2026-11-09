@@ -145,13 +145,15 @@ type Service interface {
 	// file whose content was imported before into a notebook visible to AI clients
 	// is skipped. The note is marked as created by AI.
 	ImportAiNote(context.Context, *ImportAiNotePayload) (res *ImportResult, err error)
-	// Add an image to a note in a notebook of the collab kind: a PNG, JPEG, GIF or
-	// WebP image of at most 5 MB, told by its content. The name is cleaned up
-	// (letters, digits, - and _), gets the extension of the type, and a suffix
-	// such as -2 when it is taken. Refer to the file from the body with the
-	// returned path, with update_ai_note. Notes in other notebooks are read-only
-	// for AI clients; to add a note with images to a notebook of the drop kind,
-	// use import_ai_note.
+	// Add a file of at most 5 MB to a note in a notebook of the collab kind: an
+	// image, which the body shows, or another file, such as a PDF, which the body
+	// links to. The name is cleaned up (letters, digits, - and _), keeps its
+	// extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the
+	// extension of its type), and gets a suffix such as -2 when it is taken. Refer
+	// to the file from the body with the returned path, with update_ai_note:
+	// ![description](path) for an image and [name](path) for another file. Notes
+	// in other notebooks are read-only for AI clients; to add a note with images
+	// to a notebook of the drop kind, use import_ai_note.
 	AddAiFile(context.Context, *AddAiFilePayload) (res *NoteFile, err error)
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
@@ -200,14 +202,17 @@ type Service interface {
 	// notes, nor its sub notebooks. A sub notebook can be made private on its own.
 	// Only people can undo this.
 	MakeNotebookPrivate(context.Context, *MakeNotebookPrivatePayload) (err error)
-	// Add an image to a note. The request body is the file: a PNG, JPEG, GIF or
-	// WebP image of at most 10 MB, told by its content. The name is cleaned up
-	// (letters, digits, - and _), gets the extension of the type, and a suffix
-	// such as -2 when it is taken. Refer to the file from the body with the
-	// returned path.
+	// Add a file to a note. The request body is the file, of any type, at most 50
+	// MB. The name is cleaned up (letters, digits, - and _), keeps its extension
+	// (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of
+	// its type), and gets a suffix such as -2 when it is taken. Refer to the file
+	// from the body with the returned path: ![description](path) shows an image,
+	// and [name](path) links to a file.
 	AddFile(context.Context, *AddFilePayload, io.ReadCloser) (res *NoteFile, err error)
-	// Get a file of a note. The response body is the file. Only files of the
-	// accepted image types are served, told by their content.
+	// Get a file of a note. The response body is the file. Images (PNG, JPEG, GIF
+	// and WebP, told by their content) and PDF files are served as their type to
+	// be shown; other files, which might run scripts if shown, as
+	// application/octet-stream to be downloaded.
 
 	// If body implements [io.WriterTo], that implementation will be used instead.
 	// Consider [goa.design/goa/v3/pkg.SkipResponseWriter] to adapt existing
@@ -228,7 +233,8 @@ type Service interface {
 	// files that do not exist. A reference is <id>.assets/<name> anywhere in a
 	// body, including in code, so that a file counts as used rather than not.
 	// Files added within the last hour are marked recent, as the note may still be
-	// being edited.
+	// being edited, and files that only earlier versions of notes refer to are
+	// marked in_history, as putting such a version back would need them.
 	CheckFiles(context.Context, *CheckFilesPayload) (res *FileCheck, err error)
 	// Stream note changes as Server-Sent Events. Events missed while disconnected
 	// are not replayed; the ready event sent on every (re)connection tells clients
@@ -336,7 +342,7 @@ type AddAiFilePayload struct {
 	ID string
 	// File name
 	Name string
-	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	// The file, base64-encoded, at most 5 MB
 	Content []byte
 }
 
@@ -590,6 +596,8 @@ type GetFileResult struct {
 	ContentType string
 	// Size of the file in bytes
 	Length int64
+	// Whether the file is shown (inline) or downloaded (attachment), with its name
+	Disposition string
 }
 
 // GetPayload is the payload type of the notes service get method.
@@ -704,7 +712,7 @@ type ImportFile struct {
 	Ref string
 	// File name
 	Name string
-	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	// The image, at most 50 MB
 	Content []byte
 }
 
@@ -1384,6 +1392,9 @@ type UnusedFile struct {
 	// Whether the file was added within the last hour, such as to a note still
 	// being edited, whose body does not refer to it until saved
 	Recent bool
+	// Whether an earlier version of a note, kept on this device, refers to the
+	// file, which putting that version back would need
+	InHistory bool
 }
 
 // UpdateAiNotePayload is the payload type of the notes service update_ai_note
@@ -1781,7 +1792,7 @@ type jsonImportFileTransport struct {
 	Ref *string `json:"ref"`
 	// File name
 	Name *string `json:"name"`
-	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	// The image, at most 50 MB
 	Content []byte `json:"content"`
 }
 
@@ -2868,6 +2879,9 @@ type jsonUnusedFileTransport struct {
 	// Whether the file was added within the last hour, such as to a note still
 	// being edited, whose body does not refer to it until saved
 	Recent *bool `json:"recent"`
+	// Whether an earlier version of a note, kept on this device, refers to the
+	// file, which putting that version back would need
+	InHistory *bool `json:"in_history"`
 }
 
 // validatejsonUnusedFileTransport checks decoded JSON before it becomes a service value.
@@ -2895,6 +2909,9 @@ func validatejsonUnusedFileTransport(value *jsonUnusedFileTransport) (err error)
 	}
 	if value.Recent == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("recent", "body"))
+	}
+	if value.InHistory == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("in_history", "body"))
 	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
@@ -6539,12 +6556,13 @@ func EncodeUnusedFile(in *UnusedFile) ([]byte, error) {
 	var body *jsonUnusedFileTransport
 	{
 		body = &jsonUnusedFileTransport{
-			NoteID:  &in.NoteID,
-			Title:   &in.Title,
-			Name:    &in.Name,
-			Path:    &in.Path,
-			AddedAt: &in.AddedAt,
-			Recent:  &in.Recent,
+			NoteID:    &in.NoteID,
+			Title:     &in.Title,
+			Name:      &in.Name,
+			Path:      &in.Path,
+			AddedAt:   &in.AddedAt,
+			Recent:    &in.Recent,
+			InHistory: &in.InHistory,
 		}
 		size := fileCheckInt64Transport(in.Size)
 		body.Size = &size
@@ -6577,12 +6595,13 @@ func ValidateUnusedFileValue(in *UnusedFile) error {
 	var body *jsonUnusedFileTransport
 	{
 		body = &jsonUnusedFileTransport{
-			NoteID:  &in.NoteID,
-			Title:   &in.Title,
-			Name:    &in.Name,
-			Path:    &in.Path,
-			AddedAt: &in.AddedAt,
-			Recent:  &in.Recent,
+			NoteID:    &in.NoteID,
+			Title:     &in.Title,
+			Name:      &in.Name,
+			Path:      &in.Path,
+			AddedAt:   &in.AddedAt,
+			Recent:    &in.Recent,
+			InHistory: &in.InHistory,
 		}
 		size := fileCheckInt64Transport(in.Size)
 		body.Size = &size
@@ -6619,13 +6638,14 @@ func DecodeUnusedFile(data []byte) (out *UnusedFile, err error) {
 	}
 	{
 		out = &UnusedFile{
-			NoteID:  *body.NoteID,
-			Title:   *body.Title,
-			Name:    *body.Name,
-			Path:    *body.Path,
-			Size:    int64(*body.Size),
-			AddedAt: *body.AddedAt,
-			Recent:  *body.Recent,
+			NoteID:    *body.NoteID,
+			Title:     *body.Title,
+			Name:      *body.Name,
+			Path:      *body.Path,
+			Size:      int64(*body.Size),
+			AddedAt:   *body.AddedAt,
+			Recent:    *body.Recent,
+			InHistory: *body.InHistory,
 		}
 	}
 	return out, nil
@@ -6806,13 +6826,14 @@ func decodeTextRangeTransportToTextRange(v *jsonTextRangeTransport) *TextRange {
 
 func decodeUnusedFileTransportToUnusedFile(v *jsonUnusedFileTransport) *UnusedFile {
 	res := &UnusedFile{
-		NoteID:  *v.NoteID,
-		Title:   *v.Title,
-		Name:    *v.Name,
-		Path:    *v.Path,
-		Size:    int64(*v.Size),
-		AddedAt: *v.AddedAt,
-		Recent:  *v.Recent,
+		NoteID:    *v.NoteID,
+		Title:     *v.Title,
+		Name:      *v.Name,
+		Path:      *v.Path,
+		Size:      int64(*v.Size),
+		AddedAt:   *v.AddedAt,
+		Recent:    *v.Recent,
+		InHistory: *v.InHistory,
 	}
 
 	return res
@@ -7008,12 +7029,13 @@ func encodeTextRangeToTextRangeTransport(v *TextRange) *jsonTextRangeTransport {
 
 func encodeUnusedFileToUnusedFileTransport(v *UnusedFile) *jsonUnusedFileTransport {
 	res := &jsonUnusedFileTransport{
-		NoteID:  &v.NoteID,
-		Title:   &v.Title,
-		Name:    &v.Name,
-		Path:    &v.Path,
-		AddedAt: &v.AddedAt,
-		Recent:  &v.Recent,
+		NoteID:    &v.NoteID,
+		Title:     &v.Title,
+		Name:      &v.Name,
+		Path:      &v.Path,
+		AddedAt:   &v.AddedAt,
+		Recent:    &v.Recent,
+		InHistory: &v.InHistory,
 	}
 	size := fileCheckInt64Transport(v.Size)
 	res.Size = &size
@@ -7282,6 +7304,13 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 			); err != nil {
 				return err
 			}
+		case "in_history":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether an earlier version of a note, kept on this device, refers to the file, which putting that version back would need",
+			); err != nil {
+				return err
+			}
 		case "name":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -7327,6 +7356,7 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"added_at",
+				"in_history",
 				"name",
 				"note_id",
 				"path",
@@ -7633,7 +7663,7 @@ func validateImportFileJSONValue(path string, value any, description string) err
 		case "content":
 			if err := validateAIImportFileJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The image: PNG, JPEG, GIF or WebP, at most 10 MB",
+				typed[key], "The image, at most 50 MB",
 			); err != nil {
 				return err
 			}

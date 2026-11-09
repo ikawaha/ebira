@@ -25,7 +25,7 @@ func runFiles(args []string) error {
 		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server is used, started in the background if needed")
 		addr     = fs.String("addr", defaultAddr(), "address of a server started for the check")
 		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:13579")
-		del      = fs.Bool("delete", false, "delete the unused files, except those added within the last hour")
+		del      = fs.Bool("delete", false, "delete the unused files, except those added within the last hour and those earlier versions of notes refer to")
 	)
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
@@ -59,7 +59,8 @@ func runFiles(args []string) error {
 }
 
 // checkFiles prints the unused files and the broken references, and deletes
-// the unused files that are not recent when del is set.
+// the unused files that are neither recent nor in the history of notes when
+// del is set.
 func checkFiles(ctx context.Context, check, deleteFile func(context.Context, any) (any, error), del bool, out io.Writer) error {
 	v, err := check(ctx, &gennotes.CheckFilesPayload{})
 	if err != nil {
@@ -72,6 +73,8 @@ func checkFiles(ctx context.Context, check, deleteFile func(context.Context, any
 		note := ""
 		if f.Recent {
 			note = "  (added within the last hour; the note may be being edited)"
+		} else if f.InHistory {
+			note = "  (an earlier version of a note refers to it)"
 		}
 		added := f.AddedAt
 		if t, err := time.Parse(time.RFC3339, f.AddedAt); err == nil {
@@ -86,13 +89,13 @@ func checkFiles(ctx context.Context, check, deleteFile func(context.Context, any
 	}
 	if !del {
 		if len(res.Unused) > 0 {
-			fmt.Fprintf(out, "%s in unused files; run with -delete to delete them, except recent ones.\n", formatSize(size))
+			fmt.Fprintf(out, "%s in unused files; run with -delete to delete them, except recent ones and those in the history of notes.\n", formatSize(size))
 		}
 		return nil
 	}
 	deleted, freed := 0, int64(0)
 	for _, f := range res.Unused {
-		if f.Recent {
+		if f.Recent || f.InHistory {
 			continue
 		}
 		if _, err := deleteFile(ctx, &gennotes.DeleteFilePayload{ID: f.NoteID, Name: f.Name}); err != nil {

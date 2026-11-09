@@ -19,7 +19,7 @@ type (
 		ID *string `json:"id"`
 		// File name
 		Name *string `json:"name"`
-		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		// The file, base64-encoded, at most 5 MB
 		Content []byte `json:"content"`
 	}
 	// AddAiFileResultTransport is the internal JSON transport type for AddAiFileResult.

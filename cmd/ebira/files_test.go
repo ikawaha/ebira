@@ -13,6 +13,7 @@ func TestCheckFiles(t *testing.T) {
 		Unused: []*gennotes.UnusedFile{
 			{NoteID: "n1", Title: "One", Name: "old.png", Path: "n1.assets/old.png", Size: 2048, AddedAt: "2026-10-15T12:00:00Z"},
 			{NoteID: "n1", Title: "One", Name: "new.png", Path: "n1.assets/new.png", Size: 100, AddedAt: "2026-10-17T11:50:00Z", Recent: true},
+			{NoteID: "n2", Title: "Two", Name: "kept.pdf", Path: "n2.assets/kept.pdf", Size: 10, AddedAt: "2026-10-15T12:00:00Z", InHistory: true},
 		},
 		Broken: []*gennotes.BrokenFileRef{{NoteID: "n3", Title: "Three", Path: "n3.assets/gone.png"}},
 	}
@@ -27,7 +28,7 @@ func TestCheckFiles(t *testing.T) {
 	if err := checkFiles(context.Background(), check, deleteFile, false, &out); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Unused files: 2", "n1.assets/old.png  2.0 KB", "n1.assets/new.png  100 B", "within the last hour", "Broken references: 1", "n3.assets/gone.png  in Three (n3)", "run with -delete"} {
+	for _, want := range []string{"Unused files: 3", "n1.assets/old.png  2.0 KB", "n1.assets/new.png  100 B", "within the last hour", "an earlier version", "Broken references: 1", "n3.assets/gone.png  in Three (n3)", "run with -delete"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("output lacks %q:\n%s", want, out.String())
 		}
