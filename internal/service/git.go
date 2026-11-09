@@ -34,6 +34,13 @@ func (s *Notes) GitSync(ctx context.Context, p *gennotes.GitSyncPayload) (*genno
 	if !fromPerson(ctx) {
 		return nil, gennotes.MakeForbidden(errors.New("only people can sync with git"))
 	}
+	// Connecting a remote makes the server run git transports toward it, so
+	// it is an important operation, as are the history and emptying the trash.
+	if deref(p.Remote) != "" {
+		if err := requireVerified(ctx); err != nil {
+			return nil, err
+		}
+	}
 	s.gitMu.Lock()
 	defer s.gitMu.Unlock()
 	label := "conflict " + s.now().Local().Format("2006-01-02 15:04")

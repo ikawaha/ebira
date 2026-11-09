@@ -22,6 +22,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // ErrNotRepo is returned when the notes directory is not in a git repository,
@@ -110,11 +111,24 @@ func Open(ctx context.Context, dir string) (*Repo, error) {
 	return r, nil
 }
 
+// checkURL refuses a remote repository URL that git could take for an option
+// or that holds a control character. The URL is also given to git after --,
+// so that it is only ever a repository.
+func checkURL(url string) error {
+	if url == "" || strings.HasPrefix(url, "-") || strings.ContainsFunc(url, unicode.IsControl) {
+		return fmt.Errorf("invalid remote repository URL %q", url)
+	}
+	return nil
+}
+
 // RemoteBranch returns the default branch of the remote repository url, or
 // "" when the repository has no branch yet.
 func RemoteBranch(ctx context.Context, url string) (string, error) {
+	if err := checkURL(url); err != nil {
+		return "", err
+	}
 	r := &Repo{}
-	out, err := r.git(ctx, "ls-remote", "--symref", url, "HEAD")
+	out, err := r.git(ctx, "ls-remote", "--symref", "--", url, "HEAD")
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +139,7 @@ func RemoteBranch(ctx context.Context, url string) (string, error) {
 		}
 	}
 	// No default branch: take main or master, else the first.
-	out, err = r.git(ctx, "ls-remote", "--heads", url)
+	out, err = r.git(ctx, "ls-remote", "--heads", "--", url)
 	if err != nil {
 		return "", err
 	}
@@ -149,6 +163,9 @@ func RemoteBranch(ctx context.Context, url string) (string, error) {
 // Clone clones the remote repository url into dir, a notes directory that
 // does not exist yet or is empty.
 func Clone(ctx context.Context, url, dir string) error {
+	if err := checkURL(url); err != nil {
+		return err
+	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return err
@@ -156,7 +173,7 @@ func Clone(ctx context.Context, url, dir string) error {
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 		return err
 	}
-	if _, err := (&Repo{root: filepath.Dir(abs)}).git(ctx, "clone", "--quiet", url, abs); err != nil {
+	if _, err := (&Repo{root: filepath.Dir(abs)}).git(ctx, "clone", "--quiet", "--", url, abs); err != nil {
 		return err
 	}
 	// The default branch of the remote may not exist, such as when the
@@ -218,7 +235,7 @@ func Connect(ctx context.Context, dir, url string, locked func(f func() error) e
 		}
 	}
 	if addOrigin {
-		if _, err := r.git(ctx, "remote", "add", "origin", url); err != nil {
+		if _, err := r.git(ctx, "remote", "add", "--", "origin", url); err != nil {
 			return nil, err
 		}
 	}
@@ -455,8 +472,15 @@ func (r *Repo) abortMerge(ctx context.Context) {
 }
 
 // stages are the versions of an unmerged file: the blob of ours (stage 2)
-// and of theirs (stage 3); empty when the side deleted the file.
-type stages struct{ ours, theirs string }
+// and of theirs (stage 3); empty when the side deleted the file. special is
+// set when either version is not a regular file, such as a symbolic link.
+type stages struct {
+	ours, theirs string
+	special      bool
+}
+
+// regular tells whether a mode of git ls-files is a regular file's.
+func regular(mode string) bool { return mode == "100644" || mode == "100755" }
 
 // unmerged returns the unmerged files, by their paths relative to the top.
 func (r *Repo) unmerged(ctx context.Context) (map[string]*stages, error) {
@@ -485,6 +509,9 @@ func (r *Repo) unmerged(ctx context.Context) (map[string]*stages, error) {
 		case "3":
 			s.theirs = f[1]
 		}
+		if (f[2] == "2" || f[2] == "3") && !regular(f[0]) {
+			s.special = true
+		}
 	}
 	return files, nil
 }
@@ -492,9 +519,14 @@ func (r *Repo) unmerged(ctx context.Context) (map[string]*stages, error) {
 // resolve resolves the unmerged files of a merge, all of which must be notes'
 // files.
 func (r *Repo) resolve(ctx context.Context, unmerged map[string]*stages, res *Result, isNote IsNote, resolve Resolver) error {
-	for p := range unmerged {
+	for p, s := range unmerged {
 		if _, ok := r.inNotes(p); !ok {
 			return fmt.Errorf("a file outside the notes changed on both sides: %s; merge it by hand in %s", p, r.root)
+		}
+		// A symbolic link (or a submodule) is not a note's file: writing the
+		// kept version through it could reach outside the notes.
+		if s.special {
+			return fmt.Errorf("a file that is not a regular file changed on both sides: %s; merge it by hand in %s", p, r.root)
 		}
 	}
 	for p, s := range unmerged {
@@ -534,17 +566,46 @@ func (r *Repo) resolve(ctx context.Context, unmerged map[string]*stages, res *Re
 	return nil
 }
 
-// writeBlob writes the blob to the file p, relative to the top.
+// writeBlob writes the blob to the file p, relative to the top. It never
+// follows a symbolic link: a directory on the way that is one is refused, and
+// a file there that is not a regular file is replaced, not written through.
 func (r *Repo) writeBlob(ctx context.Context, blob, p string) error {
 	b, err := r.git(ctx, "cat-file", "blob", blob)
 	if err != nil {
 		return err
 	}
 	full := filepath.Join(r.root, filepath.FromSlash(p))
-	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+	dir := filepath.Dir(full)
+	for d := dir; d != r.root && strings.HasPrefix(d, r.root+string(filepath.Separator)); d = filepath.Dir(d) {
+		if fi, err := os.Lstat(d); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s: a directory on the way is a symbolic link", p)
+		}
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(full, []byte(b), 0o644)
+	if fi, err := os.Lstat(full); err == nil && !fi.Mode().IsRegular() {
+		if err := os.Remove(full); err != nil {
+			return err
+		}
+	}
+	f, err := os.CreateTemp(dir, ".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	if _, err := f.WriteString(b); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Chmod(0o644); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), full)
 }
 
 // pathspec returns the pathspec of the files to commit: the notes directory,
