@@ -254,6 +254,8 @@
   "copyTitle": "Copy as Markdown, with the title, to the clipboard (y)",
   "copiedMarkdown": "Copied {title} as Markdown.",
   "copyFailed": "Could not copy: {error}",
+  "downloaded": "Saved {name} in Downloads.",
+  "downloadFailed": "Could not save {name}: {error}",
   "markTitle": "Mark (M)",
   "markMenu": "Mark",
   "markNone": "No mark",

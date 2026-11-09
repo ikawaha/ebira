@@ -101,6 +101,11 @@ func (s *shell) onPageMessage(data string) {
 		pageState
 		Text string `json:"text"`
 		URL  string `json:"url"`
+		// download: a part of a file to save
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Data string `json:"data"`
+		End  bool   `json:"end"`
 	}
 	if err := json.Unmarshal([]byte(data), &m); err != nil {
 		log.Print("a message of the page: ", err)
@@ -113,6 +118,8 @@ func (s *shell) onPageMessage(data string) {
 		s.openURL(m.URL)
 	case "restart": // the mark of an outdated server (markOutdated)
 		go s.askRestart()
+	case "download": // a file of a note (downloadFile)
+		s.download(m.ID, m.Name, m.Data, m.End)
 	case "copy":
 		if !s.app.Clipboard.SetText(m.Text) {
 			log.Printf("the clipboard took no text of %d bytes", len(m.Text))

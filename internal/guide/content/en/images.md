@@ -11,7 +11,7 @@ While editing, paste an image or another file, or drop one onto the editor, to a
 
 - Images and files are kept in the folder `<note ID>.assets/` next to the note, and move, go to the trash and are deleted with it.
 - The images shown in the body are PNG, JPEG, GIF and WebP. Other files may be of any type. Each may be up to 50 MB.
-- Clicking a link opens a PDF in a new tab, and downloads another file.
+- Clicking a link opens a PDF in a new tab, and downloads another file. In the desktop app, any file is saved in the Downloads folder (with a number, as in "name 2", when the name is taken).
 - Save a new note once before adding images or files.
 
 ## Checking files

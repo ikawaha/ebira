@@ -4310,6 +4310,12 @@ window.ebira = {
   newNotebook: () => openNewNotebook(),
   renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
   emptyTrash: () => { if (trashFull()) emptyTrash(); },
+  // downloaded tells how saving a file of a note went (downloadFile): the name
+  // the file took, or the error.
+  downloaded: (name, error) => {
+    if (error) alert(t("downloadFailed", { name, error }));
+    else showToast(t("downloaded", { name }));
+  },
 };
 
 // canRenameNotebook reports whether the notebook shown can be renamed in its
@@ -4378,13 +4384,46 @@ function openOutside(url) {
   else window.open(url, "_blank", "noopener");
 }
 
-// In the desktop app, links that open a new tab go to the browser.
+// In the desktop app, links that open a new tab go to the browser, and the
+// files of notes to the downloads folder.
 document.addEventListener("click", (e) => {
   const a = e.target.closest?.("a[target=_blank]");
   if (!a || !inApp() || e.defaultPrevented) return;
   e.preventDefault();
-  tellApp("openURL", { url: a.href });
+  if (a.classList.contains("attachment")) downloadFile(a.href);
+  else tellApp("openURL", { url: a.href });
 }, true);
+
+// DOWNLOAD_PART is the most of a file sent to the app in one message.
+const DOWNLOAD_PART = 4 << 20;
+let downloadSeq = 0;
+
+// downloadFile has the desktop app save the file of a note at url in the
+// downloads folder. The page reads it, as the browser the app would open has
+// no session of this page under passkey sign-in, and sends it in parts; the
+// app answers with window.ebira.downloaded.
+async function downloadFile(url) {
+  const name = decodeURIComponent(new URL(url).pathname.split("/").pop());
+  let blob;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    blob = await res.blob();
+  } catch (e) {
+    alert(t("downloadFailed", { name, error: e.message }));
+    return;
+  }
+  const id = `${Date.now()}-${++downloadSeq}`;
+  for (let at = 0; at === 0 || at < blob.size; at += DOWNLOAD_PART) {
+    const part = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob.slice(at, at + DOWNLOAD_PART));
+    });
+    tellApp("download", { id, name, data: part.slice(part.indexOf(",") + 1), end: at + DOWNLOAD_PART >= blob.size });
+  }
+}
 
 let toldState = "";
 

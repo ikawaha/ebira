@@ -168,3 +168,15 @@ func saveFrame(win *application.WebviewWindow) {
 	w, h := win.Size()
 	setSetting(frameKey, fmt.Sprintf("%d,%d,%d,%d", x, y, w, h))
 }
+
+// downloadsDir is where the files of notes are saved: the Downloads folder of
+// the user.
+func downloadsDir() (string, error) {
+	return windows.KnownFolderPath(windows.FOLDERID_Downloads, 0)
+}
+
+// markDownloaded marks a saved file as one from the internet, as browsers do,
+// so that Windows checks it when it is opened.
+func markDownloaded(path string) error {
+	return os.WriteFile(path+":Zone.Identifier", []byte("[ZoneTransfer]\r\nZoneId=3\r\n"), 0o644)
+}
