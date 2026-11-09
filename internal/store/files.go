@@ -19,7 +19,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// The files of a note, such as images, are kept in a directory next to the
+// The files of a note, images and other attachments, are kept in a directory next to the
 // note file, notes/<notebook>/<id>.assets/, and move with the note. The body
 // refers to them by paths relative to the note file, <id>.assets/<name>, so
 // that it reads as a Markdown file put in the notebook directory. The suffix
@@ -30,17 +30,16 @@ import (
 const AssetsSuffix = ".assets"
 
 // MaxFileSize is the largest file a note may hold.
-const MaxFileSize = 10 << 20
+const MaxFileSize = 50 << 20
 
 var (
-	ErrUnsupportedFile = errors.New("unsupported file: only PNG, JPEG, GIF and WebP images are accepted")
-	ErrFileTooLarge    = fmt.Errorf("file is larger than %d MB", MaxFileSize>>20)
-	ErrFileNotFound    = errors.New("file not found")
+	ErrFileTooLarge = fmt.Errorf("file is larger than %d MB", MaxFileSize>>20)
+	ErrFileNotFound = errors.New("file not found")
 )
 
-// fileTypes maps the content types of the files a note may hold to their
+// imageTypes maps the content types of the images shown in the body to their
 // extensions. SVG is left out on purpose: it may hold scripts.
-var fileTypes = map[string]string{
+var imageTypes = map[string]string{
 	"image/png":  ".png",
 	"image/jpeg": ".jpg",
 	"image/gif":  ".gif",
@@ -48,11 +47,32 @@ var fileTypes = map[string]string{
 }
 
 // FileType returns the content type of a file from its first bytes, and
-// whether a note may hold such a file.
+// whether it is an image shown in the body. Notes hold files of any type, but
+// only images are served as their type, and other files as downloads, so
+// that a file such as an HTML or SVG file never runs in the origin of the web
+// UI.
 func FileType(head []byte) (string, bool) {
 	ct := http.DetectContentType(head)
-	_, ok := fileTypes[ct]
+	_, ok := imageTypes[ct]
 	return ct, ok
+}
+
+// maxExt is the longest extension kept from the name of a file.
+const maxExt = 16
+
+// fileExt returns the extension of name made usable for a file of a note: in
+// lower case, of ASCII letters and digits only, or empty if it is not.
+func fileExt(name string) string {
+	ext := strings.ToLower(path.Ext(path.Base(strings.ReplaceAll(name, `\`, "/"))))
+	if len(ext) < 2 || len(ext) > maxExt+1 {
+		return ""
+	}
+	for _, r := range ext[1:] {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return ""
+		}
+	}
+	return ext
 }
 
 // FilePath returns the path of a file of note id, relative to the note file,
@@ -93,27 +113,26 @@ func CleanFileName(name, ext string) string {
 }
 
 // validFileName reports whether name can be the name of a file of a note:
-// cleaned up as CleanFileName does, with an extension of an accepted type.
+// cleaned up as CleanFileName does, with an extension as fileExt leaves it.
 func validFileName(name string) bool {
-	ext := path.Ext(name)
-	for _, e := range fileTypes {
-		if e == ext {
-			return CleanFileName(name, ext) == name
-		}
+	ext := fileExt(name)
+	if ext != path.Ext(name) {
+		return false
 	}
-	return false
+	return CleanFileName(name, ext) == name
 }
 
 // AddFile adds a file with the content b to note id and returns its name:
-// name cleaned up (see CleanFileName) with the extension of its type, and a
-// suffix such as -2 when the name is taken.
+// name cleaned up (see CleanFileName) with the extension of its type for an
+// image and its own extension (see fileExt) for another file, and a suffix
+// such as -2 when the name is taken.
 func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	if len(b) > MaxFileSize {
 		return "", ErrFileTooLarge
 	}
-	ct, ok := FileType(b)
-	if !ok {
-		return "", ErrUnsupportedFile
+	ext := fileExt(name)
+	if ct, ok := FileType(b); ok {
+		ext = imageTypes[ct]
 	}
 	place, err := s.locate(id)
 	if err != nil {
@@ -123,7 +142,6 @@ func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
-	ext := fileTypes[ct]
 	clean := CleanFileName(name, ext)
 	stem := strings.TrimSuffix(clean, ext)
 	for i := 1; ; i++ {
@@ -237,10 +255,10 @@ func (s *Store) AllFiles() ([]NoteFile, error) {
 
 // fileRef matches a reference to a file of a note in a body, as a path
 // relative to the note file: <id>.assets/<name>, with the name as is or
-// percent-encoded. It finds references anywhere, such as in Markdown images
-// and links, HTML attributes and code, so that a file counts as used rather
-// than not.
-var fileRef = regexp.MustCompile(`([a-z0-9][a-z0-9_-]{0,63})\.assets/((?:[\p{L}\p{N}_-]|%[0-9A-Fa-f]{2})+\.(?:png|jpg|gif|webp))`)
+// percent-encoded, and an extension as fileExt leaves it, if any. It finds
+// references anywhere, such as in Markdown images and links, HTML attributes
+// and code, so that a file counts as used rather than not.
+var fileRef = regexp.MustCompile(`([a-z0-9][a-z0-9_-]{0,63})\.assets/((?:[\p{L}\p{N}_-]|%[0-9A-Fa-f]{2})+(?:\.[a-z0-9]{1,16})?)`)
 
 // FileRef is a reference to a file of a note found in a body.
 type FileRef struct {

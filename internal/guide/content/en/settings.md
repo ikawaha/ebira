@@ -9,7 +9,7 @@ tags: [guide, settings]
 - Style…: how the preview looks (Band, Document, Compact or Lined)
 - Server settings…: change the language, authentication, search mode and more, in the two files below
 - Import Markdown (or drop files onto the page)
-- Check images, Server status, Sync with git
+- Check files, Server status, Sync with git
 - Add the guide
 - Report an issue: open the page to post a request or a bug on GitHub
 - At the bottom, the version of ebira; choose it to copy the details, to tell in a report

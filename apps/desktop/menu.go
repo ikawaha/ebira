@@ -189,7 +189,7 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(key(file.Add("New Notebook…"), "cmd+shift+n", "ctrl+shift+n").OnClick(on(func() { s.call("newNotebook") })), notEditing)
 	file.AddSeparator()
 	n.add(file.Add("Import Markdown…").OnClick(on(func() { s.call("importFiles") })), notEditing)
-	n.add(file.Add("Check Images…").OnClick(on(func() { s.call("checkFiles") })), always)
+	n.add(file.Add("Check Files…").OnClick(on(func() { s.call("checkFiles") })), always)
 	n.add(file.Add("Sync with Git").OnClick(on(func() { s.call("syncGit") })), inGit)
 	file.AddSeparator()
 	if mac {

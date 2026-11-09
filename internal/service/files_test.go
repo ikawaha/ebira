@@ -12,6 +12,7 @@ import (
 	"time"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/history"
 	"github.com/ikawaha/ebira/internal/store"
 )
 
@@ -52,7 +53,6 @@ func TestFiles(t *testing.T) {
 	}{
 		{"AI", "not_found", ai, &gennotes.AddFilePayload{ID: "n1", Name: "a.png"}, pngHead},
 		{"missing note", "not_found", person, &gennotes.AddFilePayload{ID: "missing", Name: "a.png"}, pngHead},
-		{"SVG", "bad_request", person, &gennotes.AddFilePayload{ID: "n1", Name: "a.svg"}, []byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`)},
 		{"too large", "too_large", person, &gennotes.AddFilePayload{ID: "n1", Name: "a.png"}, append(bytes.Clone(pngHead), make([]byte, store.MaxFileSize)...)},
 	} {
 		if _, err := svc.AddFile(tt.ctx, tt.p, body(tt.b)); errorName(err) != tt.want {
@@ -66,13 +66,26 @@ func TestFiles(t *testing.T) {
 		t.Errorf("DeleteFile by AI: %v", err)
 	}
 
-	// A file put in the directory by hand is served only if it is an image of
-	// an accepted type.
-	if err := os.WriteFile(filepath.Join(dir, "work", "n1.assets", "page.png"), []byte("<html><script>alert(1)</script>"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := svc.GetFile(person, &gennotes.GetFilePayload{ID: "n1", Name: "page.png"}); errorName(err) != "not_found" {
-		t.Errorf("GetFile of HTML named .png: %v", err)
+	// Images and PDF files are shown; other files, also an HTML file named
+	// .png, are served as downloads.
+	for _, tt := range []struct{ name, content, ct, disposition string }{
+		{"page.png", "<html><script>alert(1)</script>", "application/octet-stream", "attachment; filename=page.png"},
+		{"a.svg", `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`, "application/octet-stream", "attachment; filename=a.svg"},
+		{"report.pdf", "%PDF-1.7\n", "application/pdf", "inline; filename=report.pdf"},
+		{"報告.zip", "PK\x03\x04", "application/octet-stream", "attachment; filename*=utf-8''%E5%A0%B1%E5%91%8A.zip"},
+	} {
+		got, err := svc.AddFile(person, &gennotes.AddFilePayload{ID: "n1", Name: tt.name}, body([]byte(tt.content)))
+		if err != nil || got.Name != tt.name {
+			t.Fatalf("AddFile(%q) = %+v, %v", tt.name, got, err)
+		}
+		res, rc, err := svc.GetFile(person, &gennotes.GetFilePayload{ID: "n1", Name: tt.name})
+		if err != nil {
+			t.Fatalf("GetFile(%q): %v", tt.name, err)
+		}
+		rc.Close()
+		if res.ContentType != tt.ct || res.Disposition != tt.disposition || res.Length != int64(len(tt.content)) {
+			t.Errorf("GetFile(%q) = %+v", tt.name, res)
+		}
 	}
 
 	// The files go with the note to the trash and back.
@@ -103,6 +116,11 @@ func TestCheckFiles(t *testing.T) {
 	ai := context.Background()
 	person := AsPerson(ai)
 	svc, dir := newTestService(t)
+	h, err := history.New(filepath.Join(filepath.Dir(dir), "history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.SetHistory(h)
 	now := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
 	svc.now = func() time.Time { return now }
 	for _, n := range []struct{ id, title string }{{"n1", "One"}, {"n2", "Two"}, {"n3", "Three"}} {
@@ -132,8 +150,10 @@ func TestCheckFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// n1 uses its own file and one of n2; n3, in the trash, uses its own file
-	// and refers to one that is gone.
+	// n1 uses its own file and one of n2, and used old.png in an earlier
+	// version; n3, in the trash, uses its own file and refers to one that is
+	// gone.
+	update("n1", "[o](n1.assets/old.png)")
 	update("n1", "![u](n1.assets/used.png)\n![e](n2.assets/elsewhere.png)")
 	update("n3", "![t](n3.assets/trash.png)\n![g](n3.assets/gone.png)\n![g](n9.assets/x.png)")
 	if err := svc.Delete(person, &gennotes.DeletePayload{ID: "n3"}); err != nil {
@@ -146,14 +166,14 @@ func TestCheckFiles(t *testing.T) {
 	}
 	var unused, broken []string
 	for _, f := range res.Unused {
-		unused = append(unused, fmt.Sprintf("%s %s %s %v", f.Path, f.Title, f.AddedAt, f.Recent))
+		unused = append(unused, fmt.Sprintf("%s %s %s %v %v", f.Path, f.Title, f.AddedAt, f.Recent, f.InHistory))
 	}
 	for _, b := range res.Broken {
 		broken = append(broken, b.Title+" "+b.Path)
 	}
 	wantUnused := []string{
-		"n1.assets/new.png One 2026-10-17T11:50:00Z true",
-		"n1.assets/old.png One 2026-10-15T12:00:00Z false",
+		"n1.assets/new.png One 2026-10-17T11:50:00Z true false",
+		"n1.assets/old.png One 2026-10-15T12:00:00Z false true",
 	}
 	if !slices.Equal(unused, wantUnused) {
 		t.Errorf("unused = %q, want %q", unused, wantUnused)

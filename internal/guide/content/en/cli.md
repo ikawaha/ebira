@@ -9,7 +9,7 @@ tags: [guide, terminal]
 | `ebira server start` / `stop` / `restart` / `status` | Run the server in the background |
 | `ebira serve` | Run the server in the foreground |
 | `ebira import path…` | Import Markdown files |
-| `ebira files check` | Find images no note uses |
+| `ebira files check` | Find images and files no note uses |
 | `ebira sync` | Sync with git |
 | `ebira auth passkey` | Register a passkey |
 | `ebira version` | Print the version |

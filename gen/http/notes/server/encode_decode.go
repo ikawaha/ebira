@@ -3443,6 +3443,7 @@ func EncodeGetFileResponse(encoder func(context.Context, http.ResponseWriter) go
 			lengths := strconv.FormatInt(val, 10)
 			w.Header().Set("Content-Length", lengths)
 		}
+		w.Header().Set("Content-Disposition", res.Disposition)
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -5088,13 +5089,14 @@ func marshalNotesNoteVersionSummaryToNoteVersionSummaryResponse(v *notes.NoteVer
 // *UnusedFileResponseBody from a value of type *notes.UnusedFile.
 func marshalNotesUnusedFileToUnusedFileResponseBody(v *notes.UnusedFile) *UnusedFileResponseBody {
 	res := &UnusedFileResponseBody{
-		NoteID:  v.NoteID,
-		Title:   v.Title,
-		Name:    v.Name,
-		Path:    v.Path,
-		Size:    v.Size,
-		AddedAt: v.AddedAt,
-		Recent:  v.Recent,
+		NoteID:    v.NoteID,
+		Title:     v.Title,
+		Name:      v.Name,
+		Path:      v.Path,
+		Size:      v.Size,
+		AddedAt:   v.AddedAt,
+		Recent:    v.Recent,
+		InHistory: v.InHistory,
 	}
 
 	return res
