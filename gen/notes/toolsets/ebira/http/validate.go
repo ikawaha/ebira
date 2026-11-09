@@ -57,9 +57,6 @@ func ValidateCreateAiNotePayloadTransport(body *CreateAiNotePayloadTransport) (e
 	if body.Title == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
 	}
-	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
-	}
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}

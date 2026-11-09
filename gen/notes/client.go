@@ -549,9 +549,8 @@ func (c *Client) Import(ctx context.Context, p *ImportPayload) (res *ImportResul
 
 // CreateAiNote calls the "create_ai_note" endpoint of the "notes" service.
 // CreateAiNote may return the following errors:
-//   - "bad_request" (type *goa.ServiceError): The ID is given for a drop notebook, or the notebook is invalid
+//   - "bad_request" (type *goa.ServiceError): The notebook is invalid
 //   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab or drop kind
-//   - "already_exists" (type *goa.ServiceError): A note with the ID exists
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error

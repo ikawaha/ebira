@@ -1059,9 +1059,8 @@ var _ = Service("notes", func() {
 	// edit notes with create, update and delete.
 	Method("create_ai_note", func() {
 		NoSecurity()
-		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note is marked as created by AI (created_by).")
+		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note gets a random ID, which the result has, and is marked as created by AI (created_by).")
 		Payload(func() {
-			Attribute("id", String, "Note ID; random if omitted. Must be omitted for a drop notebook", noteIDDSL)
 			RequiredAttribute("notebook", String, "ID of a notebook of the collab or drop kind", notebookIDDSL)
 			RequiredAttribute("title", String, "Title", func() {
 				MinLength(1)
@@ -1070,9 +1069,8 @@ var _ = Service("notes", func() {
 			Attribute("body", String, "Body in Markdown")
 		})
 		Result(Note)
-		Error("bad_request", ErrorResult, "The ID is given for a drop notebook, or the notebook is invalid")
+		Error("bad_request", ErrorResult, "The notebook is invalid")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
-		Error("already_exists", ErrorResult, "A note with the ID exists")
 		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only")
 	})
 
