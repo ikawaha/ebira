@@ -515,4 +515,17 @@ func TestWriteBlobReplacesLink(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(base, "b.yaml")); !errors.Is(err, os.ErrNotExist) {
 		t.Error("created outside through the linked directory")
 	}
+
+	// A regular file keeps its permissions.
+	exe := filepath.Join(top, "notes", "run.sh")
+	write(t, exe, "old\n")
+	if err := os.Chmod(exe, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.writeBlob(ctx, blob, "notes/run.sh"); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(exe); err != nil || fi.Mode().Perm() != 0o750 {
+		t.Errorf("mode = %v %v, want 0750", fi.Mode().Perm(), err)
+	}
 }

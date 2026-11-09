@@ -584,8 +584,12 @@ func (r *Repo) writeBlob(ctx context.Context, blob, p string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	if fi, err := os.Lstat(full); err == nil && !fi.Mode().IsRegular() {
-		if err := os.Remove(full); err != nil {
+	// The file keeps its permissions, as git writes it in place.
+	perm := os.FileMode(0o644)
+	if fi, err := os.Lstat(full); err == nil {
+		if fi.Mode().IsRegular() {
+			perm = fi.Mode().Perm()
+		} else if err := os.Remove(full); err != nil {
 			return err
 		}
 	}
@@ -598,7 +602,7 @@ func (r *Repo) writeBlob(ctx context.Context, blob, p string) error {
 		f.Close()
 		return err
 	}
-	if err := f.Chmod(0o644); err != nil {
+	if err := f.Chmod(perm); err != nil {
 		f.Close()
 		return err
 	}

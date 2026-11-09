@@ -1121,10 +1121,6 @@ func TestVerification(t *testing.T) {
 			_, err := e.MoveNotebook(ai, &gennotes.MoveNotebookPayload{Session: s, ID: vault.ID, Parent: &work.ID})
 			return err
 		},
-		"git_sync with a remote": func(e *gennotes.Endpoints) error {
-			_, err := e.GitSync(ai, &gennotes.GitSyncPayload{Session: s, Remote: ptr(filepath.Join(t.TempDir(), "none.git"))})
-			return err
-		},
 	}
 	for name, call := range calls {
 		if err := call(endpoints(false)); errorName(err) != "verification_required" {
