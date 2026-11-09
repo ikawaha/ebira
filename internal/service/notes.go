@@ -18,6 +18,7 @@ import (
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/history"
+	"github.com/ikawaha/ebira/internal/importer"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/store"
 )
@@ -163,6 +164,9 @@ func (s *Notes) create(ctx context.Context, p *gennotes.CreatePayload, createdBy
 	if n.Notebook == store.Trash {
 		return nil, gennotes.MakeBadRequest(errors.New("cannot create a note in the trash"))
 	}
+	if err := checkBody(n.Body); err != nil {
+		return nil, err
+	}
 	if err := s.store.Create(n); err != nil {
 		return nil, mapErr(err)
 	}
@@ -171,6 +175,19 @@ func (s *Notes) create(ctx context.Context, p *gennotes.CreatePayload, createdBy
 	}
 	s.events.publish(eventCreated, n.ID)
 	return toNote(n), nil
+}
+
+// maxBody is the largest body a note gets through the API, in bytes: that
+// of a Markdown file imported. A body grows with append and edits too, so
+// the body is checked as it is to be written, not as sent.
+const maxBody = importer.MaxSize
+
+// checkBody fails a body larger than maxBody.
+func checkBody(body string) error {
+	if len(body) > maxBody {
+		return gennotes.MakeBadRequest(fmt.Errorf("the body is larger than %d MB", maxBody>>20))
+	}
+	return nil
 }
 
 func (s *Notes) Update(ctx context.Context, p *gennotes.UpdatePayload) (*gennotes.Note, error) {
@@ -203,6 +220,9 @@ func (s *Notes) updateNote(ctx context.Context, p *gennotes.UpdatePayload) (*gen
 		n.Tags = tags(p.Tags)
 	}
 	if p.Body != nil {
+		if err := checkBody(*p.Body); err != nil {
+			return nil, err
+		}
 		n.Body = *p.Body
 	}
 	if edited {
