@@ -351,25 +351,22 @@ func DecodeDeviceStartRequest(mux goahttp.Muxer, decoder func(*http.Request) goa
 	return func(r *http.Request) (*auth.DeviceStartPayload, error) {
 		var payload *auth.DeviceStartPayload
 		var (
-			body DeviceStartRequestBody
-			err  error
+			client *string
+			err    error
 		)
-		err = decoder(r).Decode(&body)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return payload, goa.MissingPayloadError()
-			}
-			var gerr *goa.ServiceError
-			if errors.As(err, &gerr) {
-				return payload, gerr
-			}
-			return payload, goa.DecodePayloadError(err.Error())
+		clientRaw := r.URL.Query().Get("client")
+		if clientRaw != "" {
+			client = &clientRaw
 		}
-		err = ValidateDeviceStartRequestBody(&body)
+		if client != nil {
+			if !(*client == "tui" || *client == "cli") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("client", *client, []any{"tui", "cli"}))
+			}
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDeviceStartPayload(&body)
+		payload = NewDeviceStartPayload(client)
 
 		return payload, nil
 	}

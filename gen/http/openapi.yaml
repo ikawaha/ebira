@@ -130,11 +130,14 @@ paths:
             description: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.
             operationId: auth#device_start
             parameters:
-                - name: device_start_request_body
-                  in: body
-                  required: true
-                  schema:
-                    $ref: '#/definitions/AuthDeviceStartRequestBody'
+                - name: client
+                  in: query
+                  description: 'What asks to sign in, which the web UI shows when people approve it: tui for the TUI, cli for a command such as ebira import'
+                  required: false
+                  type: string
+                  enum:
+                    - tui
+                    - cli
             responses:
                 "200":
                     description: OK response.
@@ -4228,19 +4231,6 @@ definitions:
             - temporary
             - timeout
             - fault
-    AuthDeviceStartRequestBody:
-        title: AuthDeviceStartRequestBody
-        type: object
-        properties:
-            client:
-                type: string
-                description: 'What asks to sign in, which the web UI shows when people approve it: tui for the TUI, cli for a command such as ebira import'
-                example: cli
-                enum:
-                    - tui
-                    - cli
-        example:
-            client: cli
     AuthDeviceStartResponseBody:
         title: AuthDeviceStartResponseBody
         type: object

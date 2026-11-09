@@ -116,21 +116,22 @@ func BuildLoginFinishPayload(authLoginFinishBody *string) (*auth.CeremonyFinish,
 
 // BuildDeviceStartPayload builds the payload for the auth device_start
 // endpoint from CLI flags.
-func BuildDeviceStartPayload(authDeviceStartBody *string) (*auth.DeviceStartPayload, error) {
+func BuildDeviceStartPayload(authDeviceStartClient *string) (*auth.DeviceStartPayload, error) {
 	var err error
-	var body DeviceStartRequestBody
+	var client *string
 	{
-		if authDeviceStartBody == nil {
-			return nil, fmt.Errorf("missing required flag --body")
-		}
-		err = json.Unmarshal([]byte(*authDeviceStartBody), &body)
-		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"client\": \"cli\"\n   }'")
+		if authDeviceStartClient != nil {
+			client = authDeviceStartClient
+			if !(*authDeviceStartClient == "tui" || *authDeviceStartClient == "cli") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("client", *authDeviceStartClient, []any{"tui", "cli"}))
+			}
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	v := &auth.DeviceStartPayload{
-		Client: body.Client,
-	}
+	v := &auth.DeviceStartPayload{}
+	v.Client = client
 
 	return v, nil
 }

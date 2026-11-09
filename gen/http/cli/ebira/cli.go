@@ -286,8 +286,8 @@ func ParseEndpoint(
 		authLoginFinishFlags    = flag.NewFlagSet("login-finish", flag.ExitOnError)
 		authLoginFinishBodyFlag = new(cliStringFlag)
 
-		authDeviceStartFlags    = flag.NewFlagSet("device-start", flag.ExitOnError)
-		authDeviceStartBodyFlag = new(cliStringFlag)
+		authDeviceStartFlags      = flag.NewFlagSet("device-start", flag.ExitOnError)
+		authDeviceStartClientFlag = new(cliStringFlag)
 
 		authDeviceTokenFlags    = flag.NewFlagSet("device-token", flag.ExitOnError)
 		authDeviceTokenBodyFlag = new(cliStringFlag)
@@ -419,7 +419,7 @@ func ParseEndpoint(
 	authRegisterBeginFlags.Var(authRegisterBeginSessionFlag, "session", "")
 	authRegisterFinishFlags.Var(authRegisterFinishBodyFlag, "body", "")
 	authLoginFinishFlags.Var(authLoginFinishBodyFlag, "body", "")
-	authDeviceStartFlags.Var(authDeviceStartBodyFlag, "body", "")
+	authDeviceStartFlags.Var(authDeviceStartClientFlag, "client", "")
 	authDeviceTokenFlags.Var(authDeviceTokenBodyFlag, "body", "")
 	authDeviceRequestFlags.Var(authDeviceRequestUserCodeFlag, "user-code", "User code shown by the client")
 	authDeviceRequestFlags.Var(authDeviceRequestSessionFlag, "session", "")
@@ -912,7 +912,7 @@ func ParseEndpoint(
 				data, err = authc.BuildLoginFinishPayload(authLoginFinishBodyFlag.value)
 			case "device-start":
 				endpoint = c.DeviceStart()
-				data, err = authc.BuildDeviceStartPayload(authDeviceStartBodyFlag.value)
+				data, err = authc.BuildDeviceStartPayload(authDeviceStartClientFlag.value)
 			case "device-token":
 				endpoint = c.DeviceToken()
 				data, err = authc.BuildDeviceTokenPayload(authDeviceTokenBodyFlag.value)
@@ -2069,7 +2069,7 @@ func authLoginFinishUsage() {
 func authDeviceStartUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] auth device-start", os.Args[0])
-	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -client STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -2077,11 +2077,11 @@ func authDeviceStartUsage() {
 	fmt.Fprintln(os.Stderr, `Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -client STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-start --body '{\n      \"client\": \"cli\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-start --client \"tui\"")
 }
 
 func authDeviceTokenUsage() {

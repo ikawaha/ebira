@@ -117,6 +117,9 @@ var _ = Service("auth", func() {
 		})
 		HTTP(func() {
 			POST("/auth/device")
+			// In the query, so that a request without a body, as of
+			// earlier clients, still begins a sign-in.
+			Param("client")
 		})
 	})
 

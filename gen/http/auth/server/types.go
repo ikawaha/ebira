@@ -39,14 +39,6 @@ type LoginFinishRequestBody struct {
 	Credential any `form:"credential,omitempty" json:"credential,omitempty" xml:"credential,omitempty"`
 }
 
-// DeviceStartRequestBody is the type of the "auth" service "device_start"
-// endpoint HTTP request body.
-type DeviceStartRequestBody struct {
-	// What asks to sign in, which the web UI shows when people approve it: tui for
-	// the TUI, cli for a command such as ebira import
-	Client *string `form:"client,omitempty" json:"client,omitempty" xml:"client,omitempty"`
-}
-
 // DeviceTokenRequestBody is the type of the "auth" service "device_token"
 // endpoint HTTP request body.
 type DeviceTokenRequestBody struct {
@@ -816,10 +808,9 @@ func NewLoginFinishCeremonyFinish(body *LoginFinishRequestBody) *auth.CeremonyFi
 }
 
 // NewDeviceStartPayload builds a auth service device_start endpoint payload.
-func NewDeviceStartPayload(body *DeviceStartRequestBody) *auth.DeviceStartPayload {
-	v := &auth.DeviceStartPayload{
-		Client: body.Client,
-	}
+func NewDeviceStartPayload(client *string) *auth.DeviceStartPayload {
+	v := &auth.DeviceStartPayload{}
+	v.Client = client
 
 	return v
 }
@@ -901,17 +892,6 @@ func ValidateLoginFinishRequestBody(body *LoginFinishRequestBody) (err error) {
 	}
 	if body.Credential == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("credential", "body"))
-	}
-	return
-}
-
-// ValidateDeviceStartRequestBody runs the validations defined on
-// DeviceStartRequestBody
-func ValidateDeviceStartRequestBody(body *DeviceStartRequestBody) (err error) {
-	if body.Client != nil {
-		if !(*body.Client == "tui" || *body.Client == "cli") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.client", *body.Client, []any{"tui", "cli"}))
-		}
 	}
 	return
 }

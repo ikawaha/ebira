@@ -39,14 +39,6 @@ type LoginFinishRequestBody struct {
 	Credential any `form:"credential" json:"credential" xml:"credential"`
 }
 
-// DeviceStartRequestBody is the type of the "auth" service "device_start"
-// endpoint HTTP request body.
-type DeviceStartRequestBody struct {
-	// What asks to sign in, which the web UI shows when people approve it: tui for
-	// the TUI, cli for a command such as ebira import
-	Client *string `form:"client,omitempty" json:"client,omitempty" xml:"client,omitempty"`
-}
-
 // DeviceTokenRequestBody is the type of the "auth" service "device_token"
 // endpoint HTTP request body.
 type DeviceTokenRequestBody struct {
@@ -478,15 +470,6 @@ func NewLoginFinishRequestBody(p *auth.CeremonyFinish) *LoginFinishRequestBody {
 	body := &LoginFinishRequestBody{
 		Ceremony:   p.Ceremony,
 		Credential: p.Credential,
-	}
-	return body
-}
-
-// NewDeviceStartRequestBody builds the HTTP request body from the payload of
-// the "device_start" endpoint of the "auth" service.
-func NewDeviceStartRequestBody(p *auth.DeviceStartPayload) *DeviceStartRequestBody {
-	body := &DeviceStartRequestBody{
-		Client: p.Client,
 	}
 	return body
 }

@@ -526,10 +526,11 @@ func EncodeDeviceStartRequest(encoder func(*http.Request) goahttp.Encoder) func(
 		if !ok {
 			return goahttp.ErrInvalidType("auth", "device_start", "*auth.DeviceStartPayload", v)
 		}
-		body := NewDeviceStartRequestBody(p)
-		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("auth", "device_start", err)
+		values := req.URL.Query()
+		if p.Client != nil {
+			values.Add("client", *p.Client)
 		}
+		req.URL.RawQuery = values.Encode()
 		return nil
 	}
 }
