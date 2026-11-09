@@ -2335,6 +2335,7 @@ async function loadNote() {
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
   addSectionCopy(body, n.body || "");
+  addCodeFolds(body, n.id);
   const title = el("h2", "", ...noteMarks(n), highlighted(n.title || t("untitled"), n.title_highlights));
   if (n.title) {
     const copy = button(kindSVG("copy"), copyTitle, { title: t("copyNoteTitle"), cls: "title-copy" });
@@ -2858,6 +2859,7 @@ function jumpFind(delta) {
   find.index = (find.index + delta + find.marks.length) % find.marks.length;
   const m = find.marks[find.index];
   m.classList.add("current");
+  unfold(m);
   m.scrollIntoView({ block: "center" });
   updateFindCount();
 }
@@ -2930,6 +2932,42 @@ function addSectionCopy(el, body) {
     copy.setAttribute("aria-label", t("copySectionTitle"));
     h.append(copy);
   });
+}
+
+// The code blocks folded in the preview, by note: the indexes of the blocks,
+// kept in the page only, so that drawing the note again keeps them.
+const codeFolds = new Map();
+
+// addCodeFolds puts each code block of a rendered body under a bar that folds
+// and unfolds it, open at first. A block with a match of the search opens
+// again, so that a match is never hidden. Math and diagrams are no code blocks.
+function addCodeFolds(body, id) {
+  const folded = codeFolds.get(id);
+  [...body.querySelectorAll("pre")].forEach((pre, i) => {
+    const code = pre.querySelector(":scope > code");
+    const lang = /(?:^|\s)language-(\S+)/.exec(code?.className || "")?.[1];
+    const lines = pre.textContent.replace(/\n$/, "").split("\n").length;
+    const label = t("codeLines", { n: lines });
+    const fold = el("details", "code-fold");
+    fold.open = !folded?.has(i) || !!pre.querySelector("mark");
+    pre.replaceWith(fold);
+    const bar = el("summary", "", kindSVG("chevron"), el("span", "code-lines", label));
+    if (lang) bar.insertBefore(el("span", "code-lang", lang), bar.lastChild);
+    fold.append(bar, pre);
+    fold.addEventListener("toggle", () => {
+      const set = codeFolds.get(id) || new Set();
+      if (fold.open) set.delete(i);
+      else set.add(i);
+      if (set.size) codeFolds.set(id, set);
+      else codeFolds.delete(id);
+    });
+  });
+}
+
+// unfold opens the folded code block that holds node, to show it.
+function unfold(node) {
+  const fold = node.closest("details.code-fold");
+  if (fold) fold.open = true;
 }
 
 // copySection copies a section of the note in the preview to the clipboard.
@@ -3028,6 +3066,7 @@ function jumpMark(delta) {
   markIndex = (markIndex + delta + marks.length) % marks.length;
   const m = marks[markIndex];
   m.classList.add("current");
+  unfold(m);
   m.scrollIntoView({ block: "center" });
   updateMarkCount();
 }
