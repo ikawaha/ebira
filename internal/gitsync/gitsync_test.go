@@ -412,3 +412,120 @@ func TestConnectFailure(t *testing.T) {
 		t.Errorf("Connect after the failures = %+v, %v", res, err)
 	}
 }
+
+func TestRemoteURLChecked(t *testing.T) {
+	gitEnv(t)
+	ctx := context.Background()
+	for _, url := range []string{"", "-x", "--help", "repo\nx"} {
+		dir := filepath.Join(t.TempDir(), "notes")
+		if _, err := RemoteBranch(ctx, url); err == nil || !strings.Contains(err.Error(), "invalid remote") {
+			t.Errorf("RemoteBranch(%q) = %v", url, err)
+		}
+		if err := Clone(ctx, url, dir); err == nil || !strings.Contains(err.Error(), "invalid remote") {
+			t.Errorf("Clone(%q) = %v", url, err)
+		}
+		if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("Clone(%q) made %s", url, dir)
+		}
+		if _, err := Connect(ctx, dir, url, noLock, isNote, copies(dir)); err == nil || !strings.Contains(err.Error(), "invalid remote") {
+			t.Errorf("Connect(%q) = %v", url, err)
+		}
+	}
+}
+
+// A note that the other side turned into a symbolic link to a file outside
+// the notes stops the merge instead of being written through.
+func TestSyncSymlinkConflict(t *testing.T) {
+	for _, local := range []string{"edit", "delete"} {
+		t.Run(local, func(t *testing.T) {
+			a, b := clones(t)
+			outside := filepath.Join(filepath.Dir(filepath.Dir(a)), "outside.txt")
+			write(t, outside, "outside\n")
+			note := filepath.Join(a, "inbox", "a.yaml")
+			if err := os.Remove(note); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(outside, note); err != nil {
+				t.Fatal(err)
+			}
+			run(t, filepath.Dir(a), "add", "-A")
+			run(t, filepath.Dir(a), "commit", "--quiet", "-m", "link")
+			run(t, filepath.Dir(a), "push", "--quiet")
+			if local == "edit" {
+				write(t, filepath.Join(b, "inbox", "a.yaml"), "title: A\nbody: |\n  two\n")
+			} else if err := os.Remove(filepath.Join(b, "inbox", "a.yaml")); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx := context.Background()
+			r, err := Open(ctx, b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := r.Sync(ctx, noLock, isNote, copies(b)); err == nil || !strings.Contains(err.Error(), "not a regular file") {
+				t.Errorf("err = %v", err)
+			}
+			if got := read(t, outside); got != "outside\n" {
+				t.Errorf("the file outside the notes changed: %q", got)
+			}
+			if _, err := os.Stat(filepath.Join(filepath.Dir(b), ".git", "MERGE_HEAD")); !errors.Is(err, os.ErrNotExist) {
+				t.Error("the merge is left")
+			}
+		})
+	}
+}
+
+func TestWriteBlobReplacesLink(t *testing.T) {
+	gitEnv(t)
+	ctx := context.Background()
+	base := t.TempDir()
+	top := filepath.Join(base, "repo")
+	run(t, base, "init", "--quiet", top)
+	write(t, filepath.Join(top, "blob.txt"), "kept\n")
+	blob := strings.TrimSpace(run(t, top, "hash-object", "-w", "blob.txt"))
+	outside := filepath.Join(base, "outside.txt")
+	write(t, outside, "outside\n")
+	if err := os.MkdirAll(filepath.Join(top, "notes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(top, "notes", "a.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	r := &Repo{root: top}
+	if err := r.writeBlob(ctx, blob, "notes/a.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(t, outside); got != "outside\n" {
+		t.Errorf("written through the link: %q", got)
+	}
+	if fi, err := os.Lstat(filepath.Join(top, "notes", "a.yaml")); err != nil || !fi.Mode().IsRegular() {
+		t.Errorf("not a regular file: %v %v", fi, err)
+	}
+	if got := read(t, filepath.Join(top, "notes", "a.yaml")); got != "kept\n" {
+		t.Errorf("content = %q", got)
+	}
+
+	// A directory on the way that is a link is refused.
+	if err := os.Symlink(base, filepath.Join(top, "notes", "dir")); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.writeBlob(ctx, blob, "notes/dir/b.yaml"); err == nil {
+		t.Error("written below a linked directory")
+	}
+	if _, err := os.Stat(filepath.Join(base, "b.yaml")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("created outside through the linked directory")
+	}
+
+	// A regular file keeps its permissions.
+	exe := filepath.Join(top, "notes", "run.sh")
+	write(t, exe, "old\n")
+	if err := os.Chmod(exe, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.writeBlob(ctx, blob, "notes/run.sh"); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(exe); err != nil || fi.Mode().Perm() != 0o750 {
+		t.Errorf("mode = %v %v, want 0750", fi.Mode().Perm(), err)
+	}
+}
