@@ -134,7 +134,8 @@ type Service interface {
 	// or add one to a notebook of the drop kind, such as an inbox, whose notes AI
 	// clients cannot see and therefore cannot update or delete. Other notebooks
 	// are read-only for AI clients: use list_notebooks to find the notebooks whose
-	// kind is collab or drop. The note is marked as created by AI (created_by).
+	// kind is collab or drop. The note gets a random ID, which the result has, and
+	// is marked as created by AI (created_by).
 	CreateAiNote(context.Context, *CreateAiNotePayload) (res *Note, err error)
 	// Import a Markdown file as a new note in a notebook of the collab or drop
 	// kind, as create_ai_note does, converting it as people's imports do: the
@@ -277,7 +278,9 @@ type Service interface {
 	// Stop the server and start it again with the same executable, flags and
 	// environment, so that it reads the settings again. It answers before it
 	// stops; the server answers on GET /health with another instance once it runs
-	// again. For people only.
+	// again. For people only; while passkeys are required, the session must have
+	// signed in with a passkey recently, as the server starts with the settings
+	// written, which decide how it authenticates people.
 	RestartServer(context.Context, *RestartServerPayload) (err error)
 	// Scan the notes directory and bring the SQLite index in line with the YAML
 	// files. Not needed while the server watches files.
@@ -385,8 +388,6 @@ type CheckFilesPayload struct {
 // CreateAiNotePayload is the payload type of the notes service create_ai_note
 // method.
 type CreateAiNotePayload struct {
-	// Note ID; random if omitted. Must be omitted for a drop notebook
-	ID *string
 	// ID of a notebook of the collab or drop kind
 	Notebook string
 	// Title

@@ -114,6 +114,28 @@ func BuildLoginFinishPayload(authLoginFinishBody *string) (*auth.CeremonyFinish,
 	return v, nil
 }
 
+// BuildDeviceStartPayload builds the payload for the auth device_start
+// endpoint from CLI flags.
+func BuildDeviceStartPayload(authDeviceStartClient *string) (*auth.DeviceStartPayload, error) {
+	var err error
+	var client *string
+	{
+		if authDeviceStartClient != nil {
+			client = authDeviceStartClient
+			if !(*authDeviceStartClient == "tui" || *authDeviceStartClient == "cli") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("client", *authDeviceStartClient, []any{"tui", "cli"}))
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	v := &auth.DeviceStartPayload{}
+	v.Client = client
+
+	return v, nil
+}
+
 // BuildDeviceTokenPayload builds the payload for the auth device_token
 // endpoint from CLI flags.
 func BuildDeviceTokenPayload(authDeviceTokenBody *string) (*auth.DeviceTokenPayload, error) {
@@ -131,6 +153,29 @@ func BuildDeviceTokenPayload(authDeviceTokenBody *string) (*auth.DeviceTokenPayl
 	v := &auth.DeviceTokenPayload{
 		DeviceCode: body.DeviceCode,
 	}
+
+	return v, nil
+}
+
+// BuildDeviceRequestPayload builds the payload for the auth device_request
+// endpoint from CLI flags.
+func BuildDeviceRequestPayload(authDeviceRequestUserCode *string, authDeviceRequestSession *string) (*auth.DeviceRequestPayload, error) {
+	var userCode string
+	{
+		if authDeviceRequestUserCode == nil {
+			return nil, fmt.Errorf("missing required flag --user-code")
+		}
+		userCode = *authDeviceRequestUserCode
+	}
+	var session *string
+	{
+		if authDeviceRequestSession != nil {
+			session = authDeviceRequestSession
+		}
+	}
+	v := &auth.DeviceRequestPayload{}
+	v.UserCode = userCode
+	v.Session = session
 
 	return v, nil
 }

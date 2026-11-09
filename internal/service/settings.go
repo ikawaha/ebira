@@ -115,9 +115,13 @@ func (s *Notes) SaveSettings(ctx context.Context, p *gennotes.SaveSettingsPayloa
 }
 
 // RestartServer starts the server again, which stops this one. For people
-// only.
+// only, signed in with the passkey recently: the server starts with the
+// settings written, which decide how it authenticates people.
 func (s *Notes) RestartServer(ctx context.Context, _ *gennotes.RestartServerPayload) error {
 	if err := peopleOnly(ctx); err != nil {
+		return err
+	}
+	if err := requireVerified(ctx); err != nil {
 		return err
 	}
 	if why := s.restartReason(); why != "" {

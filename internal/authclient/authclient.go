@@ -46,6 +46,10 @@ func (c *Cookie) RoundTrip(r *http.Request) (*http.Response, error) {
 // so that nobody can approve a sign-in.
 var ErrNoPasskey = errors.New("the server requires a passkey (auth: passkey), but none is registered: register one with ebira auth passkey, or restart the server with -auth=none")
 
+// cliClient is what the commands tell device_start they are, which the web
+// UI shows when people approve the sign-in.
+var cliClient = "cli"
+
 // SignIn signs in through the web UI when the server requires a passkey: it
 // prints the URL and the code to approve to out, and waits until people
 // approve it, or ctx is done. It returns the session, or "" when the server
@@ -61,7 +65,7 @@ func SignIn(ctx context.Context, api *genauth.Client, out io.Writer) (string, er
 	if !st.Registered {
 		return "", ErrNoPasskey
 	}
-	d, err := api.DeviceStart(ctx)
+	d, err := api.DeviceStart(ctx, &genauth.DeviceStartPayload{Client: &cliClient})
 	if err != nil {
 		return "", fmt.Errorf("cannot begin the sign-in: %w", err)
 	}

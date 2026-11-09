@@ -84,8 +84,6 @@ func ValidateAddAiFileResultTransport(value *AddAiFileResultTransport) (err erro
 
 // CreateAiNotePayloadTransport stores JSON fields until they have been validated.
 type CreateAiNotePayloadTransport struct {
-	// Note ID; random if omitted. Must be omitted for a drop notebook
-	ID *string `json:"id,omitempty"`
 	// ID of a notebook of the collab or drop kind
 	Notebook *string `json:"notebook"`
 	// Title
@@ -106,9 +104,6 @@ func ValidateCreateAiNotePayloadTransport(value *CreateAiNotePayloadTransport) (
 	}
 	if value.Title == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
-	}
-	if value.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	if value.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
@@ -546,6 +541,11 @@ func ValidateGetInputTransport(value *GetInputTransport) (err error) {
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
+	if value.Q != nil {
+		if utf8.RuneCountInString(*value.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1000, false))
+		}
+	}
 	return err
 }
 
@@ -569,6 +569,11 @@ func ValidateGetPayloadTransport(value *GetPayloadTransport) (err error) {
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Q != nil {
+		if utf8.RuneCountInString(*value.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1000, false))
+		}
 	}
 	return err
 }
@@ -1827,6 +1832,9 @@ func ValidateSearchInputTransport(value *SearchInputTransport) (err error) {
 		if utf8.RuneCountInString(*value.Q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1, true))
 		}
+		if utf8.RuneCountInString(*value.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1000, false))
+		}
 	}
 	if value.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *value.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
@@ -1895,6 +1903,9 @@ func ValidateSearchPayloadTransport(value *SearchPayloadTransport) (err error) {
 	if value.Q != nil {
 		if utf8.RuneCountInString(*value.Q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1000, false))
 		}
 	}
 	if value.Notebook != nil {
@@ -2552,7 +2563,6 @@ func DecodeCreateAiNotePayload(data []byte) (out *notes.CreateAiNotePayload, err
 	}
 	{
 		out = &notes.CreateAiNotePayload{
-			ID:       body.ID,
 			Notebook: *body.Notebook,
 			Title:    *body.Title,
 			Body:     body.Body,

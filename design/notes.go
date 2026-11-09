@@ -248,6 +248,12 @@ var NoteList = Type("NoteList", func() {
 	Attribute("separators", ArrayOf(Separator), "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset")
 })
 
+// searchQueryDSL limits the length of a search query, which the index parses
+// and matches against every note.
+var searchQueryDSL = func() {
+	MaxLength(1000)
+}
+
 // separatorIDDSL is the pattern and an example of a separator ID. It fits
 // the pattern of note IDs, so that after takes a note or a separator.
 var separatorIDDSL = func() {
@@ -530,7 +536,7 @@ var _ = Service("notes", func() {
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
-			Attribute("q", String, "Search query to highlight, as search takes it; its tags are not highlighted")
+			Attribute("q", String, "Search query to highlight, as search takes it; its tags are not highlighted", searchQueryDSL)
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from the client")
@@ -664,6 +670,7 @@ var _ = Service("notes", func() {
 			sessionDSL()
 			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first", func() {
 				MinLength(1)
+				searchQueryDSL()
 			})
 			notebookTreeFilter()
 			Attribute("tag", String, "Only notes with this tag")
@@ -1052,9 +1059,8 @@ var _ = Service("notes", func() {
 	// edit notes with create, update and delete.
 	Method("create_ai_note", func() {
 		NoSecurity()
-		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note is marked as created by AI (created_by).")
+		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note gets a random ID, which the result has, and is marked as created by AI (created_by).")
 		Payload(func() {
-			Attribute("id", String, "Note ID; random if omitted. Must be omitted for a drop notebook", noteIDDSL)
 			RequiredAttribute("notebook", String, "ID of a notebook of the collab or drop kind", notebookIDDSL)
 			RequiredAttribute("title", String, "Title", func() {
 				MinLength(1)
@@ -1063,9 +1069,8 @@ var _ = Service("notes", func() {
 			Attribute("body", String, "Body in Markdown")
 		})
 		Result(Note)
-		Error("bad_request", ErrorResult, "The ID is given for a drop notebook, or the notebook is invalid")
+		Error("bad_request", ErrorResult, "The notebook is invalid")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
-		Error("already_exists", ErrorResult, "A note with the ID exists")
 		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only")
 	})
 
@@ -1502,7 +1507,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("restart_server", func() {
-		Description("Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.")
+		Description("Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.")
 		Payload(sessionDSL)
 		Error("unavailable", ErrorResult, "The server cannot start itself again")
 		HTTP(func() {

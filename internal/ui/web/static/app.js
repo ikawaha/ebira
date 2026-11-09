@@ -545,9 +545,19 @@ function localURL(url) {
   }
 }
 
+// linkHref returns the URL of a link: an <a>, also in SVG, where it may be
+// in xlink:href, or an <area> of an image map; null for another element.
+function linkHref(node) {
+  if (node.localName !== "a" && node.localName !== "area") return null;
+  return node.getAttribute("href") ?? node.getAttribute("xlink:href");
+}
+
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  // Links to notes open in this page; the others in a new tab.
-  if (node.tagName === "A" && node.hasAttribute("href") && !noteLink(node.getAttribute("href"))) {
+  // Links to notes open in this page; the others in a new tab, those of SVG
+  // and image maps too, so that none takes this page (or the window of the
+  // desktop app) to another site.
+  const href = linkHref(node);
+  if (href !== null && !noteLink(href)) {
     node.setAttribute("target", "_blank");
     node.setAttribute("rel", "noopener noreferrer");
   }
@@ -4463,11 +4473,17 @@ function openOutside(url) {
 // In the desktop app, links that open a new tab go to the browser, and the
 // files of notes to the downloads folder.
 document.addEventListener("click", (e) => {
-  const a = e.target.closest?.("a[target=_blank]");
+  const a = e.target.closest?.("a[target=_blank], area[target=_blank]");
   if (!a || !inApp() || e.defaultPrevented) return;
   e.preventDefault();
-  if (a.classList.contains("attachment")) downloadFile(a.href);
-  else tellApp("openURL", { url: a.href });
+  let url;
+  try {
+    url = new URL(linkHref(a) ?? "", location.href).href; // an <a> of SVG has no string href
+  } catch (_) {
+    return;
+  }
+  if (a.classList.contains("attachment")) downloadFile(url);
+  else tellApp("openURL", { url });
 }, true);
 
 // DOWNLOAD_PART is the most of a file sent to the app in one message.
@@ -5425,9 +5441,23 @@ $("passkeys-open").addEventListener("click", () => openPasskeys());
 // showDeviceApprove asks to approve the sign-in of a client without a
 // browser, such as the TUI, which shows the same code and the URL of this
 // page with it (#device/<code>). The page must be signed in with a passkey.
-function showDeviceApprove(code) {
+// It tells when the request was made and by what, so that one people did not
+// make, as from a link someone sent, can be told apart.
+async function showDeviceApprove(code) {
   const d = $("auth");
   delete d.dataset.required;
+  let asked = null;
+  try {
+    const r = await api("/auth/device/" + encodeURIComponent(code));
+    const client = { tui: t("deviceClientTui"), cli: t("deviceClientCli") }[r.client] || t("deviceClientOther");
+    asked = el("p", "", t("deviceAsked", { client, time: formatTime(r.created_at, true) }));
+  } catch (e) {
+    if (e.status === 404) {
+      authDialog(t("deviceTitle"), t("deviceNotFound"), button(t("authDone"), () => d.close(), { cls: "primary" }));
+      return;
+    }
+    // An earlier server cannot tell: the code alone is shown.
+  }
   let msg;
   const cancel = button(t("cancel"), () => d.close());
   const go = button(t("deviceApprove"), async () => {
@@ -5443,7 +5473,8 @@ function showDeviceApprove(code) {
   }, { cls: "primary" });
   msg = authDialog(t("deviceTitle"), el("div", "",
     el("p", "", t("deviceText")),
-    el("div", "auth-cmd device-code", el("code", "", code))), cancel, go);
+    el("div", "auth-cmd device-code", el("code", "", code)),
+    ...(asked ? [asked] : [])), cancel, go);
 }
 
 // passkeyError is the message of a failed ceremony; the browser tells a

@@ -39,6 +39,8 @@ const (
 // device is a pending device request.
 type device struct {
 	userCode string
+	created  time.Time // when the request was made, which people see before approving it
+	client   string    // what made it, as it tells: tui, cli or ""
 	expires  time.Time
 	approved bool
 }
@@ -72,7 +74,7 @@ func normalizeUserCode(code string) string {
 // client polls with, the user code people approve, and the URL of the page of
 // the web UI that approves it. It forgets expired requests, and the oldest
 // when there are too many.
-func (p *Passkeys) StartDevice() (deviceCode, userCode, uri string) {
+func (p *Passkeys) StartDevice(client string) (deviceCode, userCode, uri string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := time.Now()
@@ -91,8 +93,23 @@ func (p *Passkeys) StartDevice() (deviceCode, userCode, uri string) {
 	rand.Read(b)
 	deviceCode = base64.RawURLEncoding.EncodeToString(b)
 	userCode = newUserCode()
-	p.devices[deviceCode] = &device{userCode: userCode, expires: now.Add(DeviceMaxAge)}
+	p.devices[deviceCode] = &device{userCode: userCode, created: now, client: client, expires: now.Add(DeviceMaxAge)}
 	return deviceCode, userCode, p.origin + "/#device/" + userCode
+}
+
+// DeviceRequest tells about the pending request with userCode: when it was
+// made, by what client as it told, and when it expires.
+func (p *Passkeys) DeviceRequest(userCode string) (created time.Time, client string, expires time.Time, err error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	want := normalizeUserCode(userCode)
+	now := time.Now()
+	for _, d := range p.devices {
+		if normalizeUserCode(d.userCode) == want && now.Before(d.expires) {
+			return d.created, d.client, d.expires, nil
+		}
+	}
+	return time.Time{}, "", time.Time{}, ErrDeviceCode
 }
 
 // ApproveDevice approves the pending request with userCode. Call it only for

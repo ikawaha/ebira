@@ -44,6 +44,10 @@ type Client struct {
 	// device_token endpoint.
 	DeviceTokenDoer goahttp.Doer
 
+	// DeviceRequest Doer is the HTTP client used to make requests to the
+	// device_request endpoint.
+	DeviceRequestDoer goahttp.Doer
+
 	// DeviceApprove Doer is the HTTP client used to make requests to the
 	// device_approve endpoint.
 	DeviceApproveDoer goahttp.Doer
@@ -90,6 +94,7 @@ func NewClient(
 		LoginFinishDoer:     doer,
 		DeviceStartDoer:     doer,
 		DeviceTokenDoer:     doer,
+		DeviceRequestDoer:   doer,
 		DeviceApproveDoer:   doer,
 		PasskeysDoer:        doer,
 		DeletePasskeyDoer:   doer,
@@ -222,10 +227,15 @@ func (c *Client) LoginFinish() goa.Endpoint {
 // device_start server.
 func (c *Client) DeviceStart() goa.Endpoint {
 	var (
+		encodeRequest  = EncodeDeviceStartRequest(c.encoder)
 		decodeResponse = DecodeDeviceStartResponse(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildDeviceStartRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
@@ -256,6 +266,30 @@ func (c *Client) DeviceToken() goa.Endpoint {
 		resp, err := c.DeviceTokenDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("auth", "device_token", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// DeviceRequest returns an endpoint that makes HTTP requests to the auth
+// service device_request server.
+func (c *Client) DeviceRequest() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeDeviceRequestRequest(c.encoder)
+		decodeResponse = DecodeDeviceRequestResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildDeviceRequestRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.DeviceRequestDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("auth", "device_request", err)
 		}
 		return decodeResponse(resp)
 	}

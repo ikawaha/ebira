@@ -148,7 +148,7 @@ refuses the others. MCP stays open to AI clients.`)
 // hc.
 func authAPI(u *url.URL, hc *http.Client) *genauth.Client {
 	c := authcli.NewClient(u.Scheme, u.Host, hc, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
-	return genauth.NewClient(c.Status(), c.RegisterBegin(), c.RegisterFinish(), c.LoginBegin(), c.LoginFinish(), c.DeviceStart(), c.DeviceToken(), c.DeviceApprove(), c.Passkeys(), c.DeletePasskey(), c.RevokeSessions(), c.Logout())
+	return genauth.NewClient(c.Status(), c.RegisterBegin(), c.RegisterFinish(), c.LoginBegin(), c.LoginFinish(), c.DeviceStart(), c.DeviceToken(), c.DeviceRequest(), c.DeviceApprove(), c.Passkeys(), c.DeletePasskey(), c.RevokeSessions(), c.Logout())
 }
 
 // authStatus asks the server at base how it authenticates people.

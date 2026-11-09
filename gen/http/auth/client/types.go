@@ -112,6 +112,18 @@ type DeviceTokenResponseBody struct {
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 }
 
+// DeviceRequestResponseBody is the type of the "auth" service "device_request"
+// endpoint HTTP response body.
+type DeviceRequestResponseBody struct {
+	// When the request was made, in RFC 3339
+	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
+	// What made it, as device_start tells: tui or cli; none for a client that does
+	// not tell
+	Client *string `form:"client,omitempty" json:"client,omitempty" xml:"client,omitempty"`
+	// Seconds until the request expires
+	ExpiresIn *int `form:"expires_in,omitempty" json:"expires_in,omitempty" xml:"expires_in,omitempty"`
+}
+
 // RegisterBeginForbiddenResponseBody is the type of the "auth" service
 // "register_begin" endpoint HTTP response body for the "forbidden" error.
 type RegisterBeginForbiddenResponseBody struct {
@@ -188,6 +200,42 @@ type LoginBeginBadRequestResponseBody struct {
 // LoginFinishUnauthorizedResponseBody is the type of the "auth" service
 // "login_finish" endpoint HTTP response body for the "unauthorized" error.
 type LoginFinishUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeviceRequestUnauthorizedResponseBody is the type of the "auth" service
+// "device_request" endpoint HTTP response body for the "unauthorized" error.
+type DeviceRequestUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// DeviceRequestNotFoundResponseBody is the type of the "auth" service
+// "device_request" endpoint HTTP response body for the "not_found" error.
+type DeviceRequestNotFoundResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -587,6 +635,48 @@ func NewDeviceTokenResultOK(body *DeviceTokenResponseBody) *auth.DeviceTokenResu
 	return v
 }
 
+// NewDeviceRequestResultOK builds a "auth" service "device_request" endpoint
+// result from a HTTP "OK" response.
+func NewDeviceRequestResultOK(body *DeviceRequestResponseBody) *auth.DeviceRequestResult {
+	v := &auth.DeviceRequestResult{
+		CreatedAt: *body.CreatedAt,
+		Client:    body.Client,
+		ExpiresIn: *body.ExpiresIn,
+	}
+
+	return v
+}
+
+// NewDeviceRequestUnauthorized builds a auth service device_request endpoint
+// unauthorized error.
+func NewDeviceRequestUnauthorized(body *DeviceRequestUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewDeviceRequestNotFound builds a auth service device_request endpoint
+// not_found error.
+func NewDeviceRequestNotFound(body *DeviceRequestNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewDeviceApproveUnauthorized builds a auth service device_approve endpoint
 // unauthorized error.
 func NewDeviceApproveUnauthorized(body *DeviceApproveUnauthorizedResponseBody) *goa.ServiceError {
@@ -848,6 +938,21 @@ func ValidateDeviceTokenResponseBody(body *DeviceTokenResponseBody) (err error) 
 	return
 }
 
+// ValidateDeviceRequestResponseBody runs the validations defined on
+// DeviceRequestResponseBody
+func ValidateDeviceRequestResponseBody(body *DeviceRequestResponseBody) (err error) {
+	if body.CreatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
+	}
+	if body.ExpiresIn == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("expires_in", "body"))
+	}
+	if body.CreatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
+	}
+	return
+}
+
 // ValidateRegisterBeginForbiddenResponseBody runs the validations defined on
 // RegisterBeginForbiddenResponseBody
 func ValidateRegisterBeginForbiddenResponseBody(body *RegisterBeginForbiddenResponseBody) (err error) {
@@ -947,6 +1052,54 @@ func ValidateLoginBeginBadRequestResponseBody(body *LoginBeginBadRequestResponse
 // ValidateLoginFinishUnauthorizedResponseBody runs the validations defined on
 // LoginFinishUnauthorizedResponseBody
 func ValidateLoginFinishUnauthorizedResponseBody(body *LoginFinishUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeviceRequestUnauthorizedResponseBody runs the validations defined
+// on DeviceRequestUnauthorizedResponseBody
+func ValidateDeviceRequestUnauthorizedResponseBody(body *DeviceRequestUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateDeviceRequestNotFoundResponseBody runs the validations defined on
+// DeviceRequestNotFoundResponseBody
+func ValidateDeviceRequestNotFoundResponseBody(body *DeviceRequestNotFoundResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

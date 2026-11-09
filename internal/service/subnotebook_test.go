@@ -62,7 +62,8 @@ func TestSubNotebooks(t *testing.T) {
 		t.Errorf("name of a sub notebook: %v", err)
 	}
 	// AI clients write in the sub notebooks of a collab notebook.
-	if _, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{ID: ptr("a"), Notebook: design.ID, Title: "A", Body: ptr("ひまわり")}); err != nil {
+	byAI, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{Notebook: design.ID, Title: "A", Body: ptr("ひまわり")})
+	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("b"), Notebook: &dev.ID, Title: "B", Body: ptr("ひまわり")}); err != nil {
@@ -82,8 +83,8 @@ func TestSubNotebooks(t *testing.T) {
 	if got := list(person, dev.ID); !slices.Equal(got, []string{"b"}) {
 		t.Errorf("notes of dev = %v, want [b]", got)
 	}
-	if got := list(person, design.ID); !slices.Equal(got, []string{"a"}) {
-		t.Errorf("notes of dev/design = %v, want [a]", got)
+	if got := list(person, design.ID); !slices.Equal(got, []string{byAI.ID}) {
+		t.Errorf("notes of dev/design = %v, want [%s]", got, byAI.ID)
 	}
 
 	// Made private, the parent hides its sub notebooks from AI clients too.

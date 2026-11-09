@@ -35,6 +35,26 @@ func legacyState(t *testing.T, dir string) string {
 	return sd
 }
 
+// TestLoopback checks which listening hosts are reached from this computer
+// only, below which the server does not warn about auth: none.
+func TestLoopback(t *testing.T) {
+	for host, want := range map[string]bool{
+		"localhost":   true,
+		"127.0.0.1":   true,
+		"127.0.0.2":   true,
+		"::1":         true,
+		"":            false, // every address
+		"0.0.0.0":     false,
+		"::":          false,
+		"192.168.0.2": false,
+		"example.com": false,
+	} {
+		if got := loopback(host); got != want {
+			t.Errorf("loopback(%q) = %v, want %v", host, got, want)
+		}
+	}
+}
+
 func TestServerDir(t *testing.T) {
 	setStateHome(t)
 	dir := filepath.Join(t.TempDir(), "notes")

@@ -129,6 +129,15 @@ paths:
             summary: device_start auth
             description: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.
             operationId: auth#device_start
+            parameters:
+                - name: client
+                  in: query
+                  description: 'What asks to sign in, which the web UI shows when people approve it: tui for the TUI, cli for a command such as ebira import'
+                  required: false
+                  type: string
+                  enum:
+                    - tui
+                    - cli
             responses:
                 "200":
                     description: OK response.
@@ -140,6 +149,53 @@ paths:
                             - verification_uri
                             - expires_in
                             - interval
+            schemes:
+                - http
+    /auth/device/{user_code}:
+        get:
+            tags:
+                - auth
+            summary: device_request auth
+            description: 'Tell the web UI, signed in with a passkey, about the request of device_start with a user code before people approve it: when it was made, and by what.'
+            operationId: auth#device_request
+            parameters:
+                - name: user_code
+                  in: path
+                  description: User code shown by the client
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/AuthDeviceRequestResponseBody'
+                        required:
+                            - created_at
+                            - expires_in
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    schema:
+                        $ref: '#/definitions/AuthDeviceRequestUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The user code is unknown or expired'
+                    schema:
+                        $ref: '#/definitions/AuthDeviceRequestNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
             schemes:
                 - http
     /auth/device/approve:
@@ -1551,6 +1607,7 @@ paths:
                   description: Search query to highlight, as search takes it; its tags are not highlighted
                   required: false
                   type: string
+                  maxLength: 1000
                 - name: id
                   in: path
                   description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
@@ -2602,6 +2659,7 @@ paths:
                   description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter), and mark:red, or mark:"a name", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -"two words", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first
                   required: true
                   type: string
+                  maxLength: 1000
                   minLength: 1
                 - name: notebook
                   in: query
@@ -2951,7 +3009,7 @@ paths:
             tags:
                 - notes
             summary: restart_server notes
-            description: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.
+            description: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.
             operationId: notes#restart_server
             responses:
                 "202":
@@ -4055,6 +4113,117 @@ definitions:
             name: bad_request
             temporary: false
             timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeviceRequestNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    AuthDeviceRequestResponseBody:
+        title: AuthDeviceRequestResponseBody
+        type: object
+        properties:
+            client:
+                type: string
+                description: 'What made it, as device_start tells: tui or cli; none for a client that does not tell'
+                example: Distinctio ad.
+            created_at:
+                type: string
+                description: When the request was made, in RFC 3339
+                example: "1974-06-23T11:33:05Z"
+                format: date-time
+            expires_in:
+                type: integer
+                description: Seconds until the request expires
+                example: 750965102598955012
+                format: int64
+        example:
+            client: Distinctio ad.
+            created_at: "1974-06-23T11:33:05Z"
+            expires_in: 750965102598955012
+        required:
+            - created_at
+            - expires_in
+    AuthDeviceRequestUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
         required:
             - name
             - id

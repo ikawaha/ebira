@@ -480,22 +480,23 @@ func TestAINotes(t *testing.T) {
 			t.Errorf("CreateAiNote in %s = %v, want forbidden", nb, err)
 		}
 	}
-	n, err := svc.CreateAiNote(ctx, &gennotes.CreateAiNotePayload{ID: ptr("research"), Notebook: ai.ID, Title: "調査", Body: ptr("結果")})
+	n, err := svc.CreateAiNote(ctx, &gennotes.CreateAiNotePayload{Notebook: ai.ID, Title: "調査", Body: ptr("結果")})
 	if err != nil {
 		t.Fatal(err)
 	}
+	research := n.ID // random
 
 	// Updating: the version is required, and notes of people are read-only.
-	if _, err := svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: "research", Version: `"stale"`, Body: ptr("x")}); errorName(err) != "precondition_failed" {
+	if _, err := svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: research, Version: `"stale"`, Body: ptr("x")}); errorName(err) != "precondition_failed" {
 		t.Errorf("UpdateAiNote with a stale version = %v, want precondition_failed", err)
 	}
 	if _, err := svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: "human", Version: human.Version, Body: ptr("x")}); errorName(err) != "forbidden" {
 		t.Errorf("UpdateAiNote of a note of people = %v, want forbidden", err)
 	}
-	if _, err := svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: "research", Version: n.Version, Notebook: &people.ID}); errorName(err) != "forbidden" {
+	if _, err := svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: research, Version: n.Version, Notebook: &people.ID}); errorName(err) != "forbidden" {
 		t.Errorf("UpdateAiNote moving out of the collab notebooks = %v, want forbidden", err)
 	}
-	n, err = svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: "research", Version: n.Version, Body: ptr("結果 2"), Notebook: &ai2.ID})
+	n, err = svc.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: research, Version: n.Version, Body: ptr("結果 2"), Notebook: &ai2.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -507,14 +508,14 @@ func TestAINotes(t *testing.T) {
 	if err := svc.DeleteAiNote(ctx, &gennotes.DeleteAiNotePayload{ID: "human", Version: human.Version}); errorName(err) != "forbidden" {
 		t.Errorf("DeleteAiNote of a note of people = %v, want forbidden", err)
 	}
-	if err := svc.DeleteAiNote(ctx, &gennotes.DeleteAiNotePayload{ID: "research", Version: n.Version}); err != nil {
+	if err := svc.DeleteAiNote(ctx, &gennotes.DeleteAiNotePayload{ID: research, Version: n.Version}); err != nil {
 		t.Fatal(err)
 	}
-	trashed, err := svc.Get(person, &gennotes.GetPayload{ID: "research"})
+	trashed, err := svc.Get(person, &gennotes.GetPayload{ID: research})
 	if err != nil || trashed.Notebook != store.Trash {
 		t.Fatalf("after DeleteAiNote: %+v, %v", trashed, err)
 	}
-	if err := svc.DeleteAiNote(ctx, &gennotes.DeleteAiNotePayload{ID: "research", Version: trashed.Version}); errorName(err) != "not_found" {
+	if err := svc.DeleteAiNote(ctx, &gennotes.DeleteAiNotePayload{ID: research, Version: trashed.Version}); errorName(err) != "not_found" {
 		t.Errorf("DeleteAiNote in the trash = %v, want not_found: the trash is hidden from AI clients", err)
 	}
 
@@ -1119,6 +1120,11 @@ func TestVerification(t *testing.T) {
 		},
 		"move_notebook out of private": func(e *gennotes.Endpoints) error {
 			_, err := e.MoveNotebook(ai, &gennotes.MoveNotebookPayload{Session: s, ID: vault.ID, Parent: &work.ID})
+			return err
+		},
+		// The test server cannot start again: unavailable once verified.
+		"restart_server": func(e *gennotes.Endpoints) error {
+			_, err := e.RestartServer(ai, &gennotes.RestartServerPayload{Session: s})
 			return err
 		},
 	}

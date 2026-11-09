@@ -138,6 +138,19 @@ paths:
             summary: device_start auth
             description: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.
             operationId: auth#device_start
+            parameters:
+                - name: client
+                  in: query
+                  description: 'What asks to sign in, which the web UI shows when people approve it: tui for the TUI, cli for a command such as ebira import'
+                  allowEmptyValue: true
+                  schema:
+                    type: string
+                    description: 'What asks to sign in, which the web UI shows when people approve it: tui for the TUI, cli for a command such as ebira import'
+                    example: tui
+                    enum:
+                        - tui
+                        - cli
+                  example: tui
             responses:
                 "200":
                     description: OK response.
@@ -151,6 +164,68 @@ paths:
                                 interval: 1594048462833705464
                                 user_code: BCDF-GHJK
                                 verification_uri: Omnis inventore et rem dolorem.
+    /auth/device/{user_code}:
+        get:
+            tags:
+                - auth
+            summary: device_request auth
+            description: 'Tell the web UI, signed in with a passkey, about the request of device_start with a user code before people approve it: when it was made, and by what.'
+            operationId: auth#device_request
+            parameters:
+                - name: user_code
+                  in: path
+                  description: User code shown by the client
+                  required: true
+                  schema:
+                    type: string
+                    description: User code shown by the client
+                    example: Explicabo natus.
+                  example: Explicabo natus.
+                - name: ebira_session
+                  in: cookie
+                  description: Session cookie of the web UI
+                  schema:
+                    type: string
+                    description: Session cookie of the web UI
+                    example: Nisi et fugiat in.
+                  example: Nisi et fugiat in.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeviceRequestResponseBody'
+                            example:
+                                client: Distinctio ad.
+                                created_at: "1974-06-23T11:33:05Z"
+                                expires_in: 750965102598955012
+                "401":
+                    description: 'unauthorized: The request is not signed in with a passkey'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The user code is unknown or expired'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
     /auth/device/approve:
         post:
             tags:
@@ -2195,8 +2270,9 @@ paths:
                   schema:
                     type: string
                     description: Search query to highlight, as search takes it; its tags are not highlighted
-                    example: Magni consequatur iste quisquam qui.
-                  example: Magni consequatur iste quisquam qui.
+                    example: yja
+                    maxLength: 1000
+                  example: yja
                 - name: id
                   in: path
                   description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
@@ -3467,6 +3543,7 @@ paths:
                     description: Search terms separated by spaces, combined with AND. "two words" in double quotes is a phrase, matched in that order. tag:name, or tag:"a name", asks for notes with the tag (case and width do not matter), and mark:red, or mark:"a name", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -"two words", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first
                     example: k
                     minLength: 1
+                    maxLength: 1000
                   example: k
                 - name: notebook
                   in: query
@@ -3966,7 +4043,7 @@ paths:
             tags:
                 - notes
             summary: restart_server notes
-            description: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only.
+            description: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.
             operationId: notes#restart_server
             responses:
                 "202":
@@ -4954,6 +5031,30 @@ components:
                 user_code: Fugit voluptate vel.
             required:
                 - user_code
+        DeviceRequestResponseBody:
+            type: object
+            properties:
+                client:
+                    type: string
+                    description: 'What made it, as device_start tells: tui or cli; none for a client that does not tell'
+                    example: Distinctio ad.
+                created_at:
+                    type: string
+                    description: When the request was made, in RFC 3339
+                    example: "1974-06-23T11:33:05Z"
+                    format: date-time
+                expires_in:
+                    type: integer
+                    description: Seconds until the request expires
+                    example: 750965102598955012
+                    format: int64
+            example:
+                client: Distinctio ad.
+                created_at: "1974-06-23T11:33:05Z"
+                expires_in: 750965102598955012
+            required:
+                - created_at
+                - expires_in
         DeviceStartResponseBody:
             type: object
             properties:

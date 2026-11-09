@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"os"
@@ -151,9 +152,12 @@ func TestManagePasskeys(t *testing.T) {
 		t.Errorf("after the deletion: %+v", list)
 	}
 
-	// Revoking sessions ends the others and gives a new verified one.
+	// Revoking sessions ends the others and gives a new one, verified as long
+	// as the one that asked, no longer.
 	old := session(t, p, time.Now().Add(time.Hour), time.Time{})
-	s, err := p.RevokeSessions()
+	until := time.Now().Add(2 * time.Second)
+	asking := session(t, p, time.Now().Add(time.Hour), until)
+	s, err := p.RevokeSessions(asking)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,6 +167,23 @@ func TestManagePasskeys(t *testing.T) {
 	if valid, verified := p.Check(s); !valid || !verified {
 		t.Errorf("the new session: valid %v, verified %v", valid, verified)
 	}
+	payload, _ := sessionPayload(mustLoad(t, p).SessionKey, s)
+	if got := int64(binary.BigEndian.Uint64(payload[8:])); got != until.Unix() {
+		t.Errorf("the new session is verified until %d, want %d as the one that asked", got, until.Unix())
+	}
+	// A session of the old key cannot ask.
+	if _, err := p.RevokeSessions(asking); !errors.Is(err, ErrSession) {
+		t.Errorf("revoking with a session of the old key: %v, want ErrSession", err)
+	}
+}
+
+func mustLoad(t *testing.T, p *Passkeys) *user {
+	t.Helper()
+	u, err := p.load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return u
 }
 
 func TestRegisterToken(t *testing.T) {
@@ -240,7 +261,7 @@ func TestLogin(t *testing.T) {
 func TestDevice(t *testing.T) {
 	p, _ := newTest(t)
 	register(t, p)
-	code, user, uri := p.StartDevice()
+	code, user, uri := p.StartDevice("")
 	if len(user) != 9 || user[4] != '-' || uri != "http://localhost:13579/#device/"+user {
 		t.Errorf("user code %q, URI %q", user, uri)
 	}
@@ -267,7 +288,7 @@ func TestDevice(t *testing.T) {
 	}
 
 	// An expired request is gone, and cannot be approved.
-	code, user, _ = p.StartDevice()
+	code, user, _ = p.StartDevice("")
 	p.devices[code].expires = time.Now().Add(-time.Second)
 	if err := p.ApproveDevice(user); !errors.Is(err, ErrDeviceCode) {
 		t.Errorf("expired code approved: %v", err)
@@ -278,7 +299,7 @@ func TestDevice(t *testing.T) {
 
 	// Pending requests are bounded.
 	for range 2 * maxDevices {
-		p.StartDevice()
+		p.StartDevice("")
 	}
 	if n := len(p.devices); n > maxDevices {
 		t.Errorf("%d pending requests, want at most %d", n, maxDevices)

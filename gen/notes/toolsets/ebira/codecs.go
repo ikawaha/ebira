@@ -757,11 +757,6 @@ var createAiNotePayloadFields = []tools.FieldMetadata{
 		JSONType: "object",
 	},
 	{
-		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
-		JSONType:    "string",
-		Description: "Note ID; random if omitted. Must be omitted for a drop notebook",
-	},
-	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
 		JSONType:    "string",
 		Description: "ID of a notebook of the collab or drop kind",
@@ -3975,7 +3970,6 @@ func MarshalCreateAiNotePayload(v *CreateAiNotePayload) ([]byte, error) {
 	_ = in
 	var out *toolhttp.CreateAiNotePayloadTransport
 	out = &toolhttp.CreateAiNotePayloadTransport{
-		ID:       in.ID,
 		Notebook: &in.Notebook,
 		Title:    &in.Title,
 		Body:     in.Body,
@@ -4010,7 +4004,6 @@ func UnmarshalCreateAiNotePayload(data []byte) (*CreateAiNotePayload, error) {
 	_ = in
 	var out *CreateAiNotePayload
 	out = &CreateAiNotePayload{
-		ID:       in.ID,
 		Notebook: *in.Notebook,
 		Title:    *in.Title,
 		Body:     in.Body,
@@ -7366,13 +7359,6 @@ func validateCreateAiNotePayloadJSONValue(path string, value any, description st
 			); err != nil {
 				return err
 			}
-		case "id":
-			if err := validateStringJSONValue(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID; random if omitted. Must be omitted for a drop notebook",
-			); err != nil {
-				return err
-			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -7397,7 +7383,6 @@ func validateCreateAiNotePayloadJSONValue(path string, value any, description st
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"body",
-				"id",
 				"notebook",
 				"tags",
 				"title",

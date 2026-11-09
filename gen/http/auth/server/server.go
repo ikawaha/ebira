@@ -26,6 +26,7 @@ type Server struct {
 	LoginFinish    http.Handler
 	DeviceStart    http.Handler
 	DeviceToken    http.Handler
+	DeviceRequest  http.Handler
 	DeviceApprove  http.Handler
 	Passkeys       http.Handler
 	DeletePasskey  http.Handler
@@ -67,6 +68,7 @@ func New(
 			{"LoginFinish", "POST", "/auth/passkey/login/finish"},
 			{"DeviceStart", "POST", "/auth/device"},
 			{"DeviceToken", "POST", "/auth/device/token"},
+			{"DeviceRequest", "GET", "/auth/device/{user_code}"},
 			{"DeviceApprove", "POST", "/auth/device/approve"},
 			{"Passkeys", "GET", "/auth/passkeys"},
 			{"DeletePasskey", "DELETE", "/auth/passkeys/{id}"},
@@ -80,6 +82,7 @@ func New(
 		LoginFinish:    NewLoginFinishHandler(e.LoginFinish, mux, decoder, encoder, errhandler, formatter),
 		DeviceStart:    NewDeviceStartHandler(e.DeviceStart, mux, decoder, encoder, errhandler, formatter),
 		DeviceToken:    NewDeviceTokenHandler(e.DeviceToken, mux, decoder, encoder, errhandler, formatter),
+		DeviceRequest:  NewDeviceRequestHandler(e.DeviceRequest, mux, decoder, encoder, errhandler, formatter),
 		DeviceApprove:  NewDeviceApproveHandler(e.DeviceApprove, mux, decoder, encoder, errhandler, formatter),
 		Passkeys:       NewPasskeysHandler(e.Passkeys, mux, decoder, encoder, errhandler, formatter),
 		DeletePasskey:  NewDeletePasskeyHandler(e.DeletePasskey, mux, decoder, encoder, errhandler, formatter),
@@ -100,6 +103,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.LoginFinish = m(s.LoginFinish)
 	s.DeviceStart = m(s.DeviceStart)
 	s.DeviceToken = m(s.DeviceToken)
+	s.DeviceRequest = m(s.DeviceRequest)
 	s.DeviceApprove = m(s.DeviceApprove)
 	s.Passkeys = m(s.Passkeys)
 	s.DeletePasskey = m(s.DeletePasskey)
@@ -119,6 +123,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountLoginFinishHandler(mux, h.LoginFinish)
 	MountDeviceStartHandler(mux, h.DeviceStart)
 	MountDeviceTokenHandler(mux, h.DeviceToken)
+	MountDeviceRequestHandler(mux, h.DeviceRequest)
 	MountDeviceApproveHandler(mux, h.DeviceApprove)
 	MountPasskeysHandler(mux, h.Passkeys)
 	MountDeletePasskeyHandler(mux, h.DeletePasskey)
@@ -412,6 +417,7 @@ func NewDeviceStartHandler(
 	formatter func(ctx context.Context, err error) goahttp.Statuser,
 ) http.Handler {
 	var (
+		decodeRequest  = DecodeDeviceStartRequest(mux, decoder)
 		encodeResponse = EncodeDeviceStartResponse(encoder)
 		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
 	)
@@ -419,8 +425,14 @@ func NewDeviceStartHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "device_start")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "auth")
-		var err error
-		res, err := endpoint(ctx, nil)
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
@@ -465,6 +477,59 @@ func NewDeviceTokenHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "device_token")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "auth")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountDeviceRequestHandler configures the mux to serve the "auth" service
+// "device_request" endpoint.
+func MountDeviceRequestHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/auth/device/{user_code}", f)
+}
+
+// NewDeviceRequestHandler creates a HTTP handler which loads the HTTP request
+// and calls the "auth" service "device_request" endpoint.
+func NewDeviceRequestHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeDeviceRequestRequest(mux, decoder)
+		encodeResponse = EncodeDeviceRequestResponse(encoder)
+		encodeError    = EncodeDeviceRequestError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "device_request")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "auth")
 		payload, err := decodeRequest(r)
 		if err != nil {

@@ -286,6 +286,9 @@ func runServe(args []string) error {
 	if *o.auth == auth.ModePasskey && listenHost != "localhost" {
 		slog.Warn("passkeys work only on the web UI at localhost", "url", "http://localhost:"+port+web.Prefix)
 	}
+	if *o.auth != auth.ModePasskey && !loopback(listenHost) {
+		slog.Warn("without passkeys (auth: none), anyone who reaches this address reads and changes the notes; set auth: passkey or listen on localhost", "addr", *addr)
+	}
 
 	// Only the REST API, which the UI uses, is marked as from people: every
 	// request without passkeys (auth: none), and requests signed in with a
@@ -299,7 +302,7 @@ func runServe(args []string) error {
 		gate.Session = passkeys.Check
 	}
 	notesEndpoints := gennotes.NewEndpoints(rest)
-	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil))
+	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), &mcpnotes.MCPAdapterOptions{ErrorMapper: mcpError}))
 
 	mux := goahttp.NewMuxer()
 	eh := func(ctx context.Context, w http.ResponseWriter, err error) {
@@ -550,4 +553,15 @@ func sweepHistoryEvery(ctx context.Context, svc *service.Notes, interval time.Du
 		case <-t.C:
 		}
 	}
+}
+
+// loopback reports whether a server listening on host is reached from this
+// computer only: localhost or a loopback IP. An empty host, as in :13579,
+// listens on every address.
+func loopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

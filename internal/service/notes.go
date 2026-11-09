@@ -18,6 +18,7 @@ import (
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/history"
+	"github.com/ikawaha/ebira/internal/importer"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/store"
 )
@@ -163,6 +164,9 @@ func (s *Notes) create(ctx context.Context, p *gennotes.CreatePayload, createdBy
 	if n.Notebook == store.Trash {
 		return nil, gennotes.MakeBadRequest(errors.New("cannot create a note in the trash"))
 	}
+	if err := checkBody(n.Body); err != nil {
+		return nil, err
+	}
 	if err := s.store.Create(n); err != nil {
 		return nil, mapErr(err)
 	}
@@ -171,6 +175,19 @@ func (s *Notes) create(ctx context.Context, p *gennotes.CreatePayload, createdBy
 	}
 	s.events.publish(eventCreated, n.ID)
 	return toNote(n), nil
+}
+
+// maxBody is the largest body a note gets through the API, in bytes: that
+// of a Markdown file imported. A body grows with append and edits too, so
+// the body is checked as it is to be written, not as sent.
+const maxBody = importer.MaxSize
+
+// checkBody fails a body larger than maxBody.
+func checkBody(body string) error {
+	if len(body) > maxBody {
+		return gennotes.MakeBadRequest(fmt.Errorf("the body is larger than %d MB", maxBody>>20))
+	}
+	return nil
 }
 
 func (s *Notes) Update(ctx context.Context, p *gennotes.UpdatePayload) (*gennotes.Note, error) {
@@ -203,6 +220,9 @@ func (s *Notes) updateNote(ctx context.Context, p *gennotes.UpdatePayload) (*gen
 		n.Tags = tags(p.Tags)
 	}
 	if p.Body != nil {
+		if err := checkBody(*p.Body); err != nil {
+			return nil, err
+		}
 		n.Body = *p.Body
 	}
 	if edited {
@@ -1131,21 +1151,14 @@ func (s *Notes) requireKind(nb string, kinds ...string) error {
 }
 
 // CreateAiNote creates a note for an AI client, marked as created by AI, in a
-// notebook of the collab or drop kind. In a drop notebook the ID is always random:
-// a chosen ID that is taken would tell AI clients that a note they cannot see
-// exists.
+// notebook of the collab or drop kind. The ID is always random: a chosen ID
+// that is taken would tell AI clients that a note they cannot see exists, in
+// a private or drop notebook or in the trash.
 func (s *Notes) CreateAiNote(ctx context.Context, p *gennotes.CreateAiNotePayload) (*gennotes.Note, error) {
 	if err := s.requireKind(p.Notebook, store.KindCollab, store.KindDrop); err != nil {
 		return nil, err
 	}
-	if p.ID != nil {
-		if m, err := s.store.NotebookMeta(p.Notebook); err != nil {
-			return nil, err
-		} else if m.Kind == store.KindDrop {
-			return nil, gennotes.MakeBadRequest(fmt.Errorf("notebook %s is of the drop kind: omit the id, which is chosen at random", p.Notebook))
-		}
-	}
-	return s.create(ctx, &gennotes.CreatePayload{ID: p.ID, Notebook: &p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body}, store.CreatedByAI)
+	return s.create(ctx, &gennotes.CreatePayload{Notebook: &p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body}, store.CreatedByAI)
 }
 
 // UpdateAiNote updates a note for an AI client. The note must be in a notebook
