@@ -33,6 +33,44 @@ func TestPadHighlight(t *testing.T) {
 	}
 }
 
+func TestStripStrings(t *testing.T) {
+	for in, want := range map[string]string{
+		"plain":                          "plain",
+		"\x1b[1mbold\x1b[0m":             "\x1b[1mbold\x1b[0m",
+		"a\x1bP$qm\x1b\\b":               "ab",
+		"a\x1b_Ga=T;AAAA\x1b\\b":         "ab",
+		"a\x1b^pm\x1b\\b\x1bXsos\x1b\\c": "abc",
+		"a\u0090$qm\u009cb":              "ab",
+		"a\u009fGa=T\x1b\\b":             "ab",
+		"a\x1bPno end":                   "ano end",
+		"日本\x1bP$qm\x1b\\語":              "日本語",
+		"\x1b_x\x1b\\":                   "",
+		"\x1b]8;;https://example.com\x1b\\l\x1b]8;;\x1b\\": "\x1b]8;;https://example.com\x1b\\l\x1b]8;;\x1b\\",
+	} {
+		if got := stripStrings(in); got != want {
+			t.Errorf("stripStrings(%q) = %q, want %q", in, got, want)
+		}
+	}
+
+	// Through the view: names of notebooks with a DCS and an APC.
+	m := New(context.Background(), &Clients{}, false, "en")
+	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	m = tm.(Model)
+	tm, _ = m.Update(notebooksMsg{notebooks: []*gennotes.Notebook{
+		{ID: inboxNotebook, Name: "Inbox", Kind: "drop", Sort: "order", Reserved: true},
+		{ID: "work", Name: "Wo\x1bP$qm\x1b\\rk", Kind: "default", Sort: "order"},
+		{ID: "pics", Name: "Pi\x1b_Ga=T;AAAA\x1b\\cs", Kind: "default", Sort: "order"},
+	}})
+	m = tm.(Model)
+	v := m.View().Content
+	if strings.Contains(v, "\x1bP") || strings.Contains(v, "\x1b_") {
+		t.Errorf("the view has a DCS or an APC: %q", v)
+	}
+	if !strings.Contains(ansi.Strip(v), "Work") || !strings.Contains(ansi.Strip(v), "Pics") {
+		t.Errorf("the names are not shown:\n%s", ansi.Strip(v))
+	}
+}
+
 func TestShiftRanges(t *testing.T) {
 	got := shiftRanges([]*gennotes.TextRange{{Start: 0, End: 2}}, "受信 · ")
 	if got[0].Start != 5 || got[0].End != 7 {

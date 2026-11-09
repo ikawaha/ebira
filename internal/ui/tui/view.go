@@ -328,11 +328,51 @@ func (m Model) highlightOn() string {
 }
 
 func (m Model) View() tea.View {
-	v := tea.NewView(m.render())
+	v := tea.NewView(stripStrings(m.render()))
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
 	v.WindowTitle = "ebira"
 	return v
+}
+
+// stripStrings drops the control strings from s: DCS, SOS, PM and APC, with
+// ESC or as C1 controls, up to their ST, or only the introducer of one
+// without an ST, so that it starts none. The renderer passes them to the
+// terminal as they are, which may act on them (answer a request, redefine
+// keys, draw an image), and the text of notes may hold them. The TUI uses
+// none itself; they take no width, so the layout stays as it was.
+func stripStrings(s string) string {
+	var b strings.Builder
+	start := 0
+	for i := 0; i < len(s); {
+		n := 0 // the length of the introducer at i
+		switch {
+		case s[i] == 0x1b && i+1 < len(s) && strings.IndexByte("PX^_", s[i+1]) >= 0:
+			n = 2
+		case s[i] == 0xc2 && i+1 < len(s) && (s[i+1] == 0x90 || s[i+1] == 0x98 || s[i+1] == 0x9e || s[i+1] == 0x9f):
+			n = 2
+		}
+		if n == 0 {
+			i++
+			continue
+		}
+		b.WriteString(s[start:i])
+		end := -1
+		for _, st := range []string{"\x1b\\", "\u009c"} {
+			if j := strings.Index(s[i+n:], st); j >= 0 && (end < 0 || i+n+j+len(st) < end) {
+				end = i + n + j + len(st)
+			}
+		}
+		if end < 0 {
+			end = i + n
+		}
+		i, start = end, end
+	}
+	if start == 0 {
+		return s
+	}
+	b.WriteString(s[start:])
+	return b.String()
 }
 
 func (m Model) render() string {
