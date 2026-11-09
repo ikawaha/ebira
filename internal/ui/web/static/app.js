@@ -5414,7 +5414,13 @@ async function openPasskeys() {
     el("span", "msg", t("passkeyCreated", { time: k.created_at ? formatTime(k.created_at) : "—" }) + (k.used_at ? " · " + t("passkeyUsed", { time: formatTime(k.used_at) }) : "")), " ",
     (() => {
       const b = button(t("passkeyDelete"), () => {
-        if (confirm(t("confirmDeletePasskey", { n: i + 1 }))) run(() => api(`/auth/passkeys/${encodeURIComponent(k.id)}`, { method: "DELETE" }));
+        if (!confirm(t("confirmDeletePasskey", { n: i + 1 }))) return;
+        run(async () => {
+          await api(`/auth/passkeys/${encodeURIComponent(k.id)}`, { method: "DELETE" });
+          // Sessions are not tied to a passkey, so those it signed in stay
+          // until they expire: for a passkey lost, end them now.
+          if (confirm(t("confirmRevokeAfterDelete"))) await api("/auth/sessions/revoke", { method: "POST" });
+        });
       });
       // The only passkey stays; ebira auth reset removes every passkey.
       if (list.length === 1) {
