@@ -529,6 +529,22 @@ function fileURL(path) {
   return `${noteURL(m[1])}/files/${encodeURIComponent(name)}`;
 }
 
+// localImagesOnly is set while an answer of the assistant is sanitized. The
+// model writes it from the text of notes, which may ask it to show an image
+// whose URL carries what it read, so only the files of notes and data: URLs
+// are loaded in it; notes themselves may show images from the web.
+let localImagesOnly = false;
+
+// localURL reports whether url is of this server or a data: URL.
+function localURL(url) {
+  try {
+    const u = new URL(url, location.href);
+    return u.origin === location.origin || u.protocol === "data:";
+  } catch (_) {
+    return false;
+  }
+}
+
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   // Links to notes open in this page; the others in a new tab.
   if (node.tagName === "A" && node.hasAttribute("href") && !noteLink(node.getAttribute("href"))) {
@@ -547,6 +563,13 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
       node.setAttribute("href", url);
       node.classList.add("attachment");
     }
+  }
+  if (localImagesOnly) {
+    // An image left without its URL shows its description instead.
+    for (const name of ["src", "poster"]) {
+      if (node.hasAttribute(name) && !localURL(node.getAttribute(name))) node.removeAttribute(name);
+    }
+    node.removeAttribute("srcset");
   }
 });
 
@@ -4561,7 +4584,12 @@ async function ask(question) {
   try {
     const r = await api("/ask", { method: "POST", body: { question }, signal: controller.signal });
     const body = el("div", "body");
-    renderBody(body, r.answer || "", null);
+    localImagesOnly = true;
+    try {
+      renderBody(body, r.answer || "", null);
+    } finally {
+      localImagesOnly = false;
+    }
     answer.replaceChildren(body);
   } catch (e) {
     const msg = e.name === "AbortError" ? t("aborted")
