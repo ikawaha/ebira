@@ -71,6 +71,39 @@ func plainKey(k *yaml.Node) bool {
 	return k.Kind == yaml.ScalarNode && k.Tag != "!!merge" && k.Value != "<<"
 }
 
+// maxResolved limits the nodes of a value copied by resolved, against
+// aliases that refer to aliases many times over.
+const maxResolved = 10000
+
+// resolved returns a copy of value v with each alias replaced by a copy of
+// the node it refers to, and without anchors, so that it reads the same in
+// the note file, where the other keys of the front matter may be dropped.
+// It reports false for a value of more than maxResolved nodes so copied.
+func resolved(v *yaml.Node) (*yaml.Node, bool) {
+	count := 0
+	var cp func(*yaml.Node) *yaml.Node
+	cp = func(v *yaml.Node) *yaml.Node {
+		for v.Kind == yaml.AliasNode && v.Alias != nil {
+			v = v.Alias
+		}
+		if count++; count > maxResolved {
+			return nil
+		}
+		c := *v
+		c.Anchor, c.Content = "", nil
+		for _, e := range v.Content {
+			ce := cp(e)
+			if ce == nil {
+				return nil
+			}
+			c.Content = append(c.Content, ce)
+		}
+		return &c
+	}
+	c := cp(v)
+	return c, c != nil
+}
+
 // keyName names key k in a warning.
 func keyName(k *yaml.Node) string {
 	if k.Kind == yaml.AliasNode {
@@ -117,6 +150,11 @@ func Parse(in Input) (*Note, error) {
 			k, v := fm.Content[i], fm.Content[i+1]
 			key := k.Value
 			switch {
+			case !plainKey(k):
+				// A merge key or an alias as a key would set the keys of
+				// ebira when the note is read, whatever their name here; an
+				// alias names its anchor, not a key, and is dropped too.
+				dropped = append(dropped, keyName(k))
 			case slices.Contains(titleKeys, key):
 				if v.Kind == yaml.ScalarNode {
 					n.Title = strings.TrimSpace(v.Value)
@@ -135,14 +173,14 @@ func Parse(in Input) (*Note, error) {
 				} else if !ok {
 					n.Warnings = append(n.Warnings, fmt.Sprintf("the time %s: %q could not be read", key, v.Value))
 				}
-			case !plainKey(k):
-				// A merge key or an alias as a key would set the keys of
-				// ebira when the note is read, whatever their name here.
-				dropped = append(dropped, keyName(k))
 			case slices.Contains(reservedKeys, key):
 				dropped = append(dropped, key)
 			default:
-				n.Extra = append(n.Extra, k, v)
+				if c, ok := resolved(v); ok {
+					n.Extra = append(n.Extra, k, c)
+				} else {
+					n.Warnings = append(n.Warnings, fmt.Sprintf("the front matter key %s refers to too many aliases and was dropped", key))
+				}
 			}
 		}
 	}

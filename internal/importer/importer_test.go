@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -40,6 +41,47 @@ func TestMergeKeyDropped(t *testing.T) {
 	}
 	w := strings.Join(n.Warnings, " ")
 	if !strings.Contains(w, "<<") || !strings.Contains(w, "*k") {
+		t.Errorf("Warnings = %q", n.Warnings)
+	}
+}
+
+// An alias named like a key of ebira is dropped too, and the values kept do
+// not depend on the anchors of keys dropped.
+func TestAliasesResolved(t *testing.T) {
+	src := "---\n" +
+		"name: &title category\n" +
+		"*title : injected\n" +
+		"<<: &base {author: me}\n" +
+		"metadata: *base\n" +
+		"---\n" +
+		"body\n"
+	n := parse(t, "a.md", src, mtime)
+	if n.Title == "injected" {
+		t.Errorf("Title = %q, set through an alias", n.Title)
+	}
+	if got := extraKeys(n); len(got) != 2 || got[0] != "name=category" || !strings.HasPrefix(got[1], "metadata=") {
+		t.Fatalf("Extra = %q, want name and metadata", got)
+	}
+	meta := n.Extra[3]
+	if meta.Kind != yaml.MappingNode || len(meta.Content) != 2 || meta.Content[1].Value != "me" || meta.Anchor != "" {
+		t.Errorf("metadata = %+v, want {author: me} without an alias", meta)
+	}
+	if n.Extra[1].Anchor != "" {
+		t.Errorf("name keeps the anchor %q", n.Extra[1].Anchor)
+	}
+
+	// A value of aliases of aliases many times over is dropped.
+	bomb := "---\na: &a [x, x, x, x, x, x, x, x, x, x]\n"
+	for i, prev := range []string{"a", "b", "c", "d", "e"} {
+		next := string(rune('b' + i))
+		bomb += fmt.Sprintf("%s: &%s [*%s, *%s, *%s, *%s, *%s, *%s, *%s, *%s, *%s, *%s]\n", next, next, prev, prev, prev, prev, prev, prev, prev, prev, prev, prev)
+	}
+	bomb += "---\nbody\n"
+	n = parse(t, "b.md", bomb, mtime)
+	if got := extraKeys(n); slices.Contains(got, "f=") {
+		t.Errorf("Extra = %q, kept the value of too many aliases", got)
+	}
+	if !strings.Contains(strings.Join(n.Warnings, " "), "too many aliases") {
 		t.Errorf("Warnings = %q", n.Warnings)
 	}
 }

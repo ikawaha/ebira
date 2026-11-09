@@ -456,6 +456,19 @@ func TestCreateExtraNoMerge(t *testing.T) {
 	if got.Order != nil || len(got.Marks) != 0 || got.TrashedFrom != "" {
 		t.Errorf("Load = order %v, marks %v, trashed_from %q; want none", got.Order, got.Marks, got.TrashedFrom)
 	}
+
+	// A value with an alias whose anchor is on a key left out is left out
+	// too, so that the file still reads.
+	if err := yaml.Unmarshal([]byte("<<: &base {author: me}\nmetadata: *base\nkept: yes\n"), &fm); err != nil {
+		t.Fatal(err)
+	}
+	n = &Note{ID: "a", Notebook: Inbox, Title: "a", CreatedAt: at, UpdatedAt: at, Body: "x\n", Extra: fm.Content[0].Content}
+	if err := s.Create(n); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Load("a"); err != nil {
+		t.Errorf("Load: %v", err)
+	}
 }
 
 func TestCreateWithExtra(t *testing.T) {
