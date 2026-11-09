@@ -113,11 +113,12 @@ func TestImportAiNote(t *testing.T) {
 	person := AsPerson(ai)
 	svc, _ := newTestService(t)
 	svc.now = func() time.Time { return time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC) }
-	if _, err := svc.CreateAiNotebook(ai, &gennotes.CreateAiNotebookPayload{Name: "shared"}); err != nil {
+	shared, err := svc.CreateAiNotebook(ai, &gennotes.CreateAiNotebookPayload{Name: "shared"})
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := svc.ImportAiNote(ai, &gennotes.ImportAiNotePayload{Notebook: "shared", Name: "kyoto.md", Content: kyoto})
+	res, err := svc.ImportAiNote(ai, &gennotes.ImportAiNotePayload{Notebook: shared.ID, Name: "kyoto.md", Content: kyoto})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestImportAiNote(t *testing.T) {
 	if !strings.Contains(res.Note.Body, "](img/tera.png)") || !strings.Contains(strings.Join(res.Warnings, " "), "img/tera.png") {
 		t.Errorf("body %q, warnings %q", res.Note.Body, res.Warnings)
 	}
-	if res, err := svc.ImportAiNote(ai, &gennotes.ImportAiNotePayload{Notebook: "shared", Name: "k.md", Content: kyoto}); err != nil || res.Status != "skipped" {
+	if res, err := svc.ImportAiNote(ai, &gennotes.ImportAiNotePayload{Notebook: shared.ID, Name: "k.md", Content: kyoto}); err != nil || res.Status != "skipped" {
 		t.Errorf("ImportAiNote again = %+v, %v", res, err)
 	}
 

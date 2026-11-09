@@ -384,8 +384,9 @@ func TestSubNotebookKinds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if nb.ID != "dev/notes" || nb.Kind != "collab" || nb.OwnKind != nil {
-		t.Errorf("sub notebook created by AI = %+v, want dev/notes taking the collab kind", nb)
+	// The ID of a notebook made by AI clients has a random part.
+	if !strings.HasPrefix(nb.ID, "dev/notes-") || nb.Kind != "collab" || nb.OwnKind != nil {
+		t.Errorf("sub notebook created by AI = %+v, want dev/notes-<random> taking the collab kind", nb)
 	}
 	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Read", Kind: "default"}); err != nil {
 		t.Fatal(err)
@@ -395,7 +396,7 @@ func TestSubNotebookKinds(t *testing.T) {
 		"diary":     "not_found", // hidden from them
 		"dev/log":   "not_found", // a private sub notebook
 		"nothing":   "not_found",
-		"dev/notes": "bad_request", // one level deep
+		nb.ID:       "bad_request", // one level deep
 		store.Inbox: "forbidden",
 	} {
 		if _, err := svc.CreateAiNotebook(ai, &gennotes.CreateAiNotebookPayload{Name: "X", Parent: ptr(parent)}); errorName(err) != want {
