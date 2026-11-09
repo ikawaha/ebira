@@ -66,7 +66,7 @@ func NewClient(rawURL string) (*Clients, error) {
 			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, // the methods for AI clients have no HTTP endpoints
 			c.AddFile(), c.GetFile(), c.DeleteFile(), c.History(), c.HistoryVersion(), c.CheckFiles(), c.Events(), c.GitStatus(), c.GitSync(), c.AddGuide(), c.PreviewStyle(), c.SetPreviewStyle(), c.Settings(), c.SaveSettings(), c.RestartServer(), c.Sync()),
 		Assistant: genassistant.NewClient(a.Status(), a.Ask()),
-		Auth:      genauth.NewClient(au.Status(), au.RegisterBegin(), au.RegisterFinish(), au.LoginBegin(), au.LoginFinish(), au.DeviceStart(), au.DeviceToken(), au.DeviceApprove(), au.Passkeys(), au.DeletePasskey(), au.RevokeSessions(), au.Logout()),
+		Auth:      genauth.NewClient(au.Status(), au.RegisterBegin(), au.RegisterFinish(), au.LoginBegin(), au.LoginFinish(), au.DeviceStart(), au.DeviceToken(), au.DeviceRequest(), au.DeviceApprove(), au.Passkeys(), au.DeletePasskey(), au.RevokeSessions(), au.Logout()),
 		Web:       web,
 		session:   session,
 	}, nil

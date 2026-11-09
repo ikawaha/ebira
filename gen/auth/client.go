@@ -22,6 +22,7 @@ type Client struct {
 	LoginFinishEndpoint    goa.Endpoint
 	DeviceStartEndpoint    goa.Endpoint
 	DeviceTokenEndpoint    goa.Endpoint
+	DeviceRequestEndpoint  goa.Endpoint
 	DeviceApproveEndpoint  goa.Endpoint
 	PasskeysEndpoint       goa.Endpoint
 	DeletePasskeyEndpoint  goa.Endpoint
@@ -30,7 +31,7 @@ type Client struct {
 }
 
 // NewClient initializes a "auth" service client given the endpoints.
-func NewClient(status, registerBegin, registerFinish, loginBegin, loginFinish, deviceStart, deviceToken, deviceApprove, passkeys, deletePasskey, revokeSessions, logout goa.Endpoint) *Client {
+func NewClient(status, registerBegin, registerFinish, loginBegin, loginFinish, deviceStart, deviceToken, deviceRequest, deviceApprove, passkeys, deletePasskey, revokeSessions, logout goa.Endpoint) *Client {
 	return &Client{
 		StatusEndpoint:         status,
 		RegisterBeginEndpoint:  registerBegin,
@@ -39,6 +40,7 @@ func NewClient(status, registerBegin, registerFinish, loginBegin, loginFinish, d
 		LoginFinishEndpoint:    loginFinish,
 		DeviceStartEndpoint:    deviceStart,
 		DeviceTokenEndpoint:    deviceToken,
+		DeviceRequestEndpoint:  deviceRequest,
 		DeviceApproveEndpoint:  deviceApprove,
 		PasskeysEndpoint:       passkeys,
 		DeletePasskeyEndpoint:  deletePasskey,
@@ -107,9 +109,9 @@ func (c *Client) LoginFinish(ctx context.Context, p *CeremonyFinish) (res *Login
 }
 
 // DeviceStart calls the "device_start" endpoint of the "auth" service.
-func (c *Client) DeviceStart(ctx context.Context) (res *DeviceStartResult, err error) {
+func (c *Client) DeviceStart(ctx context.Context, p *DeviceStartPayload) (res *DeviceStartResult, err error) {
 	var ires any
-	ires, err = c.DeviceStartEndpoint(ctx, nil)
+	ires, err = c.DeviceStartEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
@@ -124,6 +126,20 @@ func (c *Client) DeviceToken(ctx context.Context, p *DeviceTokenPayload) (res *D
 		return
 	}
 	return ires.(*DeviceTokenResult), nil
+}
+
+// DeviceRequest calls the "device_request" endpoint of the "auth" service.
+// DeviceRequest may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The request is not signed in with a passkey
+//   - "not_found" (type *goa.ServiceError): The user code is unknown or expired
+//   - error: internal error
+func (c *Client) DeviceRequest(ctx context.Context, p *DeviceRequestPayload) (res *DeviceRequestResult, err error) {
+	var ires any
+	ires, err = c.DeviceRequestEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*DeviceRequestResult), nil
 }
 
 // DeviceApprove calls the "device_approve" endpoint of the "auth" service.

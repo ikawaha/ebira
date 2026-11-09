@@ -240,7 +240,7 @@ func TestLogin(t *testing.T) {
 func TestDevice(t *testing.T) {
 	p, _ := newTest(t)
 	register(t, p)
-	code, user, uri := p.StartDevice()
+	code, user, uri := p.StartDevice("")
 	if len(user) != 9 || user[4] != '-' || uri != "http://localhost:13579/#device/"+user {
 		t.Errorf("user code %q, URI %q", user, uri)
 	}
@@ -267,7 +267,7 @@ func TestDevice(t *testing.T) {
 	}
 
 	// An expired request is gone, and cannot be approved.
-	code, user, _ = p.StartDevice()
+	code, user, _ = p.StartDevice("")
 	p.devices[code].expires = time.Now().Add(-time.Second)
 	if err := p.ApproveDevice(user); !errors.Is(err, ErrDeviceCode) {
 		t.Errorf("expired code approved: %v", err)
@@ -278,7 +278,7 @@ func TestDevice(t *testing.T) {
 
 	// Pending requests are bounded.
 	for range 2 * maxDevices {
-		p.StartDevice()
+		p.StartDevice("")
 	}
 	if n := len(p.devices); n > maxDevices {
 		t.Errorf("%d pending requests, want at most %d", n, maxDevices)

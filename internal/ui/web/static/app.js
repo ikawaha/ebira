@@ -5441,9 +5441,23 @@ $("passkeys-open").addEventListener("click", () => openPasskeys());
 // showDeviceApprove asks to approve the sign-in of a client without a
 // browser, such as the TUI, which shows the same code and the URL of this
 // page with it (#device/<code>). The page must be signed in with a passkey.
-function showDeviceApprove(code) {
+// It tells when the request was made and by what, so that one people did not
+// make, as from a link someone sent, can be told apart.
+async function showDeviceApprove(code) {
   const d = $("auth");
   delete d.dataset.required;
+  let asked = null;
+  try {
+    const r = await api("/auth/device/" + encodeURIComponent(code));
+    const client = { tui: t("deviceClientTui"), cli: t("deviceClientCli") }[r.client] || t("deviceClientOther");
+    asked = el("p", "", t("deviceAsked", { client, time: formatTime(r.created_at, true) }));
+  } catch (e) {
+    if (e.status === 404) {
+      authDialog(t("deviceTitle"), t("deviceNotFound"), button(t("authDone"), () => d.close(), { cls: "primary" }));
+      return;
+    }
+    // An earlier server cannot tell: the code alone is shown.
+  }
   let msg;
   const cancel = button(t("cancel"), () => d.close());
   const go = button(t("deviceApprove"), async () => {
@@ -5459,7 +5473,8 @@ function showDeviceApprove(code) {
   }, { cls: "primary" });
   msg = authDialog(t("deviceTitle"), el("div", "",
     el("p", "", t("deviceText")),
-    el("div", "auth-cmd device-code", el("code", "", code))), cancel, go);
+    el("div", "auth-cmd device-code", el("code", "", code)),
+    ...(asked ? [asked] : [])), cancel, go);
 }
 
 // passkeyError is the message of a failed ceremony; the browser tells a

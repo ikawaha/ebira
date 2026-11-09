@@ -62,11 +62,15 @@ func (m *Model) checkAuth() tea.Cmd {
 	}
 }
 
+// tuiClient is what the TUI tells device_start it is, which the web UI
+// shows when people approve the sign-in.
+var tuiClient = "tui"
+
 func (m *Model) startDevice() tea.Cmd {
 	m.passkey.starting = true
 	ctx, api := m.ctx, m.auth
 	return func() tea.Msg {
-		res, err := api.DeviceStart(ctx)
+		res, err := api.DeviceStart(ctx, &genauth.DeviceStartPayload{Client: &tuiClient})
 		return deviceStartMsg{res: res, err: err}
 	}
 }

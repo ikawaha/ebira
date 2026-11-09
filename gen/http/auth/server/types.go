@@ -39,6 +39,14 @@ type LoginFinishRequestBody struct {
 	Credential any `form:"credential,omitempty" json:"credential,omitempty" xml:"credential,omitempty"`
 }
 
+// DeviceStartRequestBody is the type of the "auth" service "device_start"
+// endpoint HTTP request body.
+type DeviceStartRequestBody struct {
+	// What asks to sign in, which the web UI shows when people approve it: tui for
+	// the TUI, cli for a command such as ebira import
+	Client *string `form:"client,omitempty" json:"client,omitempty" xml:"client,omitempty"`
+}
+
 // DeviceTokenRequestBody is the type of the "auth" service "device_token"
 // endpoint HTTP request body.
 type DeviceTokenRequestBody struct {
@@ -110,6 +118,18 @@ type DeviceTokenResponseBody struct {
 	Status string `form:"status" json:"status" xml:"status"`
 	// Session, when approved
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
+}
+
+// DeviceRequestResponseBody is the type of the "auth" service "device_request"
+// endpoint HTTP response body.
+type DeviceRequestResponseBody struct {
+	// When the request was made, in RFC 3339
+	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
+	// What made it, as device_start tells: tui or cli; none for a client that does
+	// not tell
+	Client *string `form:"client,omitempty" json:"client,omitempty" xml:"client,omitempty"`
+	// Seconds until the request expires
+	ExpiresIn int `form:"expires_in" json:"expires_in" xml:"expires_in"`
 }
 
 // PasskeysResponseBody is the type of the "auth" service "passkeys" endpoint
@@ -192,6 +212,42 @@ type LoginBeginBadRequestResponseBody struct {
 // LoginFinishUnauthorizedResponseBody is the type of the "auth" service
 // "login_finish" endpoint HTTP response body for the "unauthorized" error.
 type LoginFinishUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeviceRequestUnauthorizedResponseBody is the type of the "auth" service
+// "device_request" endpoint HTTP response body for the "unauthorized" error.
+type DeviceRequestUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// DeviceRequestNotFoundResponseBody is the type of the "auth" service
+// "device_request" endpoint HTTP response body for the "not_found" error.
+type DeviceRequestNotFoundResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -455,6 +511,17 @@ func NewDeviceTokenResponseBody(res *auth.DeviceTokenResult) *DeviceTokenRespons
 	return body
 }
 
+// NewDeviceRequestResponseBody builds the HTTP response body from the result
+// of the "device_request" endpoint of the "auth" service.
+func NewDeviceRequestResponseBody(res *auth.DeviceRequestResult) *DeviceRequestResponseBody {
+	body := &DeviceRequestResponseBody{
+		CreatedAt: res.CreatedAt,
+		Client:    res.Client,
+		ExpiresIn: res.ExpiresIn,
+	}
+	return body
+}
+
 // NewPasskeysResponseBody builds the HTTP response body from the result of the
 // "passkeys" endpoint of the "auth" service.
 func NewPasskeysResponseBody(res []*auth.PasskeyInfo) []*PasskeyInfoResponse {
@@ -529,6 +596,34 @@ func NewLoginBeginBadRequestResponseBody(res *goa.ServiceError) *LoginBeginBadRe
 // the result of the "login_finish" endpoint of the "auth" service.
 func NewLoginFinishUnauthorizedResponseBody(res *goa.ServiceError) *LoginFinishUnauthorizedResponseBody {
 	body := &LoginFinishUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeviceRequestUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "device_request" endpoint of the "auth" service.
+func NewDeviceRequestUnauthorizedResponseBody(res *goa.ServiceError) *DeviceRequestUnauthorizedResponseBody {
+	body := &DeviceRequestUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewDeviceRequestNotFoundResponseBody builds the HTTP response body from the
+// result of the "device_request" endpoint of the "auth" service.
+func NewDeviceRequestNotFoundResponseBody(res *goa.ServiceError) *DeviceRequestNotFoundResponseBody {
+	body := &DeviceRequestNotFoundResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -720,11 +815,30 @@ func NewLoginFinishCeremonyFinish(body *LoginFinishRequestBody) *auth.CeremonyFi
 	return v
 }
 
+// NewDeviceStartPayload builds a auth service device_start endpoint payload.
+func NewDeviceStartPayload(body *DeviceStartRequestBody) *auth.DeviceStartPayload {
+	v := &auth.DeviceStartPayload{
+		Client: body.Client,
+	}
+
+	return v
+}
+
 // NewDeviceTokenPayload builds a auth service device_token endpoint payload.
 func NewDeviceTokenPayload(body *DeviceTokenRequestBody) *auth.DeviceTokenPayload {
 	v := &auth.DeviceTokenPayload{
 		DeviceCode: *body.DeviceCode,
 	}
+
+	return v
+}
+
+// NewDeviceRequestPayload builds a auth service device_request endpoint
+// payload.
+func NewDeviceRequestPayload(userCode string, session *string) *auth.DeviceRequestPayload {
+	v := &auth.DeviceRequestPayload{}
+	v.UserCode = userCode
+	v.Session = session
 
 	return v
 }
@@ -787,6 +901,17 @@ func ValidateLoginFinishRequestBody(body *LoginFinishRequestBody) (err error) {
 	}
 	if body.Credential == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("credential", "body"))
+	}
+	return
+}
+
+// ValidateDeviceStartRequestBody runs the validations defined on
+// DeviceStartRequestBody
+func ValidateDeviceStartRequestBody(body *DeviceStartRequestBody) (err error) {
+	if body.Client != nil {
+		if !(*body.Client == "tui" || *body.Client == "cli") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.client", *body.Client, []any{"tui", "cli"}))
+		}
 	}
 	return
 }

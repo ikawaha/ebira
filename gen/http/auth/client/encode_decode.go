@@ -518,6 +518,22 @@ func (c *Client) BuildDeviceStartRequest(ctx context.Context, v any) (*http.Requ
 	return req, nil
 }
 
+// EncodeDeviceStartRequest returns an encoder for requests sent to the auth
+// device_start server.
+func EncodeDeviceStartRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*auth.DeviceStartPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("auth", "device_start", "*auth.DeviceStartPayload", v)
+		}
+		body := NewDeviceStartRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("auth", "device_start", err)
+		}
+		return nil
+	}
+}
+
 // DecodeDeviceStartResponse returns a decoder for responses returned by the
 // auth device_start endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
@@ -643,6 +659,133 @@ func DecodeDeviceTokenResponse(decoder func(*http.Response) goahttp.Decoder, res
 				return nil, goahttp.ErrDecodingError("auth", "device_token", err)
 			}
 			return nil, goahttp.ErrInvalidResponse("auth", "device_token", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildDeviceRequestRequest instantiates a HTTP request object with method and
+// path set to call the "auth" service "device_request" endpoint
+func (c *Client) BuildDeviceRequestRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		userCode string
+	)
+	{
+		p, ok := v.(*auth.DeviceRequestPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("auth", "device_request", "*auth.DeviceRequestPayload", v)
+		}
+		userCode = p.UserCode
+	}
+
+	rawPath := fmt.Sprintf("/auth/device/%v", url.PathEscape(fmt.Sprint(userCode)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeviceRequestAuthPath(userCode), RawPath: rawPath}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("auth", "device_request", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeDeviceRequestRequest returns an encoder for requests sent to the auth
+// device_request server.
+func EncodeDeviceRequestRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*auth.DeviceRequestPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("auth", "device_request", "*auth.DeviceRequestPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodeDeviceRequestResponse returns a decoder for responses returned by the
+// auth device_request endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeDeviceRequestResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - error: internal error
+func DecodeDeviceRequestResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("auth", "device_request", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("auth", "device_request", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body DeviceRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("auth", "device_request", err)
+			}
+			err = ValidateDeviceRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("auth", "device_request", err)
+			}
+			res := NewDeviceRequestResultOK(&body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body DeviceRequestUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("auth", "device_request", err)
+			}
+			err = ValidateDeviceRequestUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("auth", "device_request", err)
+			}
+			return nil, NewDeviceRequestUnauthorized(&body)
+		case http.StatusNotFound:
+			var (
+				body DeviceRequestNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("auth", "device_request", err)
+			}
+			err = ValidateDeviceRequestNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("auth", "device_request", err)
+			}
+			return nil, NewDeviceRequestNotFound(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("auth", "device_request", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("auth", "device_request", resp.StatusCode, string(body))
 		}
 	}
 }

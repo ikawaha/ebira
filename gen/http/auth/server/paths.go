@@ -44,6 +44,11 @@ func DeviceTokenAuthPath() string {
 	return "/auth/device/token"
 }
 
+// DeviceRequestAuthPath returns the URL path to the auth service device_request HTTP endpoint.
+func DeviceRequestAuthPath(userCode string) string {
+	return fmt.Sprintf("/auth/device/%v", userCode)
+}
+
 // DeviceApproveAuthPath returns the URL path to the auth service device_approve HTTP endpoint.
 func DeviceApproveAuthPath() string {
 	return "/auth/device/approve"

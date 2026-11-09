@@ -27,7 +27,7 @@ func UsageCommands() []string {
 	return []string{
 		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
 		"assistant (status|ask)",
-		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
+		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-request|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
 }
 
@@ -286,10 +286,15 @@ func ParseEndpoint(
 		authLoginFinishFlags    = flag.NewFlagSet("login-finish", flag.ExitOnError)
 		authLoginFinishBodyFlag = new(cliStringFlag)
 
-		authDeviceStartFlags = flag.NewFlagSet("device-start", flag.ExitOnError)
+		authDeviceStartFlags    = flag.NewFlagSet("device-start", flag.ExitOnError)
+		authDeviceStartBodyFlag = new(cliStringFlag)
 
 		authDeviceTokenFlags    = flag.NewFlagSet("device-token", flag.ExitOnError)
 		authDeviceTokenBodyFlag = new(cliStringFlag)
+
+		authDeviceRequestFlags        = flag.NewFlagSet("device-request", flag.ExitOnError)
+		authDeviceRequestUserCodeFlag = new(cliStringFlag)
+		authDeviceRequestSessionFlag  = new(cliStringFlag)
 
 		authDeviceApproveFlags       = flag.NewFlagSet("device-approve", flag.ExitOnError)
 		authDeviceApproveBodyFlag    = new(cliStringFlag)
@@ -414,7 +419,10 @@ func ParseEndpoint(
 	authRegisterBeginFlags.Var(authRegisterBeginSessionFlag, "session", "")
 	authRegisterFinishFlags.Var(authRegisterFinishBodyFlag, "body", "")
 	authLoginFinishFlags.Var(authLoginFinishBodyFlag, "body", "")
+	authDeviceStartFlags.Var(authDeviceStartBodyFlag, "body", "")
 	authDeviceTokenFlags.Var(authDeviceTokenBodyFlag, "body", "")
+	authDeviceRequestFlags.Var(authDeviceRequestUserCodeFlag, "user-code", "User code shown by the client")
+	authDeviceRequestFlags.Var(authDeviceRequestSessionFlag, "session", "")
 	authDeviceApproveFlags.Var(authDeviceApproveBodyFlag, "body", "")
 	authDeviceApproveFlags.Var(authDeviceApproveSessionFlag, "session", "")
 	authPasskeysFlags.Var(authPasskeysSessionFlag, "session", "")
@@ -480,6 +488,7 @@ func ParseEndpoint(
 	authLoginFinishFlags.Usage = authLoginFinishUsage
 	authDeviceStartFlags.Usage = authDeviceStartUsage
 	authDeviceTokenFlags.Usage = authDeviceTokenUsage
+	authDeviceRequestFlags.Usage = authDeviceRequestUsage
 	authDeviceApproveFlags.Usage = authDeviceApproveUsage
 	authPasskeysFlags.Usage = authPasskeysUsage
 	authDeletePasskeyFlags.Usage = authDeletePasskeyUsage
@@ -691,6 +700,9 @@ func ParseEndpoint(
 			case "device-token":
 				epf = authDeviceTokenFlags
 
+			case "device-request":
+				epf = authDeviceRequestFlags
+
 			case "device-approve":
 				epf = authDeviceApproveFlags
 
@@ -900,9 +912,13 @@ func ParseEndpoint(
 				data, err = authc.BuildLoginFinishPayload(authLoginFinishBodyFlag.value)
 			case "device-start":
 				endpoint = c.DeviceStart()
+				data, err = authc.BuildDeviceStartPayload(authDeviceStartBodyFlag.value)
 			case "device-token":
 				endpoint = c.DeviceToken()
 				data, err = authc.BuildDeviceTokenPayload(authDeviceTokenBodyFlag.value)
+			case "device-request":
+				endpoint = c.DeviceRequest()
+				data, err = authc.BuildDeviceRequestPayload(authDeviceRequestUserCodeFlag.value, authDeviceRequestSessionFlag.value)
 			case "device-approve":
 				endpoint = c.DeviceApprove()
 				data, err = authc.BuildDeviceApprovePayload(authDeviceApproveBodyFlag.value, authDeviceApproveSessionFlag.value)
@@ -1950,6 +1966,7 @@ func authUsage() {
 	fmt.Fprintln(os.Stderr, `    login-finish: Finish signing in with the passkey the browser used. The response sets the session cookie.`)
 	fmt.Fprintln(os.Stderr, `    device-start: Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.`)
 	fmt.Fprintln(os.Stderr, `    device-token: Ask whether people approved the request of device_start. Once approved, the result has the session, which the client keeps in memory only and sends as the session cookie; the request is then gone.`)
+	fmt.Fprintln(os.Stderr, `    device-request: Tell the web UI, signed in with a passkey, about the request of device_start with a user code before people approve it: when it was made, and by what.`)
 	fmt.Fprintln(os.Stderr, `    device-approve: Approve the request of device_start with its user code, from the web UI signed in with a passkey recently, as the session it gives lasts as long as one of a sign-in.`)
 	fmt.Fprintln(os.Stderr, `    passkeys: List the registered passkeys, for the web UI signed in with a passkey.`)
 	fmt.Fprintln(os.Stderr, `    delete-passkey: Delete a registered passkey, from the web UI signed in and verified with a passkey. The only passkey cannot be deleted; ebira auth reset removes every passkey.`)
@@ -2052,6 +2069,7 @@ func authLoginFinishUsage() {
 func authDeviceStartUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] auth device-start", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -2059,10 +2077,11 @@ func authDeviceStartUsage() {
 	fmt.Fprintln(os.Stderr, `Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.`)
 
 	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-start")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-start --body '{\n      \"client\": \"cli\"\n   }'")
 }
 
 func authDeviceTokenUsage() {
@@ -2081,6 +2100,26 @@ func authDeviceTokenUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-token --body '{\n      \"device_code\": \"Perferendis maiores.\"\n   }'")
+}
+
+func authDeviceRequestUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] auth device-request", os.Args[0])
+	fmt.Fprint(os.Stderr, " -user-code STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Tell the web UI, signed in with a passkey, about the request of device_start with a user code before people approve it: when it was made, and by what.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -user-code STRING: User code shown by the client`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "auth device-request --user-code \"Explicabo natus.\" --session \"Nisi et fugiat in.\"")
 }
 
 func authDeviceApproveUsage() {

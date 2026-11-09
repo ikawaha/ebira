@@ -43,11 +43,14 @@ type Service interface {
 	// shows the user code and the URL, people approve the code in the web UI,
 	// signed in with a passkey, and the client gets a session from device_token
 	// meanwhile.
-	DeviceStart(context.Context) (res *DeviceStartResult, err error)
+	DeviceStart(context.Context, *DeviceStartPayload) (res *DeviceStartResult, err error)
 	// Ask whether people approved the request of device_start. Once approved, the
 	// result has the session, which the client keeps in memory only and sends as
 	// the session cookie; the request is then gone.
 	DeviceToken(context.Context, *DeviceTokenPayload) (res *DeviceTokenResult, err error)
+	// Tell the web UI, signed in with a passkey, about the request of device_start
+	// with a user code before people approve it: when it was made, and by what.
+	DeviceRequest(context.Context, *DeviceRequestPayload) (res *DeviceRequestResult, err error)
 	// Approve the request of device_start with its user code, from the web UI
 	// signed in with a passkey recently, as the session it gives lasts as long as
 	// one of a sign-in.
@@ -80,7 +83,7 @@ const ServiceName = "auth"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [12]string{"status", "register_begin", "register_finish", "login_begin", "login_finish", "device_start", "device_token", "device_approve", "passkeys", "delete_passkey", "revoke_sessions", "logout"}
+var MethodNames = [13]string{"status", "register_begin", "register_finish", "login_begin", "login_finish", "device_start", "device_token", "device_request", "device_approve", "passkeys", "delete_passkey", "revoke_sessions", "logout"}
 
 // Ceremony is the result type of the auth service register_begin method.
 type Ceremony struct {
@@ -118,6 +121,35 @@ type DeviceApprovePayload struct {
 	Session *string
 	// User code shown by the client
 	UserCode string
+}
+
+// DeviceRequestPayload is the payload type of the auth service device_request
+// method.
+type DeviceRequestPayload struct {
+	// Session cookie of the web UI
+	Session *string
+	// User code shown by the client
+	UserCode string
+}
+
+// DeviceRequestResult is the result type of the auth service device_request
+// method.
+type DeviceRequestResult struct {
+	// When the request was made, in RFC 3339
+	CreatedAt string
+	// What made it, as device_start tells: tui or cli; none for a client that does
+	// not tell
+	Client *string
+	// Seconds until the request expires
+	ExpiresIn int
+}
+
+// DeviceStartPayload is the payload type of the auth service device_start
+// method.
+type DeviceStartPayload struct {
+	// What asks to sign in, which the web UI shows when people approve it: tui for
+	// the TUI, cli for a command such as ebira import
+	Client *string
 }
 
 // DeviceStartResult is the result type of the auth service device_start method.
