@@ -583,7 +583,7 @@ func (c *Client) ImportAiNote(ctx context.Context, p *ImportAiNotePayload) (res 
 // AddAiFile calls the "add_ai_file" endpoint of the "notes" service.
 // AddAiFile may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
-//   - "bad_request" (type *goa.ServiceError): The file is not a supported image
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
 //   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
 //   - "too_large" (type *goa.ServiceError): The file is larger than 5 MB
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
@@ -748,8 +748,8 @@ func (c *Client) MakeNotebookPrivate(ctx context.Context, p *MakeNotebookPrivate
 // AddFile calls the "add_file" endpoint of the "notes" service.
 // AddFile may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist
-//   - "bad_request" (type *goa.ServiceError): The file is not a supported image, or the note ID is used in more than one notebook
-//   - "too_large" (type *goa.ServiceError): The file is larger than 10 MB
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "too_large" (type *goa.ServiceError): The file is larger than 50 MB
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -764,7 +764,7 @@ func (c *Client) AddFile(ctx context.Context, p *AddFilePayload, req io.ReadClos
 
 // GetFile calls the "get_file" endpoint of the "notes" service.
 // GetFile may return the following errors:
-//   - "not_found" (type *goa.ServiceError): The note or the file does not exist, or the file is not of an accepted type
+//   - "not_found" (type *goa.ServiceError): The note or the file does not exist
 //   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again

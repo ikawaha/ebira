@@ -9,7 +9,7 @@ tags: [guide, terminal]
 | `ebira server start` / `stop` / `restart` / `status` | 裏のサーバーを操作する |
 | `ebira serve` | サーバーを前面で動かす |
 | `ebira import パス…` | Markdown のファイルを取り込む |
-| `ebira files check` | 使われていない画像を探す |
+| `ebira files check` | 使われていない画像やファイルを探す |
 | `ebira sync` | git と同期する |
 | `ebira auth passkey` | パスキーを登録する |
 | `ebira version` | 版を出す |

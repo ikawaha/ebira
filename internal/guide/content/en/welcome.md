@@ -10,7 +10,7 @@ Read from the top to learn the whole of it, or pick what you need.
 
 - [The screen](screen.md)
 - [Notes and notebooks](notes.md)
-- [Writing Markdown](markdown.md) · [Math and diagrams](math.md) · [Images](images.md) · [Handy keys of the editor](editor.md)
+- [Writing Markdown](markdown.md) · [Math and diagrams](math.md) · [Images and files](images.md) · [Handy keys of the editor](editor.md)
 - [Tags](tags.md) · [Marks](marks.md) · [Separators and order](separators.md)
 - [How to search](search.md) · [Finding in a note](find.md)
 - [History](history.md) · [Kinds of notebooks and AI](kinds.md)

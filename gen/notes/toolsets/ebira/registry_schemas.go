@@ -48,29 +48,29 @@ func ToolSchemas() []*genregistry.ToolSchema {
 	}
 } // schema1 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema1() *genregistry.ToolSchema {
-	registryText1 := "Add an image (PNG, JPEG, GIF or WebP, at most 5 MB) to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note"
+	registryText1 := "Add an image or another file, such as a PDF (at most 5 MB), to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.add_ai_file",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
 		ResultSchema:           []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"File name\",\"example\":\"screenshot.png\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"example\":\"be4c1193735ee1.assets/screenshot.png\",\"type\":\"string\"}},\"required\":[\"name\",\"path\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Add Ai File",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 45,
-				Terms:  map[string]int{"5": 1, "a": 2, "add": 3, "ai": 4, "an": 1, "at": 1, "body": 1, "collab": 1, "ebira": 1, "file": 2, "from": 1, "gif": 1, "image": 1, "in": 1, "it": 1, "jpeg": 1, "kind": 1, "mb": 1, "most": 1, "note": 2, "notebook": 1, "or": 1, "path": 1, "png": 1, "refer": 1, "returned": 1, "shared": 1, "the": 2, "then": 1, "to": 2, "update": 1, "using": 1, "webp": 1, "with": 2},
+				Length: 47,
+				Terms:  map[string]int{"5": 1, "a": 3, "add": 3, "ai": 4, "an": 1, "another": 1, "as": 1, "at": 1, "body": 1, "collab": 1, "ebira": 1, "file": 3, "from": 1, "image": 1, "in": 1, "it": 1, "kind": 1, "mb": 1, "most": 1, "note": 2, "notebook": 1, "or": 1, "path": 1, "pdf": 1, "refer": 1, "returned": 1, "shared": 1, "such": 1, "the": 2, "then": 1, "to": 2, "update": 1, "using": 1, "with": 2},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
-				Description:     "Add an image (PNG, JPEG, GIF or WebP, at most 5 MB) to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note",
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
+				Description:     "Add an image or another file, such as a PDF (at most 5 MB), to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 45,
-					Terms:  map[string]int{"5": 1, "a": 2, "add": 3, "ai": 4, "an": 1, "at": 1, "body": 1, "collab": 1, "ebira": 1, "file": 2, "from": 1, "gif": 1, "image": 1, "in": 1, "it": 1, "jpeg": 1, "kind": 1, "mb": 1, "most": 1, "note": 2, "notebook": 1, "or": 1, "path": 1, "png": 1, "refer": 1, "returned": 1, "shared": 1, "the": 2, "then": 1, "to": 2, "update": 1, "using": 1, "webp": 1, "with": 2},
+					Length: 47,
+					Terms:  map[string]int{"5": 1, "a": 3, "add": 3, "ai": 4, "an": 1, "another": 1, "as": 1, "at": 1, "body": 1, "collab": 1, "ebira": 1, "file": 3, "from": 1, "image": 1, "in": 1, "it": 1, "kind": 1, "mb": 1, "most": 1, "note": 2, "notebook": 1, "or": 1, "path": 1, "pdf": 1, "refer": 1, "returned": 1, "shared": 1, "such": 1, "the": 2, "then": 1, "to": 2, "update": 1, "using": 1, "with": 2},
 				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
 				Payload:       declarations.metadata11(),
 			},
 			Payload: declarations.metadata2(),
@@ -84,7 +84,7 @@ func (declarations registryDeclarations) metadata2() *genregistry.ToolTypeMetada
 	registryText1 := "AddAiFilePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
 			declarations.field3(),
 			declarations.field4(),
@@ -131,7 +131,7 @@ func (registryDeclarations) field5() *genregistry.ToolFieldMetadata {
 // field6 constructs one generated field declaration.
 func (registryDeclarations) field6() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB"
+	registryText2 := "The file, base64-encoded, at most 5 MB"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("content")},
@@ -194,7 +194,7 @@ func (declarations registryDeclarations) metadata11() *genregistry.ToolTypeMetad
 	registryText1 := "AddAiFilePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
 			declarations.field12(),
 			declarations.field13(),
@@ -241,7 +241,7 @@ func (registryDeclarations) field14() *genregistry.ToolFieldMetadata {
 // field15 constructs one generated field declaration.
 func (registryDeclarations) field15() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB"
+	registryText2 := "The file, base64-encoded, at most 5 MB"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("content")},

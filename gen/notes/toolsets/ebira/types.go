@@ -16,7 +16,7 @@ type (
 		ID string
 		// File name
 		Name string
-		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		// The file, base64-encoded, at most 5 MB
 		Content []byte
 	}
 	// AddAiFileResult defines the JSON result for the ebira.add_ai_file tool.

@@ -3827,6 +3827,9 @@ type UnusedFileResponseBody struct {
 	// Whether the file was added within the last hour, such as to a note still
 	// being edited, whose body does not refer to it until saved
 	Recent *bool `form:"recent,omitempty" json:"recent,omitempty" xml:"recent,omitempty"`
+	// Whether an earlier version of a note, kept on this device, refers to the
+	// file, which putting that version back would need
+	InHistory *bool `form:"in_history,omitempty" json:"in_history,omitempty" xml:"in_history,omitempty"`
 }
 
 // BrokenFileRefResponseBody is used to define fields on response body types.
@@ -3900,7 +3903,7 @@ type ImportFileRequestBody struct {
 	Ref string `form:"ref" json:"ref" xml:"ref"`
 	// File name
 	Name string `form:"name" json:"name" xml:"name"`
-	// The image: PNG, JPEG, GIF or WebP, at most 10 MB
+	// The image, at most 50 MB
 	Content []byte `form:"content" json:"content" xml:"content"`
 }
 
@@ -6327,10 +6330,11 @@ func NewAddFileVerificationRequired(body *AddFileVerificationRequiredResponseBod
 
 // NewGetFileResultOK builds a "notes" service "get_file" endpoint result from
 // a HTTP "OK" response.
-func NewGetFileResultOK(contentType string, length int64) *notes.GetFileResult {
+func NewGetFileResultOK(contentType string, length int64, disposition string) *notes.GetFileResult {
 	v := &notes.GetFileResult{}
 	v.ContentType = contentType
 	v.Length = length
+	v.Disposition = disposition
 
 	return v
 }
@@ -12552,6 +12556,9 @@ func ValidateUnusedFileResponseBody(body *UnusedFileResponseBody) (err error) {
 	if body.Recent == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("recent", "body"))
 	}
+	if body.InHistory == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("in_history", "body"))
+	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -12584,6 +12591,9 @@ func validateUnusedFileResponseBody(body *UnusedFileResponseBody, path string) (
 	}
 	if body.Recent == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("recent", path))
+	}
+	if body.InHistory == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("in_history", path))
 	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))

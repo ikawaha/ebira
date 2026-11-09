@@ -734,7 +734,7 @@ var addAiFilePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("content")},
 		JSONType:    "string",
-		Description: "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+		Description: "The file, base64-encoded, at most 5 MB",
 	},
 }
 var addAiFileResultFields = []tools.FieldMetadata{
@@ -7626,7 +7626,7 @@ func validateAddAiFilePayloadJSONValue(path string, value any, description strin
 		case "content":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+				typed[key], "The file, base64-encoded, at most 5 MB",
 			); err != nil {
 				return err
 			}

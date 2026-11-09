@@ -4444,6 +4444,7 @@ func DecodeGetFileResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			var (
 				contentType string
 				length      int64
+				disposition string
 				err         error
 			)
 			contentTypeRaw := resp.Header.Get("Content-Type")
@@ -4462,10 +4463,15 @@ func DecodeGetFileResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				}
 				length = v
 			}
+			dispositionRaw := resp.Header.Get("Content-Disposition")
+			if dispositionRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("disposition", "header"))
+			}
+			disposition = dispositionRaw
 			if err != nil {
 				return nil, goahttp.ErrValidationError("notes", "get_file", err)
 			}
-			res := NewGetFileResultOK(contentType, length)
+			res := NewGetFileResultOK(contentType, length, disposition)
 			return res, nil
 		case http.StatusNotFound:
 			var (
@@ -6573,13 +6579,14 @@ func unmarshalNoteVersionSummaryResponseToNotesNoteVersionSummary(v *NoteVersion
 // *notes.UnusedFile from a value of type *UnusedFileResponseBody.
 func unmarshalUnusedFileResponseBodyToNotesUnusedFile(v *UnusedFileResponseBody) *notes.UnusedFile {
 	res := &notes.UnusedFile{
-		NoteID:  *v.NoteID,
-		Title:   *v.Title,
-		Name:    *v.Name,
-		Path:    *v.Path,
-		Size:    *v.Size,
-		AddedAt: *v.AddedAt,
-		Recent:  *v.Recent,
+		NoteID:    *v.NoteID,
+		Title:     *v.Title,
+		Name:      *v.Name,
+		Path:      *v.Path,
+		Size:      *v.Size,
+		AddedAt:   *v.AddedAt,
+		Recent:    *v.Recent,
+		InHistory: *v.InHistory,
 	}
 
 	return res
