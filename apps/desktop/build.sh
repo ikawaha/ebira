@@ -24,7 +24,7 @@ for size in 16 32 128 256 512; do
 	sips -s format png -Z "$((size * 2))" "$icons/icon.svg" --out "$icons/icon.iconset/icon_${size}x${size}@2x.png" >/dev/null
 done
 iconutil -c icns -o "$app/Contents/Resources/icon.icns" "$icons/icon.iconset"
-go build -o "$app/Contents/MacOS/ebira-desktop" .
+go build -ldflags "-X main.bundled=true" -o "$app/Contents/MacOS/ebira-desktop" .
 (cd ../.. && go build -o "apps/desktop/$app/Contents/Helpers/ebira" ./cmd/ebira)
 
 # The version of the app is the one of the server in it, built from the same
