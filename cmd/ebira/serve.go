@@ -306,7 +306,7 @@ func runServe(args []string) error {
 		slog.ErrorContext(ctx, "request failed", "error", err)
 	}
 	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
-	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
+	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, tooLarge))
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(gate), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
@@ -341,7 +341,13 @@ func runServe(args []string) error {
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{Handler: httpguard.Guard(root, listenHost), ReadHeaderTimeout: 10 * time.Second}
+	// No WriteTimeout: the event stream (/events) and MCP streams stay open.
+	srv := &http.Server{
+		Handler:           httpguard.Guard(limitBodies(root), listenHost),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       5 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+	}
 	srv.RegisterOnShutdown(svc.Close) // end event streams so that Shutdown does not wait for them
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
