@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	neturl "net/url"
 	"os/exec"
 	"runtime"
 	"time"
@@ -155,9 +157,15 @@ func (m *Model) handleAuth(msg tea.Msg) tea.Cmd {
 // browserOpenedMsg tells that the browser could not open a URL.
 type browserOpenedMsg struct{ err error }
 
-// openURL opens url in the default browser.
-func openURL(url string) tea.Cmd {
+// openURL opens url, a page of the web UI at web, in the default browser.
+// The opener of the system opens files and programs too, so a URL the
+// server gives is opened only when it is a page of the web UI: http or
+// https, with the scheme, host and port of web.
+func openURL(url, web string) tea.Cmd {
 	return func() tea.Msg {
+		if !webPage(url, web) {
+			return browserOpenedMsg{err: fmt.Errorf("not a page of the web UI at %s: %q", web, url)}
+		}
 		name, args := "xdg-open", []string{url}
 		switch runtime.GOOS {
 		case "darwin":
@@ -167,4 +175,17 @@ func openURL(url string) tea.Cmd {
 		}
 		return browserOpenedMsg{err: exec.Command(name, args...).Run()}
 	}
+}
+
+// webPage reports whether u is a page of the web UI at web.
+func webPage(u, web string) bool {
+	p, err := neturl.Parse(u)
+	if err != nil {
+		return false
+	}
+	w, err := neturl.Parse(web)
+	if err != nil {
+		return false
+	}
+	return (p.Scheme == "http" || p.Scheme == "https") && p.Scheme == w.Scheme && p.Host == w.Host && p.User == nil
 }
