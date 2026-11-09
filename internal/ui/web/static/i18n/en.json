@@ -445,6 +445,7 @@
   "passkeyDelete": "Delete",
   "passkeyLast": "The only passkey cannot be deleted. To remove every passkey, run ebira auth reset in the terminal.",
   "confirmDeletePasskey": "Delete passkey {n}? It can no longer sign in. Delete it also from your browser or password manager.",
+  "confirmRevokeAfterDelete": "The passkey is deleted. Browsers and the TUI it signed in stay signed in until their sessions expire. If it was lost, or someone else may have used it, sign out every other browser and the TUI now?",
   "passkeyAdd": "Add a passkey",
   "revokeSessions": "End other sessions",
   "revokeSessionsText": "Ending the sessions signs out the other browsers and the TUI; this page stays signed in.",
