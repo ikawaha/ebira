@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
@@ -39,7 +38,7 @@ type Config struct {
 func (s *Store) Config() (Config, error) {
 	var c Config
 	p := s.ConfigPath()
-	b, err := os.ReadFile(p)
+	b, err := readFile(p)
 	if errors.Is(err, fs.ErrNotExist) {
 		return c, nil
 	}
@@ -63,7 +62,7 @@ func (s *Store) ConfigPath() string { return filepath.Join(s.dir, ConfigFile) }
 // defaults; an empty list is written as [], for none.
 func (s *Store) SaveSearch(c Config) error {
 	p := s.ConfigPath()
-	old, err := os.ReadFile(p)
+	old, err := readFile(p)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

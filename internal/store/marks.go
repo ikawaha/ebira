@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
-	"os"
 	"slices"
 
 	"gopkg.in/yaml.v3"
@@ -45,7 +44,7 @@ func CleanMarks(marks []string) []string {
 // names remove the key. The other keys and the comments of the file are kept.
 func (s *Store) SaveMarkNames(names map[string]string) error {
 	p := s.ConfigPath()
-	old, err := os.ReadFile(p)
+	old, err := readFile(p)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

@@ -103,7 +103,7 @@ func (s *Store) Repair() ([]Repair, error) {
 // repairStray takes in the file name in the place pl, which is not of an ID.
 func (s *Store) repairStray(pl, name string) (*Repair, error) {
 	file := filepath.Join(s.dir, filepath.FromSlash(pl), name)
-	b, err := os.ReadFile(file)
+	b, err := readFile(file)
 	if err != nil {
 		return nil, nil // gone meanwhile
 	}
@@ -113,7 +113,7 @@ func (s *Store) repairStray(pl, name string) (*Repair, error) {
 	rel := path.Join(pl, name)
 	copied := false // of a note next to it
 	for _, id := range copiedIDs(strings.TrimSuffix(name, Ext)) {
-		orig, err := os.ReadFile(s.path(pl, id))
+		orig, err := readFile(s.path(pl, id))
 		if err != nil {
 			continue
 		}
@@ -139,7 +139,7 @@ func (s *Store) repairDuplicate(id string, pls []string) ([]Repair, error) {
 	}
 	vs := make([]version, 0, len(pls))
 	for _, pl := range pls {
-		b, err := os.ReadFile(s.path(pl, id))
+		b, err := readFile(s.path(pl, id))
 		if err != nil || !isNote(b) {
 			return nil, nil // in progress; next time
 		}
@@ -208,7 +208,7 @@ func (s *Store) writeCopy(pl, key string, b []byte, label bool) (string, error) 
 	for i := 0; ; i++ {
 		sum := sha256.Sum256([]byte(key + "\x00" + strconv.Itoa(i)))
 		id := "c" + hex.EncodeToString(sum[:])[:13]
-		if cur, err := os.ReadFile(s.path(pl, id)); err == nil {
+		if cur, err := readFile(s.path(pl, id)); err == nil {
 			if bytes.Equal(cur, enc) {
 				return id, nil // made already, such as on another machine
 			}

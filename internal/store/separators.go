@@ -76,7 +76,7 @@ func (s *Store) Separators(nb string) ([]Separator, error) {
 		return nil, ErrInvalidNotebook
 	}
 	p := s.separatorsPath(nb)
-	b, err := os.ReadFile(p)
+	b, err := readFile(p)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -136,7 +136,7 @@ func (s *Store) SaveSeparators(nb string, seps []Separator) error {
 		}
 		return nil
 	}
-	old, err := os.ReadFile(p)
+	old, err := readFile(p)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

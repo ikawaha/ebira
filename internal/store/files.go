@@ -192,11 +192,11 @@ func (s *Store) File(id, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p := filepath.Join(s.assetsDir(place, id), name)
-	if fi, err := os.Stat(p); err != nil || !fi.Mode().IsRegular() {
-		return "", ErrFileNotFound
+	dir := s.assetsDir(place, id)
+	if !regularIn(dir, name) {
+		return "", ErrFileNotFound // also a link, or one in a linked folder
 	}
-	return p, nil
+	return filepath.Join(dir, name), nil
 }
 
 // DeleteFile removes the file name of note id, and the directory of the
@@ -242,7 +242,7 @@ func (s *Store) AllFiles() ([]NoteFile, error) {
 			if !e.IsDir() || !ok || !ValidID(id) {
 				continue
 			}
-			if fi, err := os.Stat(s.path(place, id)); err != nil || !fi.Mode().IsRegular() {
+			if fi, err := os.Lstat(s.path(place, id)); err != nil || !fi.Mode().IsRegular() {
 				continue // the files of a note that is gone
 			}
 			names, err := os.ReadDir(filepath.Join(dir, e.Name()))
