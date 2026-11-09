@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -12,6 +13,16 @@ import (
 	genauth "github.com/ikawaha/ebira/gen/auth"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 )
+
+// TestPollEvery checks that the TUI pauses between questions about a sign-in
+// request whatever interval the server gives.
+func TestPollEvery(t *testing.T) {
+	for interval, want := range map[int]time.Duration{-1: time.Second, 0: time.Second, 1: time.Second, 5: 5 * time.Second} {
+		if got := pollEvery(&genauth.DeviceStartResult{Interval: interval}); got != want {
+			t.Errorf("pollEvery(%d) = %v, want %v", interval, got, want)
+		}
+	}
+}
 
 // TestWebPage checks that the TUI opens only pages of the web UI, as the URL
 // of a sign-in request comes from the server.

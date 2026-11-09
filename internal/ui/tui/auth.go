@@ -122,7 +122,7 @@ func (m *Model) handleAuth(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		m.passkey.device = msg.res
-		return deviceTick(msg.res.DeviceCode, time.Duration(msg.res.Interval)*time.Second)
+		return deviceTick(msg.res.DeviceCode, pollEvery(msg.res))
 
 	case browserOpenedMsg:
 		if msg.err != nil {
@@ -138,7 +138,7 @@ func (m *Model) handleAuth(msg tea.Msg) tea.Cmd {
 		if !m.waiting(msg.code) {
 			return nil
 		}
-		every := time.Duration(m.passkey.device.Interval) * time.Second
+		every := pollEvery(m.passkey.device)
 		switch {
 		case msg.err != nil:
 			return deviceTick(msg.code, 5*every) // the server may be restarting
@@ -156,6 +156,17 @@ func (m *Model) handleAuth(msg tea.Msg) tea.Cmd {
 		return deviceTick(msg.code, every)
 	}
 	return nil
+}
+
+// minPoll is the shortest pause between two questions about a sign-in
+// request.
+const minPoll = time.Second
+
+// pollEvery is how often the TUI asks the server about the request d: the
+// interval the server gives, but not less than minPoll, so that a server
+// giving none or 0 is not asked without a pause.
+func pollEvery(d *genauth.DeviceStartResult) time.Duration {
+	return max(time.Duration(d.Interval)*time.Second, minPoll)
 }
 
 // browserOpenedMsg tells that the browser could not open a URL.
