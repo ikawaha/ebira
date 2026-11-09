@@ -66,19 +66,19 @@ func TestFiles(t *testing.T) {
 		t.Errorf("DeleteFile by AI: %v", err)
 	}
 
-	// Images and PDF files are shown; other files, also an HTML file named
-	// .png, are served as downloads.
-	for _, tt := range []struct{ name, content, ct, disposition string }{
-		{"page.png", "<html><script>alert(1)</script>", "application/octet-stream", "attachment; filename=page.png"},
-		{"a.svg", `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`, "application/octet-stream", "attachment; filename=a.svg"},
-		{"report.pdf", "%PDF-1.7\n", "application/pdf", "inline; filename=report.pdf"},
-		{"報告.zip", "PK\x03\x04", "application/octet-stream", "attachment; filename*=utf-8''%E5%A0%B1%E5%91%8A.zip"},
+	// Images and PDF files are shown; other files are served as downloads.
+	// An HTML file named .png loses the extension of an image.
+	for _, tt := range []struct{ name, stored, content, ct, disposition string }{
+		{"page.png", "page", "<html><script>alert(1)</script>", "application/octet-stream", "attachment; filename=page"},
+		{"a.svg", "a.svg", `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`, "application/octet-stream", "attachment; filename=a.svg"},
+		{"report.pdf", "report.pdf", "%PDF-1.7\n", "application/pdf", "inline; filename=report.pdf"},
+		{"報告.zip", "報告.zip", "PK\x03\x04", "application/octet-stream", "attachment; filename*=utf-8''%E5%A0%B1%E5%91%8A.zip"},
 	} {
 		got, err := svc.AddFile(person, &gennotes.AddFilePayload{ID: "n1", Name: tt.name}, body([]byte(tt.content)))
-		if err != nil || got.Name != tt.name {
+		if err != nil || got.Name != tt.stored {
 			t.Fatalf("AddFile(%q) = %+v, %v", tt.name, got, err)
 		}
-		res, rc, err := svc.GetFile(person, &gennotes.GetFilePayload{ID: "n1", Name: tt.name})
+		res, rc, err := svc.GetFile(person, &gennotes.GetFilePayload{ID: "n1", Name: tt.stored})
 		if err != nil {
 			t.Fatalf("GetFile(%q): %v", tt.name, err)
 		}

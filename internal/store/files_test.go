@@ -60,7 +60,9 @@ func TestFiles(t *testing.T) {
 		{"data.tar.gz", "data-tar.gz"},
 		{"README", "README"},
 		{"a.svg", "a.svg"},
-		{"odd.p-f", "odd"}, // not an extension to keep
+		{"odd.p-f", "odd"},   // not an extension to keep
+		{"page.png", "page"}, // no image, so no extension of one
+		{"photo.JPG", "photo"},
 	} {
 		got, err := s.AddFile("n1", tt.name, []byte("%PDF-1.7 or anything"))
 		if err != nil || got != tt.want {

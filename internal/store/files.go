@@ -75,6 +75,17 @@ func fileExt(name string) string {
 	return ext
 }
 
+// imageExt reports whether ext is the extension of the images, as AddFile
+// gives it to them.
+func imageExt(ext string) bool {
+	for _, e := range imageTypes {
+		if ext == e {
+			return true
+		}
+	}
+	return false
+}
+
 // FilePath returns the path of a file of note id, relative to the note file,
 // as the body refers to it.
 func FilePath(id, name string) string { return id + AssetsSuffix + "/" + name }
@@ -125,7 +136,8 @@ func validFileName(name string) bool {
 // AddFile adds a file with the content b to note id and returns its name:
 // name cleaned up (see CleanFileName) with the extension of its type for an
 // image and its own extension (see fileExt) for another file, and a suffix
-// such as -2 when the name is taken.
+// such as -2 when the name is taken. Another file keeps no extension of an
+// image, so that the name tells the images, which the UI shows as such.
 func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	if len(b) > MaxFileSize {
 		return "", ErrFileTooLarge
@@ -133,6 +145,8 @@ func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	ext := fileExt(name)
 	if ct, ok := FileType(b); ok {
 		ext = imageTypes[ct]
+	} else if imageExt(ext) {
+		ext = ""
 	}
 	place, err := s.locate(id)
 	if err != nil {
