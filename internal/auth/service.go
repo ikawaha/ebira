@@ -231,7 +231,7 @@ func (s *Service) RevokeSessions(_ context.Context, p *genauth.RevokeSessionsPay
 	if err := s.verify(p.Session); err != nil {
 		return nil, err
 	}
-	session, err := s.passkeys.RevokeSessions()
+	session, err := s.passkeys.RevokeSessions(*p.Session)
 	if err != nil {
 		return nil, err
 	}

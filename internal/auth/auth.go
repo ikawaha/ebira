@@ -101,6 +101,9 @@ var (
 	ErrNoPasskey = errors.New("no passkey is registered: run ebira auth passkey to register one")
 	// ErrPasskeyNotFound is a passkey that is not registered.
 	ErrPasskeyNotFound = errors.New("the passkey is not registered")
+	// ErrSession is a session that was not given by this server with its
+	// current key.
+	ErrSession = errors.New("invalid session")
 	// ErrLastPasskey is the deletion of the only passkey, which would lock
 	// people out of the web UI.
 	ErrLastPasskey = errors.New("the only passkey cannot be deleted: register another one first, or run ebira auth reset")
@@ -286,8 +289,10 @@ func (p *Passkeys) Delete(id string) error {
 }
 
 // RevokeSessions replaces the key of sessions, which ends every session, and
-// returns a new session for the request that asked for it, still verified.
-func (p *Passkeys) RevokeSessions() (string, error) {
+// returns a new session for session, the one that asked for it. The new
+// session is verified as long as session was, no longer, so that revoking
+// again and again does not keep it verified.
+func (p *Passkeys) RevokeSessions(session string) (string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	u, err := p.load()
@@ -297,13 +302,17 @@ func (p *Passkeys) RevokeSessions() (string, error) {
 	if len(u.Credentials) == 0 {
 		return "", ErrNoPasskey
 	}
+	payload, ok := sessionPayload(u.SessionKey, session)
+	if !ok {
+		return "", ErrSession
+	}
+	verified := time.Unix(int64(binary.BigEndian.Uint64(payload[8:])), 0)
 	u.SessionKey = make([]byte, 32)
 	rand.Read(u.SessionKey)
 	if err := p.save(u); err != nil {
 		return "", err
 	}
-	now := time.Now()
-	return newSession(u.SessionKey, now.Add(SessionMaxAge), now.Add(VerifyMaxAge)), nil
+	return newSession(u.SessionKey, time.Now().Add(SessionMaxAge), verified), nil
 }
 
 // NewRegisterToken creates the one-time token of a registration in dir,
@@ -548,6 +557,25 @@ func newSession(key []byte, exp, verified time.Time) string {
 	return base64.RawURLEncoding.EncodeToString(payload) + "." + base64.RawURLEncoding.EncodeToString(sign(key, payload))
 }
 
+// sessionPayload returns the payload of session, the expiry and the time it
+// is verified until, when key signed it; ok is false for another session.
+// It does not check the expiry.
+func sessionPayload(key []byte, session string) (payload []byte, ok bool) {
+	enc, sig, ok := strings.Cut(session, ".")
+	if !ok {
+		return nil, false
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(enc)
+	if err != nil || len(payload) != sessionSize {
+		return nil, false
+	}
+	mac, err := base64.RawURLEncoding.DecodeString(sig)
+	if err != nil || !hmac.Equal(mac, sign(key, payload)) {
+		return nil, false
+	}
+	return payload, true
+}
+
 func sign(key, payload []byte) []byte {
 	m := hmac.New(sha256.New, key)
 	m.Write(payload)
@@ -558,22 +586,14 @@ func sign(key, payload []byte) []byte {
 // while a passkey is registered, and whether it is verified: signed in with
 // a passkey within VerifyMaxAge.
 func (p *Passkeys) Check(session string) (valid, verified bool) {
-	enc, sig, ok := strings.Cut(session, ".")
-	if !ok {
-		return false, false
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(enc)
-	if err != nil || len(payload) != sessionSize {
-		return false, false
-	}
-	mac, err := base64.RawURLEncoding.DecodeString(sig)
-	if err != nil {
-		return false, false
-	}
 	p.mu.Lock()
 	u, err := p.load()
 	p.mu.Unlock()
-	if err != nil || len(u.Credentials) == 0 || !hmac.Equal(mac, sign(u.SessionKey, payload)) {
+	if err != nil || len(u.Credentials) == 0 {
+		return false, false
+	}
+	payload, ok := sessionPayload(u.SessionKey, session)
+	if !ok {
 		return false, false
 	}
 	now := time.Now().Unix()
