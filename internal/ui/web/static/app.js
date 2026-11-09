@@ -715,7 +715,9 @@ function renderBody(el, body, ranges) {
   // A single newline is a line break, as in GitHub comments and Quiver.
   const html = marked.parse(markSource(body, ranges), { gfm: true, breaks: true });
   // No CSS from notes: the CSP allows inline styles for KaTeX and Mermaid.
-  const purify = { FORBID_TAGS: ["style"], FORBID_ATTR: ["style"] };
+  // The ids and names of notes get a prefix (user-content-), so that none
+  // takes the place of an element of the page that $ finds by its id.
+  const purify = { FORBID_TAGS: ["style"], FORBID_ATTR: ["style"], SANITIZE_NAMED_PROPS: true };
   let clean = DOMPurify.sanitize(html, purify);
   if (ranges && ranges.length) {
     // Markers that ended up in attributes, such as a highlighted URL, which
