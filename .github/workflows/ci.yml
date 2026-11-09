@@ -4,13 +4,20 @@ on:
   pull_request:
   push:
     branches: [main]
+  # GitHub runs no pull_request workflow for a push while the pull request
+  # cannot be merged, as when it conflicts with main, and the push gets no
+  # run when the conflict is resolved later: run it by hand then, with
+  # gh workflow run CI --ref <branch>.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# A new push to a pull request cancels the run of the one before; each push
+# to main is checked to the end.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # The actions are pinned to the commits of their releases, with the version
 # in a comment; Dependabot updates both.
