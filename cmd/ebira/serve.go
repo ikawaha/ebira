@@ -306,7 +306,7 @@ func runServe(args []string) error {
 		slog.ErrorContext(ctx, "request failed", "error", err)
 	}
 	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
-	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh))
+	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, tooLarge))
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(gate), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
