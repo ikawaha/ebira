@@ -26,7 +26,7 @@
 
 ---
 
-ebira is a note app with a strong search. Every note is a YAML file in a folder you own: keep it as it is, put it in a synced folder such as Dropbox, or let ebira sync it with git. A local server keeps a SQLite index of the notes, and serves a web UI, a TUI, a REST API and an MCP server for AI clients.
+ebira is a note app with a strong search. Every note is a YAML file in a folder you own: keep it as it is, put it in a synced folder such as Dropbox, or let ebira sync it with git. A local server keeps a SQLite index of the notes, and serves a web UI, which also comes as a desktop app for macOS and Windows, a TUI, a REST API and an MCP server for AI clients.
 
 <p align="center">
   <img src="assets/screenshots/web.png" width="800" alt="The ebira web UI: notebooks on the left, the notes found for a search in the middle, and the note with its matches highlighted, a diagram, math and code on the right">
@@ -42,7 +42,7 @@ Plain files are the best home for notes: they outlive apps, and git gives you sy
 
 ```mermaid
 flowchart LR
-  W["🌐 web UI"] --> R
+  W["🌐 web UI · 🖥️ desktop app"] --> R
   T["⌨️ TUI"] --> R
   C["🤖 AI clients"] --> M
   subgraph S["ebira server"]
@@ -61,15 +61,17 @@ flowchart LR
   F <-.->|"git · Dropbox"| O["💻 other machines"]
 ```
 
-## Web UI and TUI
+## Web UI, desktop app and TUI
 
-The same notes, from the browser or from the terminal; both talk to the same local server, and each shows the other's changes as they happen.
+The same notes, from the browser, from a window of their own or from the terminal; all talk to the same local server, and each shows the others' changes as they happen.
 
 **Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; create, rename, retype and trash notebooks from their menus or by dragging them onto the trash, empty the trash from its menu, and drag notes onto a notebook to move them; edit Markdown with list continuation and code coloring, paste images and attach files, and see math and diagrams rendered.
 
 <p align="center">
   <img src="assets/screenshots/web-editor.png" width="800" alt="Editing a note in the web UI: the title, notebook and tags above, and the Markdown body with a Go code block colored">
 </p>
+
+**Desktop app** — the web UI in a window of its own, with menus, on macOS and Windows (see [Desktop app](#desktop-app) to build it). The menus do what the keys of the web UI do, links open in the browser, and files of notes are saved in the Downloads folder. It carries the server: it uses the one already running for the notes, or starts it, and the server keeps running when you quit, shared with the TUI, the commands and MCP.
 
 **TUI** — `ebira`. The same three panes in the terminal, driven by the keyboard: `/` to search, `j`/`k` to move, `z` to zoom the note to the whole width, `e` to edit in the TUI or in your `$EDITOR`. Press `v` to show the Markdown itself in the document pane instead: you then edit the note right there, as soon as you move into the pane, and the changes are saved when you leave it (or with `ctrl+s`). To see it rendered for a while, press `p` in the list or `ctrl+r` in the pane. While editing, `ctrl+l` zooms the pane, as `z` does elsewhere. `f` (`ctrl+f` while editing) finds text in the note, as the web UI's find bar does.
 
@@ -85,6 +87,7 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 - **Sync with git, if you like** — `ebira sync`, a menu item, or every few minutes: commit, merge and push in one step. A note changed on two machines never ends in conflict markers; the other version becomes a new note.
 - **Always up to date** — the index follows file changes (fsnotify), so `git pull` or another editor just works. The index is a cache: delete it and it is rebuilt.
 - **Web UI** — notebooks and tags, search as you type, Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation, code coloring and emoji completion such as `:smile` (CodeMirror 6), drag and drop to reorder and to import, images and files by paste or drop, and live updates. In English and Japanese, with light and dark themes.
+- **Desktop app** — the web UI in a window of its own, with menus, for macOS and Windows, carrying the server.
 - **TUI** — the same notes in the terminal.
 - **A guide in your notes** — a new notes directory starts with the guide of ebira, a notebook of notes that tell how to use it, each showing the feature it tells about. Change or delete them as you like; "Add the guide" in the gear menu adds it again at any time, as a new notebook.
 - **MCP server** — AI clients such as Claude Code can list, search and read notes, and write where you allow it (see [MCP server](#mcp-server)).
@@ -103,7 +106,7 @@ Requires Go 1.27 or later.
 go install github.com/ikawaha/ebira/cmd/ebira@latest
 ```
 
-ebira runs on macOS and Linux.
+The `ebira` command, with the server, the web UI and the TUI, runs on macOS and Linux. On macOS and Windows there is also the desktop app, which carries the server; on Windows, it is the way to run ebira.
 
 ### Desktop app
 
@@ -120,7 +123,7 @@ open apps/desktop/build/ebira.app
 powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
 ```
 
-The macOS build needs the Xcode Command Line Tools, and the app is signed for that Mac only. On Windows, open `ebira-desktop.exe` in the folder; Windows 10 may need the WebView2 runtime. Without git, get the source with "Code" → "Download ZIP" on GitHub. `apps/desktop/build-windows.sh` makes the same folder on macOS or Linux. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. Cmd+, (the File menu on Windows) sets the notes folder and the address.
+The macOS build needs the Xcode Command Line Tools, and the app is signed for that Mac only. On Windows, open `ebira-desktop.exe` in the folder; Windows 10 may need the WebView2 runtime. Without git, get the source with "Code" → "Download ZIP" on GitHub. `apps/desktop/build-windows.sh` makes the same folder on macOS or Linux. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. It follows the settings file of ebira (see [Quick Start](#quick-start)); Settings… (Cmd+,; the File menu on Windows) sets the notes folder and the address of the app. The page "Desktop App" of the guide in your notes tells more, such as where its log is.
 
 ## Quick Start
 
@@ -136,6 +139,8 @@ The macOS build needs the Xcode Command Line Tools, and the app is signed for th
    ```
 
    `ebira web` starts the server in the background and opens the web UI at <http://localhost:13579/>. `ebira` opens the TUI instead. The server keeps running when you close them.
+
+   With the desktop app, open it once ebira is set up this way, as it takes the same settings; or choose the notes folder in its Settings… (Cmd+,; the File menu on Windows), as on Windows without the `ebira` command.
 
    A new notes directory starts with the notebook "ebira Guide" (in the language you chose), which tells how to use ebira. Read it from the top, try things on its notes, and move it to the trash when you are done; it does not come back by itself, but "Add the guide" in the gear menu adds it again.
 
@@ -362,6 +367,7 @@ Once connected, ask in your own words, for example:
 
 - There is no login by default: the server answers only requests to localhost (and the host of `-addr`), and refuses requests that change notes from web pages of other sites. Keep it on your machine.
 - Every request to the REST API is taken as from you, so an AI agent on your machine that can run `curl` could act as you. To stop that, require a passkey (experimental): run `ebira auth passkey` to register one on a one-time URL, then set `auth: passkey` in the settings file and restart the server. The web UI then asks you to sign in with the passkey, and REST requests without the sign-in are refused. MCP stays as it is. The TUI signs in through the web UI: it shows a URL and a code, and you approve the code in the web UI signed in with the passkey (press `o` to open the URL). The commands that call the server, such as `ebira sync`, sign in the same way. Important operations, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, ask for the passkey again unless you signed in within 5 minutes. Manage the passkeys, and end the other sessions, from **Manage passkeys…** in the settings menu; if you lose them, `ebira auth reset` removes every passkey.
+- The desktop app takes messages only from the page of its server, and opens links in notes in the browser, not in its window. With the address of a server on another computer, that server's page may write to the clipboard and open links in the browser: choose only a server you trust.
 - The kinds hold for every AI that goes through ebira's API, MCP and the assistant alike. They cannot stop a program on your machine that reads the note files directly, such as an AI agent with file access; `private` marks what AI is not to see, and is not encryption.
 
 ## Assistant
