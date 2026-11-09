@@ -4184,7 +4184,11 @@ function notePrivateLost(id) {
     privateLost.clear();
     await loadNotebooks().catch(() => {}); // for their names
     offerUndo(t("privateLost", { names: ids.map(notebookName).join(", ") }), async () => {
-      for (const id of ids) await api(`/notebooks/${nbPath(id)}`, { method: "PUT", body: { kind: "private" } });
+      // A sub notebook whose parent is made private too takes its kind
+      // again, as before, rather than one of its own.
+      for (const id of ids.filter((id) => !ids.includes(parentOf(id)))) {
+        await api(`/notebooks/${nbPath(id)}`, { method: "PUT", body: { kind: "private" } });
+      }
       loadNotebooks().catch(() => {});
     }, PRIVATE_LOST_MS);
   }, 300);
