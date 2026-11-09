@@ -29,12 +29,12 @@ func TestCleanFileName(t *testing.T) {
 			t.Errorf("CleanFileName(%q, %q) = %q, want %q", tt.name, tt.ext, got, tt.want)
 		}
 	}
-	for _, name := range []string{"a.png", "a-2.jpg", "画像.webp"} {
+	for _, name := range []string{"a.png", "a-2.jpg", "画像.webp", "a.svg", "report.pdf", "a-tar.gz", "README"} {
 		if !validFileName(name) {
 			t.Errorf("validFileName(%q) = false", name)
 		}
 	}
-	for _, name := range []string{"", "a.svg", "a.jpeg", "../a.png", "a/b.png", ".a.png", "a b.png", "a.b.png"} {
+	for _, name := range []string{"", "../a.png", "a/b.png", ".a.png", "a b.png", "a.b.png", "a.PDF", "a.p-f", ".DS_Store", "a.abcdefghijklmnopq"} {
 		if validFileName(name) {
 			t.Errorf("validFileName(%q) = true", name)
 		}
@@ -54,11 +54,20 @@ func TestFiles(t *testing.T) {
 	if _, err := s.AddFile("missing", "a.png", pngHead); !errors.Is(err, ErrNotFound) {
 		t.Errorf("AddFile to a missing note: %v", err)
 	}
-	if _, err := s.AddFile("n1", "a.svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)); !errors.Is(err, ErrUnsupportedFile) {
-		t.Errorf("AddFile of SVG: %v", err)
-	}
-	if _, err := s.AddFile("n1", "a.html", []byte("<html><script>alert(1)</script>")); !errors.Is(err, ErrUnsupportedFile) {
-		t.Errorf("AddFile of HTML: %v", err)
+	// Files of any type are taken, keeping their extension in lower case.
+	for _, tt := range []struct{ name, want string }{
+		{"Report 2026.PDF", "Report-2026.pdf"},
+		{"data.tar.gz", "data-tar.gz"},
+		{"README", "README"},
+		{"a.svg", "a.svg"},
+		{"odd.p-f", "odd"},   // not an extension to keep
+		{"page.png", "page"}, // no image, so no extension of one
+		{"photo.JPG", "photo"},
+	} {
+		got, err := s.AddFile("n1", tt.name, []byte("%PDF-1.7 or anything"))
+		if err != nil || got != tt.want {
+			t.Errorf("AddFile(%q) = %q, %v, want %q", tt.name, got, err, tt.want)
+		}
 	}
 	big := append(slices.Clone(pngHead), make([]byte, MaxFileSize)...)
 	if _, err := s.AddFile("n1", "a.png", big); !errors.Is(err, ErrFileTooLarge) {
@@ -167,10 +176,12 @@ func TestFileRefs(t *testing.T) {
 		"`n3.assets/code.gif` in code\n" +
 		"![e](n1.assets/%E7%94%BB%E5%83%8F.png)\n" +
 		"![j](n1.assets/画像-2.png)\n" +
-		"not a file: n1.assets/a.svg n1.assets/ n1.assets/a.png.bak"
+		"[pdf](n4.assets/Report-2026.pdf) [readme](n4.assets/README) [gz](n4.assets/data-tar.gz).\n" +
+		"not a file: n1.assets/ n1.assets/.hidden"
 	want := []FileRef{
 		{"n1", "a.png"}, {"n2", "b-2.webp"}, {"other", "doc.jpg"}, {"n3", "code.gif"},
 		{"n1", "画像.png"}, {"n1", "画像-2.png"},
+		{"n4", "Report-2026.pdf"}, {"n4", "README"}, {"n4", "data-tar.gz"},
 	}
 	if got := FileRefs(body); !slices.Equal(got, want) {
 		t.Errorf("FileRefs = %v, want %v", got, want)
@@ -198,7 +209,7 @@ func TestAllFiles(t *testing.T) {
 	}
 	// Left out: a file with a name AddFile does not give, and the files of a
 	// note that is gone.
-	if err := os.WriteFile(filepath.Join(dir, Inbox, "a.assets", "notes.txt"), []byte("x"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, Inbox, "a.assets", ".DS_Store"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "work", "gone.assets"), 0o755); err != nil {

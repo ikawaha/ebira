@@ -218,6 +218,38 @@ func read(dir, rev string) (*Version, error) {
 	return &v, nil
 }
 
+// Each calls fn with the versions of all notes, in no particular order, and
+// stops at the first error fn returns. Broken files are skipped, as List
+// skips them.
+func (s *Store) Each(fn func(id string, v *Version) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entries, err := os.ReadDir(s.dir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if !e.IsDir() || !idPattern.MatchString(e.Name()) {
+			continue
+		}
+		dir := filepath.Join(s.dir, e.Name())
+		rs, err := revs(dir)
+		if err != nil {
+			return err
+		}
+		for _, rev := range rs {
+			v, err := read(dir, rev)
+			if err != nil {
+				continue
+			}
+			if err := fn(e.Name(), v); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // Remove drops the versions of note id, such as when the note is deleted for
 // good.
 func (s *Store) Remove(id string) error {

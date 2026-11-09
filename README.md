@@ -65,7 +65,7 @@ flowchart LR
 
 The same notes, from the browser or from the terminal; both talk to the same local server, and each shows the other's changes as they happen.
 
-**Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; create, rename, retype and trash notebooks from their menus or by dragging them onto the trash, empty the trash from its menu, and drag notes onto a notebook to move them; edit Markdown with list continuation and code coloring, paste images, and see math and diagrams rendered.
+**Web UI** — `ebira web`. Notebooks and tags on the left, the notes in the middle, the note on the right; create, rename, retype and trash notebooks from their menus or by dragging them onto the trash, empty the trash from its menu, and drag notes onto a notebook to move them; edit Markdown with list continuation and code coloring, paste images and attach files, and see math and diagrams rendered.
 
 <p align="center">
   <img src="assets/screenshots/web-editor.png" width="800" alt="Editing a note in the web UI: the title, notebook and tags above, and the Markdown body with a Go code block colored">
@@ -79,12 +79,12 @@ The same notes, from the browser or from the terminal; both talk to the same loc
 
 ## Features
 
-- **YAML notes in folders** — `<notebook>/<id>.yaml` in your notes directory. Comments and unknown keys survive every update. Images live next to their note.
+- **YAML notes in folders** — `<notebook>/<id>.yaml` in your notes directory. Comments and unknown keys survive every update. Images and attached files live next to their note.
 - **Five search modes** — `bigram` (default), `trigram`, `ja` (Japanese morphological analysis with [kagome](https://github.com/ikawaha/kagome), plus bigrams), `en` (English words with their stems, plus trigrams), and `like`. Matches are highlighted in the list and the note.
 - **Sync with Dropbox, iCloud Drive and the like** — keep the notes in a synced folder; the conflicted copies the services leave become notes, so no change is hidden.
 - **Sync with git, if you like** — `ebira sync`, a menu item, or every few minutes: commit, merge and push in one step. A note changed on two machines never ends in conflict markers; the other version becomes a new note.
 - **Always up to date** — the index follows file changes (fsnotify), so `git pull` or another editor just works. The index is a cache: delete it and it is rebuilt.
-- **Web UI** — notebooks and tags, search as you type, Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation, code coloring and emoji completion such as `:smile` (CodeMirror 6), drag and drop to reorder and to import, images by paste, and live updates. In English and Japanese, with light and dark themes.
+- **Web UI** — notebooks and tags, search as you type, Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation, code coloring and emoji completion such as `:smile` (CodeMirror 6), drag and drop to reorder and to import, images and files by paste or drop, and live updates. In English and Japanese, with light and dark themes.
 - **TUI** — the same notes in the terminal.
 - **A guide in your notes** — a new notes directory starts with the guide of ebira, a notebook of notes that tell how to use it, each showing the feature it tells about. Change or delete them as you like; "Add the guide" in the gear menu adds it again at any time, as a new notebook.
 - **MCP server** — AI clients such as Claude Code can list, search and read notes, and write where you allow it (see [MCP server](#mcp-server)).
@@ -186,7 +186,7 @@ The macOS build needs the Xcode Command Line Tools, and the app is signed for th
 | `ebira serve` | Run the server in the foreground |
 | `ebira server start\|stop\|restart\|status` | Manage the server in the background; `restart` keeps the flags it ran with |
 | `ebira import [-notebook ID] [-force] [-dry-run] path...` | Import Markdown files, and the images they refer to, as notes |
-| `ebira files check [-delete]` | List unused images and broken image references |
+| `ebira files check [-delete]` | List unused images and files, and broken references to them |
 | `ebira sync [-remote URL]` | Sync the notes with their git repository: commit, merge the upstream branch and push; `-remote` connects them to a repository first |
 | `ebira auth passkey [-no-open]` | Register a passkey for the web UI, on a one-time URL (experimental; see [What it guards](#what-it-guards-and-what-it-does-not)) |
 | `ebira auth reset [-yes]` | Remove every passkey and end every session, such as when the passkeys are lost |
@@ -227,7 +227,7 @@ Only the notes are in the notes directory: the index and the server's state, wit
 - A **notebook** is a folder. `inbox` and `trash` always exist; deleting a note moves it to the trash first.
 - A **sub notebook** is a folder in a notebook, one level deep, such as `development/design/`. It takes the kind of its notebook. The web UI shows the sub notebooks at the top of the note list of their notebook; create one from the menu of the notebook, or move a notebook into another from its menu or by dropping it on the middle of the other one.
 - A **note** has `title`, `tags`, `created_at`, `updated_at` and a Markdown `body`. ebira adds `order` when you reorder notes by hand and `created_by: ai` when an AI wrote the note.
-- **Images** go in `<id>.assets/` next to the note, and the body refers to them as `![alt](<id>.assets/name.png)`.
+- **Images and files** go in `<id>.assets/` next to the note, and the body refers to them as `![alt](<id>.assets/name.png)` for an image and `[name](<id>.assets/report.pdf)` for another file. Files may be of any type, up to 50 MB each. The web UI shows images, opens PDF files in a new tab, and downloads other files.
 
 ### Marks
 
@@ -325,14 +325,14 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `get_note` | Get a note, with its body and its version |
 | `create_ai_note` | Write a new note in a `collab` notebook, or drop one in a `drop` notebook |
 | `import_ai_note` | Import a Markdown file, with its front matter and the images it refers to, as a new note, the same way |
-| `add_ai_file` | Add an image to a note in a `collab` notebook, to refer to from its body |
+| `add_ai_file` | Add an image or another file to a note in a `collab` notebook, to refer to from its body |
 | `update_ai_note` | Change a note in a `collab` notebook, or set its mark; needs the version from `get_note`. A long body can be changed in part: `append` adds text at its end, and `edits` replace exact pieces of it; `brief` leaves the body out of the result |
 | `delete_ai_note` | Move a note in a `collab` notebook to the trash; needs the version from `get_note` |
 | `move_ai_note` | Reorder a note in a `collab` notebook: put it after another note, or first |
 | `create_ai_notebook` | Make a new `collab` notebook, for the AI to write in |
 | `make_notebook_private` | Hide a notebook from AI; only you can undo it |
 
-Images from AI are PNG, JPEG, GIF or WebP, at most 5 MB each, and at most 10 images and 20 MB in all with one note.
+Files from AI are at most 5 MB each, and the images sent with a new note at most 10 and 20 MB in all.
 
 The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten.
 

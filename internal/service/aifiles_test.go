@@ -47,7 +47,7 @@ func TestAddAiFile(t *testing.T) {
 		{"a note of people", "mine", "forbidden", pngHead},
 		{"a private note", "secret", "not_found", pngHead},
 		{"a missing note", "missing", "not_found", pngHead},
-		{"SVG", n.ID, "bad_request", []byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`)},
+		{"another file", n.ID, "", []byte("%PDF-1.7\n")},
 		{"too large", n.ID, "too_large", append(bytes.Clone(pngHead), make([]byte, aiMaxFileSize)...)},
 	} {
 		if _, err := svc.AddAiFile(ai, &gennotes.AddAiFilePayload{ID: tt.id, Name: "a.png", Content: tt.content}); errorName(err) != tt.want {
