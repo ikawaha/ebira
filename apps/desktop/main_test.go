@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -67,6 +71,68 @@ func TestReadHealth(t *testing.T) {
 		if (err == nil) != tc.ok {
 			t.Errorf("readHealth of %d %s: %v, want ok %v", tc.status, tc.body, err, tc.ok)
 		}
+	}
+}
+
+// TestOwnServer checks that what answers at a local address is taken for the
+// server of the notes folder only as the state of this user's server tells.
+func TestOwnServer(t *testing.T) {
+	state := func(pid int) *struct {
+		PID int `json:"pid"`
+	} {
+		return &struct {
+			PID int `json:"pid"`
+		}{pid}
+	}
+	h := &health{PID: 4242, Addr: "localhost:13579", NotesDir: "/n"}
+	for _, tc := range []struct {
+		name string
+		st   status
+		ok   bool
+	}{
+		{"its server", status{NotesDir: "/n", Running: true, State: state(4242)}, true},
+		{"not running", status{NotesDir: "/n"}, false},
+		{"another process", status{NotesDir: "/n", Running: true, State: state(1)}, false},
+		{"no state yet", status{NotesDir: "/n", Running: true}, false},
+	} {
+		if err := ownServer("localhost:13579", &tc.st, h); (err == nil) != tc.ok {
+			t.Errorf("%s: ownServer = %v, want ok %v", tc.name, err, tc.ok)
+		}
+	}
+	if err := ownServer("localhost:13579", &status{NotesDir: "/n", Running: true, State: state(0)}, &health{NotesDir: "/n"}); err == nil {
+		t.Error("ownServer took a server without a PID")
+	}
+}
+
+// TestConnectSquatter checks connect against a program that answers at the
+// address as a server of the user's folder while the user's server is not
+// running, with an ebira that tells the state as the real one does.
+func TestConnectSquatter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the ebira of the test is a shell script")
+	}
+	notes := t.TempDir()
+	addr := healthServer(t, 200, `{"pid":4242,"addr":"localhost:13579","notes_dir":"`+notes+`","api":1}`)
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	ebira := func(running bool, pid int) {
+		t.Helper()
+		st := fmt.Sprintf(`{"notes_dir":%q,"running":%v,"state":{"pid":%d}}`, notes, running, pid)
+		if err := os.WriteFile(filepath.Join(bin, "ebira"), []byte("#!/bin/sh\necho '"+st+"'\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ebira(false, 0)
+	if _, err := connect(target{Notes: notes, Addr: addr}); err == nil {
+		t.Error("connect took the program for the server, which is not running")
+	}
+	ebira(true, 7)
+	if _, err := connect(target{Notes: notes, Addr: addr}); err == nil {
+		t.Error("connect took the program for the server, which is another process")
+	}
+	ebira(true, 4242)
+	if _, err := connect(target{Notes: notes, Addr: addr}); err != nil {
+		t.Errorf("connect to the server: %v", err)
 	}
 }
 

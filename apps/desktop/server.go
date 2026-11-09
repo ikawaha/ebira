@@ -22,6 +22,7 @@ const api = 1
 const apiRev = 1
 
 type health struct {
+	PID          int    `json:"pid"`
 	Addr         string `json:"addr"`
 	NotesDir     string `json:"notes_dir"`
 	API          int    `json:"api"`
@@ -51,29 +52,63 @@ func readHealth(addr string) (*health, error) {
 	return &h, nil
 }
 
-// configuredNotes asks the ebira of the app for the notes directory of
-// notes_dir in the config file of ebira, which an empty notes folder follows.
-func configuredNotes() (string, error) {
+// status is what ebira server status -json prints.
+type status struct {
+	NotesDir string `json:"notes_dir"`
+	Running  bool   `json:"running"`
+	State    *struct {
+		PID int `json:"pid"`
+	} `json:"state"`
+}
+
+// serverStatus asks the ebira of the app for the server of the notes folder
+// notes, or of notes_dir in the config file of ebira for an empty one: from
+// its lock and state, which only this user can write.
+func serverStatus(notes string) (*status, error) {
 	bin, err := helper()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	out, err := helperCommand(bin, "server", "status", "-json").Output()
+	args := []string{"server", "status", "-json"}
+	if notes != "" {
+		args = append(args, "-notes", notes)
+	}
+	out, err := helperCommand(bin, args...).Output()
 	if err != nil {
 		// As an ebira on the PATH older than -json says.
 		var exit *exec.ExitError
 		if errors.As(err, &exit) && len(exit.Stderr) > 0 {
 			err = fmt.Errorf("%w: %s", err, strings.TrimSpace(string(exit.Stderr)))
 		}
+		return nil, err
+	}
+	var st status
+	if err := json.Unmarshal(out, &st); err != nil || st.NotesDir == "" {
+		return nil, fmt.Errorf("unexpected status: %s", out)
+	}
+	return &st, nil
+}
+
+// configuredNotes asks the ebira of the app for the notes directory of
+// notes_dir in the config file of ebira, which an empty notes folder follows.
+func configuredNotes() (string, error) {
+	st, err := serverStatus("")
+	if err != nil {
 		return "", fmt.Errorf("find the notes folder of the config file of ebira: %w", err)
 	}
-	var st struct {
-		NotesDir string `json:"notes_dir"`
-	}
-	if err := json.Unmarshal(out, &st); err != nil || st.NotesDir == "" {
-		return "", fmt.Errorf("find the notes folder of the config file of ebira: %s", out)
-	}
 	return st.NotesDir, nil
+}
+
+// ownServer checks that h, what answers at addr, is the server of the notes
+// folder that this user runs, as st, its status, tells. Anything can answer
+// at a local address, such as a program of another user of the computer
+// while this user's server is not running, and say it serves the folder; it
+// cannot be the process the state of this user's server names.
+func ownServer(addr string, st *status, h *health) error {
+	if st.Running && st.State != nil && st.State.PID != 0 && st.State.PID == h.PID {
+		return nil
+	}
+	return fmt.Errorf("something other than the server of %s answers at %s; choose another address in the settings", st.NotesDir, addr)
 }
 
 // connect finds the server of t, starting it if nothing answers. The server
@@ -112,6 +147,16 @@ func connect(t target) (*health, error) {
 		return nil, err
 	} else if got, err := realPath(h.NotesDir); err != nil || got != want {
 		return nil, fmt.Errorf("the server at %s serves %s, not %s", addr, h.NotesDir, want)
+	}
+	// The state of a server is kept by the path it was given, which may reach
+	// the folder through a link: asked by the path it tells, which the state
+	// of this user's server, not what answers, has.
+	st, err := serverStatus(h.NotesDir)
+	if err != nil {
+		return nil, fmt.Errorf("check the server at %s: %w", addr, err)
+	}
+	if err := ownServer(addr, st, h); err != nil {
+		return nil, err
 	}
 	return h, nil
 }
