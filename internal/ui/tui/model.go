@@ -1685,7 +1685,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "o":
 		// While waiting for the approval of the sign-in, open its page.
 		if m.passkey != nil && m.passkey.device != nil {
-			return m, openURL(m.passkey.device.VerificationURI)
+			return m, openURL(m.passkey.device.VerificationURI, m.web)
 		}
 	case "?":
 		m.prompt = promptAsk

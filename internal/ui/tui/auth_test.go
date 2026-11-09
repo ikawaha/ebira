@@ -13,6 +13,34 @@ import (
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 )
 
+// TestWebPage checks that the TUI opens only pages of the web UI, as the URL
+// of a sign-in request comes from the server.
+func TestWebPage(t *testing.T) {
+	const web = "http://localhost:13579"
+	for u, want := range map[string]bool{
+		"http://localhost:13579/#device":       true,
+		"http://localhost:13579/":              true,
+		"https://localhost:13579/#device":      false,
+		"http://localhost:13580/#device":       false,
+		"http://127.0.0.1:13579/#device":       false,
+		"http://user@localhost:13579/#device":  false,
+		"file:///System/Applications/Calc.app": false,
+		"file:///C:/Windows/System32/x.exe":    false,
+		"javascript:alert(1)":                  false,
+		"/#device":                             false,
+		"":                                     false,
+	} {
+		if got := webPage(u, web); got != want {
+			t.Errorf("webPage(%q) = %v, want %v", u, got, want)
+		}
+	}
+	// Another URL is not handed to the opener of the system.
+	msg := openURL("file:///System/Applications/Calc.app", web)()
+	if m, ok := msg.(browserOpenedMsg); !ok || m.err == nil {
+		t.Errorf("openURL of a file = %#v, want an error", msg)
+	}
+}
+
 // TestPasskeySignIn checks that the TUI signs in through a device flow when
 // the server requires a passkey: it shows the URL and the code of the request
 // in the note list, instead of the refused requests as errors, asks the
