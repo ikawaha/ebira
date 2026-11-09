@@ -192,9 +192,9 @@ type Service interface {
 	// Create a new notebook of the collab kind, where AI clients may write notes,
 	// or a sub notebook in a notebook of the collab kind, which takes the kind of
 	// its parent. Existing notebooks cannot be turned into collab notebooks by AI
-	// clients; people do that. The ID of the notebook is derived from the name: a
-	// name with characters other than ASCII gives an ID that starts with xn--
-	// (Punycode), which is expected.
+	// clients; people do that. The ID of the notebook is derived from the name,
+	// with a random suffix: a name with characters other than ASCII gives an ID
+	// that starts with xn-- (Punycode), which is expected.
 	CreateAiNotebook(context.Context, *CreateAiNotebookPayload) (res *Notebook, err error)
 	// Make a notebook private, so that AI clients can no longer see it or its
 	// notes, nor its sub notebooks. A sub notebook can be made private on its own.

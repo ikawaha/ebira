@@ -283,6 +283,10 @@ func (s *Notes) Restore(ctx context.Context, p *gennotes.RestorePayload) (*genno
 		if err := s.ensureNotebookFromTrash(n.TrashedNotebook); err != nil {
 			return nil, err
 		}
+	} else if store.ValidNotebook(to) && to != store.Trash {
+		if err := s.ensureNotebookForRestore(to); err != nil {
+			return nil, err
+		}
 	}
 	if !store.ValidNotebook(to) || to == store.Trash {
 		to = store.Inbox
@@ -700,7 +704,19 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 		return nil, err
 	}
 	// Names and IDs are told apart among the notebooks of the same parent.
+	// For AI clients, the IDs of notebooks in the trash stay taken too, so
+	// that a notebook they make never takes in the notes restored to one of
+	// them. People may reuse such an ID on purpose.
 	taken := map[string]bool{store.Inbox: true, store.Trash: true}
+	if !fromPerson(ctx) {
+		trashed, err := s.store.TrashedNotebooks()
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range trashed {
+			taken[store.RestoredNotebook(id)] = true
+		}
+	}
 	order := 0
 	for _, nb := range nbs {
 		taken[nb.ID] = true
@@ -718,7 +734,13 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 	if parent != "" {
 		prefix = parent + "/"
 	}
-	id := prefix + store.UniqueNotebookID(store.NotebookID(name), func(id string) bool { return taken[prefix+id] })
+	base := store.NotebookID(name)
+	if !fromPerson(ctx) {
+		// For AI clients the ID always has a random part, so that whether it
+		// had to avoid the ID of a notebook hidden from them cannot be told.
+		base = base[:min(len(base), 64-7)] + "-" + store.NewID()[:6]
+	}
+	id := prefix + store.UniqueNotebookID(base, func(id string) bool { return taken[prefix+id] })
 	m := store.NotebookMeta{Name: name, Order: order + 10, Kind: storeKind(p.Kind)} // after the others by default
 	if p.Order != nil {
 		m.Order = *p.Order
@@ -977,6 +999,44 @@ func (s *Notes) ensureNotebookFromTrash(id string) error {
 		return gennotes.MakeBadRequest(fmt.Errorf("notebook %s exists with the kind %s, but the note comes from a notebook of the kind %s; restore the whole notebook from the trash after renaming or deleting the existing one", nb, apiKind(cur.Kind), apiKind(trashed.Kind)))
 	}
 	return nil
+}
+
+// ensureNotebookForRestore makes sure notebook nb, the notebook a note deleted
+// on its own came from, can take the note back without showing it to more
+// readers than before. The kind of that notebook when the note was deleted is
+// not kept, so a notebook that is gone is not recreated with the default kind,
+// which AI clients can read: one in the trash must be restored first (another
+// notebook may hold its ID meanwhile), and one deleted for good comes back
+// private, which people can change afterwards.
+func (s *Notes) ensureNotebookForRestore(nb string) error {
+	all, err := s.store.Notebooks()
+	if err != nil {
+		return err
+	}
+	if slices.Contains(all, nb) {
+		return nil
+	}
+	parent, sub := store.SplitNotebook(nb)
+	trashed, err := s.store.TrashedNotebooks()
+	if err != nil {
+		return err
+	}
+	for _, id := range trashed {
+		if r := store.RestoredNotebook(id); r == nb || (sub != "" && r == parent) {
+			return gennotes.MakeBadRequest(fmt.Errorf("notebook %s is in the trash; restore it first", r))
+		}
+	}
+	private := store.KindPrivate
+	if sub == "" {
+		return mapErr(s.store.SaveNotebookMeta(nb, store.NotebookMeta{Kind: private}))
+	}
+	if !slices.Contains(all, parent) {
+		if err := s.store.SaveNotebookMeta(parent, store.NotebookMeta{Kind: private}); err != nil {
+			return mapErr(err)
+		}
+		return mapErr(s.store.SaveNotebookMeta(nb, store.NotebookMeta{}))
+	}
+	return mapErr(s.store.SaveNotebookMeta(nb, store.NotebookMeta{OwnKind: &private}))
 }
 
 // Notebook kinds in the API; store.NotebookMeta keeps "" for the default.

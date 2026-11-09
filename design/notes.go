@@ -1219,7 +1219,7 @@ var _ = Service("notes", func() {
 
 	Method("create_ai_notebook", func() {
 		NoSecurity()
-		Description("Create a new notebook of the collab kind, where AI clients may write notes, or a sub notebook in a notebook of the collab kind, which takes the kind of its parent. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that. The ID of the notebook is derived from the name: a name with characters other than ASCII gives an ID that starts with xn-- (Punycode), which is expected.")
+		Description("Create a new notebook of the collab kind, where AI clients may write notes, or a sub notebook in a notebook of the collab kind, which takes the kind of its parent. Existing notebooks cannot be turned into collab notebooks by AI clients; people do that. The ID of the notebook is derived from the name, with a random suffix: a name with characters other than ASCII gives an ID that starts with xn-- (Punycode), which is expected.")
 		Payload(func() {
 			RequiredAttribute("name", String, "Display name, in any language; the ID is derived from it", func() {
 				MinLength(1)
@@ -1232,7 +1232,7 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The parent does not exist, or is not in the notebook list of the client")
 		Error("forbidden", ErrorResult, "The parent is not of the collab kind")
 		Error("already_exists", ErrorResult, "A notebook with the name exists (in the parent, for a sub notebook)")
-		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people")
+		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name, with a random suffix; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people")
 	})
 
 	Method("make_notebook_private", func() {

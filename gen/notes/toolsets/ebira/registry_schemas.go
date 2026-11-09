@@ -836,7 +836,7 @@ func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
 
 // schema57 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema57() *genregistry.ToolSchema {
-	registryText1 := "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people"
+	registryText1 := "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name, with a random suffix; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.create_ai_notebook",
 		Description:            &registryText1,
@@ -847,16 +847,16 @@ func (declarations registryDeclarations) schema57() *genregistry.ToolSchema {
 			Kind:  "service",
 			Title: "Create Ai Notebook",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 81,
-				Terms:  map[string]int{"a": 4, "ai": 4, "an": 1, "and": 1, "as": 2, "ascii": 1, "by": 1, "call": 1, "characters": 1, "collab": 1, "create": 3, "derived": 1, "ebira": 1, "expected": 1, "from": 1, "gives": 1, "id": 3, "in": 1, "is": 3, "its": 2, "japanese": 1, "kind": 1, "may": 1, "name": 3, "new": 1, "notebook": 6, "notes": 1, "of": 1, "or": 1, "other": 2, "parent": 1, "pass": 1, "people": 1, "punycode": 1, "result": 1, "shared": 2, "starts": 1, "sub": 1, "such": 1, "than": 1, "that": 1, "the": 4, "to": 2, "tools": 1, "where": 1, "which": 1, "with": 5, "write": 1, "xn": 1, "you": 1},
+				Length: 85,
+				Terms:  map[string]int{"a": 5, "ai": 4, "an": 1, "and": 1, "as": 2, "ascii": 1, "by": 1, "call": 1, "characters": 1, "collab": 1, "create": 3, "derived": 1, "ebira": 1, "expected": 1, "from": 1, "gives": 1, "id": 3, "in": 1, "is": 3, "its": 2, "japanese": 1, "kind": 1, "may": 1, "name": 3, "new": 1, "notebook": 6, "notes": 1, "of": 1, "or": 1, "other": 2, "parent": 1, "pass": 1, "people": 1, "punycode": 1, "random": 1, "result": 1, "shared": 2, "starts": 1, "sub": 1, "such": 1, "suffix": 1, "than": 1, "that": 1, "the": 4, "to": 2, "tools": 1, "where": 1, "which": 1, "with": 6, "write": 1, "xn": 1, "you": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
 				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
-				Description:     "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people",
+				Description:     "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name, with a random suffix; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 81,
-					Terms:  map[string]int{"a": 4, "ai": 4, "an": 1, "and": 1, "as": 2, "ascii": 1, "by": 1, "call": 1, "characters": 1, "collab": 1, "create": 3, "derived": 1, "ebira": 1, "expected": 1, "from": 1, "gives": 1, "id": 3, "in": 1, "is": 3, "its": 2, "japanese": 1, "kind": 1, "may": 1, "name": 3, "new": 1, "notebook": 6, "notes": 1, "of": 1, "or": 1, "other": 2, "parent": 1, "pass": 1, "people": 1, "punycode": 1, "result": 1, "shared": 2, "starts": 1, "sub": 1, "such": 1, "than": 1, "that": 1, "the": 4, "to": 2, "tools": 1, "where": 1, "which": 1, "with": 5, "write": 1, "xn": 1, "you": 1},
+					Length: 85,
+					Terms:  map[string]int{"a": 5, "ai": 4, "an": 1, "and": 1, "as": 2, "ascii": 1, "by": 1, "call": 1, "characters": 1, "collab": 1, "create": 3, "derived": 1, "ebira": 1, "expected": 1, "from": 1, "gives": 1, "id": 3, "in": 1, "is": 3, "its": 2, "japanese": 1, "kind": 1, "may": 1, "name": 3, "new": 1, "notebook": 6, "notes": 1, "of": 1, "or": 1, "other": 2, "parent": 1, "pass": 1, "people": 1, "punycode": 1, "random": 1, "result": 1, "shared": 2, "starts": 1, "sub": 1, "such": 1, "suffix": 1, "than": 1, "that": 1, "the": 4, "to": 2, "tools": 1, "where": 1, "which": 1, "with": 6, "write": 1, "xn": 1, "you": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
 				Payload:       declarations.metadata73(),
