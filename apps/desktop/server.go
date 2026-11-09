@@ -194,8 +194,15 @@ func realPath(p string) (string, error) {
 	return filepath.EvalSymlinks(abs)
 }
 
+// bundled is "true" in the builds of the scripts (build.sh,
+// build-windows.sh and build-windows.ps1), which put the ebira of the app
+// with it, set with -ldflags "-X main.bundled=true". Such an app runs that
+// ebira only, not one found on the PATH, which may be another program; a
+// build for development, as with go run, uses the PATH.
+var bundled string
+
 // helper finds the server: in the app bundle on macOS, beside the app on
-// Windows, or else on the PATH.
+// Windows, or else, in a build for development, on the PATH.
 func helper() (string, error) {
 	exe, err := os.Executable()
 	if err == nil {
@@ -205,6 +212,9 @@ func helper() (string, error) {
 				return bin, nil
 			}
 		}
+	}
+	if bundled == "true" {
+		return "", errors.New("the ebira command of the app is missing: install the app again")
 	}
 	if bin, err := exec.LookPath("ebira"); err == nil {
 		return bin, nil

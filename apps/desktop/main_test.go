@@ -108,6 +108,28 @@ func TestReadHealth(t *testing.T) {
 	}
 }
 
+// TestHelperBundled checks that an app built with its ebira does not take
+// one from the PATH in its place, while a build for development does.
+func TestHelperBundled(t *testing.T) {
+	bin := t.TempDir()
+	name := "ebira"
+	if runtime.GOOS == "windows" {
+		name = "ebira.exe"
+	}
+	if err := os.WriteFile(filepath.Join(bin, name), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	if got, err := helper(); err != nil || got != filepath.Join(bin, name) {
+		t.Errorf("helper of a build for development = %q, %v, want the one on the PATH", got, err)
+	}
+	bundled = "true"
+	t.Cleanup(func() { bundled = "" })
+	if got, err := helper(); err == nil {
+		t.Errorf("helper of a built app without its ebira = %q, want an error", got)
+	}
+}
+
 // TestOwnServer checks that what answers at a local address is taken for the
 // server of the notes folder only as the state of this user's server tells.
 func TestOwnServer(t *testing.T) {

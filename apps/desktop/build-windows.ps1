@@ -48,7 +48,7 @@ try {
 		$env:GOOS = 'windows'; $env:GOARCH = $arch
 	}
 	try {
-		Invoke-Go build -ldflags "-H windowsgui -X main.buildVersion=$version" -o "$out/ebira-desktop.exe" .
+		Invoke-Go build -ldflags "-H windowsgui -X main.buildVersion=$version -X main.bundled=true" -o "$out/ebira-desktop.exe" .
 	} finally {
 		Remove-Item -Force -ErrorAction SilentlyContinue $syso
 	}
