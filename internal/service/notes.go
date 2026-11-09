@@ -283,7 +283,7 @@ func (s *Notes) Restore(ctx context.Context, p *gennotes.RestorePayload) (*genno
 		if err := s.ensureNotebookFromTrash(n.TrashedNotebook); err != nil {
 			return nil, err
 		}
-	} else if store.ValidNotebook(to) && to != store.Trash {
+	} else if store.ValidNotebook(to) && to != store.Trash && to != store.Inbox {
 		if err := s.ensureNotebookForRestore(to); err != nil {
 			return nil, err
 		}
@@ -738,7 +738,7 @@ func (s *Notes) createNotebook(ctx context.Context, p *gennotes.CreateNotebookPa
 	if !fromPerson(ctx) {
 		// For AI clients the ID always has a random part, so that whether it
 		// had to avoid the ID of a notebook hidden from them cannot be told.
-		base = base[:min(len(base), 64-7)] + "-" + store.NewID()[:6]
+		base = store.RandomNotebookID(base)
 	}
 	id := prefix + store.UniqueNotebookID(base, func(id string) bool { return taken[prefix+id] })
 	m := store.NotebookMeta{Name: name, Order: order + 10, Kind: storeKind(p.Kind)} // after the others by default

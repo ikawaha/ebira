@@ -122,3 +122,12 @@ func TestUniqueNotebookID(t *testing.T) {
 		t.Errorf("UniqueNotebookID(long) = %q", got)
 	}
 }
+
+func TestRandomNotebookID(t *testing.T) {
+	if got := RandomNotebookID("books"); len(got) != len("books-")+6 || !strings.HasPrefix(got, "books-") || !ValidNotebook(got) {
+		t.Errorf("RandomNotebookID(books) = %q", got)
+	}
+	if got := RandomNotebookID(strings.Repeat("a", maxIDLen)); len(got) != maxIDLen || !ValidNotebook(got) {
+		t.Errorf("RandomNotebookID(long) = %q", got)
+	}
+}

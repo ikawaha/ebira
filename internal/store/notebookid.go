@@ -111,6 +111,13 @@ func truncatedID(id string) bool {
 	return err == nil
 }
 
+// RandomNotebookID returns id with a random suffix, "-" and 6 hex digits,
+// still within the ID length.
+func RandomNotebookID(id string) string {
+	suffix := "-" + NewID()[:6]
+	return id[:min(len(id), maxIDLen-len(suffix))] + suffix
+}
+
 // UniqueNotebookID returns id, or when taken reports it as used, id with the
 // smallest suffix "-2", "-3", ... that is free, still within the ID length.
 func UniqueNotebookID(id string, taken func(string) bool) string {
