@@ -212,6 +212,11 @@ func DecodeGetRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if qRaw != "" {
 			q = &qRaw
 		}
+		if q != nil {
+			if utf8.RuneCountInString(*q) > 1000 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q", *q, utf8.RuneCountInString(*q), 1000, false))
+			}
+		}
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -971,6 +976,9 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		}
 		if utf8.RuneCountInString(q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, utf8.RuneCountInString(q), 1, true))
+		}
+		if utf8.RuneCountInString(q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, utf8.RuneCountInString(q), 1000, false))
 		}
 		notebookRaw := qp.Get("notebook")
 		if notebookRaw != "" {

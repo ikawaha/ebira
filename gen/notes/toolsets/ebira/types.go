@@ -29,8 +29,6 @@ type (
 	}
 	// CreateAiNotePayload defines the JSON payload for the ebira.create_ai_note tool.
 	CreateAiNotePayload = struct {
-		// Note ID; random if omitted. Must be omitted for a drop notebook
-		ID *string
 		// ID of a notebook of the collab or drop kind
 		Notebook string
 		// Title

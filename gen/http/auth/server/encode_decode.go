@@ -345,6 +345,33 @@ func EncodeDeviceStartResponse(encoder func(context.Context, http.ResponseWriter
 	}
 }
 
+// DecodeDeviceStartRequest returns a decoder for requests sent to the auth
+// device_start endpoint.
+func DecodeDeviceStartRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*auth.DeviceStartPayload, error) {
+	return func(r *http.Request) (*auth.DeviceStartPayload, error) {
+		var payload *auth.DeviceStartPayload
+		var (
+			client *string
+			err    error
+		)
+		clientRaw := r.URL.Query().Get("client")
+		if clientRaw != "" {
+			client = &clientRaw
+		}
+		if client != nil {
+			if !(*client == "tui" || *client == "cli") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("client", *client, []any{"tui", "cli"}))
+			}
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewDeviceStartPayload(client)
+
+		return payload, nil
+	}
+}
+
 // EncodeDeviceTokenResponse returns an encoder for responses returned by the
 // auth device_token endpoint.
 func EncodeDeviceTokenResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
@@ -384,6 +411,87 @@ func DecodeDeviceTokenRequest(mux goahttp.Muxer, decoder func(*http.Request) goa
 		payload = NewDeviceTokenPayload(&body)
 
 		return payload, nil
+	}
+}
+
+// EncodeDeviceRequestResponse returns an encoder for responses returned by the
+// auth device_request endpoint.
+func EncodeDeviceRequestResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*auth.DeviceRequestResult)
+		enc := encoder(ctx, w)
+		body := NewDeviceRequestResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeDeviceRequestRequest returns a decoder for requests sent to the auth
+// device_request endpoint.
+func DecodeDeviceRequestRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*auth.DeviceRequestPayload, error) {
+	return func(r *http.Request) (*auth.DeviceRequestPayload, error) {
+		var payload *auth.DeviceRequestPayload
+		var (
+			userCode string
+			session  *string
+			c        *http.Cookie
+
+			params = mux.Vars(r)
+		)
+		userCode = params["user_code"]
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewDeviceRequestPayload(userCode, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeDeviceRequestError returns an encoder for errors returned by the
+// device_request auth endpoint.
+func EncodeDeviceRequestError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeviceRequestUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewDeviceRequestNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
 	}
 }
 

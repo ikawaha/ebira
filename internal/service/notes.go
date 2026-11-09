@@ -1131,21 +1131,14 @@ func (s *Notes) requireKind(nb string, kinds ...string) error {
 }
 
 // CreateAiNote creates a note for an AI client, marked as created by AI, in a
-// notebook of the collab or drop kind. In a drop notebook the ID is always random:
-// a chosen ID that is taken would tell AI clients that a note they cannot see
-// exists.
+// notebook of the collab or drop kind. The ID is always random: a chosen ID
+// that is taken would tell AI clients that a note they cannot see exists, in
+// a private or drop notebook or in the trash.
 func (s *Notes) CreateAiNote(ctx context.Context, p *gennotes.CreateAiNotePayload) (*gennotes.Note, error) {
 	if err := s.requireKind(p.Notebook, store.KindCollab, store.KindDrop); err != nil {
 		return nil, err
 	}
-	if p.ID != nil {
-		if m, err := s.store.NotebookMeta(p.Notebook); err != nil {
-			return nil, err
-		} else if m.Kind == store.KindDrop {
-			return nil, gennotes.MakeBadRequest(fmt.Errorf("notebook %s is of the drop kind: omit the id, which is chosen at random", p.Notebook))
-		}
-	}
-	return s.create(ctx, &gennotes.CreatePayload{ID: p.ID, Notebook: &p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body}, store.CreatedByAI)
+	return s.create(ctx, &gennotes.CreatePayload{Notebook: &p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body}, store.CreatedByAI)
 }
 
 // UpdateAiNote updates a note for an AI client. The note must be in a notebook

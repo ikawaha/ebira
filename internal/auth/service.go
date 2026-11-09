@@ -122,8 +122,12 @@ func (s *Service) Logout(context.Context) (*genauth.LogoutResult, error) {
 }
 
 // DeviceStart begins signing in a client without a browser.
-func (s *Service) DeviceStart(context.Context) (*genauth.DeviceStartResult, error) {
-	deviceCode, userCode, uri := s.passkeys.StartDevice()
+func (s *Service) DeviceStart(_ context.Context, p *genauth.DeviceStartPayload) (*genauth.DeviceStartResult, error) {
+	client := ""
+	if p != nil && p.Client != nil {
+		client = *p.Client
+	}
+	deviceCode, userCode, uri := s.passkeys.StartDevice(client)
 	return &genauth.DeviceStartResult{
 		DeviceCode:      deviceCode,
 		UserCode:        userCode,
@@ -140,6 +144,27 @@ func (s *Service) DeviceToken(_ context.Context, p *genauth.DeviceTokenPayload) 
 	r := &genauth.DeviceTokenResult{Status: status}
 	if session != "" {
 		r.Session = &session
+	}
+	return r, nil
+}
+
+// DeviceRequest tells people signed in about a request of a client before
+// they approve it: when it was made and by what, so that they can tell it
+// from one they did not make.
+func (s *Service) DeviceRequest(_ context.Context, p *genauth.DeviceRequestPayload) (*genauth.DeviceRequestResult, error) {
+	if valid, _ := s.check(p.Session); !valid {
+		return nil, genauth.MakeUnauthorized(errors.New("sign in with a passkey"))
+	}
+	created, client, expires, err := s.passkeys.DeviceRequest(p.UserCode)
+	if err != nil {
+		return nil, genauth.MakeNotFound(err)
+	}
+	r := &genauth.DeviceRequestResult{
+		CreatedAt: created.UTC().Format(time.RFC3339),
+		ExpiresIn: max(0, int(time.Until(expires)/time.Second)),
+	}
+	if client != "" {
+		r.Client = &client
 	}
 	return r, nil
 }

@@ -38,8 +38,6 @@ type (
 	// decode + validation (missing-field detection) before transforming into
 	// the public tool type.
 	CreateAiNotePayloadTransport struct {
-		// Note ID; random if omitted. Must be omitted for a drop notebook
-		ID *string `json:"id,omitempty"`
 		// ID of a notebook of the collab or drop kind
 		Notebook *string `json:"notebook"`
 		// Title

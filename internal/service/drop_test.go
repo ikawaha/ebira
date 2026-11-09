@@ -50,10 +50,7 @@ func TestDropNotebooks(t *testing.T) {
 		t.Errorf("Get for AI = %v, want not_found", err)
 	}
 
-	// They may add a note, with a random ID only, and then cannot touch it.
-	if _, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{ID: ptr("mine"), Notebook: store.Inbox, Title: "x"}); errorName(err) != "bad_request" {
-		t.Errorf("CreateAiNote with an ID in a drop notebook = %v, want bad_request", err)
-	}
+	// They may add a note, with a random ID, and then cannot touch it.
 	added, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{Notebook: store.Inbox, Title: "AI のメモ", Body: ptr("調べたこと")})
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +96,7 @@ func TestDropNotebooks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{ID: ptr("chosen"), Notebook: shared.ID, Title: "x"})
+	n, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{Notebook: shared.ID, Title: "x"})
 	if err != nil {
 		t.Fatal(err)
 	}

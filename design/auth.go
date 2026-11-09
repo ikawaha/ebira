@@ -101,6 +101,11 @@ var _ = Service("auth", func() {
 
 	Method("device_start", func() {
 		Description("Begin signing in a client without a browser, such as the TUI. The client shows the user code and the URL, people approve the code in the web UI, signed in with a passkey, and the client gets a session from device_token meanwhile.")
+		Payload(func() {
+			Attribute("client", String, "What asks to sign in, which the web UI shows when people approve it: tui for the TUI, cli for a command such as ebira import", func() {
+				Enum("tui", "cli")
+			})
+		})
 		Result(func() {
 			RequiredAttribute("device_code", String, "Secret code the client asks device_token with; never shown to people")
 			RequiredAttribute("user_code", String, "Code people compare with the one in the web UI before approving it", func() {
@@ -112,6 +117,9 @@ var _ = Service("auth", func() {
 		})
 		HTTP(func() {
 			POST("/auth/device")
+			// In the query, so that a request without a body, as of
+			// earlier clients, still begins a sign-in.
+			Param("client")
 		})
 	})
 
@@ -128,6 +136,30 @@ var _ = Service("auth", func() {
 		})
 		HTTP(func() {
 			POST("/auth/device/token")
+		})
+	})
+
+	Method("device_request", func() {
+		Description("Tell the web UI, signed in with a passkey, about the request of device_start with a user code before people approve it: when it was made, and by what.")
+		Payload(func() {
+			Attribute("session", String, "Session cookie of the web UI")
+			RequiredAttribute("user_code", String, "User code shown by the client")
+		})
+		Result(func() {
+			RequiredAttribute("created_at", String, "When the request was made, in RFC 3339", func() {
+				Format(FormatDateTime)
+			})
+			Attribute("client", String, "What made it, as device_start tells: tui or cli; none for a client that does not tell")
+			RequiredAttribute("expires_in", Int, "Seconds until the request expires")
+		})
+		Error("unauthorized", ErrorResult, "The request is not signed in with a passkey")
+		Error("not_found", ErrorResult, "The user code is unknown or expired")
+		HTTP(func() {
+			GET("/auth/device/{user_code}")
+			Cookie("session:" + sessionCookie)
+			Response(StatusOK)
+			Response("unauthorized", StatusUnauthorized)
+			Response("not_found", StatusNotFound)
 		})
 	})
 

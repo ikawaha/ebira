@@ -22,6 +22,7 @@ type Endpoints struct {
 	LoginFinish    goa.Endpoint
 	DeviceStart    goa.Endpoint
 	DeviceToken    goa.Endpoint
+	DeviceRequest  goa.Endpoint
 	DeviceApprove  goa.Endpoint
 	Passkeys       goa.Endpoint
 	DeletePasskey  goa.Endpoint
@@ -39,6 +40,7 @@ func NewEndpoints(s Service) *Endpoints {
 		LoginFinish:    NewLoginFinishEndpoint(s),
 		DeviceStart:    NewDeviceStartEndpoint(s),
 		DeviceToken:    NewDeviceTokenEndpoint(s),
+		DeviceRequest:  NewDeviceRequestEndpoint(s),
 		DeviceApprove:  NewDeviceApproveEndpoint(s),
 		Passkeys:       NewPasskeysEndpoint(s),
 		DeletePasskey:  NewDeletePasskeyEndpoint(s),
@@ -56,6 +58,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.LoginFinish = m(e.LoginFinish)
 	e.DeviceStart = m(e.DeviceStart)
 	e.DeviceToken = m(e.DeviceToken)
+	e.DeviceRequest = m(e.DeviceRequest)
 	e.DeviceApprove = m(e.DeviceApprove)
 	e.Passkeys = m(e.Passkeys)
 	e.DeletePasskey = m(e.DeletePasskey)
@@ -111,7 +114,8 @@ func NewLoginFinishEndpoint(s Service) goa.Endpoint {
 // "device_start" of service "auth".
 func NewDeviceStartEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		return s.DeviceStart(ctx)
+		p := req.(*DeviceStartPayload)
+		return s.DeviceStart(ctx, p)
 	}
 }
 
@@ -121,6 +125,15 @@ func NewDeviceTokenEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*DeviceTokenPayload)
 		return s.DeviceToken(ctx, p)
+	}
+}
+
+// NewDeviceRequestEndpoint returns an endpoint function that calls the method
+// "device_request" of service "auth".
+func NewDeviceRequestEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*DeviceRequestPayload)
+		return s.DeviceRequest(ctx, p)
 	}
 }
 
