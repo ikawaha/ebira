@@ -42,6 +42,9 @@ func PreviewCSS(css string) string {
 		css = css[:maxPreviewCSS]
 	}
 	css = strings.ToValidUTF8(css, "�")
+	// Line ends as browsers read them (CSS Syntax 3.3), so that a string ends
+	// where theirs does: CR LF, CR and FF are each one LF.
+	css = strings.NewReplacer("\r\n", "\n", "\r", "\n", "\f", "\n").Replace(css)
 	toks := lexCSS(css)
 	var b strings.Builder
 	b.WriteString(previewScope + " {\n")

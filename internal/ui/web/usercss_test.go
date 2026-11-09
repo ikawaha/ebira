@@ -50,6 +50,21 @@ func TestPreviewCSS(t *testing.T) {
 			t.Errorf("%s: PreviewCSS(%q) = %q, want %q", tt.name, tt.css, inner(got), tt.want)
 		}
 	}
+
+	// Strings end, or go on, at line ends as browsers read them, so that what
+	// follows is read as they read it: CR, FF and CR LF end a string as LF
+	// does, and a backslash before CR LF goes on to the next line.
+	for _, css := range []string{
+		"p{font-family:\"a\n}p{background:url(https://evil.example/)}\"}",
+		"p{font-family:\"a\r}p{background:url(https://evil.example/)}\"}",
+		"p{font-family:\"a\f}p{background:url(https://evil.example/)}\"}",
+		"p{font-family:\"a\r\n}p{background:url(https://evil.example/)}\"}",
+		"p{font-family:\"a\\\r\nb\"}p{background:url(https://evil.example/)}",
+	} {
+		if got := PreviewCSS(css); strings.Contains(got, "evil.example") || strings.ContainsAny(got, "\r\f") {
+			t.Errorf("PreviewCSS(%q) = %q, keeps the URL or the line end", css, got)
+		}
+	}
 }
 
 func TestServePreviewCSS(t *testing.T) {
