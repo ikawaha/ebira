@@ -299,7 +299,7 @@ func runServe(args []string) error {
 		gate.Session = passkeys.Check
 	}
 	notesEndpoints := gennotes.NewEndpoints(rest)
-	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil))
+	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), &mcpnotes.MCPAdapterOptions{ErrorMapper: mcpError}))
 
 	mux := goahttp.NewMuxer()
 	eh := func(ctx context.Context, w http.ResponseWriter, err error) {
