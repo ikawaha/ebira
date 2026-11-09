@@ -1124,8 +1124,12 @@ func encode(old []byte, n *Note) ([]byte, error) {
 	}
 	if len(old) == 0 {
 		for i := 0; i+1 < len(n.Extra); i += 2 {
-			if k := n.Extra[i].Value; !slices.Contains(noteKeys, k) && !has(m, k) {
-				setBefore(m, k, n.Extra[i+1], "body")
+			// Only plain keys: a merge key (<<) or an alias as a key would set
+			// the note's own keys when the file is read. Nor values with
+			// aliases, whose anchors may be on keys left out.
+			k := n.Extra[i]
+			if k.Kind == yaml.ScalarNode && k.Tag != "!!merge" && k.Value != "<<" && !slices.Contains(noteKeys, k.Value) && !has(m, k.Value) && !hasAlias(n.Extra[i+1]) {
+				setBefore(m, k.Value, n.Extra[i+1], "body")
 			}
 		}
 	}
@@ -1202,6 +1206,14 @@ func has(m *yaml.Node, key string) bool {
 		}
 	}
 	return false
+}
+
+// hasAlias reports whether node v is or holds an alias.
+func hasAlias(v *yaml.Node) bool {
+	if v.Kind == yaml.AliasNode {
+		return true
+	}
+	return slices.ContainsFunc(v.Content, hasAlias)
 }
 
 // unset removes key from the mapping node m, keeping its comments.
