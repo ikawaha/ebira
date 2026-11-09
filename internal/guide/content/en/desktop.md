@@ -43,6 +43,8 @@ When it cannot connect, the settings window tells why.
 
 "Settings…" in the ebira menu (Cmd+,; the File menu on Windows) sets the notes folder and the address of the server. With the notes folder empty, it follows `notes_dir` of the config file ([Settings](settings.md)). "Apply" connects again, to the server of those notes.
 
+With the address of a server on another computer, the app opens that server's page as it is, and lets it write to the clipboard and open links in the browser. Choose only a server you trust, such as one you run yourself.
+
 The settings of the server, such as the language and the search mode, are in "Server Settings…", as in the gear menu of the web UI.
 
 ## Menus
