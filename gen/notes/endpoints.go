@@ -75,6 +75,15 @@ type Endpoints struct {
 	Sync                  goa.Endpoint
 }
 
+// ImportRequestData holds both the payload and the HTTP request body reader of
+// the "import" method.
+type ImportRequestData struct {
+	// Payload is the method payload.
+	Payload *ImportPayload
+	// Body streams the HTTP request body.
+	Body io.ReadCloser
+}
+
 // AddFileRequestData holds both the payload and the HTTP request body reader
 // of the "add_file" method.
 type AddFileRequestData struct {
@@ -851,7 +860,7 @@ func NewEmptyTrashEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.
 // "import" of service "notes".
 func NewImportEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		p := req.(*ImportPayload)
+		ep := req.(*ImportRequestData)
 		var err error
 		sc := security.APIKeyScheme{
 			Name:           "session",
@@ -859,14 +868,14 @@ func NewImportEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endp
 			RequiredScopes: []string{},
 		}
 		var key string
-		if p.Session != nil {
-			key = string(*p.Session)
+		if ep.Payload.Session != nil {
+			key = string(*ep.Payload.Session)
 		}
 		ctx, err = authAPIKeyFn(ctx, key, &sc)
 		if err != nil {
 			return nil, err
 		}
-		return s.Import(ctx, p)
+		return s.Import(ctx, ep.Payload, ep.Body)
 	}
 }
 

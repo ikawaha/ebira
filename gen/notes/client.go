@@ -534,13 +534,13 @@ func (c *Client) EmptyTrash(ctx context.Context, p *EmptyTrashPayload) (err erro
 
 // Import calls the "import" endpoint of the "notes" service.
 // Import may return the following errors:
-//   - "bad_request" (type *goa.ServiceError): The notebook is the trash or invalid, or the file is too large
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash or invalid, the body is malformed, or the file or the images are too large
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
-func (c *Client) Import(ctx context.Context, p *ImportPayload) (res *ImportResult, err error) {
+func (c *Client) Import(ctx context.Context, p *ImportPayload, req io.ReadCloser) (res *ImportResult, err error) {
 	var ires any
-	ires, err = c.ImportEndpoint(ctx, p)
+	ires, err = c.ImportEndpoint(ctx, &ImportRequestData{Payload: p, Body: req})
 	if err != nil {
 		return
 	}

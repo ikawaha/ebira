@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -987,7 +988,7 @@ func TestPeopleOnly(t *testing.T) {
 		},
 		"empty_trash": func(ctx context.Context) error { return svc.EmptyTrash(ctx, nil) },
 		"import": func(ctx context.Context) error {
-			_, err := svc.Import(ctx, &gennotes.ImportPayload{Notebook: &diary.ID, Name: "x.md", Content: "x"})
+			_, err := svc.Import(ctx, &gennotes.ImportPayload{Notebook: &diary.ID, ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(`{"name":"x.md","content":"x"}`)))
 			return err
 		},
 		"set_marks": func(ctx context.Context) error {

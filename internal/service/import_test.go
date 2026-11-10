@@ -1,7 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +16,63 @@ import (
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 )
+
+// formFile is an image of an import sent in a multipart body.
+type formFile struct{ ref, name, content string }
+
+// importForm returns a multipart body of import with the fields, in order,
+// and the images, and its content type.
+func importForm(t *testing.T, fields [][2]string, files ...formFile) (*bytes.Buffer, string) {
+	t.Helper()
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	for _, f := range fields {
+		if err := w.WriteField(f[0], f[1]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, f := range files {
+		if err := w.WriteField("ref", f.ref); err != nil {
+			t.Fatal(err)
+		}
+		fw, err := w.CreateFormFile("file", f.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		io.WriteString(fw, f.content)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return &b, w.FormDataContentType()
+}
+
+// importOf imports a Markdown file named name with content into notebook
+// with a multipart body.
+func importOf(ctx context.Context, t *testing.T, svc *Notes, notebook, name, content string, force bool) (*gennotes.ImportResult, error) {
+	t.Helper()
+	body, ct := importForm(t, [][2]string{{"name", name}, {"content", content}})
+	p := &gennotes.ImportPayload{ContentType: &ct, Force: &force}
+	if notebook != "" {
+		p.Notebook = &notebook
+	}
+	return svc.Import(ctx, p, io.NopCloser(body))
+}
+
+// stages returns the stages left in the notes directory and the folders of
+// notebooks.
+func stages(t *testing.T, dir string) []string {
+	t.Helper()
+	var all []string
+	for _, pattern := range []string{".tmp-stage-*", "*/.tmp-stage-*", "*/*/.tmp-stage-*"} {
+		m, err := filepath.Glob(filepath.Join(dir, pattern))
+		if err != nil {
+			t.Fatal(err)
+		}
+		all = append(all, m...)
+	}
+	return all
+}
 
 const kyoto = `---
 title: 京都の旅
@@ -30,16 +92,11 @@ func TestImport(t *testing.T) {
 	person := AsPerson(context.Background())
 	svc, dir := newTestService(t)
 
-	res, err := svc.Import(person, &gennotes.ImportPayload{
-		Notebook:   ptr("travel"),
-		Name:       "kyoto.md",
-		Content:    kyoto,
-		ModifiedAt: ptr("2026-05-01T00:00:00Z"),
-		Files: []*gennotes.ImportFile{
-			{Ref: "img/tera.png", Name: "tera.png", Content: pngHead},
-			{Ref: "img/other.png", Name: "other.png", Content: pngHead},
-		},
-	})
+	body, ct := importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}, {"modified_at", "2026-05-01T00:00:00Z"}},
+		formFile{"img/tera.png", "tera.png", string(pngHead)},
+		formFile{"img/other.png", "other.png", string(pngHead)},
+	)
+	res, err := svc.Import(person, &gennotes.ImportPayload{Notebook: ptr("travel"), ContentType: &ct}, io.NopCloser(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,29 +139,155 @@ func TestImport(t *testing.T) {
 
 	// The same content again, even under another name and in the trash, is
 	// skipped unless forced.
-	again := &gennotes.ImportPayload{Name: "copy.md", Content: kyoto}
-	if res, err := svc.Import(person, again); err != nil || res.Status != "skipped" || *res.DuplicateOf != n.ID || res.Note != nil {
+	if res, err := importOf(person, t, svc, "", "copy.md", kyoto, false); err != nil || res.Status != "skipped" || *res.DuplicateOf != n.ID || res.Note != nil {
 		t.Errorf("Import again = %+v, %v", res, err)
 	}
 	if err := svc.Delete(person, &gennotes.DeletePayload{ID: n.ID}); err != nil {
 		t.Fatal(err)
 	}
-	if res, err := svc.Import(person, again); err != nil || res.Status != "skipped" {
+	if res, err := importOf(person, t, svc, "", "copy.md", kyoto, false); err != nil || res.Status != "skipped" {
 		t.Errorf("Import after deleting = %+v, %v", res, err)
 	}
-	again.Force = ptr(true)
-	if res, err := svc.Import(person, again); err != nil || res.Status != "created" || res.Note.Notebook != "inbox" {
+	if res, err := importOf(person, t, svc, "", "copy.md", kyoto, true); err != nil || res.Status != "created" || res.Note.Notebook != "inbox" {
 		t.Errorf("Import with force = %+v, %v", res, err)
 	}
 
-	for _, p := range []*gennotes.ImportPayload{
-		{Notebook: ptr("trash"), Name: "a.md", Content: "x"},
-		{Name: "a.md", Content: strings.Repeat("x", 5<<20+1)},
-		{Name: "a.md", Content: "x", ModifiedAt: ptr("yesterday")},
+	for name, fields := range map[string][][2]string{
+		"no name":    {{"content", "x"}},
+		"no content": {{"name", "a.md"}},
+		"too large":  {{"name", "a.md"}, {"content", strings.Repeat("x", 5<<20+1)}},
+		"bad time":   {{"name", "a.md"}, {"content", "x"}, {"modified_at", "yesterday"}},
 	} {
-		if _, err := svc.Import(person, p); errorName(err) != "bad_request" {
-			t.Errorf("Import(%s, %d bytes): %v", deref(p.Notebook), len(p.Content), err)
+		body, ct := importForm(t, fields)
+		if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(body)); errorName(err) != "bad_request" {
+			t.Errorf("Import with %s: %v", name, err)
 		}
+	}
+	if _, err := importOf(person, t, svc, "trash", "a.md", "x", false); errorName(err) != "bad_request" {
+		t.Errorf("Import into the trash: %v", err)
+	}
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("multipart/form-data; boundary=x")}, io.NopCloser(strings.NewReader("not multipart"))); errorName(err) != "bad_request" {
+		t.Errorf("Import of a malformed body: %v", err)
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
+	}
+}
+
+// TestImportJSON checks the JSON body of earlier versions, with the notebook
+// and force in the body.
+func TestImportJSON(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	v := map[string]any{
+		"notebook": "travel", "name": "kyoto.md", "content": kyoto, "modified_at": "2026-05-01T00:00:00Z",
+		"files": []map[string]any{{"ref": "img/tera.png", "name": "tera.png", "content": pngHead}},
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(bytes.NewReader(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := res.Note; n.Notebook != "travel" || !strings.Contains(n.Body, n.ID+".assets/tera.png") {
+		t.Errorf("Import = %+v", n)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "travel", res.Note.ID+".assets", "tera.png")); err != nil {
+		t.Errorf("the image: %v", err)
+	}
+	v["force"] = true
+	b, _ = json.Marshal(v)
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(bytes.NewReader(b))); err != nil || res.Status != "created" {
+		t.Errorf("Import with force in the body = %+v, %v", res, err)
+	}
+	// force=false in the query wins over force in the body.
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json"), Force: ptr(false)}, io.NopCloser(bytes.NewReader(b))); err != nil || res.Status != "skipped" {
+		t.Errorf("Import with force=false in the query = %+v, %v", res, err)
+	}
+	// The content is required, but may be empty.
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(`{"name":"a.md"}`))); errorName(err) != "bad_request" {
+		t.Errorf("Import without content: %v", err)
+	}
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(`{"name":"empty.md","content":""}`))); err != nil || res.Status != "created" {
+		t.Errorf("Import of an empty file = %+v, %v", res, err)
+	}
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader("{"))); errorName(err) != "bad_request" {
+		t.Errorf("Import of broken JSON: %v", err)
+	}
+}
+
+// cutReader reads r, then fails as a request cut off does.
+type cutReader struct{ r io.Reader }
+
+func (c cutReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	if errors.Is(err, io.EOF) {
+		return n, io.ErrUnexpectedEOF
+	}
+	return n, err
+}
+
+// TestImportAllOrNothing checks that a request cut off while its images are
+// received imports nothing and leaves no files behind, and that images past
+// the limit in all fail the import.
+func TestImportAllOrNothing(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	body, ct := importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}},
+		formFile{"img/tera.png", "tera.png", string(pngHead) + strings.Repeat("x", 1<<16)},
+	)
+	cut := body.Bytes()[:body.Len()-(1<<15)]
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(cutReader{bytes.NewReader(cut)})); err == nil {
+		t.Fatal("Import of a request cut off succeeded")
+	}
+	if found, err := svc.List(person, &gennotes.ListPayload{}); err != nil || found.Total != 0 {
+		t.Errorf("notes after the cut = %+v, %v", found, err)
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
+	}
+
+	// A body that ends cleanly but before its closing boundary, inside an
+	// image the file does not refer to, is cut off too: the images after it
+	// are missing.
+	body, ct = importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}},
+		formFile{"img/other.png", "other.png", string(pngHead) + strings.Repeat("x", 1<<16)},
+		formFile{"img/tera.png", "tera.png", string(pngHead)},
+	)
+	i := bytes.LastIndex(body.Bytes(), []byte("img/tera.png")) // the field ref, after the file
+	cut = body.Bytes()[:i-(1<<10)]
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(bytes.NewReader(cut))); err == nil {
+		t.Fatal("Import of a body ended early succeeded")
+	}
+	if found, err := svc.List(person, &gennotes.ListPayload{}); err != nil || found.Total != 0 {
+		t.Errorf("notes after the early end = %+v, %v", found, err)
+	}
+
+	// An image whose ref comes without its file is a bad request too.
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	w.WriteField("name", "a.md")
+	w.WriteField("content", "![x](x.png)")
+	w.WriteField("ref", "x.png")
+	w.WriteField("other", "y")
+	w.Close()
+	ct = w.FormDataContentType()
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(&b)); errorName(err) != "bad_request" {
+		t.Errorf("Import of a ref without its file: %v", err)
+	}
+
+	defer func(n int64) { importMaxImages = n }(importMaxImages)
+	importMaxImages = 100
+	body, ct = importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}},
+		formFile{"img/tera.png", "tera.png", string(pngHead) + strings.Repeat("x", 200)},
+	)
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(body)); errorName(err) != "bad_request" {
+		t.Errorf("Import past the limit: %v", err)
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
 	}
 }
 
@@ -136,7 +319,7 @@ func TestImportAiNote(t *testing.T) {
 	// A note people imported into a notebook AI clients cannot see does not
 	// count, so that the result does not tell them it exists.
 	secret := "# 秘密\n\n見せない"
-	if _, err := svc.Import(person, &gennotes.ImportPayload{Notebook: ptr("secret"), Name: "s.md", Content: secret}); err != nil {
+	if _, err := importOf(person, t, svc, "secret", "s.md", secret, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: "secret", Kind: ptr("private")}); err != nil {
@@ -150,5 +333,93 @@ func TestImportAiNote(t *testing.T) {
 		if _, err := svc.ImportAiNote(ai, &gennotes.ImportAiNotePayload{Notebook: nb, Name: "a.md", Content: "x"}); errorName(err) != "forbidden" {
 			t.Errorf("ImportAiNote into %s: %v", nb, err)
 		}
+	}
+}
+
+// hookReader reads r and calls hook once, after the first read.
+type hookReader struct {
+	r    io.Reader
+	hook func()
+}
+
+func (h *hookReader) Read(p []byte) (int, error) {
+	n, err := h.r.Read(p)
+	if h.hook != nil {
+		h.hook()
+		h.hook = nil
+	}
+	return n, err
+}
+
+// TestImportWhileNotebookMoves checks that a notebook moved to the trash
+// while the images of an import into it are received leaves the import
+// whole and no files behind.
+func TestImportWhileNotebookMoves(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	if _, err := importOf(person, t, svc, "travel", "first.md", "# 先", false); err != nil {
+		t.Fatal(err)
+	}
+	body, ct := importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}},
+		formFile{"img/tera.png", "tera.png", string(pngHead) + strings.Repeat("x", 1<<20)},
+	)
+	// The fields are read whole first; the hook runs while the image comes.
+	i := bytes.LastIndex(body.Bytes(), []byte("img/tera.png"))
+	r := io.MultiReader(bytes.NewReader(body.Bytes()[:i]), &hookReader{r: bytes.NewReader(body.Bytes()[i:]), hook: func() {
+		if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: "travel"}); err != nil {
+			t.Error(err)
+		}
+	}})
+	res, err := svc.Import(person, &gennotes.ImportPayload{Notebook: ptr("travel"), ContentType: &ct}, io.NopCloser(r))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "travel", res.Note.ID+".assets", "tera.png")); err != nil {
+		t.Errorf("the image: %v", err)
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
+	}
+	if m, _ := filepath.Glob(filepath.Join(dir, "trash", "*", ".tmp-stage-*")); len(m) > 0 {
+		t.Errorf("stages left in the trash: %v", m)
+	}
+}
+
+// TestImportMalformed checks that malformed bodies are bad requests: an
+// image without its content in JSON, and multipart data broken after the
+// first image's ref.
+func TestImportMalformed(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	for _, files := range []string{
+		`[{"ref":"x.png","name":"x.png"}]`,
+		`[{"ref":"x.png","name":"x.png","content":null}]`,
+		`[{"name":"x.png","content":""}]`,
+	} {
+		body := `{"name":"a.md","content":"![x](x.png)","files":` + files + `}`
+		if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(body))); errorName(err) != "bad_request" {
+			t.Errorf("Import of the files %s: %v", files, err)
+		}
+	}
+	// An empty image is an image.
+	body := `{"name":"e.md","content":"# empty\n![x](x.png)","files":[{"ref":"x.png","name":"x.png","content":""}]}`
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(body))); err != nil || res.Status != "created" {
+		t.Errorf("Import of an empty image = %+v, %v", res, err)
+	}
+
+	head := "--b\r\nContent-Disposition: form-data; name=\"name\"\r\n\r\na.md\r\n" +
+		"--b\r\nContent-Disposition: form-data; name=\"content\"\r\n\r\n![x](x.png)\r\n" +
+		"--b\r\nContent-Disposition: form-data; name=\"ref\"\r\n\r\nx.png\r\n"
+	for name, rest := range map[string]string{
+		"a broken header":     "--b\r\nnot a header\r\n\r\nx\r\n--b--\r\n",
+		"no closing boundary": "--b\r\nContent-Disposition: form-data; name=\"file\"; filename=\"x.png\"\r\n\r\n\x89PNG",
+	} {
+		ct := "multipart/form-data; boundary=b"
+		if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(strings.NewReader(head+rest))); errorName(err) != "bad_request" {
+			t.Errorf("Import with %s: %v", name, err)
+		}
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
 	}
 }

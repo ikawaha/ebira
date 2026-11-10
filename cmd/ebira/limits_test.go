@@ -25,24 +25,30 @@ func TestLimitBodies(t *testing.T) {
 			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
 		}
 	}))
+	const form = "multipart/form-data; boundary=x"
 	for _, tc := range []struct {
-		method, path string
-		size         int
-		ok           bool
+		method, path, contentType string
+		size                      int
+		ok                        bool
 	}{
-		{"PATCH", "/notes/a", 1 << 20, true},
-		{"PATCH", "/notes/a", maxBody + 1, false},
-		{"POST", "/mcp", maxBody, true},
-		{"POST", "/mcp", maxBody + 1, false},
-		{"POST", "/import", maxBody + 1, true},
-		{"POST", "/notes/a/files", maxFileBody + 1, false},
-		{"POST", "/notes/a/files", maxFileBody, true},
+		{"PATCH", "/notes/a", "", 1 << 20, true},
+		{"PATCH", "/notes/a", "", maxBody + 1, false},
+		{"POST", "/mcp", "", maxBody, true},
+		{"POST", "/mcp", "", maxBody + 1, false},
+		{"POST", "/import", "application/json", maxBody + 1, true},
+		{"POST", "/import", "application/json", maxImportBody + 1, false},
+		{"POST", "/import", form, maxImportBody + 1, true},
+		{"POST", "/notes/a/files", "", maxFileBody + 1, false},
+		{"POST", "/notes/a/files", "", maxFileBody, true},
 	} {
 		r := httptest.NewRequest(tc.method, tc.path, strings.NewReader(strings.Repeat("a", tc.size)))
+		if tc.contentType != "" {
+			r.Header.Set("Content-Type", tc.contentType)
+		}
 		w := httptest.NewRecorder()
 		read.ServeHTTP(w, r)
 		if ok := w.Code == http.StatusOK; ok != tc.ok {
-			t.Errorf("%s %s of %d bytes: %d, want ok %v", tc.method, tc.path, tc.size, w.Code, tc.ok)
+			t.Errorf("%s %s (%s) of %d bytes: %d, want ok %v", tc.method, tc.path, tc.contentType, tc.size, w.Code, tc.ok)
 		}
 	}
 }

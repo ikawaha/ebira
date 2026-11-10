@@ -194,9 +194,12 @@ func ParseEndpoint(
 		notesEmptyTrashFlags       = flag.NewFlagSet("empty-trash", flag.ExitOnError)
 		notesEmptyTrashSessionFlag = new(cliStringFlag)
 
-		notesImportFlags       = flag.NewFlagSet("import", flag.ExitOnError)
-		notesImportBodyFlag    = new(cliStringFlag)
-		notesImportSessionFlag = new(cliStringFlag)
+		notesImportFlags           = flag.NewFlagSet("import", flag.ExitOnError)
+		notesImportNotebookFlag    = new(cliStringFlag)
+		notesImportForceFlag       = new(cliStringFlag)
+		notesImportContentTypeFlag = new(cliStringFlag)
+		notesImportSessionFlag     = new(cliStringFlag)
+		notesImportStreamFlag      = new(cliStringFlag)
 
 		notesAddFileFlags       = flag.NewFlagSet("add-file", flag.ExitOnError)
 		notesAddFileIDFlag      = new(cliStringFlag)
@@ -379,8 +382,11 @@ func ParseEndpoint(
 	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookIDFlag, "id", "ID in the trash")
 	notesDeleteTrashedNotebookFlags.Var(notesDeleteTrashedNotebookSessionFlag, "session", "")
 	notesEmptyTrashFlags.Var(notesEmptyTrashSessionFlag, "session", "")
-	notesImportFlags.Var(notesImportBodyFlag, "body", "")
+	notesImportFlags.Var(notesImportNotebookFlag, "notebook", "")
+	notesImportFlags.Var(notesImportForceFlag, "force", "")
+	notesImportFlags.Var(notesImportContentTypeFlag, "content-type", "")
 	notesImportFlags.Var(notesImportSessionFlag, "session", "")
+	notesImportFlags.Var(notesImportStreamFlag, "stream", "path to file containing the streamed request body")
 	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesAddFileFlags.Var(notesAddFileNameFlag, "name", "")
 	notesAddFileFlags.Var(notesAddFileSessionFlag, "session", "")
@@ -826,7 +832,14 @@ func ParseEndpoint(
 				data, err = notesc.BuildEmptyTrashPayload(notesEmptyTrashSessionFlag.value)
 			case "import":
 				endpoint = c.Import()
-				data, err = notesc.BuildImportPayload(notesImportBodyFlag.value, notesImportSessionFlag.value)
+				data, err = notesc.BuildImportPayload(notesImportNotebookFlag.value, notesImportForceFlag.value, notesImportContentTypeFlag.value, notesImportSessionFlag.value)
+				if err == nil {
+					if notesImportStreamFlag.value == nil {
+						err = fmt.Errorf("missing required flag --stream")
+					} else {
+						data, err = notesc.BuildImportStreamPayload(data, *notesImportStreamFlag.value)
+					}
+				}
 			case "add-file":
 				endpoint = c.AddFile()
 				data, err = notesc.BuildAddFilePayload(notesAddFileIDFlag.value, notesAddFileNameFlag.value, notesAddFileSessionFlag.value)
@@ -975,7 +988,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.`)
 	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes and sub notebooks.`)
 	fmt.Fprintln(os.Stderr, `    empty-trash: Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
-	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.`)
+	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them. The request body is multipart/form-data: the fields name (the file name), content (the Markdown file, at most 5 MB) and modified_at (optional; the modification time of the file, for the times the front matter does not give, in RFC 3339), then, for each image, a field ref with the path as the file refers to it, followed by a file field file with the image, whose file name is the name of the image. The images are streamed to disk, each up to 50 MB and 1 GB in all; nothing is imported when the request is cut off. A JSON body with the attributes name, content, modified_at, notebook, force and files (the images, each with ref, name and the content base64-encoded) is accepted as well.`)
 	fmt.Fprintln(os.Stderr, `    add-file: Add a file to a note. The request body is the file, of any type, at most 50 MB. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path: ![description](path) shows an image, and [name](path) links to a file.`)
 	fmt.Fprintln(os.Stderr, `    get-file: Get a file of a note. The response body is the file. Images (PNG, JPEG, GIF and WebP, told by their content) and PDF files are served as their type to be shown; other files, which might run scripts if shown, as application/octet-stream to be downloaded.`)
 	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it.`)
@@ -1571,21 +1584,27 @@ func notesEmptyTrashUsage() {
 func notesImportUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes import", os.Args[0])
-	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -notebook STRING")
+	fmt.Fprint(os.Stderr, " -force BOOL")
+	fmt.Fprint(os.Stderr, " -content-type STRING")
 	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprint(os.Stderr, " -stream STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.`)
+	fmt.Fprintln(os.Stderr, `Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them. The request body is multipart/form-data: the fields name (the file name), content (the Markdown file, at most 5 MB) and modified_at (optional; the modification time of the file, for the times the front matter does not give, in RFC 3339), then, for each image, a field ref with the path as the file refers to it, followed by a file field file with the image, whose file name is the name of the image. The images are streamed to disk, each up to 50 MB and 1 GB in all; nothing is imported when the request is cut off. A JSON body with the attributes name, content, modified_at, notebook, force and files (the images, each with ref, name and the content base64-encoded) is accepted as well.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
+	fmt.Fprintln(os.Stderr, `    -force BOOL: `)
+	fmt.Fprintln(os.Stderr, `    -content-type STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+	fmt.Fprintln(os.Stderr, `    -stream STRING: path to file containing the streamed request body`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes import --body '{\n      \"content\": \"fsn\",\n      \"files\": [\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         }\n      ],\n      \"force\": true,\n      \"modified_at\": \"2026-10-16T09:30:00Z\",\n      \"name\": \"meeting.md\",\n      \"notebook\": \"inbox\"\n   }' --session \"Et labore.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes import --notebook \"inbox\" --force false --content-type \"multipart/form-data; boundary=x\" --session \"Et labore.\" --stream \"goa.png\"")
 }
 
 func notesAddFileUsage() {

@@ -1171,41 +1171,33 @@ func BuildEmptyTrashPayload(notesEmptyTrashSession *string) (*notes.EmptyTrashPa
 
 // BuildImportPayload builds the payload for the notes import endpoint from CLI
 // flags.
-func BuildImportPayload(notesImportBody *string, notesImportSession *string) (*notes.ImportPayload, error) {
+func BuildImportPayload(notesImportNotebook *string, notesImportForce *string, notesImportContentType *string, notesImportSession *string) (*notes.ImportPayload, error) {
 	var err error
-	var body ImportRequestBody
+	var notebook *string
 	{
-		if notesImportBody == nil {
-			return nil, fmt.Errorf("missing required flag --body")
-		}
-		err = json.Unmarshal([]byte(*notesImportBody), &body)
-		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"content\": \"fsn\",\n      \"files\": [\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         },\n         {\n            \"content\": \"Tm9iaXMgbm9zdHJ1bS4=\",\n            \"name\": \"photo.png\",\n            \"ref\": \"images/photo.png\"\n         }\n      ],\n      \"force\": true,\n      \"modified_at\": \"2026-10-16T09:30:00Z\",\n      \"name\": \"meeting.md\",\n      \"notebook\": \"inbox\"\n   }'")
-		}
-		if body.Notebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
-		}
-		if utf8.RuneCountInString(body.Name) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 1, true))
-		}
-		if utf8.RuneCountInString(body.Name) > 255 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 255, false))
-		}
-		if utf8.RuneCountInString(body.Content) > 5242880 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", body.Content, utf8.RuneCountInString(body.Content), 5242880, false))
-		}
-		if body.ModifiedAt != nil {
-			err = goa.MergeErrors(err, goa.ValidateFormat("body.modified_at", *body.ModifiedAt, goa.FormatDateTime))
-		}
-		for _, e := range body.Files {
-			if e != nil {
-				if err2 := validateImportFileRequestBody(e, "body.files[*]"); err2 != nil {
-					err = goa.MergeErrors(err, err2)
-				}
+		if notesImportNotebook != nil {
+			notebook = notesImportNotebook
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notesImportNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+			if err != nil {
+				return nil, err
 			}
 		}
-		if err != nil {
-			return nil, err
+	}
+	var force *bool
+	{
+		if notesImportForce != nil {
+			var val bool
+			val, err = strconv.ParseBool(*notesImportForce)
+			force = &val
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for force, must be BOOL")
+			}
+		}
+	}
+	var contentType *string
+	{
+		if notesImportContentType != nil {
+			contentType = notesImportContentType
 		}
 	}
 	var session *string
@@ -1214,23 +1206,10 @@ func BuildImportPayload(notesImportBody *string, notesImportSession *string) (*n
 			session = notesImportSession
 		}
 	}
-	v := &notes.ImportPayload{
-		Notebook:   body.Notebook,
-		Name:       body.Name,
-		Content:    body.Content,
-		ModifiedAt: body.ModifiedAt,
-		Force:      body.Force,
-	}
-	if body.Files != nil {
-		v.Files = make([]*notes.ImportFile, len(body.Files))
-		for i, val := range body.Files {
-			if val == nil {
-				v.Files[i] = nil
-				continue
-			}
-			v.Files[i] = marshalImportFileRequestBodyToNotesImportFile(val)
-		}
-	}
+	v := &notes.ImportPayload{}
+	v.Notebook = notebook
+	v.Force = force
+	v.ContentType = contentType
 	v.Session = session
 
 	return v, nil

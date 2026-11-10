@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -18,12 +19,17 @@ const (
 	// clients, a Markdown file of 5 MB with 20 MB of images in base64, even
 	// with its characters escaped in JSON, as < for <, six times as long.
 	maxBody = 64 << 20
-	// maxImportBody fits an import by people, whose images, each up to
-	// store.MaxFileSize, are sent with the Markdown file in base64: about
-	// 190 MB of images in all, a few of the largest. It does not grow with
-	// the number of images, which is not limited, so that a request is
-	// still bounded before its session is checked.
+	// maxImportBody fits an import by people in JSON, the form of earlier
+	// versions, whose images, each up to store.MaxFileSize, are sent with the
+	// Markdown file in base64 and decoded in memory: about 190 MB of images
+	// in all, a few of the largest. It does not grow with the number of
+	// images, which is not limited, so that a request is still bounded
+	// before its session is checked.
 	maxImportBody = 256 << 20
+	// maxImportForm fits an import by people in multipart/form-data, whose
+	// images are streamed to disk, up to 1 GB in all (see the service), with
+	// room for the Markdown file and the headers of the parts.
+	maxImportForm = 1<<30 + 16<<20
 	// maxFileBody fits one file added to a note, sent as is.
 	maxFileBody = store.MaxFileSize + 1<<20
 )
@@ -39,12 +45,20 @@ func tooLarge(ctx context.Context, w http.ResponseWriter, err error) {
 	slog.ErrorContext(ctx, "request failed", "error", err)
 }
 
+// isMultipart reports whether the body of r is multipart/form-data.
+func isMultipart(r *http.Request) bool {
+	mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	return mt == "multipart/form-data"
+}
+
 // limitBodies limits the size of the request bodies next reads.
 func limitBodies(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := int64(maxBody)
 		if r.Method == http.MethodPost {
 			switch p := r.URL.Path; {
+			case p == "/import" && isMultipart(r):
+				n = maxImportForm
 			case p == "/import":
 				n = maxImportBody
 			case strings.HasPrefix(p, "/notes/") && strings.HasSuffix(p, "/files"):

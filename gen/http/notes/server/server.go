@@ -1762,7 +1762,8 @@ func NewImportHandler(
 			}
 			return
 		}
-		res, err := endpoint(ctx, payload)
+		data := &notes.ImportRequestData{Payload: payload, Body: r.Body}
+		res, err := endpoint(ctx, data)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)

@@ -3212,29 +3212,35 @@ func DecodeImportRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 	return func(r *http.Request) (*notes.ImportPayload, error) {
 		var payload *notes.ImportPayload
 		var (
-			body ImportRequestBody
-			err  error
+			notebook    *string
+			force       *bool
+			contentType *string
+			session     *string
+			err         error
+			c           *http.Cookie
 		)
-		err = decoder(r).Decode(&body)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return payload, goa.MissingPayloadError()
-			}
-			var gerr *goa.ServiceError
-			if errors.As(err, &gerr) {
-				return payload, gerr
-			}
-			return payload, goa.DecodePayloadError(err.Error())
+		qp := r.URL.Query()
+		notebookRaw := qp.Get("notebook")
+		if notebookRaw != "" {
+			notebook = &notebookRaw
 		}
-		err = ValidateImportRequestBody(&body)
-		if err != nil {
-			return payload, err
+		if notebook != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
-
-		var (
-			session *string
-			c       *http.Cookie
-		)
+		{
+			forceRaw := qp.Get("force")
+			if forceRaw != "" {
+				v, err2 := strconv.ParseBool(forceRaw)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("force", forceRaw, "boolean"))
+				}
+				force = &v
+			}
+		}
+		contentTypeRaw := r.Header.Get("Content-Type")
+		if contentTypeRaw != "" {
+			contentType = &contentTypeRaw
+		}
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -3243,7 +3249,10 @@ func DecodeImportRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if sessionRaw != "" {
 			session = &sessionRaw
 		}
-		payload = NewImportPayload(&body, session)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewImportPayload(notebook, force, contentType, session)
 
 		return payload, nil
 	}
@@ -5009,18 +5018,6 @@ func marshalNotesTrashedNotebookToTrashedNotebookResponse(v *notes.TrashedNotebo
 		Name:   v.Name,
 		Kind:   v.Kind,
 		Count:  v.Count,
-	}
-
-	return res
-}
-
-// unmarshalImportFileRequestBodyToNotesImportFile builds a value of type
-// *notes.ImportFile from a value of type *ImportFileRequestBody.
-func unmarshalImportFileRequestBodyToNotesImportFile(v *ImportFileRequestBody) *notes.ImportFile {
-	res := &notes.ImportFile{
-		Ref:     *v.Ref,
-		Name:    *v.Name,
-		Content: v.Content,
 	}
 
 	return res
