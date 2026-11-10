@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
+	"io"
+	"mime"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"slices"
@@ -54,15 +58,51 @@ func TestImportFiles(t *testing.T) {
 	})
 	files := []string{filepath.Join(dir, "notes", "旅行.md"), filepath.Join(dir, "notes", "latin1.md"), filepath.Join(dir, "notes", "duplicate.md")}
 
-	var sent []*gennotes.ImportPayload
+	// sentImport is an import as the server reads it.
+	type sentImport struct {
+		p      *gennotes.ImportPayload
+		fields map[string]string
+		refs   []string
+		names  []string
+		images []string
+	}
+	var sent []sentImport
 	send := func(_ context.Context, v any) (any, error) {
-		p := v.(*gennotes.ImportPayload)
-		sent = append(sent, p)
-		if p.Name == "duplicate.md" {
+		data := v.(*gennotes.ImportRequestData)
+		_, params, err := mime.ParseMediaType(deref(data.Payload.ContentType))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := sentImport{p: data.Payload, fields: map[string]string{}}
+		mr := multipart.NewReader(data.Body, params["boundary"])
+		for {
+			part, err := mr.NextPart()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, err := io.ReadAll(part)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch part.FormName() {
+			case "ref":
+				got.refs = append(got.refs, string(b))
+			case "file":
+				got.names = append(got.names, part.FileName())
+				got.images = append(got.images, string(b))
+			default:
+				got.fields[part.FormName()] = string(b)
+			}
+		}
+		sent = append(sent, got)
+		if got.fields["name"] == "duplicate.md" {
 			id := "old"
 			return &gennotes.ImportResult{Status: "skipped", DuplicateOf: &id, Warnings: []string{}}, nil
 		}
-		return &gennotes.ImportResult{Status: "created", Note: &gennotes.Note{ID: "n1", Notebook: deref(p.Notebook), Title: "京都"}, Warnings: []string{"images not imported: none.png"}}, nil
+		return &gennotes.ImportResult{Status: "created", Note: &gennotes.Note{ID: "n1", Notebook: deref(data.Payload.Notebook), Title: "京都"}, Warnings: []string{"images not imported: none.png"}}, nil
 	}
 	var out strings.Builder
 	err := importFiles(context.Background(), files, "travel", true, send, &out)
@@ -72,13 +112,13 @@ func TestImportFiles(t *testing.T) {
 	if len(sent) != 2 {
 		t.Fatalf("sent %d files", len(sent))
 	}
-	p := sent[0]
-	if p.Name != "旅行.md" || deref(p.Notebook) != "travel" || p.Force == nil || !*p.Force || p.ModifiedAt == nil {
-		t.Errorf("payload = %+v", p)
+	got := sent[0]
+	if got.fields["name"] != "旅行.md" || !strings.HasPrefix(got.fields["content"], "# 京都") || got.fields["modified_at"] == "" || deref(got.p.Notebook) != "travel" || got.p.Force == nil || !*got.p.Force {
+		t.Errorf("import = %+v", got)
 	}
 	// The image is read relative to the file, with the path as written.
-	if len(p.Files) != 1 || p.Files[0].Ref != "../img/tera%201.png" || p.Files[0].Name != "tera 1.png" || string(p.Files[0].Content) != string(pngHead) {
-		t.Errorf("files = %+v", p.Files)
+	if !slices.Equal(got.refs, []string{"../img/tera%201.png"}) || !slices.Equal(got.names, []string{"tera 1.png"}) || !slices.Equal(got.images, []string{string(pngHead)}) {
+		t.Errorf("images = %q %q %q", got.refs, got.names, got.images)
 	}
 	for _, want := range []string{"created  ", "(travel/n1, 1 images)", "    images not imported: none.png", "failed   ", "not UTF-8", "skipped  ", "(imported before as old)", "1 created, 1 skipped, 1 failed"} {
 		if !strings.Contains(out.String(), want) {

@@ -134,6 +134,7 @@ func TestSyncCommitOnly(t *testing.T) {
 	notes := filepath.Join(dir, "notes")
 	write(t, filepath.Join(notes, "inbox", "a.yaml"), "title: A\n")
 	write(t, filepath.Join(notes, "inbox", ".DS_Store"), "x")
+	write(t, filepath.Join(notes, ".tmp-stage-1", "image.png"), "an image being received")
 	write(t, filepath.Join(dir, "other.txt"), "not a note\n")
 	res := sync(t, notes)
 	if res.Committed != 1 || res.Upstream != "" || res.Pushed {

@@ -401,7 +401,9 @@ async function loadMessages() {
 
 // API
 
-// api calls the REST API. body is sent as JSON; raw, such as a File, as is.
+// api calls the REST API. body is sent as JSON; raw, such as a File, as is;
+// a FormData as multipart/form-data, whose content type with its boundary the
+// browser sets.
 async function api(path, opts = {}) {
   const { method = "GET", params, body, raw, ifMatch, signal } = opts;
   const url = new URL(path, location.origin);
@@ -410,7 +412,7 @@ async function api(path, opts = {}) {
   }
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (raw !== undefined) headers["Content-Type"] = "application/octet-stream";
+  if (raw !== undefined && !(raw instanceof FormData)) headers["Content-Type"] = "application/octet-stream";
   if (ifMatch) headers["If-Match"] = ifMatch;
   const payload = raw !== undefined ? raw : body === undefined ? undefined : JSON.stringify(body);
   const res = await fetch(url, { method, headers, body: payload, signal });
@@ -4248,15 +4250,6 @@ function imageRefs(md) {
   return [...refs];
 }
 
-function fileBase64(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).replace(/^[^,]*,/, ""));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
-}
-
 function baseName(ref) {
   const name = ref.split("/").pop();
   try {
@@ -4286,13 +4279,19 @@ async function importMarkdown(files, notebook) {
       continue;
     }
     try {
-      const sent = [];
+      // The fields of the file come first, then a ref and a file for each
+      // image, which the server streams to disk.
+      const form = new FormData();
+      form.append("name", f.name);
+      form.append("content", content);
+      form.append("modified_at", new Date(f.lastModified).toISOString().replace(/\.\d+Z$/, "Z"));
       for (const ref of imageRefs(content)) {
         const img = images.find((i) => i.name === baseName(ref));
-        if (img) sent.push({ ref, name: img.name, content: await fileBase64(img) });
+        if (!img) continue;
+        form.append("ref", ref);
+        form.append("file", img, img.name);
       }
-      const modified = new Date(f.lastModified).toISOString().replace(/\.\d+Z$/, "Z");
-      const res = await api("/import", { method: "POST", body: { notebook, name: f.name, content, modified_at: modified, files: sent } });
+      const res = await api("/import", { method: "POST", params: { notebook }, raw: form });
       results.push({ file: f.name, res });
     } catch (e) {
       results.push({ file: f.name, error: e.message });

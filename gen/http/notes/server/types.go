@@ -174,26 +174,6 @@ type MoveNotebookRequestBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 }
 
-// ImportRequestBody is the type of the "notes" service "import" endpoint HTTP
-// request body.
-type ImportRequestBody struct {
-	// Notebook to put the note in (default inbox; not trash)
-	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
-	// File name of the Markdown file, the title when the file gives none
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// The Markdown file, at most 5 MB. A YAML front matter gives the title, tags
-	// (a list or comma-separated), created (or date) and updated times; its other
-	// keys are kept in the note file. Without a title, the first heading of level
-	// 1 is the title, else the file name
-	Content *string `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
-	// Modification time of the file, for the times the front matter does not give
-	ModifiedAt *string `form:"modified_at,omitempty" json:"modified_at,omitempty" xml:"modified_at,omitempty"`
-	// Images the file refers to
-	Files []*ImportFileRequestBody `form:"files,omitempty" json:"files,omitempty" xml:"files,omitempty"`
-	// Import even if the same content was imported before
-	Force *bool `form:"force,omitempty" json:"force,omitempty" xml:"force,omitempty"`
-}
-
 // GitSyncRequestBody is the type of the "notes" service "git_sync" endpoint
 // HTTP request body.
 type GitSyncRequestBody struct {
@@ -3924,17 +3904,6 @@ type StopListResponseBody struct {
 	Words []string `form:"words,omitempty" json:"words,omitempty" xml:"words,omitempty"`
 }
 
-// ImportFileRequestBody is used to define fields on request body types.
-type ImportFileRequestBody struct {
-	// Path of the image as the Markdown file refers to it, one of the paths the
-	// file refers to
-	Ref *string `form:"ref,omitempty" json:"ref,omitempty" xml:"ref,omitempty"`
-	// File name
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// The image, at most 50 MB
-	Content []byte `form:"content,omitempty" json:"content,omitempty" xml:"content,omitempty"`
-}
-
 // MachineSettingsRequestBody is used to define fields on request body types.
 type MachineSettingsRequestBody struct {
 	// Language of the UI; empty for the browser's
@@ -7236,24 +7205,11 @@ func NewEmptyTrashPayload(session *string) *notes.EmptyTrashPayload {
 }
 
 // NewImportPayload builds a notes service import endpoint payload.
-func NewImportPayload(body *ImportRequestBody, session *string) *notes.ImportPayload {
-	v := &notes.ImportPayload{
-		Notebook:   body.Notebook,
-		Name:       *body.Name,
-		Content:    *body.Content,
-		ModifiedAt: body.ModifiedAt,
-		Force:      body.Force,
-	}
-	if body.Files != nil {
-		v.Files = make([]*notes.ImportFile, len(body.Files))
-		for i, val := range body.Files {
-			if val == nil {
-				v.Files[i] = nil
-				continue
-			}
-			v.Files[i] = unmarshalImportFileRequestBodyToNotesImportFile(val)
-		}
-	}
+func NewImportPayload(notebook *string, force *bool, contentType *string, session *string) *notes.ImportPayload {
+	v := &notes.ImportPayload{}
+	v.Notebook = notebook
+	v.Force = force
+	v.ContentType = contentType
 	v.Session = session
 
 	return v
@@ -7646,43 +7602,6 @@ func ValidateMoveNotebookRequestBody(body *MoveNotebookRequestBody) (err error) 
 	return
 }
 
-// ValidateImportRequestBody runs the validations defined on ImportRequestBody
-func ValidateImportRequestBody(body *ImportRequestBody) (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.Content == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
-	}
-	if body.Notebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
-	}
-	if body.Name != nil {
-		if utf8.RuneCountInString(*body.Name) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
-		}
-		if utf8.RuneCountInString(*body.Name) > 255 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
-		}
-	}
-	if body.Content != nil {
-		if utf8.RuneCountInString(*body.Content) > 5242880 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.content", *body.Content, utf8.RuneCountInString(*body.Content), 5242880, false))
-		}
-	}
-	if body.ModifiedAt != nil {
-		err = goa.MergeErrors(err, goa.ValidateFormat("body.modified_at", *body.ModifiedAt, goa.FormatDateTime))
-	}
-	for _, e := range body.Files {
-		if e != nil {
-			if err2 := validateImportFileRequestBody(e, "body.files[*]"); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
-		}
-	}
-	return
-}
-
 // ValidateAddGuideRequestBody runs the validations defined on
 // AddGuideRequestBody
 func ValidateAddGuideRequestBody(body *AddGuideRequestBody) (err error) {
@@ -7716,51 +7635,6 @@ func ValidateSaveSettingsRequestBody(body *SaveSettingsRequestBody) (err error) 
 	if body.Notes != nil {
 		if err2 := validateNotesSettingsRequestBody(body.Notes, "body.notes"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
-		}
-	}
-	return
-}
-
-// ValidateImportFileRequestBody runs the validations defined on ImportFile
-func ValidateImportFileRequestBody(body *ImportFileRequestBody) (err error) {
-	if body.Ref == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("ref", "body"))
-	}
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.Content == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("content", "body"))
-	}
-	if body.Name != nil {
-		if utf8.RuneCountInString(*body.Name) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
-		}
-		if utf8.RuneCountInString(*body.Name) > 255 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
-		}
-	}
-	return
-}
-
-// validateImportFileRequestBody checks ImportFile and reports errors using the
-// path supplied by its caller
-func validateImportFileRequestBody(body *ImportFileRequestBody, path string) (err error) {
-	if body.Ref == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("ref", path))
-	}
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", path))
-	}
-	if body.Content == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("content", path))
-	}
-	if body.Name != nil {
-		if utf8.RuneCountInString(*body.Name) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(path+".name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
-		}
-		if utf8.RuneCountInString(*body.Name) > 255 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(path+".name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
 		}
 	}
 	return

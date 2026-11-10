@@ -614,9 +614,11 @@ func (r *Repo) writeBlob(ctx context.Context, blob, p string) error {
 
 // pathspec returns the pathspec of the files to commit: the notes directory,
 // except files that are not notes' but appear there, such as those of
-// Finder on macOS and the temporary files of a write in progress.
+// Finder on macOS, the temporary files of a write in progress and the
+// temporary folders of files being received, such as the images of an import
+// (store.Stage), whose files the second pattern leaves out.
 func (r *Repo) pathspec() []string {
-	return []string{r.rel, ":(exclude,glob)**/.DS_Store", ":(exclude,glob)**/.tmp-*"}
+	return []string{r.rel, ":(exclude,glob)**/.DS_Store", ":(exclude,glob)**/.tmp-*", ":(exclude,glob)**/.tmp-*/**"}
 }
 
 // relDir returns the notes directory relative to the top, for --relative.

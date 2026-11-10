@@ -4057,8 +4057,16 @@ func DecodeEmptyTrashResponse(decoder func(*http.Response) goahttp.Decoder, rest
 // BuildImportRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "import" endpoint
 func (c *Client) BuildImportRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		body io.Reader
+	)
+	rd, ok := v.(*notes.ImportRequestData)
+	if !ok {
+		return nil, goahttp.ErrInvalidType("notes", "import", "notes.ImportRequestData", v)
+	}
+	body = rd.Body
 	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ImportNotesPath()}
-	req, err := http.NewRequest("POST", u.String(), nil)
+	req, err := http.NewRequest("POST", u.String(), body)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("notes", "import", u.String(), err)
 	}
@@ -4073,9 +4081,14 @@ func (c *Client) BuildImportRequest(ctx context.Context, v any) (*http.Request, 
 // server.
 func EncodeImportRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
 	return func(req *http.Request, v any) error {
-		p, ok := v.(*notes.ImportPayload)
+		data, ok := v.(*notes.ImportRequestData)
 		if !ok {
-			return goahttp.ErrInvalidType("notes", "import", "*notes.ImportPayload", v)
+			return goahttp.ErrInvalidType("notes", "import", "*notes.ImportRequestData", v)
+		}
+		p := data.Payload
+		if p.ContentType != nil {
+			head := *p.ContentType
+			req.Header.Set("Content-Type", head)
 		}
 		if p.Session != nil {
 			v := *p.Session
@@ -4084,10 +4097,14 @@ func EncodeImportRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 				Value: v,
 			})
 		}
-		body := NewImportRequestBody(p)
-		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("notes", "import", err)
+		values := req.URL.Query()
+		if p.Notebook != nil {
+			values.Add("notebook", *p.Notebook)
 		}
+		if p.Force != nil {
+			values.Add("force", strconv.FormatBool(*p.Force))
+		}
+		req.URL.RawQuery = values.Encode()
 		return nil
 	}
 }
@@ -4186,6 +4203,19 @@ func DecodeImportResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			return nil, goahttp.ErrInvalidResponse("notes", "import", resp.StatusCode, string(body))
 		}
 	}
+}
+
+// // BuildImportStreamPayload creates a streaming endpoint request payload from
+// the method payload and the path to the file to be streamed
+func BuildImportStreamPayload(payload any, fpath string) (*notes.ImportRequestData, error) {
+	f, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	return &notes.ImportRequestData{
+		Payload: payload.(*notes.ImportPayload),
+		Body:    f,
+	}, nil
 }
 
 // BuildAddFileRequest instantiates a HTTP request object with method and path
@@ -6483,30 +6513,6 @@ func unmarshalTrashedNotebookResponseToNotesTrashedNotebook(v *TrashedNotebookRe
 		Name:   *v.Name,
 		Kind:   *v.Kind,
 		Count:  *v.Count,
-	}
-
-	return res
-}
-
-// marshalNotesImportFileToImportFileRequestBody builds a value of type
-// *ImportFileRequestBody from a value of type *notes.ImportFile.
-func marshalNotesImportFileToImportFileRequestBody(v *notes.ImportFile) *ImportFileRequestBody {
-	res := &ImportFileRequestBody{
-		Ref:     v.Ref,
-		Name:    v.Name,
-		Content: v.Content,
-	}
-
-	return res
-}
-
-// marshalImportFileRequestBodyToNotesImportFile builds a value of type
-// *notes.ImportFile from a value of type *ImportFileRequestBody.
-func marshalImportFileRequestBodyToNotesImportFile(v *ImportFileRequestBody) *notes.ImportFile {
-	res := &notes.ImportFile{
-		Ref:     v.Ref,
-		Name:    v.Name,
-		Content: v.Content,
 	}
 
 	return res

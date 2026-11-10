@@ -1,11 +1,15 @@
 package store
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 )
 
 // pngHead is enough of a PNG file for its type to be detected.
@@ -232,4 +236,107 @@ func TestAllFiles(t *testing.T) {
 	if want := []string{"a/x.png", "a/y.png", "b/x.png"}; !slices.Equal(got, want) {
 		t.Errorf("AllFiles = %v, want %v", got, want)
 	}
+}
+
+func TestStage(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stages := func() []string {
+		m, _ := filepath.Glob(filepath.Join(dir, stagePrefix+"*"))
+		return m
+	}
+
+	// The files become the note's at once.
+	st, err := s.NewStage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"shot.jpg", "shot.png"} {
+		if _, err := st.Add(name, bytes.NewReader(pngHead)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := st.Add("big.pdf", io.MultiReader(strings.NewReader("%PDF"), io.LimitReader(zeros{}, MaxFileSize))); !errors.Is(err, ErrFileTooLarge) {
+		t.Errorf("Add of a large file: %v", err)
+	}
+	if err := s.Create(&Note{ID: "n1", Notebook: "work", Title: "t"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Adopt("n1"); err != nil {
+		t.Fatal(err)
+	}
+	files, err := s.AllFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, f := range files {
+		names = append(names, f.NoteID+"/"+f.Name)
+	}
+	if want := []string{"n1/shot-2.png", "n1/shot.png"}; !slices.Equal(names, want) {
+		t.Errorf("files = %v, want %v", names, want)
+	}
+	if fi, err := os.Stat(filepath.Join(dir, "work", "n1.assets")); err != nil || fi.Mode().Perm() != 0o755 {
+		t.Errorf("the folder of the files: %v, %v", fi.Mode(), err)
+	}
+	if left := stages(); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
+	}
+
+	// A stage without files leaves nothing, and Remove drops the files.
+	for _, add := range []bool{false, true} {
+		st, err := s.NewStage()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if add {
+			if _, err := st.Add("a.png", bytes.NewReader(pngHead)); err != nil {
+				t.Fatal(err)
+			}
+			err = st.Remove()
+		} else {
+			if err := s.Create(&Note{ID: "n2", Notebook: "work", Title: "t"}); err != nil {
+				t.Fatal(err)
+			}
+			err = st.Adopt("n2")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if left := stages(); len(left) > 0 {
+			t.Errorf("stages left (add %v): %v", add, left)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "work", "n2.assets")); !os.IsNotExist(err) {
+		t.Errorf("an empty stage made the folder of the files: %v", err)
+	}
+
+	// A stage left behind long ago is removed by the next one.
+	old := filepath.Join(dir, stagePrefix+"old")
+	if err := os.Mkdir(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Now().Add(-2 * staleStage)
+	if err := os.Chtimes(old, at, at); err != nil {
+		t.Fatal(err)
+	}
+	st, err = s.NewStage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Remove()
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Errorf("the old stage is left: %v", err)
+	}
+}
+
+// zeros reads zero bytes without end.
+type zeros struct{}
+
+func (zeros) Read(p []byte) (int, error) {
+	clear(p)
+	return len(p), nil
 }

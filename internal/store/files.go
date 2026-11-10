@@ -1,9 +1,11 @@
 package store
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -133,20 +135,11 @@ func validFileName(name string) bool {
 	return CleanFileName(name, ext) == name
 }
 
-// AddFile adds a file with the content b to note id and returns its name:
-// name cleaned up (see CleanFileName) with the extension of its type for an
-// image and its own extension (see fileExt) for another file, and a suffix
-// such as -2 when the name is taken. Another file keeps no extension of an
-// image, so that the name tells the images, which the UI shows as such.
+// AddFile adds a file with the content b to note id and returns its name
+// (see writeFile).
 func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	if len(b) > MaxFileSize {
 		return "", ErrFileTooLarge
-	}
-	ext := fileExt(name)
-	if ct, ok := FileType(b); ok {
-		ext = imageTypes[ct]
-	} else if imageExt(ext) {
-		ext = ""
 	}
 	place, err := s.locate(id)
 	if err != nil {
@@ -160,6 +153,29 @@ func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 	// written through one (see ErrLink).
 	if fi, err := os.Lstat(dir); err != nil || !fi.IsDir() {
 		return "", &fs.PathError{Op: "add", Path: dir, Err: ErrLink}
+	}
+	return writeFile(dir, name, bytes.NewReader(b))
+}
+
+// writeFile writes a file with the content read from r, at most MaxFileSize,
+// to dir and returns its name: name cleaned up (see CleanFileName) with the
+// extension of its type for an image and its own extension (see fileExt) for
+// another file, and a suffix such as -2 when the name is taken. Another file
+// keeps no extension of an image, so that the name tells the images, which
+// the UI shows as such. A file larger than MaxFileSize is not written; the
+// error of reading r is returned as is.
+func writeFile(dir, name string, r io.Reader) (string, error) {
+	head := make([]byte, 512)
+	n, err := io.ReadFull(r, head)
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return "", err
+	}
+	head = head[:n]
+	ext := fileExt(name)
+	if ct, ok := FileType(head); ok {
+		ext = imageTypes[ct]
+	} else if imageExt(ext) {
+		ext = ""
 	}
 	clean := CleanFileName(name, ext)
 	stem := strings.TrimSuffix(clean, ext)
@@ -175,18 +191,86 @@ func (s *Store) AddFile(id, name string, b []byte) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if _, err := f.Write(b); err != nil {
-			f.Close()
-			os.Remove(f.Name())
-			return "", err
+		// One byte more than allowed tells a file that is too large.
+		written, err := io.Copy(f, io.LimitReader(io.MultiReader(bytes.NewReader(head), r), MaxFileSize+1))
+		if err == nil && written > MaxFileSize {
+			err = ErrFileTooLarge
 		}
-		if err := f.Close(); err != nil {
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
 			os.Remove(f.Name())
 			return "", err
 		}
 		return name, nil
 	}
 }
+
+// stagePrefix starts the names of the folders of stages in the notes
+// directory: hidden from the scans, the watcher and the git sync.
+const stagePrefix = ".tmp-stage-"
+
+// staleStage is how old a stage left behind, such as by a server that
+// stopped while receiving files, is when it is removed.
+const staleStage = 24 * time.Hour
+
+// Stage holds the files of a note yet to be created, such as the images of an
+// import while they are received, so that they become the note's files at
+// once with Adopt, or none of them with Remove.
+type Stage struct {
+	s   *Store
+	dir string
+}
+
+// NewStage returns a new stage, a folder in the notes directory, on the same
+// file system as the notes so that Adopt moves it. It removes the stages
+// left behind for longer than staleStage.
+func (s *Store) NewStage() (*Stage, error) {
+	if entries, err := os.ReadDir(s.dir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() || !strings.HasPrefix(e.Name(), stagePrefix) {
+				continue
+			}
+			if fi, err := e.Info(); err == nil && time.Since(fi.ModTime()) > staleStage {
+				os.RemoveAll(filepath.Join(s.dir, e.Name()))
+			}
+		}
+	}
+	dir, err := os.MkdirTemp(s.dir, stagePrefix+"*")
+	if err != nil {
+		return nil, err
+	}
+	// MkdirTemp makes the folder for its owner only; it becomes the folder of
+	// the note's files, which others may read as the note.
+	if err := os.Chmod(dir, 0o755); err != nil {
+		os.Remove(dir)
+		return nil, err
+	}
+	return &Stage{s: s, dir: dir}, nil
+}
+
+// Add writes a file with the content read from r to the stage, as AddFile
+// adds one to a note, and returns its name.
+func (st *Stage) Add(name string, r io.Reader) (string, error) {
+	return writeFile(st.dir, name, r)
+}
+
+// Adopt makes the files of the stage the files of note id, which has none
+// yet. A stage without files is removed.
+func (st *Stage) Adopt(id string) error {
+	if entries, err := os.ReadDir(st.dir); err == nil && len(entries) == 0 {
+		return st.Remove()
+	}
+	place, err := st.s.locate(id)
+	if err != nil {
+		return err
+	}
+	return os.Rename(st.dir, st.s.assetsDir(place, id))
+}
+
+// Remove removes the stage with its files, unless Adopt moved them.
+func (st *Stage) Remove() error { return os.RemoveAll(st.dir) }
 
 // File returns the path on disk of the file name of note id.
 func (s *Store) File(id, name string) (string, error) {

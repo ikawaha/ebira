@@ -191,20 +191,6 @@ var FileCheck = Type("FileCheck", func() {
 	RequiredAttribute("broken", ArrayOf(BrokenFileRef), "References to files that do not exist, sorted by note and path")
 })
 
-// ImportFile is an image of a Markdown file to import, referred to from it by
-// a relative path.
-var ImportFile = Type("ImportFile", func() {
-	RequiredAttribute("ref", String, "Path of the image as the Markdown file refers to it, one of the paths the file refers to", func() {
-		Example("images/photo.png")
-	})
-	RequiredAttribute("name", String, "File name", func() {
-		MinLength(1)
-		MaxLength(255)
-		Example("photo.png")
-	})
-	RequiredAttribute("content", Bytes, "The image, at most 50 MB")
-})
-
 // AIImportFile is an image sent with a Markdown file by an AI client, which
 // may send smaller images than people.
 var AIImportFile = Type("AIImportFile", func() {
@@ -1035,20 +1021,26 @@ var _ = Service("notes", func() {
 		})
 	})
 
+	// The request body of import is read by the service, so that the images
+	// are streamed to disk rather than decoded into memory whole.
 	Method("import", func() {
-		Description("Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them.")
+		Description("Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them. The request body is multipart/form-data: the fields name (the file name), content (the Markdown file, at most 5 MB) and modified_at (optional; the modification time of the file, for the times the front matter does not give, in RFC 3339), then, for each image, a field ref with the path as the file refers to it, followed by a file field file with the image, whose file name is the name of the image. The images are streamed to disk, each up to 50 MB and 1 GB in all; nothing is imported when the request is cut off. A JSON body with the attributes name, content, modified_at, notebook, force and files (the images, each with ref, name and the content base64-encoded) is accepted as well.")
 		Payload(func() {
 			sessionDSL()
 			Attribute("notebook", String, "Notebook to put the note in (default inbox; not trash)", notebookIDDSL)
-			importContent()
-			Attribute("modified_at", String, "Modification time of the file, for the times the front matter does not give", timeDSL)
-			Attribute("files", ArrayOf(ImportFile), "Images the file refers to")
 			Attribute("force", Boolean, "Import even if the same content was imported before")
+			Attribute("content_type", String, "Content type of the request body: multipart/form-data with its boundary, or application/json", func() {
+				Example("multipart/form-data; boundary=x")
+			})
 		})
 		Result(ImportResult)
-		Error("bad_request", ErrorResult, "The notebook is the trash or invalid, or the file is too large")
+		Error("bad_request", ErrorResult, "The notebook is the trash or invalid, the body is malformed, or the file or the images are too large")
 		HTTP(func() {
 			POST("/import")
+			Param("notebook")
+			Param("force")
+			Header("content_type:Content-Type")
+			SkipRequestBodyEncodeDecode()
 			Response(StatusOK)
 			Response("bad_request", StatusBadRequest)
 		})
