@@ -4280,10 +4280,12 @@ async function importMarkdown(files, notebook) {
     }
     try {
       // The fields of the file come first, then a ref and a file for each
-      // image, which the server streams to disk.
+      // image, which the server streams to disk. The content goes as the
+      // file itself: a string would have its line breaks sent as CRLF, which
+      // a file near the limit would not fit in.
       const form = new FormData();
       form.append("name", f.name);
-      form.append("content", content);
+      form.append("content", f, f.name);
       form.append("modified_at", new Date(f.lastModified).toISOString().replace(/\.\d+Z$/, "Z"));
       for (const ref of imageRefs(content)) {
         const img = images.find((i) => i.name === baseName(ref));

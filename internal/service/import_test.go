@@ -148,9 +148,10 @@ func TestImport(t *testing.T) {
 	}
 
 	for name, fields := range map[string][][2]string{
-		"no name":   {{"content", "x"}},
-		"too large": {{"name", "a.md"}, {"content", strings.Repeat("x", 5<<20+1)}},
-		"bad time":  {{"name", "a.md"}, {"content", "x"}, {"modified_at", "yesterday"}},
+		"no name":    {{"content", "x"}},
+		"no content": {{"name", "a.md"}},
+		"too large":  {{"name", "a.md"}, {"content", strings.Repeat("x", 5<<20+1)}},
+		"bad time":   {{"name", "a.md"}, {"content", "x"}, {"modified_at", "yesterday"}},
 	} {
 		body, ct := importForm(t, fields)
 		if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(body)); errorName(err) != "bad_request" {
@@ -196,6 +197,17 @@ func TestImportJSON(t *testing.T) {
 	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(bytes.NewReader(b))); err != nil || res.Status != "created" {
 		t.Errorf("Import with force in the body = %+v, %v", res, err)
 	}
+	// force=false in the query wins over force in the body.
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json"), Force: ptr(false)}, io.NopCloser(bytes.NewReader(b))); err != nil || res.Status != "skipped" {
+		t.Errorf("Import with force=false in the query = %+v, %v", res, err)
+	}
+	// The content is required, but may be empty.
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(`{"name":"a.md"}`))); errorName(err) != "bad_request" {
+		t.Errorf("Import without content: %v", err)
+	}
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(`{"name":"empty.md","content":""}`))); err != nil || res.Status != "created" {
+		t.Errorf("Import of an empty file = %+v, %v", res, err)
+	}
 	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader("{"))); errorName(err) != "bad_request" {
 		t.Errorf("Import of broken JSON: %v", err)
 	}
@@ -230,6 +242,22 @@ func TestImportAllOrNothing(t *testing.T) {
 	}
 	if left := stages(t, dir); len(left) > 0 {
 		t.Errorf("stages left: %v", left)
+	}
+
+	// A body that ends cleanly but before its closing boundary, inside an
+	// image the file does not refer to, is cut off too: the images after it
+	// are missing.
+	body, ct = importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}},
+		formFile{"img/other.png", "other.png", string(pngHead) + strings.Repeat("x", 1<<16)},
+		formFile{"img/tera.png", "tera.png", string(pngHead)},
+	)
+	i := bytes.LastIndex(body.Bytes(), []byte("img/tera.png")) // the field ref, after the file
+	cut = body.Bytes()[:i-(1<<10)]
+	if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(bytes.NewReader(cut))); err == nil {
+		t.Fatal("Import of a body ended early succeeded")
+	}
+	if found, err := svc.List(person, &gennotes.ListPayload{}); err != nil || found.Total != 0 {
+		t.Errorf("notes after the early end = %+v, %v", found, err)
 	}
 
 	// An image whose ref comes without its file is a bad request too.

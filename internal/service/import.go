@@ -48,7 +48,8 @@ type importFile struct {
 	content   io.Reader
 }
 
-// nextFile returns the next image of an import, or io.EOF after the last.
+// nextFile returns the next image of an import, or io.EOF itself after the
+// last.
 // The content of an image is read before the next one is asked for.
 type nextFile func() (*importFile, error)
 
@@ -73,18 +74,26 @@ func (s *Notes) Import(ctx context.Context, p *gennotes.ImportPayload, body io.R
 	if err := peopleOnly(ctx); err != nil {
 		return nil, err
 	}
-	a := importArgs{notebook: deref(p.Notebook), force: p.Force != nil && *p.Force}
-	var modTime string
+	a := importArgs{notebook: deref(p.Notebook)}
+	var f importFields
 	mt, params, _ := mime.ParseMediaType(deref(p.ContentType))
 	var err error
 	if mt == "multipart/form-data" {
-		modTime, err = readImportForm(multipart.NewReader(body, params["boundary"]), &a)
+		f, err = readImportForm(multipart.NewReader(body, params["boundary"]), &a)
 	} else {
-		modTime, err = readImportJSON(body, &a)
+		f, err = readImportJSON(body, &a)
 	}
 	if err != nil {
 		return nil, err
 	}
+	// The query gives force over the body, false as well as true.
+	if p.Force != nil {
+		a.force = *p.Force
+	}
+	if !f.content {
+		return nil, gennotes.MakeBadRequest(errors.New("content: the Markdown file is missing"))
+	}
+	modTime := f.modTime
 	if modTime != "" {
 		t, err := time.Parse(time.RFC3339, modTime)
 		if err != nil {
@@ -98,22 +107,44 @@ func (s *Notes) Import(ctx context.Context, p *gennotes.ImportPayload, body io.R
 	return s.importNote(ctx, a, "")
 }
 
+// importFields are the fields of a body of import that importArgs does not
+// hold: the modification time of the file as sent, and whether the body has
+// the content, which may be empty, of the file.
+type importFields struct {
+	modTime string
+	content bool
+}
+
+// nextPart returns the next part of mr, or io.EOF itself after the last
+// one. A body that ends before its closing boundary, such as a request cut
+// off, is an error: the reader wraps io.EOF then, which must not pass for the
+// end.
+func nextPart(mr *multipart.Reader) (*multipart.Part, error) {
+	p, err := mr.NextPart()
+	if err == io.EOF {
+		return nil, err
+	}
+	if errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("the request ended before its closing boundary: %w", io.ErrUnexpectedEOF)
+	}
+	return p, err
+}
+
 // readImportForm reads the fields of the Markdown file from a body of
 // multipart/form-data into a, which reads the images from the rest of the
-// body, and returns the modification time of the file as sent. The fields
-// name, content and modified_at come first; each image is a field ref and a
-// file field after it.
-func readImportForm(mr *multipart.Reader, a *importArgs) (string, error) {
-	var modTime string
+// body. The fields name, content and modified_at come first; each image is a
+// field ref and a file field after it.
+func readImportForm(mr *multipart.Reader, a *importArgs) (importFields, error) {
+	var f importFields
 	var part *multipart.Part
 	for {
 		var err error
-		part, err = mr.NextPart()
-		if errors.Is(err, io.EOF) {
+		part, err = nextPart(mr)
+		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return "", gennotes.MakeBadRequest(fmt.Errorf("the body is not multipart/form-data: %w", err))
+			return f, gennotes.MakeBadRequest(fmt.Errorf("the body is not multipart/form-data: %w", err))
 		}
 		name := part.FormName()
 		if name == "ref" {
@@ -121,15 +152,15 @@ func readImportForm(mr *multipart.Reader, a *importArgs) (string, error) {
 		}
 		v, err := formValue(part, importer.MaxSize)
 		if err != nil {
-			return "", err
+			return f, err
 		}
 		switch name {
 		case "name":
 			a.name = v
 		case "content":
-			a.content = v
+			a.content, f.content = v, true
 		case "modified_at":
-			modTime = v
+			f.modTime = v
 		}
 	}
 	// part is the field ref of the first image, if any; the parts after it
@@ -138,10 +169,7 @@ func readImportForm(mr *multipart.Reader, a *importArgs) (string, error) {
 	started := false
 	a.files = func() (*importFile, error) {
 		if started {
-			next, err := mr.NextPart()
-			if errors.Is(err, io.EOF) {
-				return nil, io.EOF
-			}
+			next, err := nextPart(mr)
 			if err != nil {
 				return nil, err
 			}
@@ -158,13 +186,16 @@ func readImportForm(mr *multipart.Reader, a *importArgs) (string, error) {
 		if err != nil {
 			return nil, err
 		}
-		file, err := mr.NextPart()
+		file, err := nextPart(mr)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
 		if err != nil || file.FormName() != "file" {
 			return nil, gennotes.MakeBadRequest(fmt.Errorf("the image %s has no field file after its ref", ref))
 		}
 		return &importFile{ref: ref, name: fileName(file), content: file}, nil
 	}
-	return modTime, nil
+	return f, nil
 }
 
 // fileName returns the file name of a file field as sent: Part.FileName keeps
@@ -181,7 +212,7 @@ func fileName(p *multipart.Part) string {
 func formValue(p *multipart.Part, limit int64) (string, error) {
 	b, err := io.ReadAll(io.LimitReader(p, limit+1))
 	if err != nil {
-		return "", err
+		return "", readErr(err)
 	}
 	if int64(len(b)) > limit {
 		if p.FormName() == "content" {
@@ -196,7 +227,7 @@ func formValue(p *multipart.Part, limit int64) (string, error) {
 type importJSON struct {
 	Notebook   *string          `json:"notebook"`
 	Name       string           `json:"name"`
-	Content    string           `json:"content"`
+	Content    *string          `json:"content"`
 	ModifiedAt string           `json:"modified_at"`
 	Force      *bool            `json:"force"`
 	Files      []importJSONFile `json:"files"`
@@ -209,23 +240,20 @@ type importJSONFile struct {
 	Content []byte `json:"content"` // base64-encoded
 }
 
-// readImportJSON reads a JSON body into a and returns the modification time
-// of the file as sent. The notebook and force in the body count unless the
-// query gives them.
-func readImportJSON(body io.Reader, a *importArgs) (string, error) {
+// readImportJSON reads a JSON body into a. The notebook and force in the
+// body count unless the query gives them.
+func readImportJSON(body io.Reader, a *importArgs) (importFields, error) {
 	var v importJSON
 	if err := json.NewDecoder(body).Decode(&v); err != nil {
-		return "", gennotes.MakeBadRequest(fmt.Errorf("the body is not JSON: %w", err))
+		return importFields{}, gennotes.MakeBadRequest(fmt.Errorf("the body is not JSON: %w", err))
 	}
-	a.name, a.content = v.Name, v.Content
+	a.name, a.content = v.Name, deref(v.Content)
 	if a.notebook == "" {
 		a.notebook = deref(v.Notebook)
 	}
-	if !a.force {
-		a.force = v.Force != nil && *v.Force
-	}
+	a.force = v.Force != nil && *v.Force
 	a.files = filesOf(v.Files, func(f importJSONFile) (string, string, []byte) { return f.Ref, f.Name, f.Content })
-	return v.ModifiedAt, nil
+	return importFields{modTime: v.ModifiedAt, content: v.Content != nil}, nil
 }
 
 // ImportAiNote imports a Markdown file for an AI client, into a notebook of
@@ -343,7 +371,7 @@ func (s *Notes) importNote(ctx context.Context, a importArgs, createdBy string) 
 func drain(next nextFile) error {
 	for next != nil {
 		f, err := next()
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
@@ -388,7 +416,7 @@ func receiveImages(stage *store.Stage, id string, refs []string, next nextFile) 
 	var total int64
 	for {
 		f, err := next()
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF { // itself, not a body cut off (see nextPart)
 			break
 		}
 		if err != nil {
