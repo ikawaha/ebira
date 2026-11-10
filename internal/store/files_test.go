@@ -245,12 +245,13 @@ func TestStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	stages := func() []string {
-		m, _ := filepath.Glob(filepath.Join(dir, stagePrefix+"*"))
-		return m
+		top, _ := filepath.Glob(filepath.Join(dir, stagePrefix+"*"))
+		in, _ := filepath.Glob(filepath.Join(dir, "*", stagePrefix+"*"))
+		return append(top, in...)
 	}
 
 	// The files become the note's at once.
-	st, err := s.NewStage()
+	st, err := s.NewStage("work")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +289,7 @@ func TestStage(t *testing.T) {
 
 	// A stage without files leaves nothing, and Remove drops the files.
 	for _, add := range []bool{false, true} {
-		st, err := s.NewStage()
+		st, err := s.NewStage("work")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -314,8 +315,26 @@ func TestStage(t *testing.T) {
 		t.Errorf("an empty stage made the folder of the files: %v", err)
 	}
 
-	// A stage left behind long ago is removed by the next one.
-	old := filepath.Join(dir, stagePrefix+"old")
+	// A stage is on the file system of the note's files: in the folder of the
+	// notebook, else in that of its parent, else in the notes directory.
+	for nb, want := range map[string]string{
+		"work":     filepath.Join(dir, "work"),
+		"work/sub": filepath.Join(dir, "work"),
+		"new":      dir,
+		"new/sub":  dir,
+	} {
+		st, err := s.NewStage(nb)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := filepath.Dir(st.dir); got != want {
+			t.Errorf("the stage for %s is in %s, want %s", nb, got, want)
+		}
+		st.Remove()
+	}
+
+	// A stage left behind long ago is removed by the next one there.
+	old := filepath.Join(dir, "work", stagePrefix+"old")
 	if err := os.Mkdir(old, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -323,7 +342,7 @@ func TestStage(t *testing.T) {
 	if err := os.Chtimes(old, at, at); err != nil {
 		t.Fatal(err)
 	}
-	st, err = s.NewStage()
+	st, err = s.NewStage("work")
 	if err != nil {
 		t.Fatal(err)
 	}

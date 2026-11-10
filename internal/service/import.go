@@ -321,7 +321,7 @@ func (s *Notes) importNote(ctx context.Context, a importArgs, createdBy string) 
 	}
 
 	id := store.NewID()
-	stage, err := s.store.NewStage()
+	stage, err := s.store.NewStage(nb)
 	if err != nil {
 		return nil, err
 	}

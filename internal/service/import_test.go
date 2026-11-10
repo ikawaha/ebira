@@ -59,14 +59,19 @@ func importOf(ctx context.Context, t *testing.T, svc *Notes, notebook, name, con
 	return svc.Import(ctx, p, io.NopCloser(body))
 }
 
-// stages returns the stages left in the notes directory.
+// stages returns the stages left in the notes directory and the folders of
+// notebooks.
 func stages(t *testing.T, dir string) []string {
 	t.Helper()
-	m, err := filepath.Glob(filepath.Join(dir, ".tmp-stage-*"))
-	if err != nil {
-		t.Fatal(err)
+	var all []string
+	for _, pattern := range []string{".tmp-stage-*", "*/.tmp-stage-*", "*/*/.tmp-stage-*"} {
+		m, err := filepath.Glob(filepath.Join(dir, pattern))
+		if err != nil {
+			t.Fatal(err)
+		}
+		all = append(all, m...)
 	}
-	return m
+	return all
 }
 
 const kyoto = `---

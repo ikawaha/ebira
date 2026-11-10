@@ -207,8 +207,9 @@ func writeFile(dir, name string, r io.Reader) (string, error) {
 	}
 }
 
-// stagePrefix starts the names of the folders of stages in the notes
-// directory: hidden from the scans, the watcher and the git sync.
+// stagePrefix starts the names of the folders of stages, in the notes
+// directory or a notebook's folder: hidden from the scans, the watcher and
+// the git sync.
 const stagePrefix = ".tmp-stage-"
 
 // staleStage is how old a stage left behind, such as by a server that
@@ -223,21 +224,36 @@ type Stage struct {
 	dir string
 }
 
-// NewStage returns a new stage, a folder in the notes directory, on the same
-// file system as the notes so that Adopt moves it. It removes the stages
-// left behind for longer than staleStage.
-func (s *Store) NewStage() (*Stage, error) {
-	if entries, err := os.ReadDir(s.dir); err == nil {
+// NewStage returns a new stage for a note to be created in notebook. It is a
+// folder on the file system the note's files will be on, so that Adopt moves
+// it there: in the folder of the notebook, which may be a link to another
+// disk, else in that of its parent, else in the notes directory, where a new
+// notebook is made. It removes the stages left there for longer than
+// staleStage.
+func (s *Store) NewStage(notebook string) (*Stage, error) {
+	folders := []string{notebook}
+	if parent, sub := SplitNotebook(notebook); sub != "" {
+		folders = append(folders, parent)
+	}
+	base := s.dir
+	for _, nb := range folders {
+		d := filepath.Join(s.dir, filepath.FromSlash(nb))
+		if fi, err := os.Stat(d); err == nil && fi.IsDir() {
+			base = d
+			break
+		}
+	}
+	if entries, err := os.ReadDir(base); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || !strings.HasPrefix(e.Name(), stagePrefix) {
 				continue
 			}
 			if fi, err := e.Info(); err == nil && time.Since(fi.ModTime()) > staleStage {
-				os.RemoveAll(filepath.Join(s.dir, e.Name()))
+				os.RemoveAll(filepath.Join(base, e.Name()))
 			}
 		}
 	}
-	dir, err := os.MkdirTemp(s.dir, stagePrefix+"*")
+	dir, err := os.MkdirTemp(base, stagePrefix+"*")
 	if err != nil {
 		return nil, err
 	}
