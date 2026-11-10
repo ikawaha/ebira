@@ -384,3 +384,42 @@ func TestImportWhileNotebookMoves(t *testing.T) {
 		t.Errorf("stages left in the trash: %v", m)
 	}
 }
+
+// TestImportMalformed checks that malformed bodies are bad requests: an
+// image without its content in JSON, and multipart data broken after the
+// first image's ref.
+func TestImportMalformed(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	for _, files := range []string{
+		`[{"ref":"x.png","name":"x.png"}]`,
+		`[{"ref":"x.png","name":"x.png","content":null}]`,
+		`[{"name":"x.png","content":""}]`,
+	} {
+		body := `{"name":"a.md","content":"![x](x.png)","files":` + files + `}`
+		if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(body))); errorName(err) != "bad_request" {
+			t.Errorf("Import of the files %s: %v", files, err)
+		}
+	}
+	// An empty image is an image.
+	body := `{"name":"e.md","content":"# empty\n![x](x.png)","files":[{"ref":"x.png","name":"x.png","content":""}]}`
+	if res, err := svc.Import(person, &gennotes.ImportPayload{ContentType: ptr("application/json")}, io.NopCloser(strings.NewReader(body))); err != nil || res.Status != "created" {
+		t.Errorf("Import of an empty image = %+v, %v", res, err)
+	}
+
+	head := "--b\r\nContent-Disposition: form-data; name=\"name\"\r\n\r\na.md\r\n" +
+		"--b\r\nContent-Disposition: form-data; name=\"content\"\r\n\r\n![x](x.png)\r\n" +
+		"--b\r\nContent-Disposition: form-data; name=\"ref\"\r\n\r\nx.png\r\n"
+	for name, rest := range map[string]string{
+		"a broken header":     "--b\r\nnot a header\r\n\r\nx\r\n--b--\r\n",
+		"no closing boundary": "--b\r\nContent-Disposition: form-data; name=\"file\"; filename=\"x.png\"\r\n\r\n\x89PNG",
+	} {
+		ct := "multipart/form-data; boundary=b"
+		if _, err := svc.Import(person, &gennotes.ImportPayload{ContentType: &ct}, io.NopCloser(strings.NewReader(head+rest))); errorName(err) != "bad_request" {
+			t.Errorf("Import with %s: %v", name, err)
+		}
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
+	}
+}

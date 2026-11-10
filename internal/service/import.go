@@ -233,7 +233,8 @@ type importJSON struct {
 	Files      []importJSONFile `json:"files"`
 }
 
-// importJSONFile is an image in a JSON body of import.
+// importJSONFile is an image in a JSON body of import. Its content is nil
+// when it is missing or null, and empty for an empty image.
 type importJSONFile struct {
 	Ref     string `json:"ref"`
 	Name    string `json:"name"`
@@ -252,6 +253,13 @@ func readImportJSON(body io.Reader, a *importArgs) (importFields, error) {
 		a.notebook = deref(v.Notebook)
 	}
 	a.force = v.Force != nil && *v.Force
+	// The attributes of the images are required, as the generated decoder
+	// of earlier versions required them.
+	for _, f := range v.Files {
+		if f.Ref == "" || f.Name == "" || utf8.RuneCountInString(f.Name) > 255 || f.Content == nil {
+			return importFields{}, gennotes.MakeBadRequest(errors.New("files: each image needs a ref, a name of 1 to 255 characters and its content"))
+		}
+	}
 	a.files = filesOf(v.Files, func(f importJSONFile) (string, string, []byte) { return f.Ref, f.Name, f.Content })
 	return importFields{modTime: v.ModifiedAt, content: v.Content != nil}, nil
 }
@@ -456,8 +464,8 @@ func receiveImages(stage *store.Stage, id string, refs []string, next nextFile) 
 	return paths, warnings, nil
 }
 
-// readErr maps an error of reading the request body: a body past its limit
-// is a bad request.
+// readErr maps an error of reading the request body, such as of malformed
+// multipart data or of a body cut off or past its limit, to a bad request.
 func readErr(err error) error {
 	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		return gennotes.MakeBadRequest(errors.New("the request body is too large"))
@@ -466,7 +474,7 @@ func readErr(err error) error {
 	if errors.As(err, &gerr) {
 		return err
 	}
-	return fmt.Errorf("read the request: %w", err)
+	return gennotes.MakeBadRequest(fmt.Errorf("read the request: %w", err))
 }
 
 // countingReader counts the bytes read from r and keeps the error of reading

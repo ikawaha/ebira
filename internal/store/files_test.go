@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -280,8 +281,11 @@ func TestStage(t *testing.T) {
 	if want := []string{"n1/shot-2.png", "n1/shot.png"}; !slices.Equal(names, want) {
 		t.Errorf("files = %v, want %v", names, want)
 	}
-	if fi, err := os.Stat(filepath.Join(dir, "work", "n1.assets")); err != nil || fi.Mode().Perm() != 0o755 {
-		t.Errorf("the folder of the files: %v, %v", fi.Mode(), err)
+	// The folder is as readable as the others; Windows has no such bits.
+	if fi, err := os.Stat(filepath.Join(dir, "work", "n1.assets")); err != nil {
+		t.Errorf("the folder of the files: %v", err)
+	} else if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o755 {
+		t.Errorf("the folder of the files is %v, want 0755", fi.Mode().Perm())
 	}
 	if left := stages(); len(left) > 0 {
 		t.Errorf("stages left: %v", left)
