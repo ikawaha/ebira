@@ -251,7 +251,7 @@ func TestStage(t *testing.T) {
 	}
 
 	// The files become the note's at once.
-	st, err := s.NewStage("work")
+	st, err := s.NewStage()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestStage(t *testing.T) {
 
 	// A stage without files leaves nothing, and Remove drops the files.
 	for _, add := range []bool{false, true} {
-		st, err := s.NewStage("work")
+		st, err := s.NewStage()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -315,26 +315,32 @@ func TestStage(t *testing.T) {
 		t.Errorf("an empty stage made the folder of the files: %v", err)
 	}
 
-	// A stage is on the file system of the note's files: in the folder of the
-	// notebook, else in that of its parent, else in the notes directory.
-	for nb, want := range map[string]string{
-		"work":     filepath.Join(dir, "work"),
-		"work/sub": filepath.Join(dir, "work"),
-		"new":      dir,
-		"new/sub":  dir,
-	} {
-		st, err := s.NewStage(nb)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := filepath.Dir(st.dir); got != want {
-			t.Errorf("the stage for %s is in %s, want %s", nb, got, want)
-		}
-		st.Remove()
+	// When the stage cannot be moved, as to a notebook on another disk, its
+	// files are copied.
+	defer func(f func(string, string) error) { rename = f }(rename)
+	rename = func(string, string) error { return &os.LinkError{Op: "rename", Err: errors.New("cross-device link")} }
+	st, err = s.NewStage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Add("far.pdf", strings.NewReader("%PDF-1.7")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Create(&Note{ID: "n3", Notebook: "work", Title: "t"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Adopt("n3"); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "work", "n3.assets", "far.pdf")); err != nil || string(b) != "%PDF-1.7" {
+		t.Errorf("the copied file: %q, %v", b, err)
+	}
+	if left := stages(); len(left) > 0 {
+		t.Errorf("stages left after the copy: %v", left)
 	}
 
-	// A stage left behind long ago is removed by the next one there.
-	old := filepath.Join(dir, "work", stagePrefix+"old")
+	// A stage left behind long ago is removed by the next one.
+	old := filepath.Join(dir, stagePrefix+"old")
 	if err := os.Mkdir(old, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +348,7 @@ func TestStage(t *testing.T) {
 	if err := os.Chtimes(old, at, at); err != nil {
 		t.Fatal(err)
 	}
-	st, err = s.NewStage("work")
+	st, err = s.NewStage()
 	if err != nil {
 		t.Fatal(err)
 	}

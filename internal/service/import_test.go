@@ -335,3 +335,52 @@ func TestImportAiNote(t *testing.T) {
 		}
 	}
 }
+
+// hookReader reads r and calls hook once, after the first read.
+type hookReader struct {
+	r    io.Reader
+	hook func()
+}
+
+func (h *hookReader) Read(p []byte) (int, error) {
+	n, err := h.r.Read(p)
+	if h.hook != nil {
+		h.hook()
+		h.hook = nil
+	}
+	return n, err
+}
+
+// TestImportWhileNotebookMoves checks that a notebook moved to the trash
+// while the images of an import into it are received leaves the import
+// whole and no files behind.
+func TestImportWhileNotebookMoves(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	if _, err := importOf(person, t, svc, "travel", "first.md", "# 先", false); err != nil {
+		t.Fatal(err)
+	}
+	body, ct := importForm(t, [][2]string{{"name", "kyoto.md"}, {"content", kyoto}},
+		formFile{"img/tera.png", "tera.png", string(pngHead) + strings.Repeat("x", 1<<20)},
+	)
+	// The fields are read whole first; the hook runs while the image comes.
+	i := bytes.LastIndex(body.Bytes(), []byte("img/tera.png"))
+	r := io.MultiReader(bytes.NewReader(body.Bytes()[:i]), &hookReader{r: bytes.NewReader(body.Bytes()[i:]), hook: func() {
+		if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: "travel"}); err != nil {
+			t.Error(err)
+		}
+	}})
+	res, err := svc.Import(person, &gennotes.ImportPayload{Notebook: ptr("travel"), ContentType: &ct}, io.NopCloser(r))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "travel", res.Note.ID+".assets", "tera.png")); err != nil {
+		t.Errorf("the image: %v", err)
+	}
+	if left := stages(t, dir); len(left) > 0 {
+		t.Errorf("stages left: %v", left)
+	}
+	if m, _ := filepath.Glob(filepath.Join(dir, "trash", "*", ".tmp-stage-*")); len(m) > 0 {
+		t.Errorf("stages left in the trash: %v", m)
+	}
+}

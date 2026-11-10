@@ -207,9 +207,8 @@ func writeFile(dir, name string, r io.Reader) (string, error) {
 	}
 }
 
-// stagePrefix starts the names of the folders of stages, in the notes
-// directory or a notebook's folder: hidden from the scans, the watcher and
-// the git sync.
+// stagePrefix starts the names of the folders of stages in the notes
+// directory: hidden from the scans, the watcher and the git sync.
 const stagePrefix = ".tmp-stage-"
 
 // staleStage is how old a stage left behind, such as by a server that
@@ -224,36 +223,21 @@ type Stage struct {
 	dir string
 }
 
-// NewStage returns a new stage for a note to be created in notebook. It is a
-// folder on the file system the note's files will be on, so that Adopt moves
-// it there: in the folder of the notebook, which may be a link to another
-// disk, else in that of its parent, else in the notes directory, where a new
-// notebook is made. It removes the stages left there for longer than
-// staleStage.
-func (s *Store) NewStage(notebook string) (*Stage, error) {
-	folders := []string{notebook}
-	if parent, sub := SplitNotebook(notebook); sub != "" {
-		folders = append(folders, parent)
-	}
-	base := s.dir
-	for _, nb := range folders {
-		d := filepath.Join(s.dir, filepath.FromSlash(nb))
-		if fi, err := os.Stat(d); err == nil && fi.IsDir() {
-			base = d
-			break
-		}
-	}
-	if entries, err := os.ReadDir(base); err == nil {
+// NewStage returns a new stage, a folder in the notes directory, which stays
+// where it is while notebooks are moved or deleted. It removes the stages
+// left behind for longer than staleStage.
+func (s *Store) NewStage() (*Stage, error) {
+	if entries, err := os.ReadDir(s.dir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || !strings.HasPrefix(e.Name(), stagePrefix) {
 				continue
 			}
 			if fi, err := e.Info(); err == nil && time.Since(fi.ModTime()) > staleStage {
-				os.RemoveAll(filepath.Join(base, e.Name()))
+				os.RemoveAll(filepath.Join(s.dir, e.Name()))
 			}
 		}
 	}
-	dir, err := os.MkdirTemp(base, stagePrefix+"*")
+	dir, err := os.MkdirTemp(s.dir, stagePrefix+"*")
 	if err != nil {
 		return nil, err
 	}
@@ -272,17 +256,68 @@ func (st *Stage) Add(name string, r io.Reader) (string, error) {
 	return writeFile(st.dir, name, r)
 }
 
+// rename is os.Rename, a variable for tests.
+var rename = os.Rename
+
 // Adopt makes the files of the stage the files of note id, which has none
-// yet. A stage without files is removed.
+// yet. A stage without files is removed. The stage is moved, or, when it
+// cannot be, as to the folder of a notebook that is a link to another disk,
+// its files are copied.
 func (st *Stage) Adopt(id string) error {
-	if entries, err := os.ReadDir(st.dir); err == nil && len(entries) == 0 {
+	entries, err := os.ReadDir(st.dir)
+	if err != nil {
+		return err
+	}
+	if len(entries) == 0 {
 		return st.Remove()
 	}
 	place, err := st.s.locate(id)
 	if err != nil {
 		return err
 	}
-	return os.Rename(st.dir, st.s.assetsDir(place, id))
+	dest := st.s.assetsDir(place, id)
+	if rename(st.dir, dest) == nil {
+		return nil
+	}
+	if err := copyFiles(st.dir, dest, entries); err != nil {
+		os.RemoveAll(dest)
+		return err
+	}
+	return st.Remove()
+}
+
+// copyFiles copies the files entries of the folder src to dest, a new
+// folder.
+func copyFiles(src, dest string, entries []fs.DirEntry) error {
+	if err := os.Mkdir(dest, 0o755); err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if !e.Type().IsRegular() {
+			continue
+		}
+		if err := copyFile(filepath.Join(src, e.Name()), filepath.Join(dest, e.Name())); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyFile(src, dest string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 // Remove removes the stage with its files, unless Adopt moved them.
