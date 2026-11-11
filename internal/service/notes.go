@@ -67,7 +67,7 @@ func New(s *store.Store, ix *index.Index) *Notes {
 		store:  s,
 		index:  ix,
 		events: newBroker(),
-		now:    func() time.Time { return time.Now().UTC().Truncate(time.Second) },
+		now:    func() time.Time { return time.Now().UTC().Truncate(time.Millisecond) },
 	}
 }
 
@@ -1494,8 +1494,8 @@ func toNote(n *store.Note) *gennotes.Note {
 		Title:     n.Title,
 		Tags:      tags(n.Tags),
 		Body:      n.Body,
-		CreatedAt: n.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: n.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: store.FormatTime(n.CreatedAt),
+		UpdatedAt: store.FormatTime(n.UpdatedAt),
 		Version:   n.Version,
 	}
 	if n.TrashedFrom != "" {
@@ -1525,8 +1525,8 @@ func summaries(ss []*index.Summary, withSnippet bool) []*gennotes.NoteSummary {
 			Notebook:  s.Notebook,
 			Title:     s.Title,
 			Tags:      tags(s.Tags),
-			CreatedAt: s.CreatedAt.UTC().Format(time.RFC3339),
-			UpdatedAt: s.UpdatedAt.UTC().Format(time.RFC3339),
+			CreatedAt: store.FormatTime(s.CreatedAt),
+			UpdatedAt: store.FormatTime(s.UpdatedAt),
 		}
 		if s.TrashedNotebook != "" {
 			r.TrashedNotebook = &s.TrashedNotebook

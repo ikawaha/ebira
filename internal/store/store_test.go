@@ -47,8 +47,8 @@ extra: 残すキー
 	want := `# 手で書いたノート
 title: 新しいタイトル # 行末コメント
 tags: [a]
-created_at: 2026-10-01T09:00:00Z
-updated_at: 2026-10-15T00:00:00Z
+created_at: 2026-10-01T09:00:00.000Z
+updated_at: 2026-10-15T00:00:00.000Z
 body: |
   一行目
   二行目
@@ -295,8 +295,8 @@ extra: 残すキー
 	b, _ := os.ReadFile(p)
 	want := `title: メモ
 tags: []
-created_at: 2026-10-01T09:00:00Z
-updated_at: 2026-10-01T09:00:00Z
+created_at: 2026-10-01T09:00:00.000Z
+updated_at: 2026-10-01T09:00:00.000Z
 order: 1234
 body: |
   本文
@@ -494,8 +494,8 @@ func TestCreateWithExtra(t *testing.T) {
 	// The keys of the note itself in Extra are ignored.
 	want := `title: 取り込み
 tags: []
-created_at: 2026-04-01T00:00:00Z
-updated_at: 2026-04-01T00:00:00Z
+created_at: 2026-04-01T00:00:00.000Z
+updated_at: 2026-04-01T00:00:00.000Z
 author: me # comment
 aliases: [a]
 imported_from: memo.md

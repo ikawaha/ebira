@@ -104,7 +104,7 @@ func TestImport(t *testing.T) {
 	if res.Status != "created" || n == nil || n.Notebook != "travel" || n.Title != "京都の旅" || !slices.Equal(n.Tags, []string{"旅行"}) {
 		t.Fatalf("Import = %+v, note %+v", res, n)
 	}
-	if n.CreatedAt != "2026-04-01T09:00:00Z" || n.UpdatedAt != "2026-05-01T00:00:00Z" || n.CreatedBy != nil {
+	if n.CreatedAt != "2026-04-01T09:00:00.000Z" || n.UpdatedAt != "2026-05-01T00:00:00.000Z" || n.CreatedBy != nil {
 		t.Errorf("times %s, %s, created_by %v", n.CreatedAt, n.UpdatedAt, n.CreatedBy)
 	}
 	wantBody := "一日目は清水寺。\n\n![寺](" + n.ID + ".assets/tera.png)\n![外](https://example.com/x.png)\n![無い](img/none.png)\n"
@@ -305,7 +305,7 @@ func TestImportAiNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Status != "created" || *res.Note.CreatedBy != "ai" || res.Note.CreatedAt != "2026-04-01T09:00:00Z" {
+	if res.Status != "created" || *res.Note.CreatedBy != "ai" || res.Note.CreatedAt != "2026-04-01T09:00:00.000Z" {
 		t.Errorf("ImportAiNote = %+v", res.Note)
 	}
 	// AI clients bring no images; the links stay.

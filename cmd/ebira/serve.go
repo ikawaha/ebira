@@ -160,7 +160,7 @@ func runServe(args []string) error {
 		return err
 	}
 	if fresh {
-		r, err := guide.Install(st, *o.lang, time.Now().UTC().Truncate(time.Second))
+		r, err := guide.Install(st, *o.lang, time.Now().UTC().Truncate(time.Millisecond))
 		if err != nil {
 			return fmt.Errorf("add the guide: %w", err)
 		}

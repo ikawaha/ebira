@@ -11,7 +11,48 @@ import (
 	"time"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/store"
 )
+
+// Notes made in the same second keep the order they were made in, by the
+// milliseconds of their times, not the order of their IDs.
+func TestSameSecondOrder(t *testing.T) {
+	svc, dir := newTestService(t)
+	ctx := AsPerson(context.Background())
+	base := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
+	var now time.Time
+	svc.now = func() time.Time { return now }
+	for i, id := range []string{"a", "b", "c"} {
+		now = base.Add(time.Duration(i+1) * time.Millisecond)
+		if _, err := svc.Create(ctx, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("work"), Title: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, sort := range []*string{nil, ptr("created"), ptr("updated")} {
+		res, err := svc.List(ctx, &gennotes.ListPayload{Notebook: ptr("work"), Sort: sort, Limit: 50})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, n := range res.Notes {
+			ids = append(ids, n.ID)
+		}
+		if want := []string{"c", "b", "a"}; !slices.Equal(ids, want) {
+			t.Errorf("sort %q = %v, want %v", deref(sort), ids, want)
+		}
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "work", "a.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), "created_at: 2026-10-01T09:00:00.001Z\n") {
+		t.Errorf("a.yaml:\n%s", b)
+	}
+	n, err := svc.Get(ctx, &gennotes.GetPayload{ID: "a"})
+	if err != nil || n.CreatedAt != "2026-10-01T09:00:00.001Z" {
+		t.Errorf("Get = %+v, %v", n, err)
+	}
+}
 
 func TestSortAndMove(t *testing.T) {
 	svc, dir := newTestService(t)
@@ -82,7 +123,7 @@ func TestSortAndMove(t *testing.T) {
 		t.Fatal(err)
 	}
 	check("a after d", list(nil), "d", "a", "c", "b")
-	if moved.UpdatedAt != base.Add(time.Hour).Format(time.RFC3339) {
+	if moved.UpdatedAt != store.FormatTime(base.Add(time.Hour)) {
 		t.Errorf("updated_at = %s, want unchanged", moved.UpdatedAt)
 	}
 	for _, id := range []string{"b", "c", "d"} {
@@ -231,7 +272,7 @@ func TestMoveAiNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := base.Add(2 * time.Minute).Format(time.RFC3339); n.UpdatedAt != want {
+	if want := store.FormatTime(base.Add(2 * time.Minute)); n.UpdatedAt != want {
 		t.Errorf("updated_at changed: %v", n.UpdatedAt)
 	}
 	if got := order(); !slices.Equal(got, []string{"b", "a", "c"}) {
