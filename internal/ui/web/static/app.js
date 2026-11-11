@@ -989,6 +989,9 @@ function renderNotebooks() {
     renderTags(ul);
     return;
   }
+  const spacer = el("span", "nb-more nb-spacer", "…");
+  spacer.setAttribute("aria-hidden", "true");
+  all.append(spacer);
   const item = (id, name, kind, count, cls, trashed = null) => {
     // The icon has a column of its own before the name, kept even without an
     // icon, so that the names line up.
@@ -1964,7 +1967,7 @@ function noteRow(n, sort, reorder, list, cls) {
   const time = created ? t("createdAt", { time: formatTime(n.created_at) }) : formatTime(n.updated_at);
   const meta = el("div", "meta", el("span", "", time));
   // Searches in a notebook find the notes of its sub notebooks too.
-  if (!state.notebook || n.notebook !== state.notebook) meta.append(el("span", "", notebookName(n.notebook)));
+  if (!state.notebook || n.notebook !== state.notebook) meta.append(el("span", "where", notebookName(n.notebook)));
   meta.append(...tagList(n.tags));
   li.append(meta);
   if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
