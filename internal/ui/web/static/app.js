@@ -819,6 +819,9 @@ const KIND_SVG = {
   flag: ["M5.5 21V4", "M5.5 4.5h11l-2.5 4 2.5 4h-11"],
   edit: ["M4 20h4L19 9l-4-4L4 16z", "M13.5 6.5l4 4"],
   history: ["M3.5 12a8.5 8.5 0 1 0 2.5-6", "M3.5 4v4.5H8", "M12 7.5V12l3 2"],
+  // The mark of a note made by AI: a plover (chidori), as in the favicon,
+  // drawn plain enough to read at the size of text.
+  chidori: ["M21 9.2L18.4 8.7C17.6 5.6 14.2 4.3 11.2 5.6C8.4 6.8 6.3 9.4 3 8.8C4.2 14.3 8 18.5 13 18.5C17 18.5 19.2 15.2 18.7 11.2z", "M8.5 12.5c2.4 1.6 5 1.4 6.8-1", "M15.9 8.4v.01", "M11.5 18.5l-.8 2.5", "M14.6 18.2l.6 2.6"],
 };
 
 // iconButton returns a button that shows the drawing of KIND_SVG named icon,
@@ -866,13 +869,11 @@ function folderSVG(kind) {
 }
 
 // aiMark returns the mark of a note created by an AI client, which goes at the
-// end of a row rather than right after the title: sparkles, as apps mark what
-// AI made.
-const AI_MARK = "\u2728";
-
+// end of a row rather than right after the title: the plover of KIND_SVG.
 function aiMark(note, label) {
   if (note.created_by !== "ai") return null;
-  const m = el("span", "ai-mark", label ? `${AI_MARK} ${label}` : AI_MARK);
+  const m = el("span", "ai-mark", kindSVG("chidori"));
+  if (label) m.append(label);
   m.title = t("aiNote");
   return m;
 }

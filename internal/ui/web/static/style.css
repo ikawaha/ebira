@@ -305,7 +305,8 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .chosen-list .where { color: var(--fg-muted); font-size: var(--fs-xs); white-space: nowrap; }
 .list .title-row { display: flex; align-items: center; gap: 8px; }
 .list .title { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ai-mark { flex: none; margin-left: auto; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; }
+.ai-mark { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; }
+.ai-mark svg { width: 16px; height: 16px; }
 .list .meta { color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; display: flex; gap: 8px; overflow: hidden; white-space: nowrap; }
 /* The meta of a row takes one line, so that the rows are of one height: a
    long notebook name is cut short, and the tags that do not fit fade out at
