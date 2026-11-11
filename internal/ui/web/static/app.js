@@ -348,6 +348,8 @@ new ResizeObserver(() => fitColumns()).observe(document.querySelector(".panes"))
 const LANGS = ["en", "ja"]; // as web.Langs
 let messages = {};
 let lang = "en";
+// Each language named in itself, for the choice of the language.
+let langNames = {};
 
 // chooseLang returns the language of the UI: the one chosen in the settings
 // menu, else the one of the server (the lang attribute of the page, from the
@@ -382,12 +384,7 @@ async function loadMessages() {
   document.documentElement.lang = lang;
   const all = Object.fromEntries(await Promise.all(LANGS.map(async (l) => [l, await fetchMessages(l)])));
   messages = { ...all.en, ...all[lang] };
-  // Each language is named in itself in the settings menu.
-  for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
-    b.textContent = all[b.dataset.lang].langName || b.dataset.lang;
-    b.lang = b.dataset.lang;
-    b.setAttribute("aria-checked", String(b.dataset.lang === lang));
-  }
+  langNames = Object.fromEntries(LANGS.map((l) => [l, all[l].langName || l]));
   // The page marks its text with data-i18n (the text), data-i18n-title,
   // data-i18n-placeholder and data-i18n-aria-label.
   for (const e of document.querySelectorAll("[data-i18n]")) e.textContent = t(e.dataset.i18n);
@@ -2613,21 +2610,26 @@ function openMarkNames(saved) {
   rows[0]?.querySelector("input").focus();
 }
 
-// The settings of the server, with a control for each: those of the machine
-// and user in the settings file, and those synced with the notes. The server
-// writes only those keys, keeping the rest of the files with their comments,
-// and reads them when it starts, so the dialog offers to restart it.
-async function openServerSettings() {
+// The settings, with a control for each: first those of this browser (the
+// language, the theme and the size of the text), which apply at once; then
+// those of the server: of the machine and user in the settings file, with the
+// style of the preview, and those synced with the notes. The server writes
+// only those keys, keeping the rest of the files with their comments, and
+// reads them when it starts, so the dialog offers to restart it.
+async function openSettings() {
   const d = $("server-settings");
   let cur;
   try {
     cur = await api("/settings");
   } catch (e) {
-    alert(t("settingsFailed", { error: e.message }));
+    // The app's own settings, of the notes folder and the address, need no
+    // server.
+    if (inApp()) tellApp("appSettings");
+    else alert(t("settingsFailed", { error: e.message }));
     return;
   }
   const overridden = new Set(cur.overridden);
-  const langName = (l) => document.querySelector(`#settings-menu [data-lang="${l}"]`)?.textContent || l;
+  const langName = (l) => langNames[l] || l;
   // A control for a value; "" is the default, which the file leaves out.
   const select = (value, options) => {
     const s = el("select");
@@ -2707,9 +2709,9 @@ async function openServerSettings() {
     return el("div", "settings-row", l, box);
   };
   const fixed = (label, value, hint) => el("div", "settings-row", el("span", "settings-label", label),
-    el("div", "settings-control", el("code", "", value), el("p", "hint", hint)));
-  const section = (title, path, ...rows) => el("section", "settings-section",
-    el("h3", "", title), el("p", "path", el("span", "path-label", t("settingsPath")), " ", el("code", "", path)), ...rows);
+    el("div", "settings-control", el("code", "", value), ...(hint ? [el("p", "hint", hint)] : [])));
+  const section = (path, ...rows) => el("section", "settings-section",
+    el("p", "path", el("span", "path-label", t("settingsPath")), " ", el("code", "", path)), ...rows);
   const jaRows = [row("stop_words", t("settingsStopWords"), stopWords.node), row("stop_tags", t("settingsStopTags"), stopTags.node)];
   const showJa = () => { for (const r of jaRows) r.hidden = c.search.value !== "ja"; };
   c.search.addEventListener("change", showJa);
@@ -2779,11 +2781,65 @@ async function openServerSettings() {
   const noRestart = el("p", "hint", t(cur.restart_unavailable === "executable_gone" ? "settingsExecutableGone" : "settingsNoRestart"));
   noRestart.hidden = cur.restart;
 
-  d.replaceChildren(
-    el("div", "files-head", el("h2", "", t("serverSettings")), closeButton(close)),
-    el("p", "hint", t("settingsApply")),
-    el("div", "settings-body",
-      section(t("settingsMachine"), cur.machine_path,
+  // This browser: each control applies at once, and none is saved with the
+  // rest. The language reloads the page, after the question about changes.
+  const pageLang = select(lang, LANGS.map((l) => [l, langName(l)]));
+  pageLang.addEventListener("change", () => {
+    if (dirty() && !confirm(t("settingsDiscard"))) {
+      pageLang.value = lang;
+      return;
+    }
+    try { localStorage.setItem("ebira.lang", pageLang.value); } catch (_) { /* this page only */ }
+    location.reload();
+  });
+  const pageTheme = select(currentTheme(), [["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]]);
+  pageTheme.addEventListener("change", () => setTheme(pageTheme.value));
+  const sizeDown = iconButton("minus", t("bodySizeSmaller"), () => stepSize(-1));
+  const sizeReset = button("", () => stepSize(0), { title: t("bodySizeReset") });
+  const sizeUp = iconButton("plus", t("bodySizeLarger"), () => stepSize(1));
+  const showSize = () => {
+    const size = bodySize();
+    sizeReset.textContent = `${size}%`;
+    sizeDown.disabled = size === BODY_SIZES[0];
+    sizeUp.disabled = size === BODY_SIZES.at(-1);
+  };
+  const stepSize = (step) => {
+    window.ebira.textSize(step);
+    showSize();
+  };
+  showSize();
+  const browserRow = (label, control) => el("div", "settings-row", el("label", "settings-label", label), el("div", "settings-control", control));
+  const previewStyle = button(t("previewStyle"), () => {
+    if (dirty() && !confirm(t("settingsDiscard"))) return;
+    d.close();
+    openPreviewStyle();
+  }, { title: t("previewStyleTitle") });
+
+  // The tabs: in the desktop app, its own settings first, which its window
+  // changes; then the display in this browser, and the two files of the
+  // server, whose controls are saved together.
+  const tabs = [];
+  if (inApp()) {
+    const change = button(t("settingsAppChange"), () => {
+      if (dirty() && !confirm(t("settingsDiscard"))) return;
+      d.close();
+      tellApp("appSettings");
+    });
+    tabs.push(["app", t("settingsTabApp"), el("section", "settings-section",
+      el("p", "hint", t("settingsAppHint")),
+      fixed(t("settingsNotesDir"), cur.notes_dir, ""),
+      fixed(t("settingsAddr"), location.host, ""),
+      el("div", "settings-row", el("span", "settings-label"), el("div", "settings-control", change)))]);
+  }
+  tabs.push(
+    ["display", t("settingsTabDisplay"), el("section", "settings-section",
+      el("p", "hint", t("settingsBrowserHint")),
+      browserRow(t("language"), pageLang),
+      browserRow(t("theme"), pageTheme),
+      browserRow(t("bodySize"), el("div", "body-size", sizeDown, sizeReset, sizeUp)))],
+    ["machine", t("settingsTabMachine"), el("div", "",
+      el("p", "hint", t("settingsApply")),
+      section(cur.machine_path,
         row("lang", t("settingsLang"), c.lang),
         row("theme", t("settingsTheme"), c.theme),
         row("auth", t("settingsAuth"), c.auth, cur.passkeys ? "" : t("settingsAuthNoPasskey")),
@@ -2792,14 +2848,56 @@ async function openServerSettings() {
         row("provider", t("settingsProvider"), c.provider),
         row("model", t("settingsModel"), c.model),
         row("tui_preview", t("settingsTUIPreview"), c.tui_preview, t("settingsTUIPreviewHint")),
+        el("div", "settings-row", el("span", "settings-label", t("previewStyleHead")),
+          el("div", "settings-control", previewStyle, el("p", "hint", t("settingsPreviewStyleHint")))),
         fixed(t("settingsNotesDir"), cur.notes_dir, t("settingsKept")),
-        fixed(t("settingsAddr"), cur.addr, t("settingsKept"))),
-      section(t("settingsNotes"), cur.notes_path,
+        fixed(t("settingsAddr"), cur.addr, t("settingsKept"))))],
+    ["notes", t("settingsTabNotes"), el("div", "",
+      el("p", "hint", t("settingsApply")),
+      section(cur.notes_path,
         el("p", "hint", t("settingsNotesHint")),
         row("search", t("settingsSearch"), c.search, t("settingsSearchHint")),
         ...jaRows,
         el("div", "settings-row", el("span", "settings-label", t("markNames")),
-          el("div", "settings-control", button(t("markNamesMenu"), () => openMarkNames(markNamesSaved)))))),
+          el("div", "settings-control", button(t("markNamesMenu"), () => openMarkNames(markNamesSaved))))))]);
+  const bar = el("div", "settings-tabs");
+  bar.setAttribute("role", "tablist");
+  const panels = [];
+  const choose = (i) => {
+    bar.querySelectorAll("button").forEach((b, j) => {
+      b.setAttribute("aria-selected", String(i === j));
+      b.tabIndex = i === j ? 0 : -1;
+    });
+    panels.forEach((p, j) => { p.hidden = i !== j; });
+  };
+  tabs.forEach(([id, label, content], i) => {
+    const b = button(label, () => choose(i));
+    b.setAttribute("role", "tab");
+    b.id = `settings-tab-${id}`;
+    b.setAttribute("aria-controls", `settings-panel-${id}`);
+    bar.append(b);
+    const p = el("div", "settings-panel", content);
+    p.id = `settings-panel-${id}`;
+    p.setAttribute("role", "tabpanel");
+    p.setAttribute("aria-labelledby", b.id);
+    panels.push(p);
+  });
+  // The arrow keys move between the tabs, as in a tablist.
+  bar.addEventListener("keydown", (e) => {
+    const i = panels.findIndex((p) => !p.hidden);
+    const j = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (j === undefined) return;
+    e.preventDefault();
+    const k = (j + tabs.length) % tabs.length;
+    choose(k);
+    bar.children[k].focus();
+  });
+  choose(0);
+
+  d.replaceChildren(
+    el("div", "files-head", el("h2", "", t("settings")), closeButton(close)),
+    bar,
+    el("div", "settings-body", ...panels),
     noRestart,
     msg,
     el("div", "files-actions", button(t("cancel"), close), saveButton, restartButton));
@@ -2808,7 +2906,7 @@ async function openServerSettings() {
     close();
   };
   d.showModal();
-  c.lang.focus();
+  bar.children[0].focus();
 }
 
 // restartServer asks the server to start again, waits until it answers as
@@ -4459,7 +4557,7 @@ window.ebira = {
   search: () => { $("q").focus(); $("q").select(); },
   previewStyle: () => openPreviewStyle(),
   // textSize makes the text of the body a size larger (1), smaller (-1), or
-  // the default (0), as the minus and plus of the settings menu.
+  // the default (0), as the minus and plus of the settings.
   textSize: (step) => {
     const i = BODY_SIZES.indexOf(bodySize());
     setBodySize(step ? BODY_SIZES[Math.min(Math.max(i + step, 0), BODY_SIZES.length - 1)] : 100);
@@ -4467,7 +4565,8 @@ window.ebira = {
   importFiles: () => $("import-input").click(),
   checkFiles: () => openFilesCheck(),
   serverStats: () => openServerStats(),
-  serverSettings: () => openServerSettings(),
+  settings: () => openSettings(),
+  serverSettings: () => openSettings(), // of desktop apps before settings
   syncGit: () => { if (!$("git-sync-open").hidden) syncGit(); },
   addGuide: () => addGuide(),
   connectAI: () => openMCP(),
@@ -4797,8 +4896,7 @@ function toggleSettings(open = $("settings-menu").hidden) {
 
 $("settings").addEventListener("click", () => toggleSettings());
 $("settings-menu").addEventListener("click", (e) => {
-  // The menu stays open while the size of the text is tried.
-  if (e.target.closest("button") && !e.target.closest(".body-size")) toggleSettings(false);
+  if (e.target.closest("button")) toggleSettings(false);
 });
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
@@ -4813,8 +4911,7 @@ $("settings-menu").addEventListener("keydown", (e) => {
 });
 $("files-check-open").addEventListener("click", () => openFilesCheck());
 $("server-stats-open").addEventListener("click", () => openServerStats());
-$("server-settings-open").addEventListener("click", () => openServerSettings());
-$("preview-style-open").addEventListener("click", () => openPreviewStyle());
+$("settings-open").addEventListener("click", () => openSettings());
 $("git-sync-open").addEventListener("click", () => syncGit());
 $("mcp-open").addEventListener("click", () => openMCP());
 $("guide-add").addEventListener("click", () => addGuide());
@@ -4964,28 +5061,16 @@ function currentTheme() {
   return ["auto", "light", "dark"].includes(chosen) ? chosen : document.documentElement.dataset.serverTheme || "auto";
 }
 
-function markTheme() {
-  const cur = currentTheme();
-  for (const b of document.querySelectorAll("#settings-menu [data-theme-choice]")) {
-    b.setAttribute("aria-checked", String(b.dataset.themeChoice === cur));
-  }
-}
-
 function setTheme(choice) {
   try { localStorage.setItem("ebira.theme", choice); } catch (_) { /* this page only */ }
   const root = document.documentElement;
   if (choice === "auto") delete root.dataset.theme;
   else root.dataset.theme = choice;
-  markTheme();
   // Diagrams are drawn in the colors of the theme; draw them again.
   mermaidReady = null;
   if (!state.editing && state.note) loadNote();
 }
 
-for (const b of document.querySelectorAll("#settings-menu [data-theme-choice]")) {
-  b.addEventListener("click", () => setTheme(b.dataset.themeChoice));
-}
-markTheme();
 
 // The size of the text of the body of notes, in the preview and the editor, kept
 // in the browser (see theme.js). It is a scale rather than a size, as the styles
@@ -4998,32 +5083,13 @@ function bodySize() {
   return BODY_SIZES.includes(size) ? size : 100;
 }
 
-function showBodySize(size) {
-  document.documentElement.style.setProperty("--body-scale", String(size / 100));
-  $("body-size-reset").textContent = `${size}%`;
-  $("body-size-down").disabled = size === BODY_SIZES[0];
-  $("body-size-up").disabled = size === BODY_SIZES.at(-1);
-}
-
 function setBodySize(size) {
   try { localStorage.setItem("ebira.bodySize", String(size)); } catch (_) { /* this page only */ }
-  showBodySize(size);
+  document.documentElement.style.setProperty("--body-scale", String(size / 100));
   // CodeMirror measures its lines, and is not told when their height changes.
   for (const node of document.querySelectorAll(".cm-content")) CM.EditorView.findFromDOM(node)?.requestMeasure();
 }
 
-$("body-size-down").addEventListener("click", () => setBodySize(BODY_SIZES[Math.max(BODY_SIZES.indexOf(bodySize()) - 1, 0)]));
-$("body-size-up").addEventListener("click", () => setBodySize(BODY_SIZES[Math.min(BODY_SIZES.indexOf(bodySize()) + 1, BODY_SIZES.length - 1)]));
-$("body-size-reset").addEventListener("click", () => setBodySize(100));
-showBodySize(bodySize());
-
-for (const b of document.querySelectorAll("#settings-menu [data-lang]")) {
-  b.addEventListener("click", () => {
-    if (b.dataset.lang === lang) return;
-    try { localStorage.setItem("ebira.lang", b.dataset.lang); } catch (_) { /* this page only */ }
-    location.reload();
-  });
-}
 $("import-open").addEventListener("click", () => $("import-input").click());
 $("import-input").addEventListener("change", (e) => {
   const files = [...e.target.files];
@@ -5408,6 +5474,9 @@ function showAuthState() {
   $("auth-state").textContent = t(authState.signed_in ? "authStateSignedIn" : "authState", { mode });
   $("logout").hidden = !authState.signed_in;
   $("passkeys-open").hidden = !authState.signed_in;
+  // In the desktop app, whose menus have the rest of the settings menu, it
+  // keeps only the passkeys.
+  $("settings").hidden = inApp() && authState.mode !== "passkey";
 }
 
 const passkeysSupported = () => window.PublicKeyCredential
@@ -5701,6 +5770,8 @@ $("logout").addEventListener("click", async () => {
   // changes the address bar.
   const linked = noteLink(location.href);
   await loadMessages();
+  // The desktop app hides what its menus have (.app-dup).
+  document.documentElement.toggleAttribute("data-app", inApp());
   try {
     authState = await api("/auth");
   } catch (_) { /* an older server: no passkeys */ }

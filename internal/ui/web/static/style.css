@@ -193,6 +193,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .side-foot { position: relative; flex: none; border-top: 1px solid var(--border); padding: 4px 8px; }
 .side-foot .gear { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: none; color: var(--fg-muted); padding: 0; border-radius: var(--r-sm); cursor: pointer; vertical-align: middle; }
 .side-foot .gear svg { width: 18px; height: 18px; }
+.side-foot .gear[hidden] { display: none; }
 .side-foot .gear:hover, .side-foot .gear[aria-expanded="true"] { background: var(--bg-hover); color: var(--fg); }
 .menu { position: absolute; left: 8px; bottom: calc(100% + 4px); z-index: 10; min-width: 180px; display: flex; flex-direction: column; padding: 4px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg); box-shadow: 0 4px 12px rgba(0, 0, 0, .15); }
 .menu[hidden] { display: none; }
@@ -202,10 +203,8 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu .menu-label { padding: 4px 12px 0; font-size: var(--fs-xs); color: var(--fg-muted); }
 /* A long version (a pseudo-version) wraps in the width of the other items, not widening the menu. */
 .menu .menu-version { width: 0; min-width: 100%; font-size: var(--fs-xs); color: var(--fg-muted); white-space: normal; overflow-wrap: anywhere; }
-.menu .body-size { display: flex; align-items: center; gap: 2px; padding: 2px 8px; }
-.menu .body-size button { flex: 1; padding: 4px 8px; text-align: center; font-variant-numeric: tabular-nums; }
-.menu .body-size button svg { width: 14px; height: 14px; }
-.menu .body-size button:disabled { opacity: 0.35; cursor: default; }
+/* The desktop app has these in its menus. */
+:root[data-app] .menu .app-dup { display: none; }
 .menu button[role="menuitemradio"]::before { content: ""; display: inline-block; width: 1.2em; }
 .menu button[aria-checked="true"]::before { content: "\2713"; }
 .notebooks li {
@@ -228,9 +227,12 @@ body.resizing { cursor: col-resize; user-select: none; }
 .kind-icon svg { display: inline-block; width: 14px; height: 14px; margin-left: 4px; vertical-align: -2px; color: var(--fg-muted); }
 .notebooks .nest { flex: none; width: 1.4em; text-align: center; }
 .notebooks .count { margin-left: auto; padding-left: 8px; color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
-.side-tabs { display: flex; gap: 4px; margin: 0 8px 8px; padding: 2px; border-radius: var(--r-md); background: var(--bg-hover); }
-.side-tabs button { flex: 1; border: none; border-radius: var(--r-sm); padding: 4px 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
-.side-tabs button[aria-selected="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.side-tabs, .settings-tabs { display: flex; gap: 4px; margin: 0 8px 8px; padding: 2px; border-radius: var(--r-md); background: var(--bg-hover); }
+.side-tabs button, .settings-tabs button { flex: 1; border: none; border-radius: var(--r-sm); padding: 4px 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.side-tabs button[aria-selected="true"], .settings-tabs button[aria-selected="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+/* The tabs of the settings dialog span it, with the size of its text. */
+.settings-tabs { margin: 8px 0 0; }
+.settings-tabs button { padding: 4px 8px; font-size: var(--fs-sm); }
 .notebooks li.empty { color: var(--fg-muted); cursor: default; }
 /* The "…" of a notebook row shows on the row that is hovered, selected or
    focused, and stays while its menu is open. */
@@ -651,7 +653,8 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 .server-settings .hint { color: var(--fg-muted); font-size: var(--fs-xs); margin: 4px 0; overflow-wrap: anywhere; }
 .server-settings .error { white-space: pre-wrap; overflow-wrap: anywhere; }
 .server-settings .files-actions { gap: 8px; }
-.settings-body { max-height: 60vh; overflow-y: auto; }
+.settings-body { height: 60vh; overflow-y: auto; }
+.settings-panel[hidden] { display: none; }
 .settings-section { margin: 12px 0; }
 .settings-section h3 { font-size: var(--fs-md); margin: 0 0 4px; }
 .settings-section .path { margin: 0 0 8px; font-size: var(--fs-xs); color: var(--fg-muted); overflow-wrap: anywhere; }
@@ -667,6 +670,9 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 .settings-radios { display: flex; flex-wrap: wrap; gap: 4px 12px; padding-top: 4px; }
 .settings-check { display: inline-flex; gap: 4px; align-items: center; padding-top: 4px; }
 .settings-row[hidden] { display: none; } /* the grid would show it */
+.settings-control .body-size { display: inline-flex; align-items: center; gap: 2px; }
+.settings-control .body-size > button:not(.icon-button) { min-width: 4.5em; font-variant-numeric: tabular-nums; }
+.settings-control .body-size button:disabled { opacity: 0.35; cursor: default; }
 @media (max-width: 560px) { .settings-row { grid-template-columns: 1fr; } }
 /* The dialog of the preview style sits at the bottom left, by the settings
    menu, and leaves the preview visible, where the style chosen is tried. */
