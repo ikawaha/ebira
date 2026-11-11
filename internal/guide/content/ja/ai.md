@@ -4,19 +4,51 @@ tags: [guide, ai]
 ---
 ## MCP
 
-ebira は MCP のサーバーです。AI のクライアントに次の URL を登録すると、AI がノートを探し、読み、collab のノートブックに書けます（[ノートブックの種別と AI](kinds.md)）。
+ebira は MCP のサーバーです。AI のクライアントに ebira の URL を登録すると、AI がノートを探し、読み、collab のノートブックに書けます（[ノートブックの種別と AI](kinds.md)）。private のノートブックは見えません。
+
+サーバーの URL と Claude Code に登録するコマンドは、歯車のメニューの「AI とつなぐ（MCP）…」（デスクトップアプリはヘルプのメニュー）に、今のサーバーのアドレスで出ます。コピーのアイコンで写せます。
+
+AI がつなげるのは、ebira のサーバーが動いている間だけです。サーバーのアドレス（設定ファイルの `addr`）を変えたら、登録し直してください。
+
+## Claude Code に登録する
+
+どれも同じ登録をします。ユーザーのスコープ（`--scope user`）に登録するので、どのプロジェクトからも使えます。
+
+- **Web UI**: 歯車のメニューの「AI とつなぐ（MCP）…」の「Claude Code に登録」（デスクトップアプリはヘルプのメニュー）。
+- **ターミナル**: `ebira mcp add`。登録するコマンドを見せて、確かめてから実行します（`-yes` で確かめずに、`-print` で出すだけ）。
+- **自分で**: 次のコマンド（アドレスを変えていれば、そのアドレス）。
 
 ```
-http://localhost:13579/mcp
+claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 ```
 
-Claude Code なら、次のコマンドで登録できます。
+登録したあとに始めた Claude Code のセッションから使えます。登録されているかは `claude mcp list` か、Claude Code の中の `/mcp` で確かめられます。アドレスを変えたあとは、ボタンか `ebira mcp add` で、前のアドレスの登録を新しいアドレスに置き換えられます。
 
-```
-claude mcp add --transport http ebira http://localhost:13579/mcp
-```
+### ボタンが出ないとき
 
-アドレスを変えていれば、そのアドレスにしてください。
+ボタンは、ebira のサーバーが Claude Code（`claude`）を見つけられるときだけ出ます。サーバーがその機械の `claude` を実行して登録するためです。
+
+- Claude Code が入っていない: 入れてから、ダイアログを開き直してください。
+- 別の機械のブラウザで開いている: ボタンはサーバーの機械の Claude Code に登録するので、出しません。使う機械のターミナルでコマンドを実行してください。
+
+### プロジェクトごとの登録
+
+前にローカルのスコープ（`--scope local`。そのプロジェクトだけで、`claude mcp add` の既定）で登録していると、そのプロジェクトではそちらが使われます。そのプロジェクトのディレクトリで `claude mcp remove ebira -s local` を実行すると、ユーザーのスコープの登録が使われます。
+
+## ほかのクライアント
+
+MCP のサーバーを JSON の設定ファイルに書くクライアント（Claude Code のプロジェクトの `.mcp.json` など）では、次の形で書きます。書き方はクライアントによって少し違います。`ebira mcp add -print` も、今のサーバーのアドレスでこの形を出します。
+
+```json
+{
+  "mcpServers": {
+    "ebira": {
+      "type": "http",
+      "url": "http://localhost:13579/mcp"
+    }
+  }
+}
+```
 
 ## アシスタント
 

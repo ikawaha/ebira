@@ -46,8 +46,8 @@
     </div>
     <ul id="notebooks"></ul>
     <div class="side-foot">
-      <button type="button" id="settings" class="gear" aria-haspopup="menu" aria-expanded="false" aria-controls="settings-menu" data-i18n-title="settings" data-i18n-aria-label="settings">⚙</button>
-      <button type="button" id="notebook-add" class="gear" data-i18n-title="notebookNew" data-i18n-aria-label="notebookNew">＋</button>
+      <button type="button" id="settings" class="gear" aria-haspopup="menu" aria-expanded="false" aria-controls="settings-menu" data-i18n-title="settings" data-i18n-aria-label="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.3 9.9L21.9 10.5L21.9 13.5L19.3 14.1L18.6 15.7L20.0 17.9L17.9 20.0L15.7 18.6L14.1 19.3L13.5 21.9L10.5 21.9L9.9 19.3L8.3 18.6L6.1 20.0L4.0 17.9L5.4 15.7L4.7 14.1L2.1 13.5L2.1 10.5L4.7 9.9L5.4 8.3L4.0 6.1L6.1 4.0L8.3 5.4L9.9 4.7L10.5 2.1L13.5 2.1L14.1 4.7L15.7 5.4L17.9 4.0L20.0 6.1L18.6 8.3Z"/><circle cx="12" cy="12" r="3.2"/></svg></button>
+      <button type="button" id="notebook-add" class="gear" data-i18n-title="notebookNew" data-i18n-aria-label="notebookNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
       <div class="menu" id="settings-menu" role="menu" hidden>
         <button type="button" role="menuitem" id="import-open" data-i18n-title="importMarkdownTitle" data-i18n="importMarkdown"></button>
         <button type="button" role="menuitem" id="files-check-open" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
@@ -55,6 +55,7 @@
         <button type="button" role="menuitem" id="preview-style-open" data-i18n-title="previewStyleTitle" data-i18n="previewStyle"></button>
         <button type="button" role="menuitem" id="server-settings-open" data-i18n-title="serverSettingsTitle" data-i18n="serverSettingsMenu"></button>
         <button type="button" role="menuitem" id="git-sync-open" data-i18n-title="gitSyncTitle" data-i18n="gitSync" hidden></button>
+        <button type="button" role="menuitem" id="mcp-open" data-i18n-title="mcpTitle" data-i18n="mcpMenu"></button>
         <button type="button" role="menuitem" id="guide-add" data-i18n-title="guideAddTitle" data-i18n="guideAdd"></button>
         <button type="button" role="menuitem" id="issue-open" data-i18n-title="issueOpenTitle" data-i18n="issueOpen"></button>
         <div class="menu-sep" role="separator"></div>
@@ -170,6 +171,7 @@
 <dialog id="passkeys" class="files-check auth" data-i18n-aria-label="passkeysTitle"></dialog>
 <dialog id="preview-style" class="preview-style" data-i18n-aria-label="previewStyleHead"></dialog>
 <dialog id="mark-names" class="files-check mark-names" data-i18n-aria-label="markNames"></dialog>
+<dialog id="mcp" class="files-check auth mcp" data-i18n-aria-label="mcpHead"></dialog>
 <dialog id="server-settings" class="files-check server-settings" data-i18n-aria-label="serverSettings"></dialog>
 </body>
 </html>

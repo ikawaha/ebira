@@ -812,6 +812,8 @@ const KIND_SVG = {
   // Copy a link to the note: two links of a chain.
   link: ["M10 13.5a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2", "M14 10.5a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"],
   copy: ["rect:9,9,11,11,2", "M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"],
+  // Copied: a tick, for a while in place of copy.
+  check: ["M5 12.5l4.5 4.5L19 7.5"],
   document: ["M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z", "M14 3v4h4", "M8.5 12h7", "M8.5 16h7"],
   // Find in the note: a magnifier.
   find: ["circle:10.5,10.5,6", "M15 15l5 5"],
@@ -4451,6 +4453,7 @@ window.ebira = {
   serverSettings: () => openServerSettings(),
   syncGit: () => { if (!$("git-sync-open").hidden) syncGit(); },
   addGuide: () => addGuide(),
+  connectAI: () => openMCP(),
   openGuide: () => openGuide(),
   searchHelp: () => toggleSearchHelp(true),
   newNotebook: () => openNewNotebook(),
@@ -4796,6 +4799,7 @@ $("server-stats-open").addEventListener("click", () => openServerStats());
 $("server-settings-open").addEventListener("click", () => openServerSettings());
 $("preview-style-open").addEventListener("click", () => openPreviewStyle());
 $("git-sync-open").addEventListener("click", () => syncGit());
+$("mcp-open").addEventListener("click", () => openMCP());
 $("guide-add").addEventListener("click", () => addGuide());
 $("issue-open").addEventListener("click", () => openIssue());
 $("version-copy").addEventListener("click", () => copyVersion());
@@ -4826,6 +4830,98 @@ async function copyVersion() {
     return;
   }
   showToast(t("versionCopied"));
+}
+
+// copyRow shows text, such as a command, in a box with an icon in it that
+// copies the text, and turns into a tick for a while once it has.
+function copyRow(text) {
+  const copy = iconButton("copy", t("authCopy"), async () => {
+    try {
+      await writeClipboard(text);
+      copy.replaceChildren(kindSVG("check"));
+      copy.title = t("authCopied");
+      setTimeout(() => {
+        copy.replaceChildren(kindSVG("copy"));
+        copy.title = t("authCopy");
+      }, 1500);
+    } catch (e) {
+      alert(t("copyFailed", { error: e.message }));
+    }
+  });
+  return el("div", "auth-cmd", el("code", "", text), copy);
+}
+
+// openMCP tells how to register ebira with an MCP client: the URL of /mcp,
+// and the command that registers it with Claude Code, each with an icon to
+// copy it. The URL is that of the page, which reaches this server from here.
+function openMCP() {
+  const d = $("mcp");
+  const url = location.origin + "/mcp";
+  const intro = el("p", "msg");
+  intro.hidden = true;
+  const claude = el("div", "mcp-claude", el("p", "msg", t("mcpChecking")));
+  d.replaceChildren(
+    el("div", "files-head", el("h2", "", t("mcpHead")), button("×", () => d.close(), { title: t("closeTitle") })),
+    el("p", "", t("mcpText")),
+    copyRow(url),
+    el("h3", "", t("mcpClaudeCode")),
+    intro,
+    copyRow(`claude mcp add --transport http --scope user ebira ${url}`),
+    claude);
+  d.showModal();
+  showClaude(claude, intro);
+}
+
+// showClaude tells in box whether Claude Code has ebira, with a button that
+// registers it (POST /claude/mcp). The server runs claude, so the button is
+// there only when the server finds claude and the page is on its machine;
+// else intro tells to run the command above, which ebira mcp add, on
+// the machine of the server, would not help with.
+async function showClaude(box, intro, done) {
+  let st;
+  try {
+    st = await api("/claude/mcp");
+  } catch (_) {
+    intro.textContent = t("mcpClaudeCodeCommand");
+    intro.hidden = false;
+    box.replaceChildren(); // a server without it: the command above remains
+    return;
+  }
+  const parts = done ? [el("p", "", done)] : [];
+  if (!st.available) {
+    intro.textContent = t("mcpClaudeCodeCommand");
+    intro.hidden = false;
+    const why = { remote: "mcpClaudeRemote", not_found: "mcpClaudeNotFound" }[st.reason];
+    parts.push(el("p", "msg", why ? t(why) : t("mcpClaudeFailed", { error: st.error || st.reason })));
+    box.replaceChildren(...parts);
+    return;
+  }
+  if (st.registered === st.url) {
+    if (!done) parts.push(el("p", "", t("mcpClaudeRegistered")));
+    box.replaceChildren(...parts);
+    return;
+  }
+  if (st.registered) parts.push(el("p", "msg", t("mcpClaudeOther", { url: st.registered })));
+  let msg;
+  const go = button(t(st.registered ? "mcpClaudeReplace" : "mcpClaudeAdd"), async () => {
+    if (!confirm(t("mcpClaudeConfirm", { command: st.command }))) return;
+    go.disabled = true;
+    msg.textContent = t("mcpClaudeRunning");
+    msg.className = "msg";
+    let res;
+    try {
+      res = await api("/claude/mcp", { method: "POST" });
+    } catch (e) {
+      msg.textContent = t("mcpClaudeFailed", { error: e.message });
+      msg.className = "error";
+      go.disabled = false;
+      return;
+    }
+    showClaude(box, intro, res.status === "replaced" ? t("mcpClaudeReplaced", { url: res.previous }) : t("mcpClaudeAdded"));
+  }, { cls: "primary" });
+  msg = el("p", "msg", "");
+  parts.push(el("div", "mcp-claude-go", go), msg);
+  box.replaceChildren(...parts);
 }
 
 // addGuide adds the guide of ebira, in the language of the UI, as a new
@@ -5339,17 +5435,9 @@ const registerCommand = "ebira auth passkey";
 // the sign-in by itself once one is: it asks the server every few seconds
 // while the dialog is open.
 function showNoPasskey() {
-  const copy = button(t("authCopy"), async () => {
-    try {
-      await navigator.clipboard.writeText(registerCommand);
-      copy.textContent = t("authCopied");
-    } catch (_) {
-      copy.disabled = true; // the command stays selectable
-    }
-  });
   authDialog(t("authTitle"), el("div", "",
     el("p", "", t("authNoPasskey")),
-    el("div", "auth-cmd", el("code", "", registerCommand), copy),
+    copyRow(registerCommand),
     el("p", "msg", t("authWaiting"))));
   const timer = setInterval(async () => {
     let st;

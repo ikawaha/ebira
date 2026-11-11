@@ -12,6 +12,7 @@ tags: [guide, terminal]
 | `ebira files check` | 使われていない画像やファイルを探す |
 | `ebira sync` | git と同期する |
 | `ebira auth passkey` | パスキーを登録する |
+| `ebira mcp add` | Claude Code に MCP のサーバーとして登録する（[AI と使う](ai.md)） |
 | `ebira version` | 版を出す |
 
 どのコマンドも `-h` で使い方が出ます。サーバーは、ノートのディレクトリごとに 1 つだけ動き、TUI・Web UI・MCP が共有します。

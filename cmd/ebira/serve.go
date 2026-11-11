@@ -26,6 +26,7 @@ import (
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/agent"
 	"github.com/ikawaha/ebira/internal/auth"
+	"github.com/ikawaha/ebira/internal/claudecode"
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
 	"github.com/ikawaha/ebira/internal/guide"
@@ -318,6 +319,9 @@ func runServe(args []string) error {
 	root := http.NewServeMux()
 	root.Handle("GET /health", daemon.HealthHandler(healthState(state, *o.auth)))
 	root.Handle("GET /debug/stats", statsHandler(ix, state.StartedAt, rest.Session))
+	claude := claudeHandler(*addr, claudecode.Find, rest.Session)
+	root.Handle("GET /claude/mcp", claude)
+	root.Handle("POST /claude/mcp", claude)
 	previewCSS := ""
 	if p, err := config.Path(); err == nil {
 		previewCSS = filepath.Join(filepath.Dir(p), web.PreviewCSSFile)

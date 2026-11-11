@@ -284,6 +284,7 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(help.Add("ebira Guide").OnClick(on(func() { s.call("openGuide") })), always)
 	n.add(help.Add("How to Search").OnClick(on(func() { s.call("searchHelp") })), always)
 	n.add(help.Add("Add the Guide").OnClick(on(func() { s.call("addGuide") })), always)
+	n.add(help.Add("Connect AI (MCP)…").OnClick(on(func() { s.call("connectAI") })), always)
 	help.AddSeparator()
 	help.Add("Requests and Bug Reports…").OnClick(on(func() {
 		// The browser, as the web view opens no window for a page that the
