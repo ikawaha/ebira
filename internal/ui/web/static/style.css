@@ -395,8 +395,11 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
    It reaches over the padding of the preview, so that nothing shows above
    it. */
 .note-head { position: sticky; top: -16px; z-index: 2; margin: -16px 0 16px; padding: 16px 0 8px; background: var(--bg); border-bottom: 1px solid var(--border); }
-.head-row { display: flex; align-items: flex-start; gap: 12px; }
-.head-row h2 { flex: 1; min-width: 0; margin: 0 0 4px; font-size: var(--fs-xl); overflow-wrap: anywhere; }
+/* The title keeps a width of its own: when the buttons leave it less, they go
+   to a line of their own below it, rather than squeezing the title to a
+   letter a line. */
+.head-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 12px; }
+.head-row h2 { flex: 1 1 12em; min-width: 0; margin: 0 0 4px; font-size: var(--fs-xl); overflow-wrap: anywhere; }
 /* The button after the title that copies it: faint until the title is
    hovered or the button has the focus. */
 .title-copy { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 24px; height: 24px; margin-left: 4px; padding: 0; border: none; border-radius: var(--r-sm); background: none; color: var(--fg-muted); opacity: 0.4; cursor: pointer; }
@@ -409,7 +412,7 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .body :hover > .section-copy, .section-copy:focus-visible { opacity: 1; }
 .section-copy:hover { color: var(--fg); background: var(--bg-active); }
 @media (hover: none) { .section-copy { opacity: 0.4; } }
-.actions { display: flex; gap: 8px; padding-top: 4px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; padding-top: 4px; }
 /* The buttons of the preview drawn as icons; their names show on hover. */
 /* Buttons of a drawing alone have no frame, but a surface on hover, as on a
    toolbar. */
