@@ -6,7 +6,7 @@ tags: [guide, settings]
 
 - Settings…: open the settings dialog below
 - Import Markdown (or drop files onto the page)
-- Check files, Sync with git, Server status
+- Check files, Sync with git, Server status (its Restart starts the server again, with the same flags and environment)
 - Connect AI (MCP)…: show the URL of ebira and the command for Claude Code; a button registers it with Claude Code ([Using AI](ai.md))
 - Add the guide
 - Report an issue: open the page to post a request or a bug on GitHub
