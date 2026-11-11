@@ -51,7 +51,7 @@
   "loadFailed": "読み込めませんでした: {error}",
   "loadMore": "さらに読み込む（残り {rest} 件）",
   "moveFailed": "動かせませんでした: {error}",
-  "newNote": "＋ 新規",
+  "newNote": "新規",
   "newNoteTitle": "新しいノート（c）",
   "nextMatch": "次の一致（n）",
   "noteGone": "このノートはありません（削除されたか移動しました）",

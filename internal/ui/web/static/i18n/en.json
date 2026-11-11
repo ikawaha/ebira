@@ -51,7 +51,7 @@
   "loadFailed": "Could not load: {error}",
   "loadMore": "Load more ({rest} left)",
   "moveFailed": "Could not move: {error}",
-  "newNote": "+ New",
+  "newNote": "New",
   "newNoteTitle": "New note (c)",
   "nextMatch": "Next match (n)",
   "noteGone": "This note no longer exists (deleted or moved)",

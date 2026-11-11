@@ -438,7 +438,7 @@ func (s *Notes) moveNote(ctx context.Context, p *gennotes.MovePayload) (*gennote
 	if err != nil {
 		return nil, err
 	}
-	if err := s.applyKeys(ctx, n.Notebook, seps, place(items, pos, n.ID, n.SortKey())); err != nil {
+	if err := s.applyKeys(ctx, n.Notebook, seps, place(items, pos, n.ID, n.SortKey()), false); err != nil {
 		return nil, err
 	}
 	if n, err = s.load(p.ID, nil); err != nil {
@@ -526,11 +526,11 @@ func keyAt(keys []index.SortKey, pos int) (int64, bool) {
 
 // applyKeys sets the keys of the manual order of the notes and the
 // separators of notebook nb, whose separators are seps: a note is written
-// only when its key changes, and the separators once when one of them does.
-// A key for a separator not in seps adds the separator, as it is in seps
-// with its other fields. The caller holds s.mu.
-func (s *Notes) applyKeys(ctx context.Context, nb string, seps []store.Separator, keys map[string]int64) error {
-	changed := false
+// only when its key changes, and the separators once when one of them does,
+// or when added is true, as seps holds a separator not in the file yet. The
+// caller holds s.mu.
+func (s *Notes) applyKeys(ctx context.Context, nb string, seps []store.Separator, keys map[string]int64, added bool) error {
+	changed := added
 	for i := range seps {
 		if key, ok := keys[seps[i].ID]; ok {
 			changed = changed || seps[i].Order != key
