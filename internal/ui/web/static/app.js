@@ -804,6 +804,7 @@ const KIND_SVG = {
   // Not kinds either: a sub notebook in the note list, and the way back up.
   folder: ["M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"],
   up: ["M12 19V6", "M6.5 11.5L12 6l5.5 5.5"],
+  down: ["M12 5v13", "M6.5 12.5L12 18l5.5-5.5"],
   // The mark of a sub notebook that opens in the list, turned down when open.
   chevron: ["M9 5.5l6.5 6.5L9 18.5"],
   // And the buttons of the preview: copy the title (two sheets), copy the
@@ -819,6 +820,14 @@ const KIND_SVG = {
   flag: ["M5.5 21V4", "M5.5 4.5h11l-2.5 4 2.5 4h-11"],
   edit: ["M4 20h4L19 9l-4-4L4 16z", "M13.5 6.5l4 4"],
   history: ["M3.5 12a8.5 8.5 0 1 0 2.5-6", "M3.5 4v4.5H8", "M12 7.5V12l3 2"],
+  // The controls of the page: settings (a gear of eight teeth), add and take
+  // away, close, the help of the search syntax and the menu of a row.
+  gear: ["M19.2 10.2L21.5 10.7L21.5 13.3L19.2 13.8L18.3 15.8L19.7 17.8L17.8 19.7L15.8 18.3L13.8 19.2L13.3 21.5L10.7 21.5L10.2 19.2L8.2 18.3L6.2 19.7L4.3 17.8L5.7 15.8L4.8 13.8L2.5 13.3L2.5 10.7L4.8 10.2L5.7 8.2L4.3 6.2L6.2 4.3L8.2 5.7L10.2 4.8L10.7 2.5L13.3 2.5L13.8 4.8L15.8 5.7L17.8 4.3L19.7 6.2L18.3 8.2z", "circle:12,12,3"],
+  plus: ["M12 5v14", "M5 12h14"],
+  minus: ["M5 12h14"],
+  close: ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"],
+  help: ["M9 9.5a3 3 0 0 1 5.8-1c.5 1.6-.7 2.5-1.7 3.1-.7.4-1.1 1-1.1 1.8v.6", "M12 17.5v.01"],
+  more: ["M5.5 12v.01", "M12 12v.01", "M18.5 12v.01"],
 };
 
 // iconButton returns a button that shows the drawing of KIND_SVG named icon,
@@ -827,6 +836,11 @@ function iconButton(icon, label, onClick) {
   const b = button(kindSVG(icon), onClick, { title: label, cls: "icon-button" });
   b.setAttribute("aria-label", label);
   return b;
+}
+
+// closeButton returns the button that closes a dialog or a bar.
+function closeButton(onClick) {
+  return iconButton("close", t("closeTitle"), onClick);
 }
 
 // kindSVG returns the drawing of a notebook kind, or null for the default kind.
@@ -849,6 +863,9 @@ function kindSVG(kind) {
   }
   return svg;
 }
+
+// The page marks the controls drawn with KIND_SVG with data-icon.
+for (const e of document.querySelectorAll("[data-icon]")) e.replaceChildren(kindSVG(e.dataset.icon));
 
 // folderSVG returns the drawing of a folder with the drawing of a notebook
 // kind drawn small inside it.
@@ -1017,7 +1034,7 @@ function renderNotebooks() {
     renderTags(ul);
     return;
   }
-  const spacer = el("span", "nb-more nb-spacer", "…");
+  const spacer = el("span", "nb-more nb-spacer", kindSVG("more"));
   spacer.setAttribute("aria-hidden", "true");
   all.append(spacer);
   const item = (id, name, kind, count, cls, trashed = null) => {
@@ -1041,7 +1058,7 @@ function renderNotebooks() {
       e.preventDefault();
       openNotebookMenu(li, id, trashed, e);
     });
-    const more = button("…", (e) => {
+    const more = button(kindSVG("more"), (e) => {
       e.stopPropagation();
       openNotebookMenu(li, id, trashed);
     }, { cls: "nb-more", title: t("notebookActions") });
@@ -1920,7 +1937,7 @@ function subNotebookRows() {
       e.preventDefault();
       openNotebookMenu(li, trashed ? "trash" : sub.id, trashed ? sub.id : null, e);
     });
-    const more = button("…", (e) => {
+    const more = button(kindSVG("more"), (e) => {
       e.stopPropagation();
       openNotebookMenu(li, trashed ? "trash" : sub.id, trashed ? sub.id : null);
     }, { cls: "nb-more", title: t("notebookActions") });
@@ -2014,7 +2031,7 @@ function separatorRow(sep, reorder, list, cls) {
   if (sep.title) li.append(el("span", "sep-title", sep.title));
   li.append(el("span", "sep-line"));
   if (sep.date) li.append(el("span", "sep-date", formatDate(sep.date)));
-  const more = button("…", (e) => {
+  const more = button(kindSVG("more"), (e) => {
     e.stopPropagation();
     openSeparatorMenu(li, sep);
   }, { cls: "nb-more", title: t("separatorActions") });
@@ -2453,8 +2470,8 @@ async function loadNote() {
     const count = el("span", "", "");
     count.id = "match-count";
     meta.append(el("span", "matches", count,
-      button("↑", () => jumpMark(-1), { title: t("prevMatch") }),
-      button("↓", () => jumpMark(1), { title: t("nextMatch") })));
+      iconButton("up", t("prevMatch"), () => jumpMark(-1)),
+      iconButton("down", t("nextMatch"), () => jumpMark(1))));
     updateMarkCount();
   }
   pv.scrollTop = keepScroll;
@@ -2585,7 +2602,7 @@ function openMarkNames(saved) {
     saved?.();
   }, { cls: "primary" });
   d.replaceChildren(
-    el("div", "files-head", el("h2", "", t("markNames")), button("×", () => d.close(), { title: t("closeTitle") })),
+    el("div", "files-head", el("h2", "", t("markNames")), closeButton(() => d.close())),
     el("p", "hint", t("markNamesHint")),
     el("div", "mark-names-list", ...rows),
     msg,
@@ -2761,7 +2778,7 @@ async function openServerSettings() {
   noRestart.hidden = cur.restart;
 
   d.replaceChildren(
-    el("div", "files-head", el("h2", "", t("serverSettings")), button("×", close, { title: t("closeTitle") })),
+    el("div", "files-head", el("h2", "", t("serverSettings")), closeButton(close)),
     el("p", "hint", t("settingsApply")),
     el("div", "settings-body",
       section(t("settingsMachine"), cur.machine_path,
@@ -2850,9 +2867,9 @@ function findBar() {
   const count = el("span", "find-count", "");
   count.id = "find-count";
   const bar = el("div", "find-bar", kindSVG("find"), input, count,
-    button("↑", () => jumpFind(-1), { title: t("prevMatch") }),
-    button("↓", () => jumpFind(1), { title: t("nextMatch") }),
-    button("×", closeFind, { title: t("closeTitle") }));
+    iconButton("up", t("prevMatch"), () => jumpFind(-1)),
+    iconButton("down", t("nextMatch"), () => jumpFind(1)),
+    closeButton(closeFind));
   bar.id = "find-bar";
   bar.hidden = !find.open;
   return bar;
@@ -3862,7 +3879,7 @@ async function openFilesCheck(message) {
 }
 
 function filesCheckHead(d) {
-  return el("div", "files-head", el("h2", "", t("filesCheck")), button("×", () => d.close(), { title: t("closeTitle") }));
+  return el("div", "files-head", el("h2", "", t("filesCheck")), closeButton(() => d.close()));
 }
 
 function renderFilesCheck(d, res, message) {
@@ -3966,7 +3983,7 @@ async function loadServerStats(d) {
 }
 
 function statsHead(d) {
-  return el("div", "files-head", el("h2", "", t("serverStats")), button("×", () => d.close(), { title: t("closeTitle") }));
+  return el("div", "files-head", el("h2", "", t("serverStats")), closeButton(() => d.close()));
 }
 
 // statsList returns a list of the rows [label key, value].
@@ -4340,7 +4357,7 @@ function renderImportResults(d, results, notebook) {
   const count = (pred) => results.filter(pred).length;
   const created = count((r) => r.res?.status === "created");
   const skipped = count((r) => r.res?.status === "skipped");
-  const head = el("div", "files-head", el("h2", "", t("importTitle")), button("×", () => d.close(), { title: t("closeTitle") }));
+  const head = el("div", "files-head", el("h2", "", t("importTitle")), closeButton(() => d.close()));
   const summary = el("p", "", t("importSummary", { notebook: notebookName(notebook), created, skipped, failed: results.length - created - skipped }));
   const ul = el("ul", "files-list import-list");
   for (const r of results) {
@@ -4372,7 +4389,7 @@ async function showGitSync() {
 // shows the outcome. The changed notes come back as change events.
 async function syncGit() {
   const d = $("git-sync");
-  const head = el("div", "files-head", el("h2", "", t("gitSync")), button("×", () => d.close(), { title: t("closeTitle") }));
+  const head = el("div", "files-head", el("h2", "", t("gitSync")), closeButton(() => d.close()));
   d.replaceChildren(head, el("p", "", t("gitSyncing")));
   if (!d.open) d.showModal();
   let res;
@@ -4717,7 +4734,7 @@ function tryPreviewStyle(style) {
 
 async function openPreviewStyle() {
   const d = $("preview-style");
-  const head = el("div", "files-head", el("h2", "", t("previewStyleHead")), button("×", () => d.close(), { title: t("closeTitle") }));
+  const head = el("div", "files-head", el("h2", "", t("previewStyleHead")), closeButton(() => d.close()));
   d.replaceChildren(head);
   if (!d.open) d.showModal();
   let cur;
@@ -5452,7 +5469,7 @@ function verifyPasskey() {
 // other sessions.
 async function openPasskeys() {
   const d = $("passkeys");
-  const head = el("div", "files-head", el("h2", "", t("passkeysTitle")), button("×", () => d.close(), { title: t("closeTitle") }));
+  const head = el("div", "files-head", el("h2", "", t("passkeysTitle")), closeButton(() => d.close()));
   const msg = el("p", "error");
   let list;
   try {
