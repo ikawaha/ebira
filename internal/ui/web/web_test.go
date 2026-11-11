@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -144,5 +145,46 @@ func TestHandlerGuideNames(t *testing.T) {
 	want := `<html data-guide-names="ebira Guide` + "\n" + `a&#34;b">`
 	if !strings.Contains(string(body), want) {
 		t.Errorf("no %q in the page", want)
+	}
+}
+
+// TestStyleScale checks that style.css keeps to its scales: the sizes of text
+// and the radii of corners are the variables of :root (or relative to the
+// text, or round), and spaces are multiples of 4px, but for the hairlines of
+// 1px and 2px.
+func TestStyleScale(t *testing.T) {
+	b, err := fs.ReadFile(static, "static/style.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	decl := regexp.MustCompile(`(?:^|[\s;{])(font-size|font|border-radius|padding(?:-\w+)?|margin(?:-\w+)?|gap|row-gap|column-gap)\s*:\s*([^;}\n]*)`)
+	px := regexp.MustCompile(`(-?\d+(?:\.\d+)?)px`)
+	for i, line := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "--") {
+			continue // the scales themselves
+		}
+		for _, m := range decl.FindAllStringSubmatch(line, -1) {
+			prop, value := m[1], strings.TrimSpace(m[2])
+			switch prop {
+			case "font-size", "border-radius":
+				if strings.Contains(value, "px") {
+					t.Errorf("style.css:%d: %s: %s, not a variable of the scale", i+1, prop, value)
+				}
+			case "font":
+				if px.MatchString(value) {
+					t.Errorf("style.css:%d: font: %s, not a variable of the scale", i+1, value)
+				}
+			default:
+				for _, n := range px.FindAllStringSubmatch(value, -1) {
+					switch v := strings.TrimPrefix(n[1], "-"); v {
+					case "0", "1", "2":
+					default:
+						if f, _ := strconv.ParseFloat(v, 64); f != float64(int(f)) || int(f)%4 != 0 {
+							t.Errorf("style.css:%d: %s: %s, off the grid of 4px", i+1, prop, value)
+						}
+					}
+				}
+			}
+		}
 	}
 }
