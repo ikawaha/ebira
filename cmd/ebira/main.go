@@ -63,6 +63,8 @@ const usage = `usage:
                                 upstream branch and push
   ebira auth passkey [flags]    register a passkey for the web UI, through a one-time URL
   ebira auth reset [flags]      remove the passkeys and end every session, such as when they are lost
+  ebira mcp add [flags]         register ebira as an MCP server of Claude Code (-print shows the
+                                command and the settings of other clients)
   ebira version                 show the version of this ebira: the commit it was built from and
                                 the build, which ebira server status shows for the server
 
@@ -117,6 +119,8 @@ func run(args []string) error {
 			return runSync(args[1:])
 		case "auth":
 			return runAuth(args[1:])
+		case "mcp":
+			return runMCP(args[1:])
 		}
 	}
 	return runTUI(args)

@@ -49,7 +49,7 @@ The settings of the server, such as the language and the search mode, are in "Se
 
 ## Menus
 
-Editing, saving, finding, marks, history, copying and more are in the menus too, doing what the keys of the web UI do. The Help menu opens this guide and [how to search](search.md).
+Editing, saving, finding, marks, history, copying and more are in the menus too, doing what the keys of the web UI do. The Help menu opens this guide, [how to search](search.md), and the commands to connect AI ([Using AI](ai.md)).
 
 When the server is older than the app, a ↻ mark shows beside the connection status at the top right. Click it to restart the server with the one inside the app.
 

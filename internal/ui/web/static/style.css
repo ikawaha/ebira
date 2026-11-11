@@ -191,7 +191,8 @@ body.resizing { cursor: col-resize; user-select: none; }
 .notebooks { background: var(--bg-side); border-right: 1px solid var(--border); padding: 8px 0 0; display: flex; flex-direction: column; overflow: hidden; }
 #notebooks { flex: 1; overflow-y: auto; }
 .side-foot { position: relative; flex: none; border-top: 1px solid var(--border); padding: 4px 8px; }
-.side-foot .gear { border: none; background: none; color: var(--fg-muted); font-size: var(--fs-lg); line-height: 1; padding: 4px; border-radius: var(--r-sm); cursor: pointer; }
+.side-foot .gear { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: none; color: var(--fg-muted); padding: 0; border-radius: var(--r-sm); cursor: pointer; vertical-align: middle; }
+.side-foot .gear svg { width: 18px; height: 18px; }
 .side-foot .gear:hover, .side-foot .gear[aria-expanded="true"] { background: var(--bg-hover); color: var(--fg); }
 .menu { position: absolute; left: 8px; bottom: calc(100% + 4px); z-index: 10; min-width: 180px; display: flex; flex-direction: column; padding: 4px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg); box-shadow: 0 4px 12px rgba(0, 0, 0, .15); }
 .menu[hidden] { display: none; }
@@ -729,7 +730,11 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .auth { max-width: 420px; }
 .auth .files-actions { gap: 8px; }
 .auth .error:empty { display: none; }
-.auth .auth-cmd { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
-.auth .auth-cmd code { flex: 1; padding: 8px; border-radius: var(--r-md); background: var(--code-bg); user-select: all; }
+.auth .auth-cmd { position: relative; display: flex; align-items: center; margin: 8px 0; }
+.auth .auth-cmd code { flex: 1; padding: 8px 40px 8px 8px; border-radius: var(--r-md); background: var(--code-bg); user-select: all; }
+.auth .auth-cmd .icon-button { position: absolute; top: 5px; right: 6px; border-radius: var(--r-sm); }
 .auth p.msg { color: var(--fg-muted); }
+.mcp h3 { margin: 16px 0 4px; font-size: var(--fs-md); }
+.mcp .auth-cmd code { white-space: pre; overflow-x: auto; }
+.mcp .mcp-claude-go { margin: 8px 0; }
 .auth .device-code code { font-size: var(--fs-xl); letter-spacing: 0.1em; text-align: center; }
