@@ -213,6 +213,30 @@ func TestSeparatorsRespace(t *testing.T) {
 	}
 }
 
+// TestSeparatorKeyOfNow checks that a new separator is saved when the key it
+// is placed at is the one it starts with: put first a second after the
+// creation of the first note, both are the time of the next second.
+func TestSeparatorKeyOfNow(t *testing.T) {
+	svc, _ := newTestService(t)
+	ctx := AsPerson(context.Background())
+	now := time.Date(2026, 11, 11, 2, 15, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+	if _, err := svc.Create(ctx, &gennotes.CreatePayload{ID: ptr("n"), Notebook: ptr("work"), Title: "n"}); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(time.Second)
+	sep, err := svc.CreateSeparator(ctx, &gennotes.CreateSeparatorPayload{Notebook: "work", Title: ptr("s")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := order(t, svc, ctx, "work"); got != "|s n" {
+		t.Errorf("order: %q", got)
+	}
+	if sep.Before == nil || *sep.Before != "n" {
+		t.Errorf("before: %v", sep.Before)
+	}
+}
+
 // TestAISeparators checks that AI clients see the separators of the
 // notebooks they see, and change them in collab notebooks only.
 func TestAISeparators(t *testing.T) {
