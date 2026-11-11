@@ -126,8 +126,10 @@ func (s *Notes) createSeparator(ctx context.Context, nb string, text sepText, af
 	for slices.ContainsFunc(items, func(k index.SortKey) bool { return k.ID == sep.ID }) {
 		sep.ID = store.NewSeparatorID()
 	}
+	// Saved even when it keeps the key it starts with: put first a second
+	// after the first note was made, both are the time of this second.
 	seps = append(seps, sep)
-	if err := s.applyKeys(ctx, nb, seps, place(items, pos, sep.ID, sep.Order)); err != nil {
+	if err := s.applyKeys(ctx, nb, seps, place(items, pos, sep.ID, sep.Order), true); err != nil {
 		return nil, err
 	}
 	return s.separator(ctx, nb, sep.ID)
@@ -174,7 +176,7 @@ func (s *Notes) moveSeparator(ctx context.Context, nb, id string, after *string)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.applyKeys(ctx, nb, seps, place(items, pos, id, cur)); err != nil {
+	if err := s.applyKeys(ctx, nb, seps, place(items, pos, id, cur), false); err != nil {
 		return nil, err
 	}
 	return s.separator(ctx, nb, id)
