@@ -10,7 +10,7 @@ ebira is distributed under the GNU Affero General Public License v3.0 or later (
 
 ## Icon (chidori)
 
-The icon of the tab of the web UI and of the desktop app is changed from "日本文様-千鳥模様.svg" by Pneuma01 (Wikimedia Commons, https://commons.wikimedia.org/wiki/File:%E6%97%A5%E6%9C%AC%E6%96%87%E6%A7%98-%E5%8D%83%E9%B3%A5%E6%A8%A1%E6%A7%98.svg ). It is licensed under the Creative Commons Attribution 4.0 International license (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ ), not under the license of ebira. Changes: the editor's metadata is removed, the picture is centered on a white square with rounded corners, and the desktop app adds a margin around it.
+The icon of the tab of the web UI and of the desktop app is changed from "日本文様-千鳥模様.svg" by Pneuma01 (Wikimedia Commons, https://commons.wikimedia.org/wiki/File:%E6%97%A5%E6%9C%AC%E6%96%87%E6%A7%98-%E5%8D%83%E9%B3%A5%E6%A8%A1%E6%A7%98.svg ). It is licensed under the Creative Commons Attribution 4.0 International license (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ ), not under the license of ebira. Changes: the editor's metadata is removed, the picture is centered on a white square with rounded corners, and the desktop app adds a margin around it. The mark of the notes made by AI in the web UI is the same picture, without the white square, drawn in the color of the text with the wing and the eye cut out.
 
 ## Parts of the web UI
 

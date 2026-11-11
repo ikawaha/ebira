@@ -865,14 +865,42 @@ function folderSVG(kind) {
   return svg;
 }
 
-// aiMark returns the mark of a note created by an AI client, which goes at the
-// end of a row rather than right after the title: sparkles, as apps mark what
-// AI made.
-const AI_MARK = "\u2728";
+// AI_BIRD holds the plover (chidori) of favicon.svg, which is under CC BY 4.0
+// (see favicon.LICENSE): the body, with the wing and the eye cut out of it,
+// then the legs and the feet.
+const AI_BIRD = [
+  "M 64.023133,110.28817 C 78.923223,77.003902 96.25076,91.153651 117.24551,92.237379 c 13.49114,0.6964 16.50745,-13.133431 40.62694,-9.315506 9.27105,1.467533 13.06773,6.594989 13.06773,6.594989 0,0 -9.57935,7.88795 -10.63562,14.520338 -2.30993,14.50407 3.21812,22.99773 -3.76552,38.00955 -8.05166,17.3076 -19.46814,11.69356 -29.67656,26.45039 -5.2705,7.6188 -5.72179,11.21441 -5.72179,11.21441 0,0 -25.093621,-5.83009 -26.306731,-28.70132 -1.643907,-30.9932 -30.810826,-40.72206 -30.810826,-40.72206 z M 149.74516,117.89402 c 0,0 0.15414,7.86426 -5.78434,17.08502 -7.79476,12.10304 -13.30689,13.11888 -13.30689,13.11888 0,0 4.21234,-2.6912 11.37907,-13.54024 5.31009,-8.03841 7.71216,-16.66366 7.71216,-16.66366 z M 79.6692,106.3290 a 3.4495,3.4495 0 1 0 6.8990,0 a 3.4495,3.4495 0 1 0 -6.8990,0 z",
+  "m 185.00289,127.1377 c 0,0 -5.70482,4.50913 -17.66972,3.62454 -12.49499,-0.92378 -14.29865,-6.80287 -14.29865,-6.80287 0,0 4.68569,4.59638 14.6341,4.9246 11.93357,0.3937 17.33427,-1.74627 17.33427,-1.74627 z",
+  "m 179.60797,122.98397 c 0,0 0.22785,2.22913 -2.78205,5.03945 -0.4097,0.38253 -1.0092,0.68776 -1.6411,1.0159 -5.24203,2.72217 -6.16211,0.12338 -6.16211,0.12338 0,0 2.81556,0.36486 5.63086,-1.44057 3.25295,-2.08608 4.9544,-4.73816 4.9544,-4.73816 z",
+  "m 170.74354,163.69253 c 0,0 -7.19555,1.04945 -17.11218,-5.70345 -10.35598,-7.05209 -8.97581,-13.04474 -8.97581,-13.04474 0,0 1.75695,6.32421 10.2061,11.58637 10.13514,6.31222 15.88189,7.16182 15.88189,7.16182 z",
+  "m 168.15105,157.3967 c 0,0 -0.91814,2.04399 -4.93036,2.97109 -0.54615,0.12623 -1.21793,0.0905 -1.92921,0.0584 -5.90071,-0.26616 -5.39694,-2.97659 -5.39694,-2.97659 0,0 2.25517,1.72476 5.59607,1.57033 3.86025,-0.17844 6.66044,-1.62323 6.66044,-1.62323 z",
+];
 
+// aiBird returns the drawing of AI_BIRD, in the color of the text.
+function aiBird() {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "8 18 126 108");
+  svg.setAttribute("aria-hidden", "true");
+  const g = document.createElementNS(ns, "g");
+  g.setAttribute("transform", "translate(-54.513 -60.9828)");
+  g.setAttribute("fill", "currentColor");
+  g.setAttribute("fill-rule", "evenodd");
+  for (const d of AI_BIRD) {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", d);
+    g.append(path);
+  }
+  svg.append(g);
+  return svg;
+}
+
+// aiMark returns the mark of a note created by an AI client, which goes at the
+// end of a row rather than right after the title: the plover of the favicon.
 function aiMark(note, label) {
   if (note.created_by !== "ai") return null;
-  const m = el("span", "ai-mark", label ? `${AI_MARK} ${label}` : AI_MARK);
+  const m = el("span", "ai-mark", aiBird());
+  if (label) m.append(label);
   m.title = t("aiNote");
   return m;
 }

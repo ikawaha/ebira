@@ -9,3 +9,7 @@ https://creativecommons.org/licenses/by/4.0/
 Changes from the original: the editor's metadata is removed, the picture is
 centered on a square with a white background with rounded corners, and
 favicon.png is favicon.svg rendered at 64 pixels.
+
+app.js draws the same picture (AI_BIRD) as the mark of the notes made by AI:
+without the white square, in the color of the text, with the wing and the
+eye cut out of the body.
