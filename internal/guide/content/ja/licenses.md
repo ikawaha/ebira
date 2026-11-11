@@ -10,7 +10,7 @@ ebira は GNU Affero General Public License v3.0 以降（AGPL-3.0-or-later）�
 
 ## アイコン（千鳥）
 
-Web UI のタブとデスクトップアプリのアイコンは、Pneuma01 による「日本文様-千鳥模様.svg」（Wikimedia Commons、https://commons.wikimedia.org/wiki/File:%E6%97%A5%E6%9C%AC%E6%96%87%E6%A7%98-%E5%8D%83%E9%B3%A5%E6%A8%A1%E6%A7%98.svg ）を改変したものです。ライセンスは Creative Commons Attribution 4.0 International（CC BY 4.0、https://creativecommons.org/licenses/by/4.0/ ）で、ebira のライセンスの対象ではありません。改変: 編集用の情報を除き、白い角丸の四角の真ん中に置き、デスクトップアプリでは周りに余白を足しました。
+Web UI のタブとデスクトップアプリのアイコンは、Pneuma01 による「日本文様-千鳥模様.svg」（Wikimedia Commons、https://commons.wikimedia.org/wiki/File:%E6%97%A5%E6%9C%AC%E6%96%87%E6%A7%98-%E5%8D%83%E9%B3%A5%E6%A8%A1%E6%A7%98.svg ）を改変したものです。ライセンスは Creative Commons Attribution 4.0 International（CC BY 4.0、https://creativecommons.org/licenses/by/4.0/ ）で、ebira のライセンスの対象ではありません。改変: 編集用の情報を除き、白い角丸の四角の真ん中に置き、デスクトップアプリでは周りに余白を足しました。Web UI の AI が作ったノートの印も、同じ絵（白い四角を除き、羽と目を抜いて文字の色で描いたもの）です。
 
 ## Web UI に入っている部品
 
