@@ -158,6 +158,8 @@ func (s *shell) onMessage(from application.Window, message string, origin *appli
 		go s.restartServer()
 	case "ebira:stay":
 		go s.stayed()
+	case "ebira:appSettings": // a page without its settings (pageSettings)
+		go s.openSettings("")
 	}
 }
 

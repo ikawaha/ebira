@@ -66,7 +66,7 @@ func TestHandlerLang(t *testing.T) {
 }
 
 // TestMessages checks that every language has the messages of English, with
-// the same {name}s, and that the page and app.js know the languages.
+// the same {name}s, and that app.js knows the languages.
 func TestMessages(t *testing.T) {
 	load := func(lang string) map[string]string {
 		t.Helper()
@@ -87,7 +87,6 @@ func TestMessages(t *testing.T) {
 		return slices.Compact(v)
 	}
 	en := load("en")
-	page, _ := fs.ReadFile(static, "static/index.html")
 	app, _ := fs.ReadFile(static, "static/app.js")
 	for _, lang := range Langs {
 		m := load(lang)
@@ -108,9 +107,6 @@ func TestMessages(t *testing.T) {
 		}
 		if m["langName"] == "" {
 			t.Errorf("%s.json: no langName", lang)
-		}
-		if !strings.Contains(string(page), `data-lang="`+lang+`"`) {
-			t.Errorf("index.html: no menu item for %s", lang)
 		}
 		if !strings.Contains(string(app), `"`+lang+`"`) {
 			t.Errorf("app.js: %s is not in LANGS", lang)

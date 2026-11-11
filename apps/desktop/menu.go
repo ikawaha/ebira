@@ -121,6 +121,23 @@ func (s *shell) call(function string, args ...any) {
 	win.ExecJS("window.ebira?." + function + "?.(" + list + ");")
 }
 
+// pageSettings opens the settings of the Web UI, whose first tab shows those
+// of the app; a page without them, from a server of an earlier build, asks
+// for the window of the app.
+const pageSettings = `window.ebira?.settings ? window.ebira.settings() : ` + toApp + `.postMessage("ebira:appSettings");`
+
+// openPageSettings opens the settings: those of the page, or without a page,
+// as when no server answers, the window of the app's settings. The page asks
+// for that window too when it cannot read the settings of its server.
+func (s *shell) openPageSettings() {
+	win := s.main()
+	if win == nil {
+		s.openSettings("")
+		return
+	}
+	win.ExecJS(pageSettings)
+}
+
 // onPageMessage reads a message of tellApp in the Web UI.
 func (s *shell) onPageMessage(data string) {
 	var m struct {
@@ -145,6 +162,8 @@ func (s *shell) onPageMessage(data string) {
 		s.openURL(m.URL)
 	case "restart": // the mark of an outdated server (markOutdated)
 		go s.askRestart()
+	case "appSettings": // Change… of the app tab of the settings
+		go s.openSettings("")
 	case "download": // a file of a note (downloadFile)
 		s.download(m.ID, m.Name, m.Data, m.End)
 	case "copy":
@@ -194,11 +213,10 @@ func (s *shell) appMenu() *application.Menu {
 		return item
 	}
 	settingsItem := func(m *application.Menu) {
-		key(m.Add("Settings…"), "cmd+,", "ctrl+,").OnClick(on(func() { s.openSettings("") }))
+		// One place for the settings: those of the page, of its display and of
+		// the server, with a tab of those of the app (openPageSettings).
+		key(m.Add("Settings…"), "cmd+,", "ctrl+,").OnClick(on(s.openPageSettings))
 		n.add(m.Add("Server Status…").OnClick(on(func() { s.call("serverStats") })), always)
-		// The settings of the server, as the settings menu of the page has them;
-		// Settings… above are those of the app.
-		n.add(m.Add("Server Settings…").OnClick(on(func() { s.call("serverSettings") })), always)
 	}
 	about := func() { go s.showAbout() }
 

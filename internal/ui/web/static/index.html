@@ -49,32 +49,17 @@
       <button type="button" id="settings" class="gear" aria-haspopup="menu" aria-expanded="false" aria-controls="settings-menu" data-icon="gear" data-i18n-title="settings" data-i18n-aria-label="settings"></button>
       <button type="button" id="notebook-add" class="gear" data-icon="plus" data-i18n-title="notebookNew" data-i18n-aria-label="notebookNew"></button>
       <div class="menu" id="settings-menu" role="menu" hidden>
-        <button type="button" role="menuitem" id="import-open" data-i18n-title="importMarkdownTitle" data-i18n="importMarkdown"></button>
-        <button type="button" role="menuitem" id="files-check-open" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
-        <button type="button" role="menuitem" id="server-stats-open" data-i18n-title="serverStatsTitle" data-i18n="serverStats"></button>
-        <button type="button" role="menuitem" id="preview-style-open" data-i18n-title="previewStyleTitle" data-i18n="previewStyle"></button>
-        <button type="button" role="menuitem" id="server-settings-open" data-i18n-title="serverSettingsTitle" data-i18n="serverSettingsMenu"></button>
-        <button type="button" role="menuitem" id="git-sync-open" data-i18n-title="gitSyncTitle" data-i18n="gitSync" hidden></button>
-        <button type="button" role="menuitem" id="mcp-open" data-i18n-title="mcpTitle" data-i18n="mcpMenu"></button>
-        <button type="button" role="menuitem" id="guide-add" data-i18n-title="guideAddTitle" data-i18n="guideAdd"></button>
-        <button type="button" role="menuitem" id="issue-open" data-i18n-title="issueOpenTitle" data-i18n="issueOpen"></button>
-        <div class="menu-sep" role="separator"></div>
-        <div class="menu-label" data-i18n="language"></div>
-        <button type="button" role="menuitemradio" data-lang="en" aria-checked="false"></button>
-        <button type="button" role="menuitemradio" data-lang="ja" aria-checked="false"></button>
-        <div class="menu-sep" role="separator"></div>
-        <div class="menu-label" data-i18n="theme"></div>
-        <button type="button" role="menuitemradio" data-theme-choice="auto" aria-checked="false" data-i18n="themeAuto" data-i18n-title="themeAutoTitle"></button>
-        <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false" data-i18n="themeLight"></button>
-        <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="false" data-i18n="themeDark"></button>
-        <div class="menu-sep" role="separator"></div>
-        <div class="menu-label" data-i18n="bodySize"></div>
-        <div class="body-size" role="group" data-i18n-aria-label="bodySize">
-          <button type="button" id="body-size-down" data-icon="minus" data-i18n-title="bodySizeSmaller" data-i18n-aria-label="bodySizeSmaller"></button>
-          <button type="button" id="body-size-reset" data-i18n-title="bodySizeReset"></button>
-          <button type="button" id="body-size-up" data-icon="plus" data-i18n-title="bodySizeLarger" data-i18n-aria-label="bodySizeLarger"></button>
-        </div>
-        <div class="menu-sep" role="separator"></div>
+        <button type="button" role="menuitem" id="settings-open" class="app-dup" data-i18n-title="settingsOpenTitle" data-i18n="settingsOpen"></button>
+        <div class="menu-sep app-dup" role="separator"></div>
+        <button type="button" role="menuitem" id="import-open" class="app-dup" data-i18n-title="importMarkdownTitle" data-i18n="importMarkdown"></button>
+        <button type="button" role="menuitem" id="files-check-open" class="app-dup" data-i18n-title="filesCheckTitle" data-i18n="filesCheck"></button>
+        <button type="button" role="menuitem" id="git-sync-open" class="app-dup" data-i18n-title="gitSyncTitle" data-i18n="gitSync" hidden></button>
+        <button type="button" role="menuitem" id="server-stats-open" class="app-dup" data-i18n-title="serverStatsTitle" data-i18n="serverStats"></button>
+        <div class="menu-sep app-dup" role="separator"></div>
+        <button type="button" role="menuitem" id="mcp-open" class="app-dup" data-i18n-title="mcpTitle" data-i18n="mcpMenu"></button>
+        <button type="button" role="menuitem" id="guide-add" class="app-dup" data-i18n-title="guideAddTitle" data-i18n="guideAdd"></button>
+        <button type="button" role="menuitem" id="issue-open" class="app-dup" data-i18n-title="issueOpenTitle" data-i18n="issueOpen"></button>
+        <div class="menu-sep app-dup" role="separator"></div>
         <div class="menu-label" id="auth-state"></div>
         <button type="button" role="menuitem" id="passkeys-open" data-i18n="passkeysOpen" hidden></button>
         <button type="button" role="menuitem" id="logout" data-i18n="logout" hidden></button>
@@ -172,6 +157,6 @@
 <dialog id="preview-style" class="preview-style" data-i18n-aria-label="previewStyleHead"></dialog>
 <dialog id="mark-names" class="files-check mark-names" data-i18n-aria-label="markNames"></dialog>
 <dialog id="mcp" class="files-check auth mcp" data-i18n-aria-label="mcpHead"></dialog>
-<dialog id="server-settings" class="files-check server-settings" data-i18n-aria-label="serverSettings"></dialog>
+<dialog id="server-settings" class="files-check server-settings" data-i18n-aria-label="settings"></dialog>
 </body>
 </html>
