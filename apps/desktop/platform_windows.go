@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -164,9 +165,13 @@ func showMain(win *application.WebviewWindow) {
 }
 
 // themeFrame gives the frame of win, its title bar, the dark or the light
-// theme.
+// theme, and leaves the menus that drop down to the system (plainDropdowns).
 func themeFrame(win *application.WebviewWindow, dark bool) {
-	application.InvokeAsync(func() { w32.SetTheme(uintptr(win.NativeWindow()), dark) })
+	application.InvokeAsync(func() {
+		hwnd := uintptr(win.NativeWindow())
+		w32.SetTheme(hwnd, dark)
+		plainDropdowns(hwnd)
+	})
 }
 
 // systemDark reports whether the system's apps are in the dark mode.
@@ -188,21 +193,28 @@ const systemThemeDelay = 300 * time.Millisecond
 // themeKey is the setting with the theme the page last told: dark or light.
 const themeKey = "theme"
 
-// The menu bar is drawn by Wails, which can give it the colours of the
-// options of the window (CustomTheme) but only when it makes the window or
-// the system's theme changes: it makes its brushes then, from the values the
-// colours point to. The colours are those of the theme the page last told,
-// kept in the settings, under both the light and the dark mode of the system,
-// so that the menu bar matches the page from the start; a theme the page
-// changes to while the app runs reaches the menu bar on the next start, or
-// when the system's theme changes. The menus that drop down follow the
-// system's mode, as Windows draws them.
+// The menu bar is drawn by Wails, in the colours of the options of the window
+// (CustomTheme), from brushes it makes when it makes the window and when the
+// system's theme changes; it reads the colours of the text at each paint.
+// The colours are those of the theme the page last told, kept in the
+// settings, else of the system's mode, under both modes of the system, so
+// that the menu bar matches the page from the start. They are not changed
+// while the app runs, as the brushes would not follow the text: a theme the
+// page changes to reaches the menu bar on the next start.
 var menuBarColours struct {
 	text, background, hoverText, hoverBackground uint32
 }
 
-// setMenuBarColours sets menuBarColours for the dark or the light theme.
-func setMenuBarColours(dark bool) {
+// windowsOptions are the options of the main window on Windows: the menu bar
+// in the colours of the theme the page last told, else of the system's mode.
+func windowsOptions() application.WindowsWindow {
+	dark := systemDark()
+	switch setting(themeKey) {
+	case "dark":
+		dark = true
+	case "light":
+		dark = false
+	}
 	c := &menuBarColours
 	if dark {
 		c.text, c.background = w32.RGB(222, 222, 222), w32.RGB(33, 33, 33)
@@ -211,21 +223,6 @@ func setMenuBarColours(dark bool) {
 		c.text, c.background = w32.RGB(0, 0, 0), w32.RGB(255, 255, 255)
 		c.hoverText, c.hoverBackground = w32.RGB(0, 0, 0), w32.RGB(229, 229, 229)
 	}
-}
-
-// windowsOptions are the options of the main window on Windows: the menu bar
-// in the colours of the theme the page last told, if any.
-func windowsOptions() application.WindowsWindow {
-	var dark bool
-	switch setting(themeKey) {
-	case "dark":
-		dark = true
-	case "light":
-	default:
-		return application.WindowsWindow{}
-	}
-	setMenuBarColours(dark)
-	c := &menuBarColours
 	normal := &application.TextTheme{Text: &c.text, Background: &c.background}
 	hover := &application.TextTheme{Text: &c.hoverText, Background: &c.hoverBackground}
 	bar := &application.MenuBarTheme{Default: normal, Hover: hover, Selected: hover}
@@ -233,7 +230,7 @@ func windowsOptions() application.WindowsWindow {
 }
 
 // keepPageTheme keeps the theme the page told for the menu bar of the next
-// start (see menuBarColours), and for the next change of the system's theme.
+// start (see menuBarColours).
 func keepPageTheme(dark bool) {
 	v := "light"
 	if dark {
@@ -242,7 +239,30 @@ func keepPageTheme(dark bool) {
 	if setting(themeKey) != v {
 		setSetting(themeKey, v)
 	}
-	application.InvokeAsync(func() { setMenuBarColours(dark) })
+}
+
+// procGetSubMenu is GetSubMenu of user32, which w32 lacks.
+var procGetSubMenu = windows.NewLazySystemDLL("user32.dll").NewProc("GetSubMenu")
+
+// plainDropdowns gives the menus that drop down from the menu bar of the
+// window hwnd the system's background again. Wails gives them that of the
+// menu bar (MIIM_APPLYTOSUBMENUS) when it makes the window and when the
+// system's theme changes, but Windows draws their text in the system's mode:
+// a dark background on light Windows would have dark text on it.
+func plainDropdowns(hwnd uintptr) {
+	bar := w32.GetMenu(hwnd)
+	if bar == 0 {
+		return
+	}
+	for i := range w32.GetMenuItemCount(bar) {
+		sub, _, _ := procGetSubMenu.Call(bar, uintptr(i))
+		if sub == 0 {
+			continue
+		}
+		mi := w32.MENUINFO{FMask: w32.MIIM_BACKGROUND | w32.MIIM_APPLYTOSUBMENUS}
+		mi.CbSize = uint32(unsafe.Sizeof(mi))
+		w32.SetMenuInfo(sub, &mi)
+	}
 }
 
 // saveFrame keeps the frame of the main window as the app ends. A minimised,

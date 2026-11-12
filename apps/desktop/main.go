@@ -224,6 +224,9 @@ func (s *shell) openMain(url string) {
 	watchReady(win)
 	win.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		shown.Do(func() { go showMain(win) })
+		// The frame, and the menus that drop down, also for a page that
+		// tells no theme (applyTheme).
+		go s.applyTheme()
 		// Each page, as after a change of the server, is checked for its server.
 		go s.markOutdated()
 	})
@@ -254,7 +257,10 @@ func (s *shell) pageTheme(dark bool) {
 		t = themeDark
 	}
 	s.theme.Store(t)
-	keepPageTheme(dark)
+	// A shell without an app, as in tests, keeps no settings.
+	if s.app != nil {
+		keepPageTheme(dark)
+	}
 	s.applyTheme()
 }
 
