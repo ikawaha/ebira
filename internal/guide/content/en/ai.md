@@ -35,9 +35,15 @@ The button shows only when the ebira server finds Claude Code (`claude`): the se
 
 If you registered ebira in the local scope of a project before (`--scope local`, the default of `claude mcp add`), that project uses that one. Run `claude mcp remove ebira -s local` in the directory of the project to use the one of the user scope.
 
-## Keeping Claude Code off the note files
+## Keeping the notes away from Claude Code
 
-The kinds of notebooks (private and the others) hold only for AI that goes through the MCP of ebira. Claude Code also has tools that read and write files, and a shell: reading the notes directory directly, it would see private notes too. To have it handle notes only through MCP, deny it the notes directory in the settings of Claude Code.
+The kinds of notebooks (private and the others) hold only for AI that goes through the MCP of ebira. Claude Code also has tools that read and write files, and a shell: reading the note files directly, it would see private notes too. To keep the notes away from Claude Code and have it handle them only through MCP, set up these three:
+
+1. Deny Claude Code the notes and the files of ebira (settings of Claude Code)
+2. Register ebira as an MCP server (settings of Claude Code; "Registering with Claude Code" above)
+3. Set up passkeys (settings of ebira; [Passkeys](passkey.md))
+
+### 1. Deny the files
 
 Written in your user settings, `~/.claude/settings.json`, this holds in every project (put your notes directory, `notes_dir` of the settings file, in place of `~/notes`):
 
@@ -45,7 +51,12 @@ Written in your user settings, `~/.claude/settings.json`, this holds in every pr
 {
   "permissions": {
     "allow": ["mcp__ebira__*"],
-    "deny": ["Read(~/notes/**)", "Edit(~/notes/**)"],
+    "deny": [
+      "Read(~/notes/**)", "Edit(~/notes/**)",
+      "Read(~/.cache/ebira/**)", "Edit(~/.cache/ebira/**)",
+      "Read(~/.local/state/ebira/**)", "Edit(~/.local/state/ebira/**)",
+      "Edit(~/.config/ebira/**)"
+    ],
     "disableBypassPermissionsMode": "disable"
   },
   "sandbox": {
@@ -53,19 +64,39 @@ Written in your user settings, `~/.claude/settings.json`, this holds in every pr
     "allowUnsandboxedCommands": false,
     "failIfUnavailable": true,
     "filesystem": {
-      "denyRead": ["~/notes"],
-      "denyWrite": ["~/notes"]
+      "denyRead": ["~/notes", "~/.cache/ebira", "~/.local/state/ebira"],
+      "denyWrite": ["~/notes", "~/.cache/ebira", "~/.local/state/ebira", "~/.config/ebira"]
     }
   }
 }
 ```
 
-- `permissions.deny` keeps the tools that read files (Read, Grep, Glob, and common shell commands such as `cat`) and those that write them (Edit, Write and others) out of the notes directory. Deny rules come before the allow rules of any settings. Write paths with `~/` or `//` (absolute); a single leading `/` is relative to the settings file.
+- Besides the notes directory, this denies the three places ebira uses:
+  - `~/.cache/ebira`: the search index, which holds the titles and the bodies of the notes.
+  - `~/.local/state/ebira`: the earlier versions of notes (history), and the keys of passkeys and sessions.
+  - `~/.config/ebira`: the settings file. Writing it could turn `auth` back to `none`, so writing is denied.
+  - If you set `XDG_CACHE_HOME`, `XDG_STATE_HOME` or `XDG_CONFIG_HOME`, use those places.
+- `permissions.deny` keeps the tools that read files (Read, Grep, Glob, and common shell commands such as `cat`) and those that write them (Edit, Write and others) out of these places. Deny rules come before the allow rules of any settings. Write paths with `~/` or `//` (absolute); a single leading `/` is relative to the settings file.
 - `permissions.allow` lets it use the MCP tools of ebira without asking each time (leave it out to be asked).
-- `sandbox` runs shell commands in a sandbox of the OS, which keeps them out of the notes directory. Deny rules do not hold for commands that read files without naming them (`grep -r` in the notes directory), or for scripts that open files themselves (Python and the like); the sandbox does. `allowUnsandboxedCommands: false` stops retries outside the sandbox, and `failIfUnavailable` stops running commands outside it when the sandbox cannot start.
+- `sandbox` runs shell commands in a sandbox of the OS, which keeps them out of these places. Deny rules do not hold for commands that read files without naming them (`grep -r` in the notes directory), or for scripts that open files themselves (Python and the like); the sandbox does. `allowUnsandboxedCommands: false` stops retries outside the sandbox, and `failIfUnavailable` stops running commands outside it when the sandbox cannot start.
 - `disableBypassPermissionsMode` turns off the mode that skips the questions and the rules (`--dangerously-skip-permissions`).
 
-The MCP server of ebira is another process, outside Claude Code, so it handles the notes whatever these rules say, as it is meant to.
+The server of ebira is another process, outside Claude Code, so it handles the notes whatever these rules say, as it is meant to.
+
+### 2. Register MCP
+
+As in "Registering with Claude Code" above. Claude Code then handles the notes only through MCP, where the kinds hold: private notebooks are hidden, and only collab notebooks can be written.
+
+### 3. Set up passkeys
+
+The sandbox still lets commands reach the server of ebira (`http://localhost:13579`). By default (`auth: none`), ebira treats every call of its REST API as from people, so Claude Code could read and write private notes by calling the REST API from its shell.
+
+With passkeys (`auth: passkey`), the REST API takes only calls with a session signed in with a passkey. MCP is open to AI as before. See [Passkeys](passkey.md) for how to set them up.
+
+- The commands of ebira (`ebira sync` and others) then ask for approval in the web UI too. Do not approve a URL or a code that Claude Code shows you.
+- Instead of passkeys, the network settings of the sandbox of Claude Code can deny it the server of ebira. That is all there is to set, but Claude Code may then not reach other servers on your machine either, such as one you are developing. Where that is fine, it is the simpler way. See the documentation of Claude Code on the network of sandboxing.
+
+### Notes
 
 - The sandbox runs on macOS, Linux and WSL2. On Windows, shell commands run without it, and only the deny rules hold.
 - Commands you type yourself after `!` at the prompt of Claude Code run outside the sandbox.
