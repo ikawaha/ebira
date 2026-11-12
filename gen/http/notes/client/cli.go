@@ -1215,6 +1215,29 @@ func BuildImportPayload(notesImportNotebook *string, notesImportForce *string, n
 	return v, nil
 }
 
+// BuildUploadAiFilePayload builds the payload for the notes upload_ai_file
+// endpoint from CLI flags.
+func BuildUploadAiFilePayload(notesUploadAiFileToken *string, notesUploadAiFileSession *string) (*notes.UploadAiFilePayload, error) {
+	var token string
+	{
+		if notesUploadAiFileToken == nil {
+			return nil, fmt.Errorf("missing required flag --token")
+		}
+		token = *notesUploadAiFileToken
+	}
+	var session *string
+	{
+		if notesUploadAiFileSession != nil {
+			session = notesUploadAiFileSession
+		}
+	}
+	v := &notes.UploadAiFilePayload{}
+	v.Token = token
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildAddFilePayload builds the payload for the notes add_file endpoint from
 // CLI flags.
 func BuildAddFilePayload(notesAddFileID *string, notesAddFileName *string, notesAddFileSession *string) (*notes.AddFilePayload, error) {

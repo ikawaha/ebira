@@ -476,6 +476,30 @@ type (
 		// Matched notes
 		Notes []*NoteSummaryTransport `json:"notes"`
 	}
+	// StartAiUploadPayloadTransport is the internal JSON transport type for StartAiUploadPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	StartAiUploadPayloadTransport struct {
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
+		ID *string `json:"id"`
+		// File name
+		Name *string `json:"name"`
+	}
+	// StartAiUploadResultTransport is the internal JSON transport type for StartAiUploadResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	StartAiUploadResultTransport struct {
+		// The URL to send the file to, in the body of a PUT request
+		URL *string `json:"url"`
+		// When the URL stops working
+		ExpiresAt *string `json:"expires_at"`
+		// The largest file the URL takes, in bytes
+		MaxSize *int64 `json:"max_size"`
+	}
 	// UpdateAiNotePayloadTransport is the internal JSON transport type for UpdateAiNotePayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into

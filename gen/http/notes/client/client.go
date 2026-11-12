@@ -123,6 +123,10 @@ type Client struct {
 	// Import Doer is the HTTP client used to make requests to the import endpoint.
 	ImportDoer goahttp.Doer
 
+	// UploadAiFile Doer is the HTTP client used to make requests to the
+	// upload_ai_file endpoint.
+	UploadAiFileDoer goahttp.Doer
+
 	// AddFile Doer is the HTTP client used to make requests to the add_file
 	// endpoint.
 	AddFileDoer goahttp.Doer
@@ -233,6 +237,7 @@ func NewClient(
 		DeleteTrashedNotebookDoer: doer,
 		EmptyTrashDoer:            doer,
 		ImportDoer:                doer,
+		UploadAiFileDoer:          doer,
 		AddFileDoer:               doer,
 		GetFileDoer:               doer,
 		DeleteFileDoer:            doer,
@@ -924,6 +929,30 @@ func (c *Client) Import() goa.Endpoint {
 		resp, err := c.ImportDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "import", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// UploadAiFile returns an endpoint that makes HTTP requests to the notes
+// service upload_ai_file server.
+func (c *Client) UploadAiFile() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeUploadAiFileRequest(c.encoder)
+		decodeResponse = DecodeUploadAiFileResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildUploadAiFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.UploadAiFileDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "upload_ai_file", err)
 		}
 		return decodeResponse(resp)
 	}

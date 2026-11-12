@@ -47,6 +47,8 @@ type Client struct {
 	CreateAiNoteEndpoint          goa.Endpoint
 	ImportAiNoteEndpoint          goa.Endpoint
 	AddAiFileEndpoint             goa.Endpoint
+	StartAiUploadEndpoint         goa.Endpoint
+	UploadAiFileEndpoint          goa.Endpoint
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
 	MoveAiNoteEndpoint            goa.Endpoint
@@ -75,7 +77,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -108,6 +110,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		CreateAiNoteEndpoint:          createAiNote,
 		ImportAiNoteEndpoint:          importAiNote,
 		AddAiFileEndpoint:             addAiFile,
+		StartAiUploadEndpoint:         startAiUpload,
+		UploadAiFileEndpoint:          uploadAiFile,
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
 		MoveAiNoteEndpoint:            moveAiNote,
@@ -591,6 +595,41 @@ func (c *Client) ImportAiNote(ctx context.Context, p *ImportAiNotePayload) (res 
 func (c *Client) AddAiFile(ctx context.Context, p *AddAiFilePayload) (res *NoteFile, err error) {
 	var ires any
 	ires, err = c.AddAiFileEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*NoteFile), nil
+}
+
+// StartAiUpload calls the "start_ai_upload" endpoint of the "notes" service.
+// StartAiUpload may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) StartAiUpload(ctx context.Context, p *StartAiUploadPayload) (res *AIUpload, err error) {
+	var ires any
+	ires, err = c.StartAiUploadEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*AIUpload), nil
+}
+
+// UploadAiFile calls the "upload_ai_file" endpoint of the "notes" service.
+// UploadAiFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The URL is unknown, used or expired, or the note does not exist or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "forbidden" (type *goa.ServiceError): The note is no longer in a notebook of the collab kind
+//   - "too_large" (type *goa.ServiceError): The file is larger than 5 MB
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) UploadAiFile(ctx context.Context, p *UploadAiFilePayload, req io.ReadCloser) (res *NoteFile, err error) {
+	var ires any
+	ires, err = c.UploadAiFileEndpoint(ctx, &UploadAiFileRequestData{Payload: p, Body: req})
 	if err != nil {
 		return
 	}

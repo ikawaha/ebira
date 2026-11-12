@@ -292,9 +292,27 @@ func (a *MCPAdapter) invokeMCPMethod8(ctx context.Context, payload *notes.AddAiF
 	return result, nil
 }
 
-// invokeMCPMethod9 sends validated input to the configured UpdateAiNote endpoint
+// invokeMCPMethod9 sends validated input to the configured StartAiUpload endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod9(ctx context.Context, payload *notes.UpdateAiNotePayload) (*notes.Note, error) {
+func (a *MCPAdapter) invokeMCPMethod9(ctx context.Context, payload *notes.StartAiUploadPayload) (*notes.AIUpload, error) {
+	// The original endpoint middleware observes its authored service and method.
+	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+	ctx = context.WithValue(ctx, goa.MethodKey, "start_ai_upload")
+	raw, err := a.endpoints.StartAiUpload(ctx, payload)
+	var zero *notes.AIUpload
+	if err != nil {
+		return zero, err
+	}
+	result, ok := raw.(*notes.AIUpload)
+	if !ok {
+		return zero, &endpointResultError{method: "StartAiUpload"}
+	}
+	return result, nil
+}
+
+// invokeMCPMethod10 sends validated input to the configured UpdateAiNote endpoint
+// and returns its declared result. An unexpected Go type is an internal error.
+func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.UpdateAiNotePayload) (*notes.Note, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "update_ai_note")
@@ -310,9 +328,9 @@ func (a *MCPAdapter) invokeMCPMethod9(ctx context.Context, payload *notes.Update
 	return result, nil
 }
 
-// invokeMCPMethod10 sends validated input to the configured DeleteAiNote endpoint
+// invokeMCPMethod11 sends validated input to the configured DeleteAiNote endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.DeleteAiNotePayload) error {
+func (a *MCPAdapter) invokeMCPMethod11(ctx context.Context, payload *notes.DeleteAiNotePayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "delete_ai_note")
@@ -320,9 +338,9 @@ func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.Delet
 	return err
 }
 
-// invokeMCPMethod11 sends validated input to the configured MoveAiNote endpoint
+// invokeMCPMethod12 sends validated input to the configured MoveAiNote endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod11(ctx context.Context, payload *notes.MoveAiNotePayload) (*notes.Note, error) {
+func (a *MCPAdapter) invokeMCPMethod12(ctx context.Context, payload *notes.MoveAiNotePayload) (*notes.Note, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "move_ai_note")
@@ -338,9 +356,9 @@ func (a *MCPAdapter) invokeMCPMethod11(ctx context.Context, payload *notes.MoveA
 	return result, nil
 }
 
-// invokeMCPMethod12 sends validated input to the configured CreateAiSeparator endpoint
+// invokeMCPMethod13 sends validated input to the configured CreateAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod12(ctx context.Context, payload *notes.CreateAiSeparatorPayload) (*notes.Separator, error) {
+func (a *MCPAdapter) invokeMCPMethod13(ctx context.Context, payload *notes.CreateAiSeparatorPayload) (*notes.Separator, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "create_ai_separator")
@@ -356,9 +374,9 @@ func (a *MCPAdapter) invokeMCPMethod12(ctx context.Context, payload *notes.Creat
 	return result, nil
 }
 
-// invokeMCPMethod13 sends validated input to the configured UpdateAiSeparator endpoint
+// invokeMCPMethod14 sends validated input to the configured UpdateAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod13(ctx context.Context, payload *notes.UpdateAiSeparatorPayload) (*notes.Separator, error) {
+func (a *MCPAdapter) invokeMCPMethod14(ctx context.Context, payload *notes.UpdateAiSeparatorPayload) (*notes.Separator, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "update_ai_separator")
@@ -374,9 +392,9 @@ func (a *MCPAdapter) invokeMCPMethod13(ctx context.Context, payload *notes.Updat
 	return result, nil
 }
 
-// invokeMCPMethod14 sends validated input to the configured DeleteAiSeparator endpoint
+// invokeMCPMethod15 sends validated input to the configured DeleteAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod14(ctx context.Context, payload *notes.DeleteAiSeparatorPayload) error {
+func (a *MCPAdapter) invokeMCPMethod15(ctx context.Context, payload *notes.DeleteAiSeparatorPayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "delete_ai_separator")
@@ -384,9 +402,9 @@ func (a *MCPAdapter) invokeMCPMethod14(ctx context.Context, payload *notes.Delet
 	return err
 }
 
-// invokeMCPMethod15 sends validated input to the configured MoveAiSeparator endpoint
+// invokeMCPMethod16 sends validated input to the configured MoveAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod15(ctx context.Context, payload *notes.MoveAiSeparatorPayload) (*notes.Separator, error) {
+func (a *MCPAdapter) invokeMCPMethod16(ctx context.Context, payload *notes.MoveAiSeparatorPayload) (*notes.Separator, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "move_ai_separator")
@@ -402,9 +420,9 @@ func (a *MCPAdapter) invokeMCPMethod15(ctx context.Context, payload *notes.MoveA
 	return result, nil
 }
 
-// invokeMCPMethod16 sends validated input to the configured CreateAiNotebook endpoint
+// invokeMCPMethod17 sends validated input to the configured CreateAiNotebook endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod16(ctx context.Context, payload *notes.CreateAiNotebookPayload) (*notes.Notebook, error) {
+func (a *MCPAdapter) invokeMCPMethod17(ctx context.Context, payload *notes.CreateAiNotebookPayload) (*notes.Notebook, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "create_ai_notebook")
@@ -420,9 +438,9 @@ func (a *MCPAdapter) invokeMCPMethod16(ctx context.Context, payload *notes.Creat
 	return result, nil
 }
 
-// invokeMCPMethod17 sends validated input to the configured MakeNotebookPrivate endpoint
+// invokeMCPMethod18 sends validated input to the configured MakeNotebookPrivate endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod17(ctx context.Context, payload *notes.MakeNotebookPrivatePayload) error {
+func (a *MCPAdapter) invokeMCPMethod18(ctx context.Context, payload *notes.MakeNotebookPrivatePayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "make_notebook_private")
@@ -539,7 +557,7 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 	tools := []*ToolInfo{
 		{
 			Name:         "add_ai_file",
-			Description:  stringPtr("Add an image or another file, such as a PDF (at most 5 MB), to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note"),
+			Description:  stringPtr("Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is"),
 			InputSchema:  json.RawMessage("{\"$defs\":{\"AddAiFilePayload\":{\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"title\":\"AddAiFilePayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"title\":\"AddAiFilePayload\",\"type\":\"object\"}"),
 			OutputSchema: json.RawMessage("{\"$defs\":{\"NoteFile\":{\"properties\":{\"name\":{\"description\":\"File name\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"type\":\"string\"}},\"required\":[\"name\",\"path\"],\"title\":\"NoteFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"File name\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"type\":\"string\"}},\"required\":[\"name\",\"path\"],\"title\":\"NoteFile\",\"type\":\"object\"}"),
 		},
@@ -635,6 +653,12 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 			Annotations:  &ToolAnnotations{ReadOnlyHint: boolPtr(true)},
 			InputSchema:  json.RawMessage("{\"$defs\":{\"SearchPayload\":{\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"title\":\"SearchPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"title\":\"SearchPayload\",\"type\":\"object\"}"),
 			OutputSchema: json.RawMessage("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"SearchResult\":{\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"title\":\"SearchResult\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"title\":\"SearchResult\",\"type\":\"object\"}"),
+		},
+		{
+			Name:         "start_ai_upload",
+			Description:  stringPtr("Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note"),
+			InputSchema:  json.RawMessage("{\"$defs\":{\"StartAiUploadPayload\":{\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"StartAiUploadPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"StartAiUploadPayload\",\"type\":\"object\"}"),
+			OutputSchema: json.RawMessage("{\"$defs\":{\"AIUpload\":{\"properties\":{\"expires_at\":{\"description\":\"When the URL stops working\",\"format\":\"date-time\",\"type\":\"string\"},\"max_size\":{\"description\":\"The largest file the URL takes, in bytes\",\"format\":\"int64\",\"type\":\"integer\"},\"url\":{\"description\":\"The URL to send the file to, in the body of a PUT request\",\"type\":\"string\"}},\"required\":[\"url\",\"expires_at\",\"max_size\"],\"title\":\"AIUpload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"expires_at\":{\"description\":\"When the URL stops working\",\"format\":\"date-time\",\"type\":\"string\"},\"max_size\":{\"description\":\"The largest file the URL takes, in bytes\",\"format\":\"int64\",\"type\":\"integer\"},\"url\":{\"description\":\"The URL to send the file to, in the body of a PUT request\",\"type\":\"string\"}},\"required\":[\"url\",\"expires_at\",\"max_size\"],\"title\":\"AIUpload\",\"type\":\"object\"}"),
 		},
 		{
 			Name:         "update_ai_note",
@@ -741,7 +765,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod16(ctx, payload)
+		result, err := a.invokeMCPMethod17(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -771,7 +795,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod12(ctx, payload)
+		result, err := a.invokeMCPMethod13(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -801,7 +825,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod10(ctx, payload)
+		err = a.invokeMCPMethod11(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -821,7 +845,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod14(ctx, payload)
+		err = a.invokeMCPMethod15(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1046,7 +1070,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod17(ctx, payload)
+		err = a.invokeMCPMethod18(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1066,7 +1090,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod11(ctx, payload)
+		result, err := a.invokeMCPMethod12(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1096,7 +1120,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod15(ctx, payload)
+		result, err := a.invokeMCPMethod16(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1152,6 +1176,36 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 			Content:           []*ContentItem{},
 			StructuredContent: json.RawMessage(encoded),
 		})}, nil
+	case "start_ai_upload":
+		arguments := p.Arguments
+		if len(arguments) == 0 {
+			arguments = json.RawMessage("{}")
+		}
+		payload, err := mcpcodec.DecodeStartAiUploadPayload(arguments)
+		if err != nil {
+			return toolCallError("invalid arguments: " + err.Error()), nil
+		}
+		result, err := a.invokeMCPMethod9(ctx, payload)
+		if err != nil {
+			failure := a.mapError(err, isEndpointFault(err))
+			span.RecordError(failure.err)
+			span.SetStatus(codes.Error, failure.err.Error())
+			if failure.internal {
+				return nil, failure.err
+			}
+			return toolCallError(failure.err.Error()), nil
+		}
+		encoded, err := mcpcodec.EncodeStartAiUploadResult(result)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, goa.PermanentError("internal_error", "%s", err.Error())
+		}
+		return &ToolsCallResult{Outcome: NewToolsCallOutcomeComplete(&ToolsCallCompleteResult{
+			Meta:              resultMeta(),
+			Content:           []*ContentItem{},
+			StructuredContent: json.RawMessage(encoded),
+		})}, nil
 	case "update_ai_note":
 		arguments := p.Arguments
 		if len(arguments) == 0 {
@@ -1161,7 +1215,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod9(ctx, payload)
+		result, err := a.invokeMCPMethod10(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1191,7 +1245,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod13(ctx, payload)
+		result, err := a.invokeMCPMethod14(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)

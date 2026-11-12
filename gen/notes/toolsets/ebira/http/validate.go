@@ -746,6 +746,45 @@ func ValidateSearchNotesResultTransport(body *SearchNotesResultTransport) (err e
 	return
 }
 
+// ValidateStartAiUploadPayloadTransport runs the validations defined on StartAiUploadPayloadTransport.
+func ValidateStartAiUploadPayloadTransport(body *StartAiUploadPayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*body.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 255, false))
+		}
+	}
+	return
+}
+
+// ValidateStartAiUploadResultTransport runs the validations defined on StartAiUploadResultTransport.
+func ValidateStartAiUploadResultTransport(body *StartAiUploadResultTransport) (err error) {
+	if body.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if body.ExpiresAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("expires_at", "body"))
+	}
+	if body.MaxSize == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("max_size", "body"))
+	}
+	if body.ExpiresAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.expires_at", *body.ExpiresAt, goa.FormatDateTime))
+	}
+	return
+}
+
 // ValidateUpdateAiNotePayloadTransport runs the validations defined on UpdateAiNotePayloadTransport.
 func ValidateUpdateAiNotePayloadTransport(body *UpdateAiNotePayloadTransport) (err error) {
 	if body.ID == nil {

@@ -4828,6 +4828,107 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /uploads/{token}:
+        put:
+            tags:
+                - notes
+            summary: upload_ai_file notes
+            description: Add a file to a note for an AI client, with a URL from start_ai_upload. The request body is the file, at most 5 MB. A URL works once, until it expires; the note must still be in a notebook of the collab kind.
+            operationId: notes#upload_ai_file
+            parameters:
+                - name: token
+                  in: path
+                  description: The token of the upload, from the URL start_ai_upload gave
+                  required: true
+                  schema:
+                    type: string
+                    description: The token of the upload, from the URL start_ai_upload gave
+                    example: Earum veniam quia.
+                  example: Earum veniam quia.
+                - name: ebira_session
+                  in: cookie
+                  description: Not used
+                  schema:
+                    type: string
+                    description: Not used
+                    example: Ratione sint error ad.
+                  example: Ratione sint error ad.
+            responses:
+                "201":
+                    description: Created response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NoteFile'
+                            example:
+                                name: screenshot.png
+                                path: be4c1193735ee1.assets/screenshot.png
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The URL is unknown, used or expired, or the note does not exist or is hidden from AI clients'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "413":
+                    description: 'too_large: The file is larger than 5 MB'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: too_large
+                                temporary: false
+                                timeout: false
+            security: []
 components:
     schemas:
         AddGuideRequestBody:

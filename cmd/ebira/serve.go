@@ -343,7 +343,7 @@ func runServe(args []string) error {
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)
 	root.Handle(web.LegacyPrefix, http.RedirectHandler(web.Prefix, http.StatusMovedPermanently))
-	root.Handle("/", mux)
+	root.Handle("/", withBaseURL(mux))
 
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {
@@ -569,6 +569,15 @@ func loopback(host string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+// withBaseURL tells the service the URL each request came to, for the URLs
+// it gives back, such as those of uploads for MCP clients, which reach the
+// server at that host. The guard has checked the host already.
+func withBaseURL(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(service.WithBaseURL(r.Context(), "http://"+r.Host)))
+	})
 }
 
 // addrHint tells what to do when the server cannot have its address, as when

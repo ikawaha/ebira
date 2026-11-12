@@ -2086,6 +2086,71 @@ func ValidateSearchResultTransport(value *SearchResultTransport) (err error) {
 	return err
 }
 
+// StartAiUploadPayloadTransport stores JSON fields until they have been validated.
+type StartAiUploadPayloadTransport struct {
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID *string `json:"id"`
+	// File name
+	Name *string `json:"name"`
+}
+
+// ValidateStartAiUploadPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateStartAiUploadPayloadTransport(value *StartAiUploadPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Name != nil {
+		if utf8.RuneCountInString(*value.Name) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Name) > 255 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
+		}
+	}
+	return err
+}
+
+// StartAiUploadResultTransport stores JSON fields until they have been validated.
+type StartAiUploadResultTransport struct {
+	// The URL to send the file to, in the body of a PUT request
+	URL *string `json:"url"`
+	// When the URL stops working
+	ExpiresAt *string `json:"expires_at"`
+	// The largest file the URL takes, in bytes
+	MaxSize *int64 `json:"max_size"`
+}
+
+// ValidateStartAiUploadResultTransport checks decoded JSON before it becomes a service value.
+func ValidateStartAiUploadResultTransport(value *StartAiUploadResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if value.ExpiresAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("expires_at", "body"))
+	}
+	if value.MaxSize == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("max_size", "body"))
+	}
+	if value.ExpiresAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.expires_at", *value.ExpiresAt, goa.FormatDateTime))
+	}
+	return err
+}
+
 // TagsInputTransport stores JSON fields until they have been validated.
 type TagsInputTransport struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
@@ -3430,6 +3495,52 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("encode SearchResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeStartAiUploadPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeStartAiUploadPayload(data []byte) (out *notes.StartAiUploadPayload, err error) {
+	var body *StartAiUploadPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode StartAiUploadPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode StartAiUploadPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode StartAiUploadPayload JSON after first value: %w", err)
+	}
+	if err := ValidateStartAiUploadPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate StartAiUploadPayload JSON: %w", err)
+	}
+	{
+		out = &notes.StartAiUploadPayload{
+			ID:   *body.ID,
+			Name: *body.Name,
+		}
+	}
+	return out, nil
+}
+
+// EncodeStartAiUploadResult turns a service value into JSON using the field names in the Goa design.
+func EncodeStartAiUploadResult(in *notes.AIUpload) ([]byte, error) {
+	var body *StartAiUploadResultTransport
+	{
+		body = &StartAiUploadResultTransport{
+			URL:       &in.URL,
+			ExpiresAt: &in.ExpiresAt,
+			MaxSize:   &in.MaxSize,
+		}
+	}
+	if err := ValidateStartAiUploadResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate StartAiUploadResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode StartAiUploadResult JSON: %w", err)
 	}
 	return data, nil
 }

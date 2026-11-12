@@ -102,7 +102,7 @@ The sandbox still lets commands reach the server of ebira (`http://localhost:135
 With passkeys (`auth: passkey`), the REST API takes only calls with a session signed in with a passkey. MCP is open to AI as before. See [Passkeys](passkey.md) for how to set them up.
 
 - The commands of ebira (`ebira sync` and others) then ask for approval in the web UI too. Do not approve a URL or a code that Claude Code shows you.
-- Instead of passkeys, the network settings of the sandbox of Claude Code can deny it the server of ebira. That is all there is to set, but Claude Code may then not reach other servers on your machine either, such as one you are developing. Where that is fine, it is the simpler way. See the documentation of Claude Code on the network of sandboxing.
+- Instead of passkeys, the network settings of the sandbox of Claude Code can deny it the server of ebira. That is all there is to set, but Claude Code may then not reach other servers on your machine either, such as one you are developing. Where that is fine, it is the simpler way. Claude Code then cannot send files to the URL ebira gives to add them to notes either, and sends them as base64 text. See the documentation of Claude Code on the network of sandboxing.
 
 ### Notes
 

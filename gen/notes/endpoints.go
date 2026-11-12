@@ -48,6 +48,8 @@ type Endpoints struct {
 	CreateAiNote          goa.Endpoint
 	ImportAiNote          goa.Endpoint
 	AddAiFile             goa.Endpoint
+	StartAiUpload         goa.Endpoint
+	UploadAiFile          goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
 	MoveAiNote            goa.Endpoint
@@ -80,6 +82,15 @@ type Endpoints struct {
 type ImportRequestData struct {
 	// Payload is the method payload.
 	Payload *ImportPayload
+	// Body streams the HTTP request body.
+	Body io.ReadCloser
+}
+
+// UploadAiFileRequestData holds both the payload and the HTTP request body
+// reader of the "upload_ai_file" method.
+type UploadAiFileRequestData struct {
+	// Payload is the method payload.
+	Payload *UploadAiFilePayload
 	// Body streams the HTTP request body.
 	Body io.ReadCloser
 }
@@ -147,6 +158,8 @@ func NewEndpoints(s Service) *Endpoints {
 		CreateAiNote:          NewCreateAiNoteEndpoint(s),
 		ImportAiNote:          NewImportAiNoteEndpoint(s),
 		AddAiFile:             NewAddAiFileEndpoint(s),
+		StartAiUpload:         NewStartAiUploadEndpoint(s),
+		UploadAiFile:          NewUploadAiFileEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
 		MoveAiNote:            NewMoveAiNoteEndpoint(s),
@@ -208,6 +221,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.CreateAiNote = m(e.CreateAiNote)
 	e.ImportAiNote = m(e.ImportAiNote)
 	e.AddAiFile = m(e.AddAiFile)
+	e.StartAiUpload = m(e.StartAiUpload)
+	e.UploadAiFile = m(e.UploadAiFile)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
 	e.MoveAiNote = m(e.MoveAiNote)
@@ -903,6 +918,24 @@ func NewAddAiFileEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*AddAiFilePayload)
 		return s.AddAiFile(ctx, p)
+	}
+}
+
+// NewStartAiUploadEndpoint returns an endpoint function that calls the method
+// "start_ai_upload" of service "notes".
+func NewStartAiUploadEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*StartAiUploadPayload)
+		return s.StartAiUpload(ctx, p)
+	}
+}
+
+// NewUploadAiFileEndpoint returns an endpoint function that calls the method
+// "upload_ai_file" of service "notes".
+func NewUploadAiFileEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*UploadAiFileRequestData)
+		return s.UploadAiFile(ctx, ep.Payload, ep.Body)
 	}
 }
 

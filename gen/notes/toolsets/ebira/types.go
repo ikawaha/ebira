@@ -389,6 +389,24 @@ type (
 		// Matched notes
 		Notes []*NoteSummary
 	}
+	// StartAiUploadPayload defines the JSON payload for the ebira.start_ai_upload tool.
+	StartAiUploadPayload = struct {
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
+		ID string
+		// File name
+		Name string
+	}
+	// StartAiUploadResult defines the JSON result for the ebira.start_ai_upload tool.
+	StartAiUploadResult = struct {
+		// The URL to send the file to, in the body of a PUT request
+		URL string
+		// When the URL stops working
+		ExpiresAt string
+		// The largest file the URL takes, in bytes
+		MaxSize int64
+	}
 	// UpdateAiNotePayload defines the JSON payload for the ebira.update_ai_note tool.
 	UpdateAiNotePayload = struct {
 		// Note ID. A link to a note in the web UI, such as

@@ -55,6 +55,8 @@ func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 			return runtime.ExecuteMCPTool(ctx, caller, call, "move_ai_separator", genebira.SpecMoveAiSeparator())
 		case genebira.SearchNotes:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "search_notes", genebira.SpecSearchNotes())
+		case genebira.StartAiUpload:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "start_ai_upload", genebira.SpecStartAiUpload())
 		case genebira.UpdateAiNote:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "update_ai_note", genebira.SpecUpdateAiNote())
 		case genebira.UpdateAiSeparator:
