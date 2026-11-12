@@ -96,6 +96,7 @@ type Model struct {
 
 	notebooks []*gennotes.Notebook
 	trashed   []*gennotes.TrashedNotebook // notebooks in the trash
+	archived  []*gennotes.Notebook        // notebooks in the archive, left out of notebooks
 	tags      []*gennotes.TagCount        // tags with their note counts
 	sideTags  bool                        // the notebook pane lists the tags instead of the notebooks (T)
 	notebook  string                      // notebook filter; empty for all notebooks except the trash
@@ -240,6 +241,7 @@ type (
 	notebooksMsg struct {
 		notebooks []*gennotes.Notebook
 		trashed   []*gennotes.TrashedNotebook
+		archived  []*gennotes.Notebook
 		tags      []*gennotes.TagCount
 		marks     []*gennotes.MarkInfo
 		err       error
@@ -281,10 +283,8 @@ func (m *Model) loadNotebooks() tea.Cmd {
 			return notebooksMsg{err: err}
 		}
 		tags, err := api.Tags(ctx, &gennotes.TagsPayload{})
-		// The notebooks in the archive are left out, as their notes are of
-		// lists; the TUI has no list of the archive yet.
-		res = slices.DeleteFunc(res, func(nb *gennotes.Notebook) bool { return nb.Archived != nil && *nb.Archived })
-		return notebooksMsg{notebooks: res, trashed: trashed, tags: tags, marks: loadMarks(ctx, api), err: err}
+		res, archive := splitArchived(res)
+		return notebooksMsg{notebooks: res, trashed: trashed, archived: archive, tags: tags, marks: loadMarks(ctx, api), err: err}
 	}
 }
 
@@ -486,22 +486,26 @@ func (m *Model) loadList() tea.Cmd {
 		return func() tea.Msg { return loadTrashedNotebook(ctx, api, tid, q, seq) }
 	}
 	var nb, tag *string
+	archive := archiveParam(m.notebook)
 	if t, ok := tagOf(m.notebook); ok {
 		tag = &t
-	} else if m.notebook != "" {
+	} else if id, ok := archivedID(m.notebook); ok {
+		nb = &id
+	} else if m.notebook != "" && m.notebook != archivePrefix {
 		nb = &m.notebook
 	}
+	across := m.acrossNotebooks()
 	return func() tea.Msg {
 		if q == "" {
 			// A notebook's list comes in its own sort, which the server knows.
 			var sort *string
-			if nb == nil && allSort != "" {
+			if across && allSort != "" {
 				sort = &allSort
 			}
-			items, seps, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort})
+			items, seps, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort, Archived: archive})
 			return listMsg{seq: seq, items: items, seps: seps, total: total, err: err}
 		}
-		res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: nb, Tag: tag, Limit: 200})
+		res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: nb, Tag: tag, Limit: 200, Archived: archive})
 		if err != nil {
 			return listMsg{seq: seq, err: err}
 		}
@@ -817,6 +821,9 @@ func (m *Model) moveNote(delta int) tea.Cmd {
 // defaultNotebook is the notebook for a new note: the selected one, or the
 // inbox when all notes or the trash are shown.
 func (m *Model) defaultNotebook() string {
+	if id, ok := archivedID(m.notebook); ok {
+		return id // a note in a notebook in the archive is there too
+	}
 	if m.acrossNotebooks() || m.notebook == trashNotebook || m.inTrashedNotebook() {
 		return inboxNotebook
 	}
@@ -832,10 +839,12 @@ func (m *Model) defaultTags() []string {
 }
 
 // acrossNotebooks reports whether the list has notes of all notebooks: all
-// notes, or the notes with a tag.
+// notes, the notes with a tag, or those of the archive. A notebook in the
+// archive is taken as one of them too: it is listed in the sort of all notes
+// and not reordered, as in the web UI.
 func (m *Model) acrossNotebooks() bool {
 	_, tag := tagOf(m.notebook)
-	return m.notebook == "" || tag
+	return m.notebook == "" || tag || inArchive(m.notebook)
 }
 
 // notebookRow is a row of the notebook pane.
@@ -869,6 +878,10 @@ func (m *Model) allRow() notebookRow {
 func (m *Model) notebookListRows() []notebookRow {
 	rows := []notebookRow{m.allRow()}
 	for _, nb := range m.notebooks {
+		// The archive and its notebooks come before the trash.
+		if nb.ID == trashNotebook {
+			rows = append(rows, m.archiveRows()...)
+		}
 		rows = append(rows, notebookRow{id: nb.ID, count: nb.Count, kind: nb.Kind})
 	}
 	// The notebooks in the trash follow the trash.
@@ -1124,6 +1137,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.notebook, m.sel, m.top = msg.show, 0, 0
 		return m, tea.Batch(m.loadNotebooks(), m.loadList())
 
+	case archivedMsg:
+		return m, m.finishArchive(msg)
+
 	case notebookSavedMsg:
 		if msg.err != nil {
 			m.setStatus(statusError, "status.notebookNotSaved", "err", m.errText(msg.err))
@@ -1163,9 +1179,18 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
 		}
-		m.notebooks, m.trashed, m.tags, m.marks = msg.notebooks, msg.trashed, msg.tags, msg.marks
-		if _, ok := trashedID(m.notebook); ok && !slices.ContainsFunc(m.notebookListRows(), func(r notebookRow) bool { return r.id == m.notebook }) {
+		m.notebooks, m.trashed, m.archived, m.tags, m.marks = msg.notebooks, msg.trashed, msg.archived, msg.tags, msg.marks
+		gone := !slices.ContainsFunc(m.notebookListRows(), func(r notebookRow) bool { return r.id == m.notebook })
+		if _, ok := trashedID(m.notebook); ok && gone {
 			m.notebook = trashNotebook // the notebook left the trash
+		}
+		if inArchive(m.notebook) && gone {
+			// The notebook left the archive, or the archive is empty.
+			id, _ := archivedID(m.notebook)
+			m.notebook = ""
+			if m.notebookOf(id) != nil {
+				m.notebook = id
+			}
 		}
 		m.nbSel = 0
 		for i, r := range m.notebookRows() {
@@ -1666,8 +1691,13 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.prompt = promptPurgeNotebook
 			} else if nb := m.selectedNotebook(); nb != nil && !nb.Reserved {
 				m.prompt = promptTrashNotebook
-			} else if _, ok := tagOf(row.id); !ok {
+			} else if _, ok := tagOf(row.id); !ok && !inArchive(row.id) {
 				m.setStatus(statusWarn, "status.reservedNotebook")
+			}
+			return m, nil
+		case "x":
+			if !m.sideTags {
+				return m, m.toggleNotebookArchive()
 			}
 			return m, nil
 		case "u":
@@ -1723,6 +1753,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "M":
 		if m.focus == focusList || m.focus == focusPreview {
 			m.startMark()
+		}
+		return m, nil
+	case "x":
+		if m.focus == focusList || m.focus == focusPreview {
+			return m, m.toggleNoteArchive()
 		}
 		return m, nil
 	case "v":

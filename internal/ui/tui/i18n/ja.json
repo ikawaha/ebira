@@ -227,5 +227,20 @@
   "mark.dropped": "中止",
   "mark.reply": "要返信",
   "mark.waiting": "返事待ち",
-  "mark.review": "確認中"
+  "mark.review": "確認中",
+  "notebook.archive": "アーカイブ",
+  "list.archive": "ノートだけをアーカイブへ移したものはありません。アーカイブのノートブックは、左の列のアーカイブの下にあります。",
+  "preview.archived": "{time} からアーカイブ",
+  "preview.archivedWithNotebook": "ノートブックごとアーカイブ",
+  "key.archive": "アーカイブへ",
+  "key.unarchive": "アーカイブから戻す",
+  "status.noteArchived": "ノートをアーカイブへ移しました",
+  "status.noteUnarchived": "ノートをアーカイブから戻しました",
+  "status.notebookArchived": "ノートブックをアーカイブへ移しました",
+  "status.notebookUnarchived": "ノートブックをアーカイブから戻しました",
+  "status.archiveFailed": "アーカイブを変えられませんでした: {err}",
+  "status.archiveTrash": "ゴミ箱のノートはアーカイブへ移せません",
+  "status.archivedWithNotebook": "このノートはノートブックごとアーカイブにあります。ノートブックを戻してください",
+  "status.archivedWithParent": "このノートブックは親ごとアーカイブにあります。親を戻してください",
+  "status.archiveReserved": "inbox と trash はアーカイブへ移せません"
 }

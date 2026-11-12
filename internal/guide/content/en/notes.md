@@ -30,6 +30,7 @@ Notes and notebooks no longer in use but worth keeping can go to the archive. Wh
 - Notebooks: "Put in the archive" in the menu of a row. Its notes and sub notebooks go with it.
 - Viewing: "Archive" in the side column. Notebooks show as cells, which open and close under them when clicked, as sub notebooks do. Notes in the archive can be edited, and stay there.
 - Taking out: "Take out of the archive" on the same button or menu.
+- TUI: `x` puts in and takes out. The notebooks in the archive are listed under "Archive" in the notebook column ([TUI](tui.md)).
 - Candidates: "Candidates for the archive…" in the gear menu lists the notes not updated for a while, oldest first, to choose and put there at once.
 - Searching: when a search shows "N more in the archive", click it to search the archive. Writing `in:archive` in the search does the same ([How to search](search.md)).
 
