@@ -1230,7 +1230,7 @@ var importAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("files"), tools.DynamicField{}, tools.FixedField("content")},
 		JSONType:    "string",
-		Description: "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+		Description: "The image, base64-encoded, at most 5 MB",
 	},
 }
 var importAiNoteResultFields = []tools.FieldMetadata{
@@ -7499,7 +7499,7 @@ func validateImportAiNotePayloadAIImportFileTransportJSONValue(path string, valu
 		case "content":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+				typed[key], "The image, base64-encoded, at most 5 MB",
 			); err != nil {
 				return err
 			}
