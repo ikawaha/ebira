@@ -89,7 +89,8 @@ type (
 		// The archive holds notes and notebooks kept but no longer in use, which lists
 		// and searches leave out unless they ask for them: exclude leaves the notes in
 		// the archive out, include takes them in with the others, and only takes them
-		// alone
+		// alone. The archive holds both the notes put there on their own and the
+		// notebooks there with all their notes
 		Archived *string `json:"archived,omitempty"`
 		// Maximum number of notes
 		Limit *int `json:"limit,omitempty"`
@@ -105,6 +106,10 @@ type (
 		Total *int `json:"total"`
 		// Matched notes
 		Notes []*NoteSummaryTransport `json:"notes"`
+		// Number of the notes in the archive that match too, which the search left out
+		// (archived=exclude, the default); search again with archived=include or only,
+		// or in:archive, to read them. Absent when the search took the archive in
+		ArchivedTotal *int `json:"archived_total,omitempty"`
 	}
 	// NoteSummaryTransport is the internal JSON transport type for NoteSummaryTransport.
 	// It lives in the toolset-local http package and is used only for JSON

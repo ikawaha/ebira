@@ -374,6 +374,10 @@ type SearchResponseBody struct {
 	Total int `form:"total" json:"total" xml:"total"`
 	// Matched notes
 	Notes []*NoteSummaryResponseBody `form:"notes" json:"notes" xml:"notes"`
+	// Number of the notes in the archive that match too, which the search left out
+	// (archived=exclude, the default); search again with archived=include or only,
+	// or in:archive, to read them. Absent when the search took the archive in
+	ArchivedTotal *int `form:"archived_total,omitempty" json:"archived_total,omitempty" xml:"archived_total,omitempty"`
 }
 
 // RestoreResponseBody is the type of the "notes" service "restore" endpoint
@@ -4512,8 +4516,9 @@ func NewUpdateResponseBody(res *notes.Note) *UpdateResponseBody {
 // "search" endpoint of the "notes" service.
 func NewSearchResponseBody(res *notes.SearchResult) *SearchResponseBody {
 	body := &SearchResponseBody{
-		Mode:  res.Mode,
-		Total: res.Total,
+		Mode:          res.Mode,
+		Total:         res.Total,
+		ArchivedTotal: res.ArchivedTotal,
 	}
 	if res.Notes != nil {
 		body.Notes = make([]*NoteSummaryResponseBody, len(res.Notes))

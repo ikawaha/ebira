@@ -270,7 +270,7 @@ var searchPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
 		JSONType:    "string",
-		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("limit")},
@@ -406,6 +406,11 @@ var searchResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet_highlights"), tools.DynamicField{}, tools.FixedField("end")},
 		JSONType:    "integer",
 		Description: "Offset just past the last character",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_total")},
+		JSONType:    "integer",
+		Description: "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in",
 	},
 }
 
@@ -864,8 +869,9 @@ func MarshalSearchResult(v *SearchResult) ([]byte, error) {
 	_ = in
 	var out *toolhttp.SearchResultTransport
 	out = &toolhttp.SearchResultTransport{
-		Mode:  &in.Mode,
-		Total: &in.Total,
+		Mode:          &in.Mode,
+		Total:         &in.Total,
+		ArchivedTotal: in.ArchivedTotal,
 	}
 	out.Notes = make([]*toolhttp.NoteSummaryTransport, len(in.Notes))
 	for i, val := range in.Notes {
@@ -899,8 +905,9 @@ func UnmarshalSearchResult(data []byte) (*SearchResult, error) {
 	_ = in
 	var out *SearchResult
 	out = &SearchResult{
-		Mode:  *in.Mode,
-		Total: *in.Total,
+		Mode:          *in.Mode,
+		Total:         *in.Total,
+		ArchivedTotal: in.ArchivedTotal,
 	}
 	out.Notes = make([]*NoteSummary, len(in.Notes))
 	for i, val := range in.Notes {
@@ -1098,7 +1105,7 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 		case "archived":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+				typed[key], "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes",
 			); err != nil {
 				return err
 			}
@@ -1206,6 +1213,13 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived_total":
+			if err := validateIntJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in",
+			); err != nil {
+				return err
+			}
 		case "mode":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -1229,6 +1243,7 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived_total",
 				"mode",
 				"notes",
 				"total",

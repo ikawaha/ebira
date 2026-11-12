@@ -2137,11 +2137,11 @@ paths:
                   example: order
                 - name: archived
                   in: query
-                  description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone'
+                  description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes'
                   allowEmptyValue: true
                   schema:
                     type: string
-                    description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone'
+                    description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes'
                     default: exclude
                     example: include
                     enum:
@@ -3908,11 +3908,11 @@ paths:
                   example: Voluptatibus deserunt veniam deserunt incidunt nostrum officia.
                 - name: archived
                   in: query
-                  description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone'
+                  description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes'
                   allowEmptyValue: true
                   schema:
                     type: string
-                    description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone'
+                    description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes'
                     default: exclude
                     example: exclude
                     enum:
@@ -3941,6 +3941,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/SearchResult'
                             example:
+                                archived_total: 2535513955843724734
                                 mode: ja
                                 notes:
                                     - archived: true
@@ -4767,11 +4768,11 @@ paths:
                   example: inbox
                 - name: archived
                   in: query
-                  description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone'
+                  description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes'
                   allowEmptyValue: true
                   schema:
                     type: string
-                    description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone'
+                    description: 'The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes'
                     default: exclude
                     example: only
                     enum:
@@ -7275,6 +7276,11 @@ components:
         SearchResult:
             type: object
             properties:
+                archived_total:
+                    type: integer
+                    description: Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in
+                    example: 2535513955843724734
+                    format: int64
                 mode:
                     type: string
                     description: Search mode used
@@ -7381,6 +7387,7 @@ components:
                     example: 5184544928014764202
                     format: int64
             example:
+                archived_total: 2535513955843724734
                 mode: ja
                 notes:
                     - archived: true

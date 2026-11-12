@@ -19,6 +19,14 @@ func noteIDs(ns []*gennotes.NoteSummary) []string {
 	return ids
 }
 
+// intOf shows a number that may be absent.
+func intOf(n *int) any {
+	if n == nil {
+		return "absent"
+	}
+	return *n
+}
+
 // Notes and notebooks in the archive are left out of lists, searches, tags
 // and counts unless asked for, keep their notebooks, and open as before.
 func TestArchive(t *testing.T) {
@@ -77,6 +85,26 @@ func TestArchive(t *testing.T) {
 	} {
 		if !slices.Equal(tt.got, tt.want) {
 			t.Errorf("%s = %v, want %v", tt.name, tt.got, tt.want)
+		}
+	}
+	// A search that leaves the archive out tells how many match there too;
+	// one that takes it in does not.
+	for _, tt := range []struct {
+		q, archived string
+		want        *int
+	}{
+		{"apple", "exclude", ptr(3)},
+		{"apple", "include", nil},
+		{"apple", "only", nil},
+		{"apple in:archive", "exclude", nil},
+		{"banana", "exclude", ptr(0)},
+	} {
+		res, err := svc.Search(person, &gennotes.SearchPayload{Q: tt.q, Archived: tt.archived, Limit: 20})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := res.ArchivedTotal; (got == nil) != (tt.want == nil) || got != nil && *got != *tt.want {
+			t.Errorf("archived_total of %q (%s) = %v, want %v", tt.q, tt.archived, intOf(got), intOf(tt.want))
 		}
 	}
 	tags, err := svc.Tags(person, &gennotes.TagsPayload{Archived: "exclude"})
@@ -215,6 +243,10 @@ func TestArchiveAI(t *testing.T) {
 	}
 	if found, _ := svc.Search(ai, &gennotes.SearchPayload{Q: "in:archive", Limit: 20}); slices.Contains(noteIDs(found.Notes), "secret") {
 		t.Error("a private note in the archive is found by AI")
+	}
+	// Nor does the number of matches in the archive count it.
+	if found, _ := svc.Search(ai, &gennotes.SearchPayload{Q: "apple", Archived: "exclude", Limit: 20}); found.ArchivedTotal == nil || *found.ArchivedTotal != 1 {
+		t.Errorf("archived_total for AI = %v, want 1 (the collab note alone)", intOf(found.ArchivedTotal))
 	}
 }
 

@@ -231,7 +231,7 @@
           "properties": {
             "archived": {
               "default": "exclude",
-              "description": "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+              "description": "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes",
               "enum": [
                 "exclude",
                 "include",
@@ -427,6 +427,11 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "additionalProperties": false,
           "properties": {
+            "archived_total": {
+              "description": "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in",
+              "format": "int64",
+              "type": "integer"
+            },
             "mode": {
               "description": "Search mode used",
               "enum": [
@@ -467,7 +472,7 @@
           "properties": {
             "archived": {
               "default": "exclude",
-              "description": "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+              "description": "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes",
               "enum": [
                 "exclude",
                 "include",
