@@ -258,6 +258,15 @@ func (s *shell) pageTheme(dark bool) {
 	s.applyTheme()
 }
 
+// forgetTheme forgets the theme of the page, before the main window goes to
+// another server, whose page may be of an earlier build that tells none: the
+// frame follows the system's until the new page tells its theme. It is done
+// before the page loads, so that it does not forget what the new page tells.
+func (s *shell) forgetTheme() {
+	s.theme.Store(themeUnknown)
+	s.applyTheme()
+}
+
 // applyTheme gives the frame of the main window the theme of its page, or
 // the system's while the page has told none, as one of an earlier build.
 func (s *shell) applyTheme() {

@@ -229,4 +229,9 @@ func TestPageTheme(t *testing.T) {
 			t.Errorf("%s: theme %d, want %d", tt.msg, got, tt.want)
 		}
 	}
+	// Going to another server forgets it, until its page tells one.
+	s.forgetTheme()
+	if got := s.theme.Load(); got != themeUnknown {
+		t.Errorf("after forgetTheme: %d", got)
+	}
 }

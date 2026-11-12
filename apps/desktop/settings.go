@@ -214,6 +214,7 @@ func (s *shell) finishSwitch() {
 	// As chosen, so that an empty folder keeps following the config file.
 	chosen.save()
 	s.notes.reset() // until the page of the server tells its state
+	s.forgetTheme() // the page of another server may tell none
 	if win == nil {
 		s.openMain(t.url())
 	} else {
