@@ -215,9 +215,8 @@ func (s *shell) openMain(url string) {
 		// The page shows the name; the title stays for the Window menu and
 		// Mission Control.
 		Mac: application.MacWindow{TitleBar: application.MacTitleBar{HideTitle: true}},
-		// The frame takes the theme of the page (applyTheme): a theme fixed
-		// here keeps Wails from setting the system's again when it changes.
-		Windows: application.WindowsWindow{Theme: frameTheme()},
+		// The menu bar takes the theme the page last told (windowsOptions).
+		Windows: windowsOptions(),
 	})
 	var shown sync.Once
 	// The runtime is ready once a page is up: on macOS when the JS of the window
@@ -225,6 +224,9 @@ func (s *shell) openMain(url string) {
 	watchReady(win)
 	win.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		shown.Do(func() { go showMain(win) })
+		// The frame, and the menus that drop down, also for a page that
+		// tells no theme (applyTheme).
+		go s.applyTheme()
 		// Each page, as after a change of the server, is checked for its server.
 		go s.markOutdated()
 	})
@@ -255,6 +257,10 @@ func (s *shell) pageTheme(dark bool) {
 		t = themeDark
 	}
 	s.theme.Store(t)
+	// A shell without an app, as in tests, keeps no settings.
+	if s.app != nil {
+		keepPageTheme(dark)
+	}
 	s.applyTheme()
 }
 
