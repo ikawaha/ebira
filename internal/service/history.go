@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"time"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/history"
 	"github.com/ikawaha/ebira/internal/index"
+	"github.com/ikawaha/ebira/internal/store"
 )
 
 // SetHistory keeps the earlier versions of notes in h: the index reports each
@@ -82,7 +82,7 @@ func (s *Notes) History(ctx context.Context, p *gennotes.HistoryPayload) ([]*gen
 		return nil, err
 	}
 	for _, v := range vs {
-		res = append(res, &gennotes.NoteVersionSummary{Rev: v.Rev, Title: v.Title, UpdatedAt: v.UpdatedAt.UTC().Format(time.RFC3339), ReplacedAt: v.ReplacedAt.UTC().Format(time.RFC3339)})
+		res = append(res, &gennotes.NoteVersionSummary{Rev: v.Rev, Title: v.Title, UpdatedAt: store.FormatTime(v.UpdatedAt), ReplacedAt: store.FormatTime(v.ReplacedAt)})
 	}
 	return res, nil
 }
@@ -108,5 +108,5 @@ func (s *Notes) HistoryVersion(ctx context.Context, p *gennotes.HistoryVersionPa
 	if err != nil {
 		return nil, err
 	}
-	return &gennotes.NoteVersion{Rev: v.Rev, Title: v.Title, Tags: v.Tags, Body: v.Body, UpdatedAt: v.UpdatedAt.UTC().Format(time.RFC3339), ReplacedAt: v.ReplacedAt.UTC().Format(time.RFC3339)}, nil
+	return &gennotes.NoteVersion{Rev: v.Rev, Title: v.Title, Tags: v.Tags, Body: v.Body, UpdatedAt: store.FormatTime(v.UpdatedAt), ReplacedAt: store.FormatTime(v.ReplacedAt)}, nil
 }

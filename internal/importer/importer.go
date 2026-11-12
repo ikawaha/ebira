@@ -217,8 +217,8 @@ func Parse(in Input) (*Note, error) {
 	if updated.Before(created) {
 		updated = created
 	}
-	n.CreatedAt = created.UTC().Truncate(time.Second)
-	n.UpdatedAt = updated.UTC().Truncate(time.Second)
+	n.CreatedAt = created.UTC().Truncate(time.Millisecond)
+	n.UpdatedAt = updated.UTC().Truncate(time.Millisecond)
 	n.Images = images(n.Body)
 	return n, nil
 }

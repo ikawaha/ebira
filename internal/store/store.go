@@ -88,6 +88,14 @@ type Note struct {
 	Version string `yaml:"-"`
 }
 
+// TimeLayout is how the times of notes are written: RFC 3339 in UTC with
+// three digits of milliseconds always, so that notes made in the same second
+// keep the order they were made in, and the written times sort as text.
+const TimeLayout = "2006-01-02T15:04:05.000Z07:00"
+
+// FormatTime writes t in TimeLayout, in UTC.
+func FormatTime(t time.Time) string { return t.UTC().Format(TimeLayout) }
+
 // SortKey returns the key of the note in the manual order: Order if set, else
 // the creation time in milliseconds. Higher comes first.
 func (n *Note) SortKey() int64 {
@@ -1111,8 +1119,8 @@ func encode(old []byte, n *Note) ([]byte, error) {
 	} else {
 		unset(m, "marks")
 	}
-	set(m, "created_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: n.CreatedAt.Format(time.RFC3339)})
-	set(m, "updated_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: n.UpdatedAt.Format(time.RFC3339)})
+	set(m, "created_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: FormatTime(n.CreatedAt)})
+	set(m, "updated_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: FormatTime(n.UpdatedAt)})
 	if n.TrashedFrom != "" {
 		set(m, "trashed_from", str(n.TrashedFrom, 0))
 	} else {

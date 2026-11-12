@@ -265,7 +265,7 @@ func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode, lan
 		return err
 	}
 	if fresh {
-		if _, err := guide.Install(st, lang, time.Now().UTC().Truncate(time.Second)); err != nil {
+		if _, err := guide.Install(st, lang, time.Now().UTC().Truncate(time.Millisecond)); err != nil {
 			return err
 		}
 	}

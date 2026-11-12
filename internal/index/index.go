@@ -200,7 +200,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 8 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks
+const schemaVersion = 9 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -1138,7 +1138,7 @@ func (ix *Index) query(ctx context.Context, q string, args ...any) ([]*Summary, 
 	return res, rows.Err()
 }
 
-func formatTime(t time.Time) string { return t.UTC().Format(time.RFC3339) }
+func formatTime(t time.Time) string { return store.FormatTime(t) }
 
 // phrase quotes s as an FTS5 phrase ("...").
 func phrase(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }

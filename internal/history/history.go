@@ -88,7 +88,7 @@ func (s *Store) Add(id string, v Version) error {
 		return err
 	}
 	now := s.now()
-	v.ReplacedAt = now.UTC().Truncate(time.Second)
+	v.ReplacedAt = now.UTC().Truncate(time.Millisecond)
 	b, err := yaml.Marshal(&v)
 	if err != nil {
 		return err
