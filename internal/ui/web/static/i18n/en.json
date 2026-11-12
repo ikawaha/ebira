@@ -248,7 +248,7 @@
   "notebookKind": "Kind",
   "notebookRename": "Rename",
   "notebookRenameHint": "Enter saves, Esc cancels. The folder keeps its name ({id}).",
-  "notebookToTrash": "Move to the trash…",
+  "notebookToTrash": "Move to the trash",
   "notebookRestore": "Restore",
   "notebookDeletePermanently": "Delete permanently…",
   "notebookFailed": "The notebook could not be changed: {error}",

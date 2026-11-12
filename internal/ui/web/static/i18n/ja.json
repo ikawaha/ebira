@@ -248,7 +248,7 @@
   "notebookKind": "種別",
   "notebookRename": "名前を変える",
   "notebookRenameHint": "Enter で保存、Esc でやめる。フォルダの名前（{id}）は変わりません。",
-  "notebookToTrash": "ゴミ箱へ移す…",
+  "notebookToTrash": "ゴミ箱へ移す",
   "notebookRestore": "元に戻す",
   "notebookDeletePermanently": "完全に削除…",
   "notebookFailed": "ノートブックを変えられませんでした: {error}",
