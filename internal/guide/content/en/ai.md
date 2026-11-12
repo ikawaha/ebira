@@ -74,7 +74,7 @@ Written in your user settings, `~/.claude/settings.json`, this holds in every pr
 - Besides the notes directory, this denies the three places ebira uses:
   - `~/.cache/ebira`: the search index, which holds the titles and the bodies of the notes.
   - `~/.local/state/ebira`: the earlier versions of notes (history), and the keys of passkeys and sessions.
-  - `~/.config/ebira`: the settings file. Writing it could turn `auth` back to `none`, so writing is denied.
+  - `~/.config/ebira`: the settings file. Writing it could turn `auth` back to `none`, so writing is denied. The defaults shared with the notes (`defaults` of `_ebira.yaml`) cannot have `auth`, so the notes cannot turn it back ([Settings](settings.md)).
   - If you set `XDG_CACHE_HOME`, `XDG_STATE_HOME` or `XDG_CONFIG_HOME`, use those places.
 - `permissions.deny` keeps the tools that read files (Read, Grep, Glob, and common shell commands such as `cat`) and those that write them (Edit, Write and others) out of these places. Deny rules come before the allow rules of any settings. Write paths with `~/` or `//` (absolute); a single leading `/` is relative to the settings file.
 - `permissions.allow` lets it use the MCP tools of ebira without asking each time (leave it out to be asked).
