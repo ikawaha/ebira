@@ -44,12 +44,19 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string `json:"marks,omitempty"`
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool `json:"archived,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
 		Version *string `json:"version"`
 		// Notebook the note was in before it was moved to the trash
 		TrashedFrom *string `json:"trashed_from,omitempty"`
+		// When the note was put in the archive on its own; absent when it was not,
+		// though it may be in the archive with its notebook (see archived)
+		ArchivedAt *string `json:"archived_at,omitempty"`
 		// Ranges of the title matched by the query of get, sorted and not overlapping
 		TitleHighlights []*TextRangeTransport `json:"title_highlights,omitempty"`
 		// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -69,15 +76,21 @@ type (
 		// it. A minus before a term, a phrase, a tag or a mark, as in -word, -"two
 		// words", -tag:name and -mark:red, leaves out the notes with it. OR in
 		// capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks
-		// for notes with either, binding closer than AND. A query of tags and marks
-		// alone, or of what to leave out alone, lists the notes found, last updated
-		// first
+		// for notes with either, binding closer than AND. in:archive asks for the
+		// notes in the archive only, which are left out otherwise. A query of tags and
+		// marks alone, or of what to leave out alone, lists the notes found, last
+		// updated first
 		Q *string `json:"q"`
 		// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
 		// except the trash
 		Notebook *string `json:"notebook,omitempty"`
 		// Only notes with this tag
 		Tag *string `json:"tag,omitempty"`
+		// The archive holds notes and notebooks kept but no longer in use, which lists
+		// and searches leave out unless they ask for them: exclude leaves the notes in
+		// the archive out, include takes them in with the others, and only takes them
+		// alone
+		Archived *string `json:"archived,omitempty"`
 		// Maximum number of notes
 		Limit *int `json:"limit,omitempty"`
 	}
@@ -121,6 +134,10 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string `json:"marks,omitempty"`
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool `json:"archived,omitempty"`
 		// Excerpt around the matched terms (search only)
 		Snippet *string `json:"snippet,omitempty"`
 		// Ranges of the title matched by the query, sorted and not overlapping (search

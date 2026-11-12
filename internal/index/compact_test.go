@@ -73,7 +73,7 @@ func TestCompact(t *testing.T) {
 		t.Errorf("after Compact: %d free pages, files %v, %d pages", after.FreePages, after.Files, after.Pages)
 	}
 	// The index still finds the note left.
-	if _, total, err := ix.Search(ctx, "天気", "", "", 10); err != nil || total != 1 {
+	if _, total, err := ix.Search(ctx, "天気", "", "", Archive{}, 10); err != nil || total != 1 {
 		t.Errorf("search after Compact: total %d, %v, want 1", total, err)
 	}
 	if freed, err := ix.Compact(ctx); err != nil || freed != 0 {

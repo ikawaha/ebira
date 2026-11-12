@@ -36,6 +36,7 @@ var NoteTrait = func() {
 		Enum("ai")
 	})
 	Attribute("marks", ArrayOf(String), "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none", marksDSL)
+	Attribute("archived", Boolean, "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not")
 }
 
 // NoteEdit is a change of part of the body of a note: the text to replace,
@@ -71,6 +72,7 @@ var Note = Type("Note", func() {
 		Example(`"87ef7c76b82c5b1d299b08b474f6a7bb"`)
 	})
 	Attribute("trashed_from", String, "Notebook the note was in before it was moved to the trash", notebookIDDSL)
+	Attribute("archived_at", String, "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)", timeDSL)
 	Attribute("title_highlights", ArrayOf(TextRange), "Ranges of the title matched by the query of get, sorted and not overlapping")
 	Attribute("body_highlights", ArrayOf(TextRange), "Ranges of the body matched by the query of get, sorted and not overlapping")
 })
@@ -98,7 +100,10 @@ var Notebook = Type("Notebook", func() {
 	Attribute("parent", String, "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent", notebookIDDSL)
 	RequiredAttribute("name", String, "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)")
 	RequiredAttribute("order", Int, "Sort key among the notebooks other than inbox and trash; lower comes first")
-	RequiredAttribute("count", Int, "Number of notes")
+	RequiredAttribute("count", Int, "Number of notes, but those put in the archive on their own")
+	RequiredAttribute("archived_count", Int, "Number of notes put in the archive on their own")
+	Attribute("archived_at", String, "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not", timeDSL)
+	Attribute("archived", Boolean, "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive")
 	RequiredAttribute("reserved", Boolean, "Whether this is a system notebook (inbox or trash)")
 	RequiredAttribute("kind", String, "Kind of the notebook. "+kindDescription, func() {
 		Enum(notebookKinds...)
@@ -449,6 +454,18 @@ var notebookTreeFilter = func() {
 	Attribute("notebook", String, "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash", notebookIDDSL)
 }
 
+// archiveDescription tells what the archive is.
+const archiveDescription = "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them"
+
+// archiveFilter takes the archive in or leaves it out of a list, a search or
+// the tags.
+var archiveFilter = func() {
+	Attribute("archived", String, archiveDescription+": exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone", func() {
+		Enum("exclude", "include", "only")
+		Default("exclude")
+	})
+}
+
 var _ = Service("notes", func() {
 	Description("CRUD and search for notes.")
 
@@ -496,7 +513,7 @@ var _ = Service("notes", func() {
 	// method returns without declaring it becomes a 500.
 
 	Method("list", func() {
-		Description("List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page.")
+		Description("List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page. The notes in the archive are left out unless archived asks for them; without a notebook, archived=only lists the notes put in the archive on their own, as those of the notebooks there are listed by their notebooks.")
 		Payload(func() {
 			sessionDSL()
 			notebookFilter()
@@ -514,6 +531,7 @@ var _ = Service("notes", func() {
 			Attribute("sort", String, sortDescription+". Omit for the sort setting of the notebook (order without a notebook)", func() {
 				Enum(sortKeys...)
 			})
+			archiveFilter()
 		})
 		Result(NoteList)
 		Error("bad_request", ErrorResult, "trashed_notebook is given without notebook=trash")
@@ -525,6 +543,7 @@ var _ = Service("notes", func() {
 			Param("offset")
 			Param("trashed_notebook")
 			Param("sort")
+			Param("archived")
 			Response("bad_request", StatusBadRequest)
 		})
 		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more", func() {
@@ -669,12 +688,13 @@ var _ = Service("notes", func() {
 		Description("Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first", func() {
+			RequiredAttribute("q", String, "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first", func() {
 				MinLength(1)
 				searchQueryDSL()
 			})
 			notebookTreeFilter()
 			Attribute("tag", String, "Only notes with this tag")
+			archiveFilter()
 			Attribute("limit", Int, "Maximum number of notes", func() {
 				Default(20)
 				Minimum(1)
@@ -687,9 +707,10 @@ var _ = Service("notes", func() {
 			Param("q")
 			Param("notebook")
 			Param("tag")
+			Param("archived")
 			Param("limit")
 		})
-		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either", func() {
+		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -823,11 +844,13 @@ var _ = Service("notes", func() {
 		Payload(func() {
 			sessionDSL()
 			notebookTreeFilter()
+			archiveFilter()
 		})
 		Result(ArrayOf(TagCount))
 		HTTP(func() {
 			GET("/tags")
 			Param("notebook")
+			Param("archived")
 		})
 		Tool("list_tags", "List tags with their note counts; filter list_notes or search_notes by one of them", func() {
 			ReadOnlyHint(true)
@@ -865,6 +888,57 @@ var _ = Service("notes", func() {
 			})
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	// Notes go into the archive and out of it without a change of their
+	// content, as with marks. People do it with archive_notes, and AI clients
+	// on notes of the collab kind with update_ai_note.
+	Method("archive_notes", func() {
+		Description("Put notes in the archive, or take them out, at once, such as several chosen in a list. " + archiveDescription + ". The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("ids", ArrayOf(String, noteIDDSL), "IDs of the notes", func() {
+				MinLength(1)
+				MaxLength(500)
+			})
+			RequiredAttribute("archived", Boolean, "true to put the notes in the archive, false to take them out")
+		})
+		Error("not_found", ErrorResult, "A note does not exist")
+		Error("bad_request", ErrorResult, "A note is in the trash, or its ID is used in more than one notebook")
+		HTTP(func() {
+			POST("/archive/notes")
+			Response(StatusNoContent)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("archive_candidates", func() {
+		Description("List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.")
+		Payload(func() {
+			sessionDSL()
+			Attribute("days", Int, "Days the notes have not been updated for", func() {
+				Default(180)
+				Minimum(1)
+				Maximum(36500)
+			})
+			Attribute("limit", Int, "Maximum number of notes", func() {
+				Default(100)
+				Minimum(1)
+				Maximum(500)
+			})
+			Attribute("offset", Int, "Number of notes to skip", func() {
+				Default(0)
+				Minimum(0)
+			})
+		})
+		Result(NoteList)
+		HTTP(func() {
+			GET("/archive/candidates")
+			Param("days")
+			Param("limit")
+			Param("offset")
 		})
 	})
 
@@ -919,7 +993,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("save_notebook", func() {
-		Description("Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.")
+		Description("Set the display name, order, kind, note sort or archive of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
@@ -931,6 +1005,7 @@ var _ = Service("notes", func() {
 			Attribute("sort", String, "Default order of the note list. "+sortDescription, func() {
 				Enum(sortKeys...)
 			})
+			Attribute("archived", Boolean, "Put the notebook in the archive, with its notes and sub notebooks, or take it out. "+archiveDescription+". Not for the inbox and the trash")
 		})
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook does not exist")
@@ -1179,6 +1254,7 @@ var _ = Service("notes", func() {
 				MaxLength(100)
 			})
 			Attribute("marks", ArrayOf(String), "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means", marksDSL)
+			Attribute("archived", Boolean, "Put the note in the archive, or take it out. "+archiveDescription+". Like marks, it changes nothing of the content")
 			Attribute("brief", Boolean, "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back")
 		})
 		Result(Note)
@@ -1186,7 +1262,7 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid, body is given with append or edits, or the old text of an edit does not appear exactly once")
 		Error("forbidden", ErrorResult, "The note, or the notebook to move it to, is not of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
-		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result")
+		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks or put it in the archive; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result")
 	})
 
 	Method("delete_ai_note", func() {
@@ -1300,6 +1376,19 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The notebook does not exist, or is not in the notebook list of the client")
 		Error("bad_request", ErrorResult, "The notebook is the trash")
 		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this")
+	})
+
+	Method("archive_ai_notebook", func() {
+		NoSecurity()
+		Description("Put a notebook of the collab kind in the archive, with its notes and sub notebooks, or take it out. " + archiveDescription + ". The notes stay in the notebook and keep their content.")
+		Payload(func() {
+			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
+			RequiredAttribute("archived", Boolean, "true to put the notebook in the archive, false to take it out")
+		})
+		Result(Notebook)
+		Error("not_found", ErrorResult, "The notebook does not exist, or is hidden from AI clients")
+		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
+		Tool("archive_ai_notebook", "Put a notebook shared with AI (kind collab) in the archive, where lists and searches leave it out unless they ask for it, or take it out")
 	})
 
 	// The files of a note, images and other attachments, are kept next to the

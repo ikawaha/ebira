@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|archive-notes|archive-candidates|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-request|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -33,7 +33,7 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
+	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --archived \"include\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
 		os.Args[0] + " " + "assistant status --session \"Voluptate exercitationem.\"" + "\n" +
 		os.Args[0] + " " + "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"" + "\n" +
 		""
@@ -77,6 +77,7 @@ func ParseEndpoint(
 		notesListOffsetFlag          = notesListFlags.String("offset", "0", "")
 		notesListTrashedNotebookFlag = new(cliStringFlag)
 		notesListSortFlag            = new(cliStringFlag)
+		notesListArchivedFlag        = notesListFlags.String("archived", "exclude", "")
 		notesListSessionFlag         = new(cliStringFlag)
 
 		notesGetFlags       = flag.NewFlagSet("get", flag.ExitOnError)
@@ -111,6 +112,7 @@ func ParseEndpoint(
 		notesSearchQFlag        = new(cliStringFlag)
 		notesSearchNotebookFlag = new(cliStringFlag)
 		notesSearchTagFlag      = new(cliStringFlag)
+		notesSearchArchivedFlag = notesSearchFlags.String("archived", "exclude", "")
 		notesSearchLimitFlag    = notesSearchFlags.String("limit", "20", "")
 		notesSearchSessionFlag  = new(cliStringFlag)
 
@@ -148,6 +150,7 @@ func ParseEndpoint(
 
 		notesTagsFlags        = flag.NewFlagSet("tags", flag.ExitOnError)
 		notesTagsNotebookFlag = new(cliStringFlag)
+		notesTagsArchivedFlag = notesTagsFlags.String("archived", "exclude", "")
 		notesTagsSessionFlag  = new(cliStringFlag)
 
 		notesMarksFlags       = flag.NewFlagSet("marks", flag.ExitOnError)
@@ -157,6 +160,16 @@ func ParseEndpoint(
 		notesSetMarksBodyFlag    = new(cliStringFlag)
 		notesSetMarksIDFlag      = new(cliStringFlag)
 		notesSetMarksSessionFlag = new(cliStringFlag)
+
+		notesArchiveNotesFlags       = flag.NewFlagSet("archive-notes", flag.ExitOnError)
+		notesArchiveNotesBodyFlag    = new(cliStringFlag)
+		notesArchiveNotesSessionFlag = new(cliStringFlag)
+
+		notesArchiveCandidatesFlags       = flag.NewFlagSet("archive-candidates", flag.ExitOnError)
+		notesArchiveCandidatesDaysFlag    = notesArchiveCandidatesFlags.String("days", "180", "")
+		notesArchiveCandidatesLimitFlag   = notesArchiveCandidatesFlags.String("limit", "100", "")
+		notesArchiveCandidatesOffsetFlag  = notesArchiveCandidatesFlags.String("offset", "0", "")
+		notesArchiveCandidatesSessionFlag = new(cliStringFlag)
 
 		notesSaveMarkNamesFlags       = flag.NewFlagSet("save-mark-names", flag.ExitOnError)
 		notesSaveMarkNamesBodyFlag    = new(cliStringFlag)
@@ -369,6 +382,9 @@ func ParseEndpoint(
 	notesSetMarksFlags.Var(notesSetMarksBodyFlag, "body", "")
 	notesSetMarksFlags.Var(notesSetMarksIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesSetMarksFlags.Var(notesSetMarksSessionFlag, "session", "")
+	notesArchiveNotesFlags.Var(notesArchiveNotesBodyFlag, "body", "")
+	notesArchiveNotesFlags.Var(notesArchiveNotesSessionFlag, "session", "")
+	notesArchiveCandidatesFlags.Var(notesArchiveCandidatesSessionFlag, "session", "")
 	notesSaveMarkNamesFlags.Var(notesSaveMarkNamesBodyFlag, "body", "")
 	notesSaveMarkNamesFlags.Var(notesSaveMarkNamesSessionFlag, "session", "")
 	notesCreateNotebookFlags.Var(notesCreateNotebookBodyFlag, "body", "")
@@ -463,6 +479,8 @@ func ParseEndpoint(
 	notesTagsFlags.Usage = notesTagsUsage
 	notesMarksFlags.Usage = notesMarksUsage
 	notesSetMarksFlags.Usage = notesSetMarksUsage
+	notesArchiveNotesFlags.Usage = notesArchiveNotesUsage
+	notesArchiveCandidatesFlags.Usage = notesArchiveCandidatesUsage
 	notesSaveMarkNamesFlags.Usage = notesSaveMarkNamesUsage
 	notesCreateNotebookFlags.Usage = notesCreateNotebookUsage
 	notesSaveNotebookFlags.Usage = notesSaveNotebookUsage
@@ -601,6 +619,12 @@ func ParseEndpoint(
 
 			case "set-marks":
 				epf = notesSetMarksFlags
+
+			case "archive-notes":
+				epf = notesArchiveNotesFlags
+
+			case "archive-candidates":
+				epf = notesArchiveCandidatesFlags
 
 			case "save-mark-names":
 				epf = notesSaveMarkNamesFlags
@@ -763,7 +787,7 @@ func ParseEndpoint(
 			switch epn {
 			case "list":
 				endpoint = c.List()
-				data, err = notesc.BuildListPayload(notesListNotebookFlag.value, notesListTagFlag.value, *notesListLimitFlag, *notesListOffsetFlag, notesListTrashedNotebookFlag.value, notesListSortFlag.value, notesListSessionFlag.value)
+				data, err = notesc.BuildListPayload(notesListNotebookFlag.value, notesListTagFlag.value, *notesListLimitFlag, *notesListOffsetFlag, notesListTrashedNotebookFlag.value, notesListSortFlag.value, *notesListArchivedFlag, notesListSessionFlag.value)
 			case "get":
 				endpoint = c.Get()
 				data, err = notesc.BuildGetPayload(notesGetIDFlag.value, notesGetQFlag.value, notesGetSessionFlag.value)
@@ -784,7 +808,7 @@ func ParseEndpoint(
 				data, err = notesc.BuildTrashNotesPayload(notesTrashNotesBodyFlag.value, notesTrashNotesSessionFlag.value)
 			case "search":
 				endpoint = c.Search()
-				data, err = notesc.BuildSearchPayload(notesSearchQFlag.value, notesSearchNotebookFlag.value, notesSearchTagFlag.value, *notesSearchLimitFlag, notesSearchSessionFlag.value)
+				data, err = notesc.BuildSearchPayload(notesSearchQFlag.value, notesSearchNotebookFlag.value, notesSearchTagFlag.value, *notesSearchArchivedFlag, *notesSearchLimitFlag, notesSearchSessionFlag.value)
 			case "restore":
 				endpoint = c.Restore()
 				data, err = notesc.BuildRestorePayload(notesRestoreIDFlag.value, notesRestoreIfMatchFlag.value, notesRestoreSessionFlag.value)
@@ -808,13 +832,19 @@ func ParseEndpoint(
 				data, err = notesc.BuildNotebooksPayload(notesNotebooksSessionFlag.value)
 			case "tags":
 				endpoint = c.Tags()
-				data, err = notesc.BuildTagsPayload(notesTagsNotebookFlag.value, notesTagsSessionFlag.value)
+				data, err = notesc.BuildTagsPayload(notesTagsNotebookFlag.value, *notesTagsArchivedFlag, notesTagsSessionFlag.value)
 			case "marks":
 				endpoint = c.Marks()
 				data, err = notesc.BuildMarksPayload(notesMarksSessionFlag.value)
 			case "set-marks":
 				endpoint = c.SetMarks()
 				data, err = notesc.BuildSetMarksPayload(notesSetMarksBodyFlag.value, notesSetMarksIDFlag.value, notesSetMarksSessionFlag.value)
+			case "archive-notes":
+				endpoint = c.ArchiveNotes()
+				data, err = notesc.BuildArchiveNotesPayload(notesArchiveNotesBodyFlag.value, notesArchiveNotesSessionFlag.value)
+			case "archive-candidates":
+				endpoint = c.ArchiveCandidates()
+				data, err = notesc.BuildArchiveCandidatesPayload(*notesArchiveCandidatesDaysFlag, *notesArchiveCandidatesLimitFlag, *notesArchiveCandidatesOffsetFlag, notesArchiveCandidatesSessionFlag.value)
 			case "save-mark-names":
 				endpoint = c.SaveMarkNames()
 				data, err = notesc.BuildSaveMarkNamesPayload(notesSaveMarkNamesBodyFlag.value, notesSaveMarkNamesSessionFlag.value)
@@ -983,7 +1013,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `CRUD and search for notes.`)
 	fmt.Fprintf(os.Stderr, "Usage:\n    %s [globalflags] notes COMMAND [flags]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "COMMAND:")
-	fmt.Fprintln(os.Stderr, `    list: List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page.`)
+	fmt.Fprintln(os.Stderr, `    list: List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page. The notes in the archive are left out unless archived asks for them; without a notebook, archived=only lists the notes put in the archive on their own, as those of the notebooks there are listed by their notebooks.`)
 	fmt.Fprintln(os.Stderr, `    get: Get a note. With q, the result also has the ranges of the title and body matched by the query, as search matches them.`)
 	fmt.Fprintln(os.Stderr, `    create: Create a note. A random ID is assigned when id is omitted, and the note goes to the inbox when notebook is omitted. A new notebook is created on demand.`)
 	fmt.Fprintln(os.Stderr, `    update: Update a note. Omitted attributes are left unchanged. Setting notebook moves the note; use delete to move it to the trash.`)
@@ -1001,9 +1031,11 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
 	fmt.Fprintln(os.Stderr, `    marks: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.`)
 	fmt.Fprintln(os.Stderr, `    set-marks: Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.`)
+	fmt.Fprintln(os.Stderr, `    archive-notes: Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.`)
+	fmt.Fprintln(os.Stderr, `    archive-candidates: List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.`)
 	fmt.Fprintln(os.Stderr, `    save-mark-names: Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.`)
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
-	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
+	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind, note sort or archive of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
 	fmt.Fprintln(os.Stderr, `    move-notebook: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A notebook moved into another keeps its kind as its own; a sub notebook keeps its own kind, or takes that of its new parent without one, and one moved to the top keeps the kind it had. In a private parent, it is private. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
 	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
@@ -1041,12 +1073,13 @@ func notesListUsage() {
 	fmt.Fprint(os.Stderr, " -offset INT")
 	fmt.Fprint(os.Stderr, " -trashed-notebook STRING")
 	fmt.Fprint(os.Stderr, " -sort STRING")
+	fmt.Fprint(os.Stderr, " -archived STRING")
 	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page.`)
+	fmt.Fprintln(os.Stderr, `List notes in the order of sort, a page at a time: total tells how many there are, and offset reads the next page. The notes in the archive are left out unless archived asks for them; without a notebook, archived=only lists the notes put in the archive on their own, as those of the notebooks there are listed by their notebooks.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
@@ -1055,11 +1088,12 @@ func notesListUsage() {
 	fmt.Fprintln(os.Stderr, `    -offset INT: `)
 	fmt.Fprintln(os.Stderr, `    -trashed-notebook STRING: `)
 	fmt.Fprintln(os.Stderr, `    -sort STRING: `)
+	fmt.Fprintln(os.Stderr, `    -archived STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --session \"Sed earum consequatur minima veritatis.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --archived \"include\" --session \"Sed earum consequatur minima veritatis.\"")
 }
 
 func notesGetUsage() {
@@ -1196,6 +1230,7 @@ func notesSearchUsage() {
 	fmt.Fprint(os.Stderr, " -q STRING")
 	fmt.Fprint(os.Stderr, " -notebook STRING")
 	fmt.Fprint(os.Stderr, " -tag STRING")
+	fmt.Fprint(os.Stderr, " -archived STRING")
 	fmt.Fprint(os.Stderr, " -limit INT")
 	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
@@ -1208,12 +1243,13 @@ func notesSearchUsage() {
 	fmt.Fprintln(os.Stderr, `    -q STRING: `)
 	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
 	fmt.Fprintln(os.Stderr, `    -tag STRING: `)
+	fmt.Fprintln(os.Stderr, `    -archived STRING: `)
 	fmt.Fprintln(os.Stderr, `    -limit INT: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes search --q \"k\" --notebook \"inbox\" --tag \"Voluptatibus deserunt veniam deserunt incidunt nostrum officia.\" --limit 11 --session \"Omnis doloribus molestias voluptate a.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes search --q \"k\" --notebook \"inbox\" --tag \"Voluptatibus deserunt veniam deserunt incidunt nostrum officia.\" --archived \"exclude\" --limit 11 --session \"Omnis doloribus molestias voluptate a.\"")
 }
 
 func notesRestoreUsage() {
@@ -1368,6 +1404,7 @@ func notesTagsUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes tags", os.Args[0])
 	fmt.Fprint(os.Stderr, " -notebook STRING")
+	fmt.Fprint(os.Stderr, " -archived STRING")
 	fmt.Fprint(os.Stderr, " -session STRING")
 	fmt.Fprintln(os.Stderr)
 
@@ -1377,11 +1414,12 @@ func notesTagsUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
+	fmt.Fprintln(os.Stderr, `    -archived STRING: `)
 	fmt.Fprintln(os.Stderr, `    -session STRING: `)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes tags --notebook \"inbox\" --session \"Iure tenetur possimus illo molestias quam.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes tags --notebook \"inbox\" --archived \"only\" --session \"Iure tenetur possimus illo molestias quam.\"")
 }
 
 func notesMarksUsage() {
@@ -1422,6 +1460,50 @@ func notesSetMarksUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes set-marks --body '{\n      \"marks\": [\n         \"red\"\n      ]\n   }' --id \"be4c1193735ee1\" --session \"Atque ratione nulla illo est fuga.\"")
+}
+
+func notesArchiveNotesUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes archive-notes", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes archive-notes --body '{\n      \"archived\": true,\n      \"ids\": [\n         \"be4c1193735ee1\"\n      ]\n   }' --session \"Quos quaerat sit molestias.\"")
+}
+
+func notesArchiveCandidatesUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes archive-candidates", os.Args[0])
+	fmt.Fprint(os.Stderr, " -days INT")
+	fmt.Fprint(os.Stderr, " -limit INT")
+	fmt.Fprint(os.Stderr, " -offset INT")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -days INT: `)
+	fmt.Fprintln(os.Stderr, `    -limit INT: `)
+	fmt.Fprintln(os.Stderr, `    -offset INT: `)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes archive-candidates --days 8831 --limit 398 --offset 6553575800984633872 --session \"Id quos sit in expedita impedit rerum.\"")
 }
 
 func notesSaveMarkNamesUsage() {
@@ -1474,7 +1556,7 @@ func notesSaveNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Set the display name, order, kind or note sort of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
+	fmt.Fprintln(os.Stderr, `Set the display name, order, kind, note sort or archive of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
@@ -1483,7 +1565,7 @@ func notesSaveNotebookUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"kind\": \"inherit\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\" --session \"Saepe qui enim id qui ex quis.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-notebook --body '{\n      \"archived\": false,\n      \"kind\": \"inherit\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }' --id \"inbox\" --session \"Saepe qui enim id qui ex quis.\"")
 }
 
 func notesMoveNotebookUsage() {

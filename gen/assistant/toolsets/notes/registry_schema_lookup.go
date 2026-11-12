@@ -20,7 +20,7 @@ func ToolSchema(name tools.Ident) (*genregistry.ToolSchema, bool) {
 	case "notes.get":
 		return declarations.schema1(), true
 	case "notes.search":
-		return declarations.schema32(), true
+		return declarations.schema34(), true
 	default:
 		return nil, false
 	}

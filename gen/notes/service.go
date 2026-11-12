@@ -25,7 +25,10 @@ import (
 // CRUD and search for notes.
 type Service interface {
 	// List notes in the order of sort, a page at a time: total tells how many
-	// there are, and offset reads the next page.
+	// there are, and offset reads the next page. The notes in the archive are left
+	// out unless archived asks for them; without a notebook, archived=only lists
+	// the notes put in the archive on their own, as those of the notebooks there
+	// are listed by their notebooks.
 	List(context.Context, *ListPayload) (res *NoteList, err error)
 	// Get a note. With q, the result also has the ranges of the title and body
 	// matched by the query, as search matches them.
@@ -84,6 +87,17 @@ type Service interface {
 	// Like the manual order, marks are no change of the content: the update time
 	// stays and no earlier version is kept.
 	SetMarks(context.Context, *SetMarksPayload) (res *Note, err error)
+	// Put notes in the archive, or take them out, at once, such as several chosen
+	// in a list. The archive holds notes and notebooks kept but no longer in use,
+	// which lists and searches leave out unless they ask for them. The notes keep
+	// their notebooks, and the update time stays. The notes are checked first:
+	// when one does not exist or is in the trash, none is changed. A note in a
+	// notebook in the archive stays there with its notebook.
+	ArchiveNotes(context.Context, *ArchiveNotesPayload) (err error)
+	// List the notes that may be put in the archive: those not updated for days,
+	// oldest first, but those in the archive or the trash already, a page at a
+	// time.
+	ArchiveCandidates(context.Context, *ArchiveCandidatesPayload) (res *NoteList, err error)
 	// Name the marks, which says what they mean: the names are written to the
 	// settings of the notes (_ebira.yaml), replacing those given before; an empty
 	// name takes the name away.
@@ -95,9 +109,9 @@ type Service interface {
 	// an ID that starts with xn--. A suffix such as -2 is added when the ID is
 	// taken.
 	CreateNotebook(context.Context, *CreateNotebookPayload) (res *Notebook, err error)
-	// Set the display name, order, kind or note sort of a notebook, creating the
-	// notebook if it does not exist. The order of inbox and trash cannot be
-	// changed.
+	// Set the display name, order, kind, note sort or archive of a notebook,
+	// creating the notebook if it does not exist. The order of inbox and trash
+	// cannot be changed.
 	SaveNotebook(context.Context, *SaveNotebookPayload) (res *Notebook, err error)
 	// Move a notebook into another notebook, as a sub notebook, or a sub notebook
 	// out to the top or into another notebook. Its ID becomes <parent>/<name> or
@@ -230,6 +244,11 @@ type Service interface {
 	// notes, nor its sub notebooks. A sub notebook can be made private on its own.
 	// Only people can undo this.
 	MakeNotebookPrivate(context.Context, *MakeNotebookPrivatePayload) (err error)
+	// Put a notebook of the collab kind in the archive, with its notes and sub
+	// notebooks, or take it out. The archive holds notes and notebooks kept but no
+	// longer in use, which lists and searches leave out unless they ask for them.
+	// The notes stay in the notebook and keep their content.
+	ArchiveAiNotebook(context.Context, *ArchiveAiNotebookPayload) (res *Notebook, err error)
 	// Add a file to a note. The request body is the file, of any type, at most 50
 	// MB. The name is cleaned up (letters, digits, - and _), keeps its extension
 	// (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of
@@ -334,7 +353,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [58]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+var MethodNames = [61]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -404,6 +423,39 @@ type AddGuidePayload struct {
 	Session *string
 	// Language of the guide (default en)
 	Lang *string
+}
+
+// ArchiveAiNotebookPayload is the payload type of the notes service
+// archive_ai_notebook method.
+type ArchiveAiNotebookPayload struct {
+	// Notebook ID
+	ID string
+	// true to put the notebook in the archive, false to take it out
+	Archived bool
+}
+
+// ArchiveCandidatesPayload is the payload type of the notes service
+// archive_candidates method.
+type ArchiveCandidatesPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Days the notes have not been updated for
+	Days int
+	// Maximum number of notes
+	Limit int
+	// Number of notes to skip
+	Offset int
+}
+
+// ArchiveNotesPayload is the payload type of the notes service archive_notes
+// method.
+type ArchiveNotesPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// IDs of the notes
+	Ids []string
+	// true to put the notes in the archive, false to take them out
+	Archived bool
 }
 
 type BrokenFileRef struct {
@@ -789,6 +841,11 @@ type ListPayload struct {
 	// and title is by code point, ignoring case and width. Omit for the sort
 	// setting of the notebook (order without a notebook)
 	Sort *string
+	// The archive holds notes and notebooks kept but no longer in use, which lists
+	// and searches leave out unless they ask for them: exclude leaves the notes in
+	// the archive out, include takes them in with the others, and only takes them
+	// alone
+	Archived string
 }
 
 // Settings of the server's machine and user, in its settings file, that the
@@ -934,12 +991,19 @@ type Note struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool
 	// Body in Markdown
 	Body string
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
 	Version string
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRange
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -1014,6 +1078,10 @@ type NoteSummary struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool
 	// Excerpt around the matched terms (search only)
 	Snippet *string
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -1067,8 +1135,17 @@ type Notebook struct {
 	Name string
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order int
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count int
+	// Number of notes put in the archive on their own
+	ArchivedCount int
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool
 	// Whether this is a system notebook (inbox or trash)
 	Reserved bool
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -1198,6 +1275,11 @@ type SaveNotebookPayload struct {
 	// created and updated are newest first, and title is by code point, ignoring
 	// case and width
 	Sort *string
+	// Put the notebook in the archive, with its notes and sub notebooks, or take
+	// it out. The archive holds notes and notebooks kept but no longer in use,
+	// which lists and searches leave out unless they ask for them. Not for the
+	// inbox and the trash
+	Archived *bool
 }
 
 // SaveSettingsPayload is the payload type of the notes service save_settings
@@ -1224,15 +1306,21 @@ type SearchPayload struct {
 	// it. A minus before a term, a phrase, a tag or a mark, as in -word, -"two
 	// words", -tag:name and -mark:red, leaves out the notes with it. OR in
 	// capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks
-	// for notes with either, binding closer than AND. A query of tags and marks
-	// alone, or of what to leave out alone, lists the notes found, last updated
-	// first
+	// for notes with either, binding closer than AND. in:archive asks for the
+	// notes in the archive only, which are left out otherwise. A query of tags and
+	// marks alone, or of what to leave out alone, lists the notes found, last
+	// updated first
 	Q string
 	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
 	// except the trash
 	Notebook *string
 	// Only notes with this tag
 	Tag *string
+	// The archive holds notes and notebooks kept but no longer in use, which lists
+	// and searches leave out unless they ask for them: exclude leaves the notes in
+	// the archive out, include takes them in with the others, and only takes them
+	// alone
+	Archived string
 	// Maximum number of notes
 	Limit int
 }
@@ -1374,6 +1462,11 @@ type TagsPayload struct {
 	// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
 	// except the trash
 	Notebook *string
+	// The archive holds notes and notebooks kept but no longer in use, which lists
+	// and searches leave out unless they ask for them: exclude leaves the notes in
+	// the archive out, include takes them in with the others, and only takes them
+	// alone
+	Archived string
 }
 
 // Range of characters, in Unicode code point offsets
@@ -1461,6 +1554,10 @@ type UpdateAiNotePayload struct {
 	// Marks of the note, one at most for now; an empty list takes them away. See
 	// list_marks for what each means
 	Marks []string
+	// Put the note in the archive, or take it out. The archive holds notes and
+	// notebooks kept but no longer in use, which lists and searches leave out
+	// unless they ask for them. Like marks, it changes nothing of the content
+	Archived *bool
 	// Leave the body out of the result (it comes back empty), as for a long note:
 	// the new version, the update time and the other attributes still come back
 	Brief *bool
@@ -2159,6 +2256,10 @@ type jsonNoteSummaryTransport struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `json:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `json:"archived,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `json:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -2262,12 +2363,19 @@ type jsonNoteTransport struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `json:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `json:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
 	Version *string `json:"version"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `json:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `json:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*jsonTextRangeTransport `json:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -2333,6 +2441,9 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 	}
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *value.ArchivedAt, goa.FormatDateTime))
 	}
 	for _, e := range value.TitleHighlights {
 		if e != nil {
@@ -2459,8 +2570,17 @@ type jsonNotebookTransport struct {
 	Name *string `json:"name"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *notebookIntTransport `json:"order"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *notebookIntTransport `json:"count"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *notebookIntTransport `json:"archived_count"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `json:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `json:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `json:"reserved"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -2497,6 +2617,9 @@ func validatejsonNotebookTransport(value *jsonNotebookTransport) (err error) {
 	if value.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if value.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if value.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -2511,6 +2634,9 @@ func validatejsonNotebookTransport(value *jsonNotebookTransport) (err error) {
 	}
 	if value.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *value.ArchivedAt, goa.FormatDateTime))
 	}
 	if value.Kind != nil {
 		if !(*value.Kind == "default" || *value.Kind == "collab" || *value.Kind == "drop" || *value.Kind == "private") {
@@ -3254,6 +3380,9 @@ func validateNoteOriginal(value *Note) (err error) {
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if value.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("value.archived_at", *value.ArchivedAt, goa.FormatDateTime))
+	}
 	return err
 }
 
@@ -3407,6 +3536,9 @@ func validateNotebookOriginal(value *Notebook) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	if value.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if value.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("value.archived_at", *value.ArchivedAt, goa.FormatDateTime))
 	}
 	if !(value.Kind == "default" || value.Kind == "collab" || value.Kind == "drop" || value.Kind == "private") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"default", "collab", "drop", "private"}))
@@ -4552,9 +4684,11 @@ func EncodeNote(in *Note) ([]byte, error) {
 			UpdatedAt:       &in.UpdatedAt,
 			TrashedNotebook: in.TrashedNotebook,
 			CreatedBy:       in.CreatedBy,
+			Archived:        in.Archived,
 			Body:            &in.Body,
 			Version:         &in.Version,
 			TrashedFrom:     in.TrashedFrom,
+			ArchivedAt:      in.ArchivedAt,
 		}
 		body.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
@@ -4622,9 +4756,11 @@ func ValidateNoteValue(in *Note) error {
 			UpdatedAt:       &in.UpdatedAt,
 			TrashedNotebook: in.TrashedNotebook,
 			CreatedBy:       in.CreatedBy,
+			Archived:        in.Archived,
 			Body:            &in.Body,
 			Version:         &in.Version,
 			TrashedFrom:     in.TrashedFrom,
+			ArchivedAt:      in.ArchivedAt,
 		}
 		body.Tags = make([]string, len(in.Tags))
 		for i, val := range in.Tags {
@@ -4696,9 +4832,11 @@ func DecodeNote(data []byte) (out *Note, err error) {
 			UpdatedAt:       *body.UpdatedAt,
 			TrashedNotebook: body.TrashedNotebook,
 			CreatedBy:       body.CreatedBy,
+			Archived:        body.Archived,
 			Body:            *body.Body,
 			Version:         *body.Version,
 			TrashedFrom:     body.TrashedFrom,
+			ArchivedAt:      body.ArchivedAt,
 		}
 		out.Tags = make([]string, len(body.Tags))
 		for i, val := range body.Tags {
@@ -5144,6 +5282,7 @@ func EncodeNoteSummary(in *NoteSummary) ([]byte, error) {
 			UpdatedAt:       &in.UpdatedAt,
 			TrashedNotebook: in.TrashedNotebook,
 			CreatedBy:       in.CreatedBy,
+			Archived:        in.Archived,
 			Snippet:         in.Snippet,
 		}
 		body.Tags = make([]string, len(in.Tags))
@@ -5212,6 +5351,7 @@ func ValidateNoteSummaryValue(in *NoteSummary) error {
 			UpdatedAt:       &in.UpdatedAt,
 			TrashedNotebook: in.TrashedNotebook,
 			CreatedBy:       in.CreatedBy,
+			Archived:        in.Archived,
 			Snippet:         in.Snippet,
 		}
 		body.Tags = make([]string, len(in.Tags))
@@ -5284,6 +5424,7 @@ func DecodeNoteSummary(data []byte) (out *NoteSummary, err error) {
 			UpdatedAt:       *body.UpdatedAt,
 			TrashedNotebook: body.TrashedNotebook,
 			CreatedBy:       body.CreatedBy,
+			Archived:        body.Archived,
 			Snippet:         body.Snippet,
 		}
 		out.Tags = make([]string, len(body.Tags))
@@ -5530,18 +5671,22 @@ func EncodeNotebook(in *Notebook) ([]byte, error) {
 	var body *jsonNotebookTransport
 	{
 		body = &jsonNotebookTransport{
-			ID:       &in.ID,
-			Parent:   in.Parent,
-			Name:     &in.Name,
-			Reserved: &in.Reserved,
-			Kind:     &in.Kind,
-			OwnKind:  in.OwnKind,
-			Sort:     &in.Sort,
+			ID:         &in.ID,
+			Parent:     in.Parent,
+			Name:       &in.Name,
+			ArchivedAt: in.ArchivedAt,
+			Archived:   in.Archived,
+			Reserved:   &in.Reserved,
+			Kind:       &in.Kind,
+			OwnKind:    in.OwnKind,
+			Sort:       &in.Sort,
 		}
 		order := notebookIntTransport(in.Order)
 		body.Order = &order
 		count := notebookIntTransport(in.Count)
 		body.Count = &count
+		archivedCount := notebookIntTransport(in.ArchivedCount)
+		body.ArchivedCount = &archivedCount
 	}
 	if err := validatejsonNotebookTransport(body); err != nil {
 		return nil, fmt.Errorf("validate Notebook JSON: %w", err)
@@ -5571,18 +5716,22 @@ func ValidateNotebookValue(in *Notebook) error {
 	var body *jsonNotebookTransport
 	{
 		body = &jsonNotebookTransport{
-			ID:       &in.ID,
-			Parent:   in.Parent,
-			Name:     &in.Name,
-			Reserved: &in.Reserved,
-			Kind:     &in.Kind,
-			OwnKind:  in.OwnKind,
-			Sort:     &in.Sort,
+			ID:         &in.ID,
+			Parent:     in.Parent,
+			Name:       &in.Name,
+			ArchivedAt: in.ArchivedAt,
+			Archived:   in.Archived,
+			Reserved:   &in.Reserved,
+			Kind:       &in.Kind,
+			OwnKind:    in.OwnKind,
+			Sort:       &in.Sort,
 		}
 		order := notebookIntTransport(in.Order)
 		body.Order = &order
 		count := notebookIntTransport(in.Count)
 		body.Count = &count
+		archivedCount := notebookIntTransport(in.ArchivedCount)
+		body.ArchivedCount = &archivedCount
 	}
 	if err := validatejsonNotebookTransport(body); err != nil {
 		return fmt.Errorf("validate Notebook value: %w", err)
@@ -5616,15 +5765,18 @@ func DecodeNotebook(data []byte) (out *Notebook, err error) {
 	}
 	{
 		out = &Notebook{
-			ID:       *body.ID,
-			Parent:   body.Parent,
-			Name:     *body.Name,
-			Order:    int(*body.Order),
-			Count:    int(*body.Count),
-			Reserved: *body.Reserved,
-			Kind:     *body.Kind,
-			OwnKind:  body.OwnKind,
-			Sort:     *body.Sort,
+			ID:            *body.ID,
+			Parent:        body.Parent,
+			Name:          *body.Name,
+			Order:         int(*body.Order),
+			Count:         int(*body.Count),
+			ArchivedCount: int(*body.ArchivedCount),
+			ArchivedAt:    body.ArchivedAt,
+			Archived:      body.Archived,
+			Reserved:      *body.Reserved,
+			Kind:          *body.Kind,
+			OwnKind:       body.OwnKind,
+			Sort:          *body.Sort,
 		}
 	}
 	return out, nil
@@ -6787,6 +6939,7 @@ func decodeNoteSummaryTransportToNoteSummary(v *jsonNoteSummaryTransport) *NoteS
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))
@@ -6832,9 +6985,11 @@ func decodeNoteTransportToNote(v *jsonNoteTransport) *Note {
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Body:            *v.Body,
 		Version:         *v.Version,
 		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
 	}
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
@@ -6993,6 +7148,7 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *jsonNoteSummaryTra
 		UpdatedAt:       &v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))
@@ -7038,9 +7194,11 @@ func encodeNoteToNoteTransport(v *Note) *jsonNoteTransport {
 		UpdatedAt:       &v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Body:            &v.Body,
 		Version:         &v.Version,
 		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
 	}
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
@@ -7885,6 +8043,20 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+			); err != nil {
+				return err
+			}
+		case "archived_at":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
+			); err != nil {
+				return err
+			}
 		case "body":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -7985,6 +8157,8 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
+				"archived_at",
 				"body",
 				"body_highlights",
 				"created_at",
@@ -8558,6 +8732,13 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+			); err != nil {
+				return err
+			}
 		case "created_at":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -8644,6 +8825,7 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"created_at",
 				"created_by",
 				"id",
@@ -9047,10 +9229,31 @@ func validateNotebookJSONValue(path string, value any, description string) error
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive",
+			); err != nil {
+				return err
+			}
+		case "archived_at":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not",
+			); err != nil {
+				return err
+			}
+		case "archived_count":
+			if err := validateGitSyncResultJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of notes put in the archive on their own",
+			); err != nil {
+				return err
+			}
 		case "count":
 			if err := validateGitSyncResultJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Number of notes",
+				typed[key], "Number of notes, but those put in the archive on their own",
 			); err != nil {
 				return err
 			}
@@ -9112,6 +9315,9 @@ func validateNotebookJSONValue(path string, value any, description string) error
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
+				"archived_at",
+				"archived_count",
 				"count",
 				"id",
 				"kind",
@@ -10321,6 +10527,11 @@ func checkImportResultNoteValue(in *Note, field string, active map[any]bool) err
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "trashed_from", false))
 			}
 		}
+		if in.ArchivedAt != nil {
+			if !utf8.ValidString(string(*in.ArchivedAt)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "archived_at", false))
+			}
+		}
 		for index1, item1 := range in.TitleHighlights {
 			_ = index1
 			_ = item1
@@ -10860,6 +11071,11 @@ func checkNotebookNotebookValue(in *Notebook, field string, active map[any]bool)
 		}
 		if !utf8.ValidString(string(in.Name)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+		if in.ArchivedAt != nil {
+			if !utf8.ValidString(string(*in.ArchivedAt)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "archived_at", false))
+			}
 		}
 		if !utf8.ValidString(string(in.Kind)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "kind", false))

@@ -35,6 +35,8 @@ type Endpoints struct {
 	Tags                  goa.Endpoint
 	Marks                 goa.Endpoint
 	SetMarks              goa.Endpoint
+	ArchiveNotes          goa.Endpoint
+	ArchiveCandidates     goa.Endpoint
 	SaveMarkNames         goa.Endpoint
 	CreateNotebook        goa.Endpoint
 	SaveNotebook          goa.Endpoint
@@ -59,6 +61,7 @@ type Endpoints struct {
 	MoveAiSeparator       goa.Endpoint
 	CreateAiNotebook      goa.Endpoint
 	MakeNotebookPrivate   goa.Endpoint
+	ArchiveAiNotebook     goa.Endpoint
 	AddFile               goa.Endpoint
 	GetFile               goa.Endpoint
 	DeleteFile            goa.Endpoint
@@ -145,6 +148,8 @@ func NewEndpoints(s Service) *Endpoints {
 		Tags:                  NewTagsEndpoint(s, a.APIKeyAuth),
 		Marks:                 NewMarksEndpoint(s, a.APIKeyAuth),
 		SetMarks:              NewSetMarksEndpoint(s, a.APIKeyAuth),
+		ArchiveNotes:          NewArchiveNotesEndpoint(s, a.APIKeyAuth),
+		ArchiveCandidates:     NewArchiveCandidatesEndpoint(s, a.APIKeyAuth),
 		SaveMarkNames:         NewSaveMarkNamesEndpoint(s, a.APIKeyAuth),
 		CreateNotebook:        NewCreateNotebookEndpoint(s, a.APIKeyAuth),
 		SaveNotebook:          NewSaveNotebookEndpoint(s, a.APIKeyAuth),
@@ -169,6 +174,7 @@ func NewEndpoints(s Service) *Endpoints {
 		MoveAiSeparator:       NewMoveAiSeparatorEndpoint(s),
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
 		MakeNotebookPrivate:   NewMakeNotebookPrivateEndpoint(s),
+		ArchiveAiNotebook:     NewArchiveAiNotebookEndpoint(s),
 		AddFile:               NewAddFileEndpoint(s, a.APIKeyAuth),
 		GetFile:               NewGetFileEndpoint(s, a.APIKeyAuth),
 		DeleteFile:            NewDeleteFileEndpoint(s, a.APIKeyAuth),
@@ -208,6 +214,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Tags = m(e.Tags)
 	e.Marks = m(e.Marks)
 	e.SetMarks = m(e.SetMarks)
+	e.ArchiveNotes = m(e.ArchiveNotes)
+	e.ArchiveCandidates = m(e.ArchiveCandidates)
 	e.SaveMarkNames = m(e.SaveMarkNames)
 	e.CreateNotebook = m(e.CreateNotebook)
 	e.SaveNotebook = m(e.SaveNotebook)
@@ -232,6 +240,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.MoveAiSeparator = m(e.MoveAiSeparator)
 	e.CreateAiNotebook = m(e.CreateAiNotebook)
 	e.MakeNotebookPrivate = m(e.MakeNotebookPrivate)
+	e.ArchiveAiNotebook = m(e.ArchiveAiNotebook)
 	e.AddFile = m(e.AddFile)
 	e.GetFile = m(e.GetFile)
 	e.DeleteFile = m(e.DeleteFile)
@@ -664,6 +673,52 @@ func NewSetMarksEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.En
 	}
 }
 
+// NewArchiveNotesEndpoint returns an endpoint function that calls the method
+// "archive_notes" of service "notes".
+func NewArchiveNotesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ArchiveNotesPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.ArchiveNotes(ctx, p)
+	}
+}
+
+// NewArchiveCandidatesEndpoint returns an endpoint function that calls the
+// method "archive_candidates" of service "notes".
+func NewArchiveCandidatesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ArchiveCandidatesPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.ArchiveCandidates(ctx, p)
+	}
+}
+
 // NewSaveMarkNamesEndpoint returns an endpoint function that calls the method
 // "save_mark_names" of service "notes".
 func NewSaveMarkNamesEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
@@ -1017,6 +1072,15 @@ func NewMakeNotebookPrivateEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*MakeNotebookPrivatePayload)
 		return nil, s.MakeNotebookPrivate(ctx, p)
+	}
+}
+
+// NewArchiveAiNotebookEndpoint returns an endpoint function that calls the
+// method "archive_ai_notebook" of service "notes".
+func NewArchiveAiNotebookEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ArchiveAiNotebookPayload)
+		return s.ArchiveAiNotebook(ctx, p)
 	}
 }
 

@@ -11,6 +11,7 @@ tags: [guide, search]
 | `tag:guide` | with the tag |
 | `mark:red` | with the mark |
 | `-draft` | without the word (also `-tag:` and `-mark:`) |
+| `in:archive` | in the archive (other searches leave the archive out) |
 | `pizza OR pasta` | with either (`OR` in capitals) |
 
 Combine them: `tag:guide search -mark:red`

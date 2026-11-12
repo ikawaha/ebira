@@ -39,6 +39,8 @@ type Server struct {
 	Tags                  http.Handler
 	Marks                 http.Handler
 	SetMarks              http.Handler
+	ArchiveNotes          http.Handler
+	ArchiveCandidates     http.Handler
 	SaveMarkNames         http.Handler
 	CreateNotebook        http.Handler
 	SaveNotebook          http.Handler
@@ -113,6 +115,8 @@ func New(
 			{"Tags", "GET", "/tags"},
 			{"Marks", "GET", "/marks"},
 			{"SetMarks", "PUT", "/notes/{id}/marks"},
+			{"ArchiveNotes", "POST", "/archive/notes"},
+			{"ArchiveCandidates", "GET", "/archive/candidates"},
 			{"SaveMarkNames", "PUT", "/marks"},
 			{"CreateNotebook", "POST", "/notebooks"},
 			{"SaveNotebook", "PUT", "/notebooks/{*id}"},
@@ -159,6 +163,8 @@ func New(
 		Tags:                  NewTagsHandler(e.Tags, mux, decoder, encoder, errhandler, formatter),
 		Marks:                 NewMarksHandler(e.Marks, mux, decoder, encoder, errhandler, formatter),
 		SetMarks:              NewSetMarksHandler(e.SetMarks, mux, decoder, encoder, errhandler, formatter),
+		ArchiveNotes:          NewArchiveNotesHandler(e.ArchiveNotes, mux, decoder, encoder, errhandler, formatter),
+		ArchiveCandidates:     NewArchiveCandidatesHandler(e.ArchiveCandidates, mux, decoder, encoder, errhandler, formatter),
 		SaveMarkNames:         NewSaveMarkNamesHandler(e.SaveMarkNames, mux, decoder, encoder, errhandler, formatter),
 		CreateNotebook:        NewCreateNotebookHandler(e.CreateNotebook, mux, decoder, encoder, errhandler, formatter),
 		SaveNotebook:          NewSaveNotebookHandler(e.SaveNotebook, mux, decoder, encoder, errhandler, formatter),
@@ -212,6 +218,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Tags = m(s.Tags)
 	s.Marks = m(s.Marks)
 	s.SetMarks = m(s.SetMarks)
+	s.ArchiveNotes = m(s.ArchiveNotes)
+	s.ArchiveCandidates = m(s.ArchiveCandidates)
 	s.SaveMarkNames = m(s.SaveMarkNames)
 	s.CreateNotebook = m(s.CreateNotebook)
 	s.SaveNotebook = m(s.SaveNotebook)
@@ -264,6 +272,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountTagsHandler(mux, h.Tags)
 	MountMarksHandler(mux, h.Marks)
 	MountSetMarksHandler(mux, h.SetMarks)
+	MountArchiveNotesHandler(mux, h.ArchiveNotes)
+	MountArchiveCandidatesHandler(mux, h.ArchiveCandidates)
 	MountSaveMarkNamesHandler(mux, h.SaveMarkNames)
 	MountCreateNotebookHandler(mux, h.CreateNotebook)
 	MountSaveNotebookHandler(mux, h.SaveNotebook)
@@ -1229,6 +1239,112 @@ func NewSetMarksHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "set_marks")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountArchiveNotesHandler configures the mux to serve the "notes" service
+// "archive_notes" endpoint.
+func MountArchiveNotesHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/archive/notes", f)
+}
+
+// NewArchiveNotesHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "archive_notes" endpoint.
+func NewArchiveNotesHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeArchiveNotesRequest(mux, decoder)
+		encodeResponse = EncodeArchiveNotesResponse(encoder)
+		encodeError    = EncodeArchiveNotesError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "archive_notes")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountArchiveCandidatesHandler configures the mux to serve the "notes"
+// service "archive_candidates" endpoint.
+func MountArchiveCandidatesHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/archive/candidates", f)
+}
+
+// NewArchiveCandidatesHandler creates a HTTP handler which loads the HTTP
+// request and calls the "notes" service "archive_candidates" endpoint.
+func NewArchiveCandidatesHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeArchiveCandidatesRequest(mux, decoder)
+		encodeResponse = EncodeArchiveCandidatesResponse(encoder)
+		encodeError    = EncodeArchiveCandidatesError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "archive_candidates")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

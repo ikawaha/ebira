@@ -82,13 +82,13 @@ func (s *Notes) setMarks(ctx context.Context, id string, marks []string) (*genno
 	}
 	marks = store.CleanMarks(marks)
 	if slices.Equal(marks, store.CleanMarks(n.Marks)) {
-		return toNote(n), nil
+		return s.note(n), nil
 	}
 	n.Marks = marks
 	if err := s.write(ctx, n, true, n.Notebook); err != nil {
 		return nil, err
 	}
-	return toNote(n), nil
+	return s.note(n), nil
 }
 
 // SaveMarkNames names the marks, writing the names to the settings of the

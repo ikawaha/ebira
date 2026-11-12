@@ -61,7 +61,7 @@ var (
 	updatedKeys = []string{"updated", "updated_at", "modified", "lastmod"}
 	// reservedKeys are the keys of ebira's note files (store.Note), which an
 	// imported file must not set, such as created_by.
-	reservedKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "trashed_from", "order", "created_by", "body", "imported_from", "import_hash"}
+	reservedKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "archived_at", "trashed_from", "order", "created_by", "body", "imported_from", "import_hash"}
 )
 
 // plainKey reports whether k is a key that stands for itself: a scalar that

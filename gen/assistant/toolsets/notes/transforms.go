@@ -29,9 +29,11 @@ func InitGetToolResult(in *notes.Note) *GetResult {
 		UpdatedAt:       in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            in.Body,
 		Version:         in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	if in.Tags != nil {
 		out.Tags = make([]string, len(in.Tags))
@@ -78,7 +80,14 @@ func InitSearchMethodPayload(in *SearchPayload) *notes.SearchPayload {
 		Q:        in.Q,
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
+		Archived: in.Archived,
 		Limit:    in.Limit,
+	}
+	{
+		var zero string
+		if out.Archived == zero {
+			out.Archived = "exclude"
+		}
 	}
 	{
 		var zero int
@@ -129,6 +138,7 @@ func transformNoteSummaryToNoteSummary(v *notes.NoteSummary) *NoteSummary {
 		UpdatedAt:       v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	if v.Tags != nil {

@@ -99,7 +99,7 @@ func TestSearchPhraseAndTags(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, tt := range tests {
-				res, total, err := ix.Search(ctx, tt.q, "", "", 10)
+				res, total, err := ix.Search(ctx, tt.q, "", "", Archive{}, 10)
 				if err != nil {
 					t.Fatalf("Search(%q): %v", tt.q, err)
 				}
@@ -113,7 +113,7 @@ func TestSearchPhraseAndTags(t *testing.T) {
 				}
 			}
 			// Tags alone list the notes last updated first.
-			res, _, err := ix.Search(ctx, "tag:travel", "", "", 10)
+			res, _, err := ix.Search(ctx, "tag:travel", "", "", Archive{}, 10)
 			if err != nil || len(res) != 2 || res[0].ID != "ja" {
 				t.Errorf("tags alone: %v, %v; want ja first", res, err)
 			}
@@ -176,7 +176,7 @@ func TestSearchShortPart(t *testing.T) {
 				t.Fatal(err)
 			}
 			for q, want := range tt.want {
-				res, _, err := ix.Search(ctx, q, "", "", 10)
+				res, _, err := ix.Search(ctx, q, "", "", Archive{}, 10)
 				if err != nil {
 					t.Fatalf("Search(%q): %v", q, err)
 				}
@@ -238,7 +238,7 @@ func TestSearchSubNotebooks(t *testing.T) {
 		{q: "tag:log", notebook: "a_b", exclude: []string{"trash", "a_b/h"}, want: []string{"sub", "top"}},
 		{q: "tag:log", notebook: "a_b/s", want: []string{"sub"}},
 	} {
-		res, total, err := ix.Search(ctx, tt.q, tt.notebook, "", 10, tt.exclude...)
+		res, total, err := ix.Search(ctx, tt.q, tt.notebook, "", Archive{}, 10, tt.exclude...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -251,7 +251,7 @@ func TestSearchSubNotebooks(t *testing.T) {
 			t.Errorf("Search(%q, %q, exclude %v) = %v (total %d), want %v", tt.q, tt.notebook, tt.exclude, got, total, tt.want)
 		}
 	}
-	tags, err := ix.Tags(ctx, "a_b", "trash", "a_b/h")
+	tags, err := ix.Tags(ctx, "a_b", Archive{}, "trash", "a_b/h")
 	if err != nil {
 		t.Fatal(err)
 	}

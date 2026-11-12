@@ -22,6 +22,10 @@ type Query struct {
 	NotMarks []string
 
 	Or [][]Alt
+
+	// InArchive is set by in:archive, which asks for the notes in the archive
+	// only, which searches leave out otherwise.
+	InArchive bool
 }
 
 // Alt is one of a group joined with OR: a term, a tag or a mark, by Kind.
@@ -39,7 +43,7 @@ const (
 
 // empty reports whether q asks for nothing.
 func (q Query) empty() bool {
-	return len(q.Terms)+len(q.Tags)+len(q.Marks)+len(q.NotTerms)+len(q.NotTags)+len(q.NotMarks)+len(q.Or) == 0
+	return len(q.Terms)+len(q.Tags)+len(q.Marks)+len(q.NotTerms)+len(q.NotTags)+len(q.NotMarks)+len(q.Or) == 0 && !q.InArchive
 }
 
 // found returns the terms whose matches are found: those to find and those in
@@ -62,6 +66,8 @@ const (
 	tagPrefix  = "tag:"
 	markPrefix = "mark:"
 	orWord     = "OR"
+	// inArchive asks for the notes in the archive only.
+	inArchive = "in:archive"
 )
 
 // ParseQuery parses q. Terms are separated by spaces. A term in double
@@ -74,7 +80,9 @@ const (
 // for notes without it; a minus alone is dropped, as while typing one. OR in
 // capitals between two of them, as in pizza OR pasta and tag:a OR tag:b, asks
 // for notes with either, binding closer than the AND of spaces; an OR next to
-// one with a minus, at an end or after another OR is dropped.
+// one with a minus, at an end or after another OR is dropped. in:archive, in
+// any case, asks for the notes in the archive only; with a minus, it is
+// dropped, as the archive is left out anyway.
 func ParseQuery(q string) Query {
 	type item struct {
 		Alt
@@ -83,6 +91,7 @@ func ParseQuery(q string) Query {
 	var items []item
 	var or []bool // whether an OR comes before items[i]
 	pendingOr := false
+	archive := false
 	add := func(kind, value string, not bool) {
 		if value = strings.TrimSpace(value); value == "" {
 			return
@@ -142,13 +151,15 @@ func ParseQuery(q string) Query {
 		}
 		if w := string(rs[i:j]); w == orWord && !not {
 			pendingOr = len(items) > 0
+		} else if strings.EqualFold(w, inArchive) {
+			archive = archive || !not
 		} else {
 			add(AltTerm, w, not)
 		}
 		i = j
 	}
 
-	var res Query
+	res := Query{InArchive: archive}
 	for i := 0; i < len(items); {
 		it := items[i]
 		j := i + 1

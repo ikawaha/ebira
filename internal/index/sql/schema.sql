@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS notes (
 	sort_key   INTEGER NOT NULL, -- key of the manual order (store.Note.SortKey), highest first
 	title_key  TEXT NOT NULL,    -- title for sorting by title: NFKC, lower-cased
 	created_by TEXT NOT NULL DEFAULT '', -- ai for a note created by an AI client (store.Note.CreatedBy)
+	archived   INTEGER NOT NULL DEFAULT 0, -- 1 for a note put in the archive on its own (store.Note.ArchivedAt)
 	import_hash TEXT NOT NULL DEFAULT '', -- hash of the file the note was imported from (store.Note.ImportHash)
 	file_mtime INTEGER NOT NULL, -- used by Sync to skip unchanged files
 	file_size  INTEGER NOT NULL

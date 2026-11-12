@@ -281,6 +281,9 @@ func (m *Model) loadNotebooks() tea.Cmd {
 			return notebooksMsg{err: err}
 		}
 		tags, err := api.Tags(ctx, &gennotes.TagsPayload{})
+		// The notebooks in the archive are left out, as their notes are of
+		// lists; the TUI has no list of the archive yet.
+		res = slices.DeleteFunc(res, func(nb *gennotes.Notebook) bool { return nb.Archived != nil && *nb.Archived })
 		return notebooksMsg{notebooks: res, trashed: trashed, tags: tags, marks: loadMarks(ctx, api), err: err}
 	}
 }

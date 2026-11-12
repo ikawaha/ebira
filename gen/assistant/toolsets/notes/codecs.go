@@ -178,6 +178,11 @@ var getResultFields = []tools.FieldMetadata{
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -191,6 +196,11 @@ var getResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_from")},
 		JSONType:    "string",
 		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights")},
@@ -245,7 +255,7 @@ var searchPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
-		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
+		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
@@ -256,6 +266,11 @@ var searchPayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("tag")},
 		JSONType:    "string",
 		Description: "Only notes with this tag",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "string",
+		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("limit")},
@@ -341,6 +356,11 @@ var searchResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks"), tools.DynamicField{}},
 		JSONType:    "string",
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
@@ -669,9 +689,11 @@ func MarshalGetResult(v *GetResult) ([]byte, error) {
 		UpdatedAt:       &in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            &in.Body,
 		Version:         &in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -734,9 +756,11 @@ func UnmarshalGetResult(data []byte) (*GetResult, error) {
 		UpdatedAt:       *in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            *in.Body,
 		Version:         *in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -784,6 +808,7 @@ func MarshalSearchPayload(v *SearchPayload) ([]byte, error) {
 		Q:        &in.Q,
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
+		Archived: &in.Archived,
 		Limit:    &in.Limit,
 	}
 	return json.Marshal(out)
@@ -815,8 +840,14 @@ func UnmarshalSearchPayload(data []byte) (*SearchPayload, error) {
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
 	}
+	if in.Archived != nil {
+		out.Archived = *in.Archived
+	}
 	if in.Limit != nil {
 		out.Limit = *in.Limit
+	}
+	if in.Archived == nil {
+		out.Archived = "exclude"
 	}
 	if in.Limit == nil {
 		out.Limit = 20
@@ -1064,6 +1095,13 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+			); err != nil {
+				return err
+			}
 		case "limit":
 			if err := validateIntJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -1081,7 +1119,7 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 		case "q":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
+				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
 			); err != nil {
 				return err
 			}
@@ -1101,6 +1139,7 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"limit",
 				"notebook",
 				"q",
@@ -1108,6 +1147,22 @@ func validateSearchPayloadJSONValue(path string, value any, description string) 
 				"tag",
 			})
 		}
+	}
+	return nil
+}
+
+// validateStringJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateStringJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -1127,22 +1182,6 @@ func validateIntJSONValue(path string, value any, description string) error {
 	}
 	if _, err := strconv.ParseInt(typed.String(), 10, strconv.IntSize); err != nil {
 		return invalidGeneratedFieldTypeError(field, "integer", "number", description)
-	}
-	return nil
-}
-
-// validateStringJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateStringJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -1243,6 +1282,13 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+			); err != nil {
+				return err
+			}
 		case "created_at":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -1329,6 +1375,7 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"created_at",
 				"created_by",
 				"id",
@@ -1343,6 +1390,22 @@ func validateSearchResultNoteSummaryTransportJSONValue(path string, value any, d
 				"updated_at",
 			})
 		}
+	}
+	return nil
+}
+
+// validateBooleanJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBooleanJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -1495,6 +1558,20 @@ func validateGetResultJSONValue(path string, value any, description string) erro
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+			); err != nil {
+				return err
+			}
+		case "archived_at":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
+			); err != nil {
+				return err
+			}
 		case "body":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -1595,6 +1672,8 @@ func validateGetResultJSONValue(path string, value any, description string) erro
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
+				"archived_at",
 				"body",
 				"body_highlights",
 				"created_at",
@@ -1743,6 +1822,7 @@ func decodeNoteSummaryTransportToNoteSummary(v *toolhttp.NoteSummaryTransport) *
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))
@@ -1787,6 +1867,7 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 		UpdatedAt:       &v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))

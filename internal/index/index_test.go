@@ -63,7 +63,7 @@ func TestSearch(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, tt := range tests {
-				res, total, err := ix.Search(ctx, tt.q, "", tt.tag, 10)
+				res, total, err := ix.Search(ctx, tt.q, "", tt.tag, Archive{}, 10)
 				if err != nil {
 					t.Fatalf("Search(%q): %v", tt.q, err)
 				}
@@ -134,10 +134,10 @@ func TestSync(t *testing.T) {
 	if len(r.Added) != 0 || !slices.Equal(r.Updated, []string{"a"}) || !slices.Equal(r.Removed, []string{"b"}) {
 		t.Fatalf("second sync = %+v", r)
 	}
-	if _, total, _ := ix.Search(ctx, "ぶどう", "", "", 10); total != 1 {
+	if _, total, _ := ix.Search(ctx, "ぶどう", "", "", Archive{}, 10); total != 1 {
 		t.Errorf("updated note not found")
 	}
-	if _, total, _ := ix.Search(ctx, "みかん", "", "", 10); total != 0 {
+	if _, total, _ := ix.Search(ctx, "みかん", "", "", Archive{}, 10); total != 0 {
 		t.Errorf("removed note still found")
 	}
 
@@ -151,7 +151,7 @@ func TestSync(t *testing.T) {
 	if r, err = ix.Sync(ctx, st); err != nil || !slices.Equal(r.Updated, []string{"a"}) {
 		t.Fatalf("sync after move = %+v, %v", r, err)
 	}
-	if res, _, _ := ix.Search(ctx, "ぶどう", "fruit", "", 10); len(res) != 1 || res[0].Notebook != "fruit" {
+	if res, _, _ := ix.Search(ctx, "ぶどう", "fruit", "", Archive{}, 10); len(res) != 1 || res[0].Notebook != "fruit" {
 		t.Errorf("moved note not found in its new notebook: %+v", res)
 	}
 
@@ -160,7 +160,7 @@ func TestSync(t *testing.T) {
 	if r, err = ix.Sync(ctx, st); err != nil || len(r.Errors) != 2 || len(r.Removed) != 0 {
 		t.Fatalf("sync with a duplicate = %+v, %v", r, err)
 	}
-	if res, _, _ := ix.Search(ctx, "ぶどう", "", "", 10); len(res) != 1 {
+	if res, _, _ := ix.Search(ctx, "ぶどう", "", "", Archive{}, 10); len(res) != 1 {
 		t.Errorf("note with a duplicate ID dropped from the index")
 	}
 }
@@ -206,11 +206,11 @@ func TestNotebookFilter(t *testing.T) {
 		{"work", []string{"b"}},
 		{store.Trash, []string{"c"}},
 	} {
-		list, _, err := ix.List(ctx, tt.notebook, "", "", 10, 0)
+		list, _, err := ix.List(ctx, tt.notebook, "", "", Archive{}, 10, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
-		found, _, err := ix.Search(ctx, "りんご", tt.notebook, "", 10)
+		found, _, err := ix.Search(ctx, "りんご", tt.notebook, "", Archive{}, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -222,7 +222,7 @@ func TestNotebookFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if counts[store.Inbox] != 1 || counts["work"] != 1 || counts[store.Trash] != 1 {
+	if counts[store.Inbox].Notes != 1 || counts["work"].Notes != 1 || counts[store.Trash].Notes != 1 {
 		t.Errorf("Counts = %v", counts)
 	}
 }
@@ -274,7 +274,7 @@ func TestJaWithBigram(t *testing.T) {
 	if got := tables(ix); !slices.Equal(got, []string{"notes_bigram", "notes_fts"}) {
 		t.Errorf("ja tables = %v", got)
 	}
-	res, total, err := ix.Search(ctx, "京都", "", "", 10)
+	res, total, err := ix.Search(ctx, "京都", "", "", Archive{}, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestJaWithBigram(t *testing.T) {
 		t.Errorf("title highlights of tokyo = %v, want [{1 3}]", hl)
 	}
 	// limit cuts the merged list.
-	if res, total, err = ix.Search(ctx, "京都", "", "", 1); err != nil || len(res) != 1 || res[0].ID != "kyoto" || total != 2 {
+	if res, total, err = ix.Search(ctx, "京都", "", "", Archive{}, 1); err != nil || len(res) != 1 || res[0].ID != "kyoto" || total != 2 {
 		t.Errorf("Search with limit 1 = %v, %d, %v", res, total, err)
 	}
 	// Updates and deletes reach the bigram table.
@@ -305,7 +305,7 @@ func TestJaWithBigram(t *testing.T) {
 	if _, err := ix.Sync(ctx, st); err != nil {
 		t.Fatal(err)
 	}
-	if res, _, _ = ix.Search(ctx, "京都", "", "", 10); len(res) != 1 {
+	if res, _, _ = ix.Search(ctx, "京都", "", "", Archive{}, 10); len(res) != 1 {
 		t.Errorf("after the update, Search = %d notes, want 1", len(res))
 	}
 	ix.Close()
@@ -327,7 +327,7 @@ func TestJaWithBigram(t *testing.T) {
 	if got := tables(ix); !slices.Equal(got, []string{"notes_bigram", "notes_fts"}) {
 		t.Errorf("ja tables again = %v", got)
 	}
-	if res, _, _ = ix.Search(ctx, "大阪", "", "", 10); len(res) != 1 {
+	if res, _, _ = ix.Search(ctx, "大阪", "", "", Archive{}, 10); len(res) != 1 {
 		t.Errorf("the rebuilt tables lost notes: %v", res)
 	}
 }
@@ -391,7 +391,7 @@ func TestEnWithTrigram(t *testing.T) {
 	}
 	search := func(q string) []string {
 		t.Helper()
-		res, _, err := ix.Search(ctx, q, "", "", 10)
+		res, _, err := ix.Search(ctx, q, "", "", Archive{}, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -451,7 +451,7 @@ func TestContentless(t *testing.T) {
 		t.Errorf("%d content tables exist, want none", n)
 	}
 	count := func(q string) int {
-		_, total, err := ix.Search(ctx, q, "", "", 10)
+		_, total, err := ix.Search(ctx, q, "", "", Archive{}, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

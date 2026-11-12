@@ -68,6 +68,7 @@ func EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if p.Sort != nil {
 			values.Add("sort", *p.Sort)
 		}
+		values.Add("archived", p.Archived)
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -1166,6 +1167,7 @@ func EncodeSearchRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if p.Tag != nil {
 			values.Add("tag", *p.Tag)
 		}
+		values.Add("archived", p.Archived)
 		values.Add("limit", strconv.Itoa(p.Limit))
 		req.URL.RawQuery = values.Encode()
 		return nil
@@ -2355,6 +2357,7 @@ func EncodeTagsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if p.Notebook != nil {
 			values.Add("notebook", *p.Notebook)
 		}
+		values.Add("archived", p.Archived)
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -2725,6 +2728,262 @@ func DecodeSetMarksResponse(decoder func(*http.Response) goahttp.Decoder, restor
 				return nil, goahttp.ErrDecodingError("notes", "set_marks", err)
 			}
 			return nil, goahttp.ErrInvalidResponse("notes", "set_marks", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildArchiveNotesRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "archive_notes" endpoint
+func (c *Client) BuildArchiveNotesRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ArchiveNotesNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "archive_notes", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeArchiveNotesRequest returns an encoder for requests sent to the notes
+// archive_notes server.
+func EncodeArchiveNotesRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.ArchiveNotesPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "archive_notes", "*notes.ArchiveNotesPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewArchiveNotesRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "archive_notes", err)
+		}
+		return nil
+	}
+}
+
+// DecodeArchiveNotesResponse returns a decoder for responses returned by the
+// notes archive_notes endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeArchiveNotesResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeArchiveNotesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_notes", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "archive_notes", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		case http.StatusNotFound:
+			var (
+				body ArchiveNotesNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_notes", err)
+			}
+			err = ValidateArchiveNotesNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_notes", err)
+			}
+			return nil, NewArchiveNotesNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body ArchiveNotesBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_notes", err)
+			}
+			err = ValidateArchiveNotesBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_notes", err)
+			}
+			return nil, NewArchiveNotesBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body ArchiveNotesUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_notes", err)
+			}
+			err = ValidateArchiveNotesUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_notes", err)
+			}
+			return nil, NewArchiveNotesUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body ArchiveNotesVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_notes", err)
+			}
+			err = ValidateArchiveNotesVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_notes", err)
+			}
+			return nil, NewArchiveNotesVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_notes", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "archive_notes", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildArchiveCandidatesRequest instantiates a HTTP request object with method
+// and path set to call the "notes" service "archive_candidates" endpoint
+func (c *Client) BuildArchiveCandidatesRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ArchiveCandidatesNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "archive_candidates", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeArchiveCandidatesRequest returns an encoder for requests sent to the
+// notes archive_candidates server.
+func EncodeArchiveCandidatesRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.ArchiveCandidatesPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "archive_candidates", "*notes.ArchiveCandidatesPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		values := req.URL.Query()
+		values.Add("days", strconv.Itoa(p.Days))
+		values.Add("limit", strconv.Itoa(p.Limit))
+		values.Add("offset", strconv.Itoa(p.Offset))
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeArchiveCandidatesResponse returns a decoder for responses returned by
+// the notes archive_candidates endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeArchiveCandidatesResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeArchiveCandidatesResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_candidates", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "archive_candidates", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body ArchiveCandidatesResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_candidates", err)
+			}
+			err = ValidateArchiveCandidatesResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_candidates", err)
+			}
+			res := NewArchiveCandidatesNoteListOK(&body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body ArchiveCandidatesUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_candidates", err)
+			}
+			err = ValidateArchiveCandidatesUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_candidates", err)
+			}
+			return nil, NewArchiveCandidatesUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body ArchiveCandidatesVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_candidates", err)
+			}
+			err = ValidateArchiveCandidatesVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "archive_candidates", err)
+			}
+			return nil, NewArchiveCandidatesVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "archive_candidates", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "archive_candidates", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -6615,6 +6874,7 @@ func unmarshalNoteSummaryResponseBodyToNotesNoteSummary(v *NoteSummaryResponseBo
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))
@@ -6681,15 +6941,18 @@ func unmarshalSeparatorResponseBodyToNotesSeparator(v *SeparatorResponseBody) *n
 // *notes.Notebook from a value of type *NotebookResponse.
 func unmarshalNotebookResponseToNotesNotebook(v *NotebookResponse) *notes.Notebook {
 	res := &notes.Notebook{
-		ID:       *v.ID,
-		Parent:   v.Parent,
-		Name:     *v.Name,
-		Order:    *v.Order,
-		Count:    *v.Count,
-		Reserved: *v.Reserved,
-		Kind:     *v.Kind,
-		OwnKind:  v.OwnKind,
-		Sort:     *v.Sort,
+		ID:            *v.ID,
+		Parent:        v.Parent,
+		Name:          *v.Name,
+		Order:         *v.Order,
+		Count:         *v.Count,
+		ArchivedCount: *v.ArchivedCount,
+		ArchivedAt:    v.ArchivedAt,
+		Archived:      v.Archived,
+		Reserved:      *v.Reserved,
+		Kind:          *v.Kind,
+		OwnKind:       v.OwnKind,
+		Sort:          *v.Sort,
 	}
 
 	return res
@@ -6743,9 +7006,11 @@ func unmarshalNoteResponseBodyToNotesNote(v *NoteResponseBody) *notes.Note {
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Body:            *v.Body,
 		Version:         *v.Version,
 		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
 	}
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {

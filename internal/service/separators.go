@@ -215,7 +215,7 @@ func (s *Notes) saveSeparators(ctx context.Context, nb string, seps []store.Sepa
 // separator returns the separator with ID id of notebook nb, with the note it
 // comes before.
 func (s *Notes) separator(ctx context.Context, nb, id string) (*gennotes.Separator, error) {
-	seps, err := s.separatorsOf(ctx, nb)
+	seps, err := s.separatorsOf(ctx, nb, index.Archive{Mode: index.ArchiveInclude})
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,18 @@ func (s *Notes) separator(ctx context.Context, nb, id string) (*gennotes.Separat
 
 // separatorsOf returns the separators of notebook nb in the manual order,
 // each with the note it comes right before.
-func (s *Notes) separatorsOf(ctx context.Context, nb string) ([]*gennotes.Separator, error) {
+func (s *Notes) separatorsOf(ctx context.Context, nb string, a index.Archive) ([]*gennotes.Separator, error) {
+	// The notes listed by a: the separators go before them, or last.
+	var hidden map[string]bool
+	switch {
+	case a.Mode == index.ArchiveOnly, a.Mode != index.ArchiveInclude && slices.Contains(a.Notebooks, nb):
+		return []*gennotes.Separator{}, nil // a list of the archive is not in the manual order
+	case a.Mode != index.ArchiveInclude:
+		var err error
+		if hidden, err = s.index.ArchivedIn(ctx, nb); err != nil {
+			return nil, err
+		}
+	}
 	items, seps, err := s.manualOrder(ctx, nb)
 	if err != nil || len(seps) == 0 {
 		return []*gennotes.Separator{}, err
@@ -242,6 +253,9 @@ func (s *Notes) separatorsOf(ctx context.Context, nb string) ([]*gennotes.Separa
 	var pending []*gennotes.Separator // separators before the next note
 	for _, k := range items {
 		sep, ok := isSep[k.ID]
+		if !ok && hidden[k.ID] {
+			continue
+		}
 		if !ok {
 			for _, p := range pending {
 				p.Before = ptr(k.ID)

@@ -11,6 +11,7 @@ tags: [guide, search]
 | `tag:guide` | そのタグを持つ |
 | `mark:red` | そのマークを持つ |
 | `-下書き` | その語を含まない（`-tag:`・`-mark:` も） |
+| `in:archive` | アーカイブにある（ほかの書き方では、アーカイブのノートは探さない） |
 | `pizza OR pasta` | どちらかを含む（大文字の `OR`） |
 
 組み合わせられます: `tag:guide 検索 -mark:red`

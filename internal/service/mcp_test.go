@@ -32,7 +32,7 @@ func TestMCPTools(t *testing.T) {
 	}
 	slices.Sort(got)
 	want := []string{
-		"add_ai_file", "create_ai_note", "create_ai_notebook", "create_ai_separator", "delete_ai_note", "delete_ai_separator",
+		"add_ai_file", "archive_ai_notebook", "create_ai_note", "create_ai_notebook", "create_ai_separator", "delete_ai_note", "delete_ai_separator",
 		"get_note", "import_ai_note", "list_marks", "list_notebooks", "list_notes", "list_tags", "make_notebook_private",
 		"move_ai_note", "move_ai_separator", "search_notes", "start_ai_upload", "update_ai_note", "update_ai_separator",
 	}
