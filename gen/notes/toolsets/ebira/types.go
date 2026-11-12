@@ -489,7 +489,7 @@ type (
 		Ref string
 		// File name
 		Name string
-		// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+		// The image, base64-encoded, at most 5 MB
 		Content []byte
 	}
 	// MarkInfo is a nested type used by the generated JSON contract.
