@@ -271,7 +271,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .mark-grid button { width: 30px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; }
 .mark-grid button.active { background: var(--bg-active); border-color: var(--accent); }
 .mark-grid .mark-dot { width: 14px; height: 14px; }
+.mark-grid .mark-unmark { color: var(--fg-muted); }
+.mark-grid .mark-unmark svg { width: 18px; height: 18px; }
+.mark-grid .mark-unmark:disabled { opacity: .35; cursor: default; }
 .mark-menu .mark-none { text-align: left; }
+.mark-actions { display: flex; gap: 4px; padding: 2px 0; }
 dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .mark-names .hint { color: var(--fg-muted); font-size: var(--fs-xs); }
 .mark-names-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 8px 0; }

@@ -905,6 +905,7 @@ const KIND_SVG = {
   plus: ["M12 5v14", "M5 12h14"],
   minus: ["M5 12h14"],
   close: ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"],
+  unmark: ["circle:12,12,7.5", "M6.7 17.3 17.3 6.7"],
   help: ["M9 9.5a3 3 0 0 1 5.8-1c.5 1.6-.7 2.5-1.7 3.1-.7.4-1.1 1-1.1 1.8v.6", "M12 17.5v.01"],
   more: ["M5.5 12v.01", "M12 12v.01", "M18.5 12v.01"],
 };
@@ -2667,17 +2668,45 @@ function openMarkMenu(n, at, e) {
     b.setAttribute("aria-label", markLabel(mk.id));
     return b;
   }));
-  const none = button(t("markNone"), () => pick(null), { cls: "mark-none" });
+  // Taking the mark away is the last cell of the grid, after the symbols.
+  const symbols = grid("symbol");
+  const none = iconButton("unmark", t("markNone"), () => pick(null));
+  none.className = "mark-unmark";
+  none.disabled = !cur;
   none.setAttribute("role", "menuitem");
-  m.replaceChildren(el("div", "menu-label", t("markMenu")), grid("color"), grid("symbol"), none);
-  // From the list in the manual order, a separator can go above the note.
-  if (at.closest?.("#notes") && findListed(n.id) && listOf(n.id).reorder) {
-    const sep = button(t("separatorInsertAbove"), () => {
+  symbols.append(none);
+  m.replaceChildren(el("div", "menu-label", t("markMenu")), grid("color"), symbols);
+  const inList = at.closest?.("#notes");
+  const item = (label, fn) => {
+    const b = button(label, () => {
       closeMarkMenu();
-      insertSeparatorAbove(n);
+      fn();
     }, { cls: "mark-none" });
-    sep.setAttribute("role", "menuitem");
-    m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }), sep);
+    b.setAttribute("role", "menuitem");
+    m.append(b);
+  };
+  const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
+  // From the list in the manual order, a separator can go above the note.
+  if (inList && findListed(n.id) && listOf(n.id).reorder) {
+    sep();
+    item(t("separatorInsertAbove"), () => insertSeparatorAbove(n));
+  }
+  // Where the note goes, as icons in a row: the archive (but for a note in
+  // a notebook there, which goes in and out with it) and the trash.
+  if (inList) {
+    const act = (icon, label, fn) => {
+      const b = iconButton(icon, label, () => {
+        closeMarkMenu();
+        fn();
+      });
+      b.setAttribute("role", "menuitem");
+      return b;
+    };
+    const row = el("div", "mark-actions");
+    if (!isArchived(n.notebook)) row.append(act("archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
+    row.append(act("trash", t("toTrashTitle"), () => moveNoteTo(n.id, "trash")));
+    sep();
+    m.append(row);
   }
   m.hidden = false;
   const r = at.getBoundingClientRect();

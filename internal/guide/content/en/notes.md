@@ -26,7 +26,7 @@ A notebook can hold sub notebooks, one level deep ("New sub notebook…" in its 
 
 Notes and notebooks no longer in use but worth keeping can go to the archive. What is there is left out of lists, searches and tag counts. The notebooks and the files of the notes stay where they are, and links to the notes still open them.
 
-- Notes: the box button of the preview, "Put in the archive" for notes chosen together, or drag them onto the archive in the side column.
+- Notes: the box button of the preview, the right-click menu of the list, "Put in the archive" for notes chosen together, or drag them onto the archive in the side column.
 - Notebooks: "Put in the archive" in the menu of a row. Its notes and sub notebooks go with it.
 - Viewing: "Archive" in the side column. Notebooks show as cells, which open and close under them when clicked, as sub notebooks do. Notes in the archive can be edited, and stay there.
 - Taking out: "Take out of the archive" on the same button or menu.
