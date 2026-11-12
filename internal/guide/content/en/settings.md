@@ -59,7 +59,8 @@ defaults:
 - The order is: the flags of a command, then the settings file of the machine, then `defaults` of `_ebira.yaml`, then the built-in defaults.
 - The settings file of a machine needs only the notes directory (`notes_dir`).
 - `notes_dir`, `auth` (how to sign in) and an `addr` other than localhost belong to each machine. Written in `defaults`, they are left out with a warning, so that other machines, or people you share the notes with, cannot turn off passkeys or open the server to the network.
-- When you make new notes, setup writes the language, the interval of syncing and the address to `defaults`. On another machine with the notes, setup does not ask what `defaults` has.
+- When you make new notes, setup writes the language, the interval of syncing and the address to `defaults`. On another machine with the notes, setup does not ask what `defaults` has, and writes the answers to what it lacks to the settings file of that machine.
+- `defaults` can also choose the provider and the model of the assistant, used with the API key of each machine, and turn on syncing with git. When you share the notes with other people, watch the changes to `_ebira.yaml`.
 - An earlier ebira does not know `defaults`: it says "field defaults not found" and does not start. Update ebira on every machine.
 
 ## CSS of the preview

@@ -14,6 +14,7 @@ import (
 
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
+	"github.com/ikawaha/ebira/internal/store"
 	"github.com/ikawaha/ebira/internal/ui/tui"
 )
 
@@ -25,8 +26,8 @@ func runTUI(args []string) error {
 		notesDir = fs.String("notes", defaultNotesDir(), "notes directory whose server the TUI uses, started in the background if needed")
 		addr     = fs.String("addr", defaultAddr(), "address of a server started for the TUI")
 		server   = fs.String("server", "", "URL of a server to use as is, without starting one, such as http://localhost:13579")
-		light    = fs.Bool("light", settings.Theme == "light", "use colors for a light terminal background (default: true when theme of the settings file is light)")
-		lang     = fs.String("lang", settings.Lang, "language of the TUI: "+strings.Join(tui.Langs, " or ")+" (default: lang of the settings file, which the web UI shares, else ja when $LANG is Japanese, else en)")
+		light    = fs.Bool("light", settings.Theme == "light", "use colors for a light terminal background (default: true when theme of the settings file, else of the defaults in "+store.ConfigFile+", is light)")
+		lang     = fs.String("lang", settings.Lang, "language of the TUI: "+strings.Join(tui.Langs, " or ")+" (default: lang of the settings file, which the web UI shares, else of the defaults in "+store.ConfigFile+", else ja when $LANG is Japanese, else en)")
 	)
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), usage+"\nflags of the TUI:\n")

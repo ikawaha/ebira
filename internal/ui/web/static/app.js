@@ -2630,9 +2630,12 @@ async function openSettings() {
   }
   const overridden = new Set(cur.overridden);
   const langName = (l) => langNames[l] || l;
-  // A control for a value; "" is the default, which the file leaves out.
+  // A control for a value; "" is the default, which the file leaves out. A
+  // value the options lack, such as one written by hand or by a newer ebira,
+  // is kept as a choice of its own, so that saving does not drop it.
   const select = (value, options) => {
     const s = el("select");
+    if (value && !options.some(([v]) => v === value)) options = [...options, [value, value]];
     for (const [v, label] of options) {
       const o = el("option", "", label);
       o.value = v;
@@ -2657,7 +2660,7 @@ async function openSettings() {
     theme: [["", t("settingsThemeDefault")], ["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]],
     watch: [["", t("settingsWatchDefault")], ["true", t("settingsWatchOn")], ["false", t("settingsWatchOff")]],
     provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]],
-    tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreview_rendered")], ["source", t("settingsTUISource")]],
+    tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreviewRendered")], ["source", t("settingsTUISource")]],
   };
   const watchValue = (w) => (w === undefined || w === null ? "" : String(w));
   // The controls of the settings of a machine, for the settings file of this
@@ -2687,12 +2690,12 @@ async function openSettings() {
   const follow = () => {
     for (const k of Object.keys(options)) {
       const shared = dc && dc[k].value;
-      const label = shared ? options[k].find(([v]) => v === shared)[1] : "";
+      const label = shared ? (options[k].find(([v]) => v === shared) || [shared, shared])[1] : "";
       c[k].options[0].textContent = shared ? t("settingsFollowShared", { value: label }) : options[k][0][1];
     }
     for (const [k, def] of [["git_sync", t("settingsGitSyncPlaceholder")], ["model", modelDefault(c.provider.value || (dc && dc.provider.value))]]) {
       const shared = dc && dc[k].value.trim();
-      c[k].placeholder = shared ? t("settingsSharedPlaceholder", { value: shared }) : def;
+      c[k].placeholder = shared ? t("settingsFollowShared", { value: shared }) : def;
     }
     if (dc) dc.model.placeholder = modelDefault(dc.provider.value);
   };

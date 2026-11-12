@@ -258,9 +258,9 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		what += ", the interval of syncing as git_sync"
 	}
 	if cloned {
-		what += ", and the settings asked after cloning that the notes do not have"
+		what += " (and, after cloning, what the notes do not share)"
 	}
-	save, err := confirm(r, out, fmt.Sprintf("Save %s in %s, to use them from any directory", what, cfgPath), true)
+	save, err := confirm(r, out, fmt.Sprintf("Save in %s %s, to use them from any directory", cfgPath, what), true)
 	if err != nil {
 		return "", err
 	}

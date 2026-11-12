@@ -164,3 +164,26 @@ func TestSaveDefaults(t *testing.T) {
 		t.Errorf("empty defaults kept:\n%s", b)
 	}
 }
+
+// Writing the search settings or the names of the marks keeps the defaults,
+// with their comments.
+func TestSaveKeepsDefaults(t *testing.T) {
+	s, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := "search: ja\ndefaults:\n  # shared\n  lang: ja\n"
+	if err := os.WriteFile(s.ConfigPath(), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveSearch(Config{Search: "bigram"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveMarkNames(map[string]string{"red": "important"}); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(s.ConfigPath())
+	if want := "search: bigram\ndefaults:\n  # shared\n  lang: ja\nmarks:\n  red: important\n"; string(b) != want {
+		t.Errorf("got:\n%s\nwant:\n%s", b, want)
+	}
+}

@@ -366,6 +366,7 @@ func TestDefaults(t *testing.T) {
 func TestLoopback(t *testing.T) {
 	for addr, want := range map[string]bool{
 		"localhost:13579": true, "127.0.0.1:13579": true, "127.0.0.2:1": true, "[::1]:13579": true,
+		"[::ffff:127.0.0.1]:13579": true, "localhost.:13579": false, "LOCALHOST:13579": false,
 		":13579": false, "0.0.0.0:13579": false, "[::]:13579": false, "example.com:80": false, "192.168.1.2:13579": false, "localhost": false,
 	} {
 		if got := Loopback(addr); got != want {
