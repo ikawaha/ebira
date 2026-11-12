@@ -102,8 +102,9 @@ func InitSearchMethodPayload(in *SearchPayload) *notes.SearchPayload {
 func InitSearchToolResult(in *notes.SearchResult) *SearchResult {
 	var out *SearchResult
 	out = &SearchResult{
-		Mode:  in.Mode,
-		Total: in.Total,
+		Mode:          in.Mode,
+		Total:         in.Total,
+		ArchivedTotal: in.ArchivedTotal,
 	}
 	if in.Notes != nil {
 		out.Notes = make([]*NoteSummary, len(in.Notes))

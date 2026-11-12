@@ -844,7 +844,8 @@ type ListPayload struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived string
 }
 
@@ -1319,7 +1320,8 @@ type SearchPayload struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived string
 	// Maximum number of notes
 	Limit int
@@ -1333,6 +1335,10 @@ type SearchResult struct {
 	Total int
 	// Matched notes
 	Notes []*NoteSummary
+	// Number of the notes in the archive that match too, which the search left out
+	// (archived=exclude, the default); search again with archived=include or only,
+	// or in:archive, to read them. Absent when the search took the archive in
+	ArchivedTotal *int
 }
 
 // Separator is the result type of the notes service create_separator method.
@@ -1465,7 +1471,8 @@ type TagsPayload struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived string
 }
 
@@ -2752,6 +2759,10 @@ type jsonSearchResultTransport struct {
 	Total *searchResultIntTransport `json:"total"`
 	// Matched notes
 	Notes []*jsonNoteSummaryTransport `json:"notes"`
+	// Number of the notes in the archive that match too, which the search left out
+	// (archived=exclude, the default); search again with archived=include or only,
+	// or in:archive, to read them. Absent when the search took the archive in
+	ArchivedTotal *searchResultIntTransport `json:"archived_total,omitempty"`
 }
 
 // validatejsonSearchResultTransport checks decoded JSON before it becomes a service value.
@@ -5987,6 +5998,10 @@ func EncodeSearchResult(in *SearchResult) ([]byte, error) {
 		}
 		total := searchResultIntTransport(in.Total)
 		body.Total = &total
+		if in.ArchivedTotal != nil {
+			archivedTotal := searchResultIntTransport(*in.ArchivedTotal)
+			body.ArchivedTotal = &archivedTotal
+		}
 		body.Notes = make([]*jsonNoteSummaryTransport, len(in.Notes))
 		for i, val := range in.Notes {
 			if val == nil {
@@ -6028,6 +6043,10 @@ func ValidateSearchResultValue(in *SearchResult) error {
 		}
 		total := searchResultIntTransport(in.Total)
 		body.Total = &total
+		if in.ArchivedTotal != nil {
+			archivedTotal := searchResultIntTransport(*in.ArchivedTotal)
+			body.ArchivedTotal = &archivedTotal
+		}
 		body.Notes = make([]*jsonNoteSummaryTransport, len(in.Notes))
 		for i, val := range in.Notes {
 			if val == nil {
@@ -6071,6 +6090,10 @@ func DecodeSearchResult(data []byte) (out *SearchResult, err error) {
 		out = &SearchResult{
 			Mode:  *body.Mode,
 			Total: int(*body.Total),
+		}
+		if body.ArchivedTotal != nil {
+			archivedTotal := int(*body.ArchivedTotal)
+			out.ArchivedTotal = &archivedTotal
 		}
 		out.Notes = make([]*NoteSummary, len(body.Notes))
 		for i, val := range body.Notes {
@@ -9541,6 +9564,13 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived_total":
+			if err := validateGitSyncResultJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in",
+			); err != nil {
+				return err
+			}
 		case "mode":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -9564,6 +9594,7 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived_total",
 				"mode",
 				"notes",
 				"total",

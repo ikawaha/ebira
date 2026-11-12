@@ -1745,10 +1745,12 @@ async function loadNotes({ chosen = false, first = false } = {}) {
   try {
     let notes, total;
     let separators = [];
+    let archived = 0; // matches in the archive, which the search left out
     if (state.query) {
       const r = await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, archived: archivedParam(state.notebook), limit: 200 } });
       notes = r.notes;
       total = r.total;
+      archived = r.archived_total ?? 0;
       if (state.trashedNotebook) {
         // The search takes no notebook in the trash: the notes of the trash
         // are narrowed here.
@@ -1796,7 +1798,9 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       ? t(total > notes.length ? "searchInfoTop" : "searchInfo", { where, query: state.query, total, shown: notes.length })
       : t(total > notes.length ? "listInfoPart" : "listInfo", { where, total, shown: notes.length });
     info.classList.remove("error");
-    if (state.query && !inArchive()) offerArchiveResults(seq);
+    if (state.query && !inArchive() && archived) {
+      info.append(" ", button(t("archiveResults", { n: archived }), selectArchive, { cls: "link" }));
+    }
     renderSort();
     renderNotes();
     applySelectionCheck();
@@ -1809,19 +1813,6 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     info.classList.add("error");
     renderNotes();
   }
-}
-
-// offerArchiveResults tells, after the search of list seq, how many notes the
-// archive has for it too, with a button that searches the archive.
-async function offerArchiveResults(seq) {
-  let total = 0;
-  try {
-    total = (await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, archived: "only", limit: 1 } })).total;
-  } catch (_) {
-    return; // the search itself is shown
-  }
-  if (seq !== loadSeq || !total) return;
-  $("list-info").append(" ", button(t("archiveResults", { n: total }), selectArchive, { cls: "link" }));
 }
 
 // applySelectionCheck clears the preview if the user changed the list and the

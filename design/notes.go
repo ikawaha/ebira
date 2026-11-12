@@ -304,6 +304,7 @@ var SearchResult = Type("SearchResult", func() {
 	})
 	RequiredAttribute("total", Int, "Number of matched notes")
 	RequiredAttribute("notes", ArrayOf(NoteSummary), "Matched notes")
+	Attribute("archived_total", Int, "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in")
 })
 
 // NoteEvent notifies that a note was changed by the API, a file edit or a git pull.
@@ -460,7 +461,7 @@ const archiveDescription = "The archive holds notes and notebooks kept but no lo
 // archiveFilter takes the archive in or leaves it out of a list, a search or
 // the tags.
 var archiveFilter = func() {
-	Attribute("archived", String, archiveDescription+": exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone", func() {
+	Attribute("archived", String, archiveDescription+": exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes", func() {
 		Enum("exclude", "include", "only")
 		Default("exclude")
 	})
@@ -546,7 +547,7 @@ var _ = Service("notes", func() {
 			Param("archived")
 			Response("bad_request", StatusBadRequest)
 		})
-		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more", func() {
+		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -710,7 +711,7 @@ var _ = Service("notes", func() {
 			Param("archived")
 			Param("limit")
 		})
-		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them", func() {
+		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them; archived_total in the result tells how many of them match too, which are worth reading when the rest does not answer", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -834,7 +835,7 @@ var _ = Service("notes", func() {
 		HTTP(func() {
 			GET("/notebooks")
 		})
-		Tool("list_notebooks", "List notebooks with their kinds and note counts; other tools take a notebook by its id, and people know it by its name", func() {
+		Tool("list_notebooks", "List notebooks with their kinds and note counts; other tools take a notebook by its id, and people know it by its name. A notebook with archived is in the archive: lists and searches leave its notes out unless they ask for the archive, and list_notes with it as notebook reads them", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -852,7 +853,7 @@ var _ = Service("notes", func() {
 			Param("notebook")
 			Param("archived")
 		})
-		Tool("list_tags", "List tags with their note counts; filter list_notes or search_notes by one of them", func() {
+		Tool("list_tags", "List tags with their note counts; filter list_notes or search_notes by one of them. The counts leave out the notes in the archive unless archived asks for them", func() {
 			ReadOnlyHint(true)
 		})
 	})

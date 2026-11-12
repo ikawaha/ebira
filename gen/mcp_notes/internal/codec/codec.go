@@ -1178,7 +1178,8 @@ type ListInputTransport struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
 }
 
@@ -1260,7 +1261,8 @@ type ListPayloadTransport struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
 }
 
@@ -2041,7 +2043,8 @@ type SearchInputTransport struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
 	// Maximum number of notes
 	Limit *int `json:"limit,omitempty"`
@@ -2124,7 +2127,8 @@ type SearchPayloadTransport struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
 	// Maximum number of notes
 	Limit *SearchPayloadIntTransport `json:"limit,omitempty"`
@@ -2302,6 +2306,10 @@ type SearchResultTransport struct {
 	Total *int `json:"total"`
 	// Matched notes
 	Notes []*SearchResultNoteSummaryTransport `json:"notes"`
+	// Number of the notes in the archive that match too, which the search left out
+	// (archived=exclude, the default); search again with archived=include or only,
+	// or in:archive, to read them. Absent when the search took the archive in
+	ArchivedTotal *int `json:"archived_total,omitempty"`
 }
 
 // ValidateSearchResultTransport checks decoded JSON before it becomes a service value.
@@ -2408,7 +2416,8 @@ type TagsInputTransport struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
 }
 
@@ -2436,7 +2445,8 @@ type TagsPayloadTransport struct {
 	// The archive holds notes and notebooks kept but no longer in use, which lists
 	// and searches leave out unless they ask for them: exclude leaves the notes in
 	// the archive out, include takes them in with the others, and only takes them
-	// alone
+	// alone. The archive holds both the notes put there on their own and the
+	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
 }
 
@@ -3836,8 +3846,9 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 	var body *SearchResultTransport
 	{
 		body = &SearchResultTransport{
-			Mode:  &in.Mode,
-			Total: &in.Total,
+			Mode:          &in.Mode,
+			Total:         &in.Total,
+			ArchivedTotal: in.ArchivedTotal,
 		}
 		body.Notes = make([]*SearchResultNoteSummaryTransport, len(in.Notes))
 		for i, val := range in.Notes {

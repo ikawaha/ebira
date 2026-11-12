@@ -52,11 +52,11 @@ func ToolSchema(name tools.Ident) (*genregistry.ToolSchema, bool) {
 	case "ebira.search_notes":
 		return declarations.schema390(), true
 	case "ebira.start_ai_upload":
-		return declarations.schema432(), true
+		return declarations.schema433(), true
 	case "ebira.update_ai_note":
-		return declarations.schema446(), true
+		return declarations.schema447(), true
 	case "ebira.update_ai_separator":
-		return declarations.schema509(), true
+		return declarations.schema510(), true
 	default:
 		return nil, false
 	}

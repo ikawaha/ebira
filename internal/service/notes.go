@@ -1444,7 +1444,18 @@ func (s *Notes) Search(ctx context.Context, p *gennotes.SearchPayload) (*gennote
 	if err != nil {
 		return nil, err
 	}
-	return &gennotes.SearchResult{Mode: string(s.index.Mode()), Total: total, Notes: s.summaries(res, true, a.Notebooks)}, nil
+	r := &gennotes.SearchResult{Mode: string(s.index.Mode()), Total: total, Notes: s.summaries(res, true, a.Notebooks)}
+	// What the search left out in the archive, so that the caller knows it
+	// is there: people see a link to it, and AI clients that it may answer.
+	if a.Mode == index.ArchiveExclude && !index.ParseQuery(p.Q).InArchive {
+		a.Mode = index.ArchiveOnly
+		_, n, err := s.index.Search(ctx, p.Q, deref(p.Notebook), deref(p.Tag), a, 0, hidden...)
+		if err != nil {
+			return nil, err
+		}
+		r.ArchivedTotal = &n
+	}
+	return r, nil
 }
 
 func (s *Notes) Sync(ctx context.Context, _ *gennotes.SyncPayload) (*gennotes.SyncResult, error) {
