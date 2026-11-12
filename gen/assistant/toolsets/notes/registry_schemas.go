@@ -26,7 +26,7 @@ func ToolSchemas() []*genregistry.ToolSchema {
 	declarations := registryDeclarations{}
 	return []*genregistry.ToolSchema{
 		declarations.schema1(),
-		declarations.schema32(),
+		declarations.schema34(),
 	}
 } // schema1 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema1() *genregistry.ToolSchema {
@@ -36,7 +36,7 @@ func (declarations registryDeclarations) schema1() *genregistry.ToolSchema {
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Get",
@@ -53,7 +53,7 @@ func (declarations registryDeclarations) schema1() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 1, "by": 1, "content": 1, "full": 1, "get": 3, "id": 1, "note": 1, "notes": 1, "of": 1, "the": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata29(),
+				Payload:       declarations.metadata31(),
 			},
 			Payload: declarations.metadata2(),
 			Result:  declarations.metadata5(),
@@ -100,7 +100,7 @@ func (declarations registryDeclarations) metadata5() *genregistry.ToolTypeMetada
 	registryText1 := "GetResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
 			declarations.field6(),
 			declarations.field7(),
@@ -125,6 +125,8 @@ func (declarations registryDeclarations) metadata5() *genregistry.ToolTypeMetada
 			declarations.field26(),
 			declarations.field27(),
 			declarations.field28(),
+			declarations.field29(),
+			declarations.field30(),
 		},
 	}
 }
@@ -284,6 +286,19 @@ func (registryDeclarations) field17() *genregistry.ToolFieldMetadata {
 
 // field18 constructs one generated field declaration.
 func (registryDeclarations) field18() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field19 constructs one generated field declaration.
+func (registryDeclarations) field19() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Body in Markdown"
 	return &genregistry.ToolFieldMetadata{
@@ -295,8 +310,8 @@ func (registryDeclarations) field18() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field19 constructs one generated field declaration.
-func (registryDeclarations) field19() *genregistry.ToolFieldMetadata {
+// field20 constructs one generated field declaration.
+func (registryDeclarations) field20() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
 	return &genregistry.ToolFieldMetadata{
@@ -308,8 +323,8 @@ func (registryDeclarations) field19() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field20 constructs one generated field declaration.
-func (registryDeclarations) field20() *genregistry.ToolFieldMetadata {
+// field21 constructs one generated field declaration.
+func (registryDeclarations) field21() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the note was in before it was moved to the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -321,27 +336,13 @@ func (registryDeclarations) field20() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field21 constructs one generated field declaration.
-func (registryDeclarations) field21() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
 // field22 constructs one generated field declaration.
 func (registryDeclarations) field22() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	registryText1 := "string"
+	registryText2 := "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
 		},
 		JSONType:    &registryText1,
 		Description: &registryText2,
@@ -350,6 +351,33 @@ func (registryDeclarations) field22() *genregistry.ToolFieldMetadata {
 
 // field23 constructs one generated field declaration.
 func (registryDeclarations) field23() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field24 constructs one generated field declaration.
+func (registryDeclarations) field24() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field25 constructs one generated field declaration.
+func (registryDeclarations) field25() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -363,8 +391,8 @@ func (registryDeclarations) field23() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field24 constructs one generated field declaration.
-func (registryDeclarations) field24() *genregistry.ToolFieldMetadata {
+// field26 constructs one generated field declaration.
+func (registryDeclarations) field26() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -378,8 +406,8 @@ func (registryDeclarations) field24() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field25 constructs one generated field declaration.
-func (registryDeclarations) field25() *genregistry.ToolFieldMetadata {
+// field27 constructs one generated field declaration.
+func (registryDeclarations) field27() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -391,8 +419,8 @@ func (registryDeclarations) field25() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field26 constructs one generated field declaration.
-func (registryDeclarations) field26() *genregistry.ToolFieldMetadata {
+// field28 constructs one generated field declaration.
+func (registryDeclarations) field28() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -405,8 +433,8 @@ func (registryDeclarations) field26() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field27 constructs one generated field declaration.
-func (registryDeclarations) field27() *genregistry.ToolFieldMetadata {
+// field29 constructs one generated field declaration.
+func (registryDeclarations) field29() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -420,8 +448,8 @@ func (registryDeclarations) field27() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field28 constructs one generated field declaration.
-func (registryDeclarations) field28() *genregistry.ToolFieldMetadata {
+// field30 constructs one generated field declaration.
+func (registryDeclarations) field30() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -435,29 +463,29 @@ func (registryDeclarations) field28() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata29 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata29() *genregistry.ToolTypeMetadata {
+// metadata31 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata31() *genregistry.ToolTypeMetadata {
 	registryText1 := "GetPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field30(),
-			declarations.field31(),
+			declarations.field32(),
+			declarations.field33(),
 		},
 	}
 }
 
-// field30 constructs one generated field declaration.
-func (registryDeclarations) field30() *genregistry.ToolFieldMetadata {
+// field32 constructs one generated field declaration.
+func (registryDeclarations) field32() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field31 constructs one generated field declaration.
-func (registryDeclarations) field31() *genregistry.ToolFieldMetadata {
+// field33 constructs one generated field declaration.
+func (registryDeclarations) field33() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID"
 	return &genregistry.ToolFieldMetadata{
@@ -469,15 +497,15 @@ func (registryDeclarations) field31() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema32 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema32() *genregistry.ToolSchema {
+// schema34 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema34() *genregistry.ToolSchema {
 	registryText1 := "Full-text search over notes. Japanese terms are supported"
 	return &genregistry.ToolSchema{
 		Name:                   "notes.search",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Search",
@@ -487,48 +515,49 @@ func (declarations registryDeclarations) schema32() *genregistry.ToolSchema {
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 				Description:     "Full-text search over notes. Japanese terms are supported",
 				Search: &genregistry.ToolSearchDocument{
 					Length: 12,
 					Terms:  map[string]int{"are": 1, "full": 1, "japanese": 1, "notes": 2, "over": 1, "search": 3, "supported": 1, "terms": 1, "text": 1},
 				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata66(),
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+				Payload:       declarations.metadata70(),
 			},
-			Payload: declarations.metadata33(),
-			Result:  declarations.metadata40(),
+			Payload: declarations.metadata35(),
+			Result:  declarations.metadata43(),
 		},
 	}
 }
 
-// metadata33 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata33() *genregistry.ToolTypeMetadata {
+// metadata35 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata35() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field34(),
-			declarations.field35(),
 			declarations.field36(),
 			declarations.field37(),
 			declarations.field38(),
 			declarations.field39(),
+			declarations.field40(),
+			declarations.field41(),
+			declarations.field42(),
 		},
 	}
 }
 
-// field34 constructs one generated field declaration.
-func (registryDeclarations) field34() *genregistry.ToolFieldMetadata {
+// field36 constructs one generated field declaration.
+func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field35 constructs one generated field declaration.
-func (registryDeclarations) field35() *genregistry.ToolFieldMetadata {
+// field37 constructs one generated field declaration.
+func (registryDeclarations) field37() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Session of people signed in with a passkey, set as a cookie by the server"
 	return &genregistry.ToolFieldMetadata{
@@ -540,10 +569,10 @@ func (registryDeclarations) field35() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field36 constructs one generated field declaration.
-func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
+// field38 constructs one generated field declaration.
+func (registryDeclarations) field38() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
+	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("q")},
@@ -553,8 +582,8 @@ func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field37 constructs one generated field declaration.
-func (registryDeclarations) field37() *genregistry.ToolFieldMetadata {
+// field39 constructs one generated field declaration.
+func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -566,8 +595,8 @@ func (registryDeclarations) field37() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field38 constructs one generated field declaration.
-func (registryDeclarations) field38() *genregistry.ToolFieldMetadata {
+// field40 constructs one generated field declaration.
+func (registryDeclarations) field40() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -579,8 +608,21 @@ func (registryDeclarations) field38() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field39 constructs one generated field declaration.
-func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
+// field41 constructs one generated field declaration.
+func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field42 constructs one generated field declaration.
+func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{
@@ -592,16 +634,13 @@ func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata40 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata40() *genregistry.ToolTypeMetadata {
+// metadata43 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata43() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field41(),
-			declarations.field42(),
-			declarations.field43(),
 			declarations.field44(),
 			declarations.field45(),
 			declarations.field46(),
@@ -624,20 +663,24 @@ func (declarations registryDeclarations) metadata40() *genregistry.ToolTypeMetad
 			declarations.field63(),
 			declarations.field64(),
 			declarations.field65(),
+			declarations.field66(),
+			declarations.field67(),
+			declarations.field68(),
+			declarations.field69(),
 		},
 	}
 }
 
-// field41 constructs one generated field declaration.
-func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
+// field44 constructs one generated field declaration.
+func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field42 constructs one generated field declaration.
-func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
+// field45 constructs one generated field declaration.
+func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Search mode used"
 	return &genregistry.ToolFieldMetadata{
@@ -649,8 +692,8 @@ func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field43 constructs one generated field declaration.
-func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
+// field46 constructs one generated field declaration.
+func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Number of matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -662,8 +705,8 @@ func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field44 constructs one generated field declaration.
-func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
+// field47 constructs one generated field declaration.
+func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -675,8 +718,8 @@ func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field45 constructs one generated field declaration.
-func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
+// field48 constructs one generated field declaration.
+func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -689,8 +732,8 @@ func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field46 constructs one generated field declaration.
-func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
+// field49 constructs one generated field declaration.
+func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -704,8 +747,8 @@ func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field47 constructs one generated field declaration.
-func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
+// field50 constructs one generated field declaration.
+func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -719,8 +762,8 @@ func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field48 constructs one generated field declaration.
-func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
+// field51 constructs one generated field declaration.
+func (registryDeclarations) field51() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -734,8 +777,8 @@ func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field49 constructs one generated field declaration.
-func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
+// field52 constructs one generated field declaration.
+func (registryDeclarations) field52() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -749,8 +792,8 @@ func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field50 constructs one generated field declaration.
-func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
+// field53 constructs one generated field declaration.
+func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -765,8 +808,8 @@ func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field51 constructs one generated field declaration.
-func (registryDeclarations) field51() *genregistry.ToolFieldMetadata {
+// field54 constructs one generated field declaration.
+func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -780,8 +823,8 @@ func (registryDeclarations) field51() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field52 constructs one generated field declaration.
-func (registryDeclarations) field52() *genregistry.ToolFieldMetadata {
+// field55 constructs one generated field declaration.
+func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -795,8 +838,8 @@ func (registryDeclarations) field52() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field53 constructs one generated field declaration.
-func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
+// field56 constructs one generated field declaration.
+func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -810,8 +853,8 @@ func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field54 constructs one generated field declaration.
-func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
+// field57 constructs one generated field declaration.
+func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -825,8 +868,8 @@ func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field55 constructs one generated field declaration.
-func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
+// field58 constructs one generated field declaration.
+func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -840,8 +883,8 @@ func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field56 constructs one generated field declaration.
-func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
+// field59 constructs one generated field declaration.
+func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -856,8 +899,23 @@ func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field57 constructs one generated field declaration.
-func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
+// field60 constructs one generated field declaration.
+func (registryDeclarations) field60() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field61 constructs one generated field declaration.
+func (registryDeclarations) field61() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Excerpt around the matched terms (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -871,80 +929,15 @@ func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field58 constructs one generated field declaration.
-func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notes")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field59 constructs one generated field declaration.
-func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notes")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field60 constructs one generated field declaration.
-func (registryDeclarations) field60() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notes")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field61 constructs one generated field declaration.
-func (registryDeclarations) field61() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notes")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
 // field62 constructs one generated field declaration.
 func (registryDeclarations) field62() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
-	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
+	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("notes")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
 		},
 		JSONType:    &registryText1,
 		Description: &registryText2,
@@ -954,12 +947,12 @@ func (registryDeclarations) field62() *genregistry.ToolFieldMetadata {
 // field63 constructs one generated field declaration.
 func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
-	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
+	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("notes")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
 		},
 		JSONType:    &registryText1,
@@ -975,7 +968,7 @@ func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("notes")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
 			{Segment: genregistry.NewToolFieldSegmentField("start")},
 		},
@@ -992,6 +985,71 @@ func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("notes")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field66 constructs one generated field declaration.
+func (registryDeclarations) field66() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field67 constructs one generated field declaration.
+func (registryDeclarations) field67() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field68 constructs one generated field declaration.
+func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field69 constructs one generated field declaration.
+func (registryDeclarations) field69() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
 			{Segment: genregistry.NewToolFieldSegmentField("snippet_highlights")},
 			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
 			{Segment: genregistry.NewToolFieldSegmentField("end")},
@@ -1001,33 +1059,34 @@ func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata66 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata66() *genregistry.ToolTypeMetadata {
+// metadata70 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata70() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"session\":{\"description\":\"Session of people signed in with a passkey, set as a cookie by the server\",\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field67(),
-			declarations.field68(),
-			declarations.field69(),
-			declarations.field70(),
 			declarations.field71(),
 			declarations.field72(),
+			declarations.field73(),
+			declarations.field74(),
+			declarations.field75(),
+			declarations.field76(),
+			declarations.field77(),
 		},
 	}
 }
 
-// field67 constructs one generated field declaration.
-func (registryDeclarations) field67() *genregistry.ToolFieldMetadata {
+// field71 constructs one generated field declaration.
+func (registryDeclarations) field71() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field68 constructs one generated field declaration.
-func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
+// field72 constructs one generated field declaration.
+func (registryDeclarations) field72() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Session of people signed in with a passkey, set as a cookie by the server"
 	return &genregistry.ToolFieldMetadata{
@@ -1039,10 +1098,10 @@ func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field69 constructs one generated field declaration.
-func (registryDeclarations) field69() *genregistry.ToolFieldMetadata {
+// field73 constructs one generated field declaration.
+func (registryDeclarations) field73() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
+	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("q")},
@@ -1052,8 +1111,8 @@ func (registryDeclarations) field69() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field70 constructs one generated field declaration.
-func (registryDeclarations) field70() *genregistry.ToolFieldMetadata {
+// field74 constructs one generated field declaration.
+func (registryDeclarations) field74() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -1065,8 +1124,8 @@ func (registryDeclarations) field70() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field71 constructs one generated field declaration.
-func (registryDeclarations) field71() *genregistry.ToolFieldMetadata {
+// field75 constructs one generated field declaration.
+func (registryDeclarations) field75() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -1078,8 +1137,21 @@ func (registryDeclarations) field71() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field72 constructs one generated field declaration.
-func (registryDeclarations) field72() *genregistry.ToolFieldMetadata {
+// field76 constructs one generated field declaration.
+func (registryDeclarations) field76() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field77 constructs one generated field declaration.
+func (registryDeclarations) field77() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{

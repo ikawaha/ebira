@@ -80,7 +80,10 @@ type Summary struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	CreatedBy       string // see store.Note.CreatedBy
-	Snippet         string
+	// Archived reports whether the note is in the archive on its own (see
+	// store.Note.ArchivedAt), not whether its notebook is.
+	Archived bool
+	Snippet  string
 	// TitleHighlights and SnippetHighlights are the ranges of Title and
 	// Snippet matched by the query of a search.
 	TitleHighlights   []Span
@@ -200,7 +203,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 9 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds
+const schemaVersion = 10 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -336,14 +339,14 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	// An update keeps the note's seq, and so its rowid in the full-text tables.
 	var seq int64
 	if err := tx.QueryRowContext(ctx, `
-INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, import_hash, file_mtime, file_size)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, archived, import_hash, file_mtime, file_size)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO UPDATE SET
 	notebook = excluded.notebook, trashed_notebook = excluded.trashed_notebook, title = excluded.title, tags = excluded.tags, marks = excluded.marks, body = excluded.body,
 	created_at = excluded.created_at, updated_at = excluded.updated_at, sort_key = excluded.sort_key, title_key = excluded.title_key,
-	created_by = excluded.created_by, import_hash = excluded.import_hash, file_mtime = excluded.file_mtime, file_size = excluded.file_size
+	created_by = excluded.created_by, archived = excluded.archived, import_hash = excluded.import_hash, file_mtime = excluded.file_mtime, file_size = excluded.file_size
 RETURNING seq`,
-		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.ImportHash, f.ModTime.UnixNano(), f.Size,
+		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.ArchivedAt != nil, n.ImportHash, f.ModTime.UnixNano(), f.Size,
 	).Scan(&seq); err != nil {
 		return err
 	}
@@ -576,19 +579,25 @@ func (ix *Index) Bodies(ctx context.Context, fn func(id, title, body string) err
 	return rows.Err()
 }
 
+// Count is the number of notes of a notebook: Notes but those put in the
+// archive on their own, which are Archived.
+type Count struct {
+	Notes, Archived int
+}
+
 // Counts returns the number of notes per notebook. The count of the trash is
 // of the notes deleted on their own (see TrashedNotebookCounts).
-func (ix *Index) Counts(ctx context.Context) (map[string]int, error) {
-	rows, err := ix.db.QueryContext(ctx, `SELECT notebook, count(*) FROM notes WHERE trashed_notebook = '' GROUP BY notebook`)
+func (ix *Index) Counts(ctx context.Context) (map[string]Count, error) {
+	rows, err := ix.db.QueryContext(ctx, `SELECT notebook, sum(archived = 0), sum(archived) FROM notes WHERE trashed_notebook = '' GROUP BY notebook`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	counts := map[string]int{}
+	counts := map[string]Count{}
 	for rows.Next() {
 		var nb string
-		var c int
-		if err := rows.Scan(&nb, &c); err != nil {
+		var c Count
+		if err := rows.Scan(&nb, &c.Notes, &c.Archived); err != nil {
 			return nil, err
 		}
 		counts[nb] = c
@@ -603,10 +612,10 @@ type TagCount struct {
 }
 
 // Tags returns the tags of the notes in notebook and its sub notebooks (all
-// but the trash if empty), but those in exclude, with their note counts,
-// sorted by name as titles are.
-func (ix *Index) Tags(ctx context.Context, notebook string, exclude ...string) ([]TagCount, error) {
-	cond, args := notebookTreeCond(notebook, exclude)
+// but the trash if empty), but those in exclude, taken by a, with their note
+// counts, sorted by name as titles are.
+func (ix *Index) Tags(ctx context.Context, notebook string, a Archive, exclude ...string) ([]TagCount, error) {
+	cond, args := a.and(notebookTreeCond(notebook, exclude))
 	rows, err := ix.db.QueryContext(ctx, `SELECT t.tag, count(*) FROM note_tags t JOIN notes n ON n.id = t.id WHERE `+cond+` GROUP BY t.tag`, args...)
 	if err != nil {
 		return nil, err
@@ -630,7 +639,7 @@ func (ix *Index) Tags(ctx context.Context, notebook string, exclude ...string) (
 }
 
 // summaryColumns are the columns that query scans.
-const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.marks, n.created_at, n.updated_at, n.created_by`
+const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.marks, n.created_at, n.updated_at, n.created_by, n.archived`
 
 // orderBy returns the ORDER BY clause of a list in the order sort (one of
 // store.Sorts; empty for store.SortOrder). The ID breaks ties, so that the
@@ -653,10 +662,10 @@ func orderBy(sort string) (string, error) {
 // full-width and half-width forms sort together, and lower-cased.
 func titleKey(title string) string { return strings.ToLower(norm.NFKC.String(title)) }
 
-// List returns notes in notebook (all but the trash and exclude if empty) in
-// the order sort, and the number of all of them.
-func (ix *Index) List(ctx context.Context, notebook, tag, sort string, limit, offset int, exclude ...string) ([]*Summary, int, error) {
-	cond, args := notebookCond(notebook, exclude)
+// List returns notes in notebook (all but the trash and exclude if empty)
+// taken by a, in the order sort, and the number of all of them.
+func (ix *Index) List(ctx context.Context, notebook, tag, sort string, a Archive, limit, offset int, exclude ...string) ([]*Summary, int, error) {
+	cond, args := a.and(notebookCond(notebook, exclude))
 	return ix.list(ctx, cond, args, tag, sort, limit, offset)
 }
 
@@ -737,8 +746,9 @@ func (ix *Index) TrashedNotebookCounts(ctx context.Context) (map[string]int, err
 // those joined with OR, and with tag if not empty. total is the number of matched notes. In the ja and en
 // modes, notes found only by bigrams (substrings that morphemes or words
 // miss) follow the notes found by morphemes or words. A query of tags alone
-// lists the notes with them, last updated first.
-func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int, exclude ...string) (res []*Summary, total int, err error) {
+// lists the notes with them, last updated first. a takes the archive in or
+// leaves it out, and in:archive in q takes only the archive.
+func (ix *Index) Search(ctx context.Context, q, notebook, tag string, a Archive, limit int, exclude ...string) (res []*Summary, total int, err error) {
 	query := ParseQuery(q)
 	terms, tags := query.Terms, query.Tags
 	if tag != "" {
@@ -746,6 +756,9 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	}
 	if query.empty() && tag == "" {
 		return []*Summary{}, 0, nil
+	}
+	if query.InArchive {
+		a.Mode = ArchiveOnly
 	}
 	orTags := false
 	for _, g := range query.Or {
@@ -772,6 +785,7 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, limit int,
 	add(notTagCond(forms, query.NotTags))
 	add(ix.notMarkCond(query.NotMarks))
 	add(ix.notTermCond(query.NotTerms))
+	add(a.cond())
 	tagWhere := strings.Join(conds, " AND ")
 	var ids []string
 	seen := map[string]bool{}
@@ -1118,7 +1132,7 @@ func (ix *Index) query(ctx context.Context, q string, args ...any) ([]*Summary, 
 	for rows.Next() {
 		var s Summary
 		var tags, marks, created, updated string
-		if err := rows.Scan(&s.ID, &s.Notebook, &s.TrashedNotebook, &s.Title, &tags, &marks, &created, &updated, &s.CreatedBy, &s.Snippet); err != nil {
+		if err := rows.Scan(&s.ID, &s.Notebook, &s.TrashedNotebook, &s.Title, &tags, &marks, &created, &updated, &s.CreatedBy, &s.Archived, &s.Snippet); err != nil {
 			return nil, err
 		}
 		if s.CreatedAt, err = time.Parse(time.RFC3339, created); err != nil {

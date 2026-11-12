@@ -15,6 +15,7 @@
   --ng: #c94a3a;
   --banner-bg: #fff4d6;
   --sub-bg: #f4f1e8;
+  --sub-line: #c8b88a; /* the rule down an opened notebook in the list */
   color-scheme: light;
   /* The scales, the same in both themes: the sizes of text, and the radii of
      corners, small parts (tags, items in menus) within controls (buttons,
@@ -48,6 +49,7 @@
   --code-bg: #2a2b2f;
   --banner-bg: #3d3420;
   --sub-bg: #2b2923;
+  --sub-line: #7a6d4c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -66,6 +68,7 @@
     --code-bg: #2a2b2f;
     --banner-bg: #3d3420;
     --sub-bg: #2b2923;
+    --sub-line: #7a6d4c;
   }
 }
 
@@ -268,7 +271,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .mark-grid button { width: 30px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; }
 .mark-grid button.active { background: var(--bg-active); border-color: var(--accent); }
 .mark-grid .mark-dot { width: 14px; height: 14px; }
+.mark-grid .mark-unmark { color: var(--fg-muted); }
+.mark-grid .mark-unmark svg { width: 18px; height: 18px; }
+.mark-grid .mark-unmark:disabled { opacity: .35; cursor: default; }
 .mark-menu .mark-none { text-align: left; }
+.mark-actions { display: flex; gap: 4px; padding: 2px 0; }
 dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .mark-names .hint { color: var(--fg-muted); font-size: var(--fs-xs); }
 .mark-names-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 8px 0; }
@@ -344,7 +351,7 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 /* The sub notebooks of the notebook shown start the note list, in a color of
    their own; from a sub notebook, a row goes back up. */
 .list li.sub-notebook { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--sub-bg); white-space: nowrap; }
-.list li.sub-notebook:hover { background: var(--bg-hover); }
+.list li.sub-notebook:hover { background-color: var(--bg-hover); }
 .list li.sub-notebook.up { color: var(--fg-muted); }
 .list li.sub-notebook .icon { flex: none; width: 26px; }
 /* An opened sub notebook shows its notes under its row, indented on a tint
@@ -352,9 +359,13 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook .twisty { flex: none; display: flex; margin-right: -4px; color: var(--fg-muted); }
 .list li.sub-notebook .twisty svg { width: 14px; height: 14px; transition: transform .15s; }
 .list li.sub-notebook.open .twisty svg { transform: rotate(90deg); }
-.list li.in-sub { padding-left: 36px; background: color-mix(in srgb, var(--sub-bg) 45%, var(--bg)); }
-.list li.in-sub:hover { background: var(--bg-hover); }
-.list li.in-sub.active, .list li.in-sub.chosen { background: var(--bg-active); }
+.list li.in-sub { padding-left: 36px; background: color-mix(in srgb, var(--sub-bg) 75%, var(--bg)); }
+/* An opened notebook and what is under it share a rule down the left edge,
+   and a notebook opened in it a second one, so that it shows where they end. */
+.list li.sub-notebook.open, .list li.sub-notebook.nested, .list li.in-sub { box-shadow: inset 4px 0 0 var(--sub-line); }
+.list li.sub-notebook.nested.open, .list li.in-sub.deep { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px); }
+.list li.in-sub:hover { background-color: var(--bg-hover); }
+.list li.in-sub.active, .list li.in-sub.chosen { background-color: var(--bg-active); }
 /* In the trash, the sub notebooks of an opened notebook, and their notes,
    one step further in. */
 .list li.sub-notebook.nested { padding-left: 36px; }
@@ -367,7 +378,7 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook .count { color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .list li.sub-notebook .nb-more { flex: none; visibility: hidden; border: none; background: none; color: var(--fg-muted); padding: 0 4px; line-height: 1.2; font-size: var(--fs-md); }
 .list li.sub-notebook:hover .nb-more, .list li.sub-notebook.menu-open .nb-more, .list li.sub-notebook .nb-more:focus-visible { visibility: visible; }
-.list li.sub-notebook.menu-open { background: var(--bg-hover); }
+.list li.sub-notebook.menu-open { background-color: var(--bg-hover); }
 .list li.sub-notebook.drop-into { box-shadow: inset 0 0 0 2px var(--accent); }
 .list li.sub-notebook .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--bg); color: var(--fg); }
 .notebook-new .inherited { color: var(--fg-muted); font-size: var(--fs-sm); }
@@ -748,3 +759,10 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .mcp .auth-cmd code { white-space: pre; overflow-x: auto; }
 .mcp .mcp-claude-go { margin: 8px 0; }
 .auth .device-code code { font-size: var(--fs-xl); letter-spacing: 0.1em; text-align: center; }
+
+/* The archive: the button of a search that the archive has notes for too,
+   the mark of a note there in the preview, and the candidates. */
+#list-info button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; }
+.note-head .meta .archived { display: inline-flex; align-items: center; gap: 4px; }
+.note-head .meta .archived svg { width: 14px; height: 14px; }
+.archive-days { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }

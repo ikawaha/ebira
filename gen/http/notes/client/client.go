@@ -84,6 +84,14 @@ type Client struct {
 	// endpoint.
 	SetMarksDoer goahttp.Doer
 
+	// ArchiveNotes Doer is the HTTP client used to make requests to the
+	// archive_notes endpoint.
+	ArchiveNotesDoer goahttp.Doer
+
+	// ArchiveCandidates Doer is the HTTP client used to make requests to the
+	// archive_candidates endpoint.
+	ArchiveCandidatesDoer goahttp.Doer
+
 	// SaveMarkNames Doer is the HTTP client used to make requests to the
 	// save_mark_names endpoint.
 	SaveMarkNamesDoer goahttp.Doer
@@ -227,6 +235,8 @@ func NewClient(
 		TagsDoer:                  doer,
 		MarksDoer:                 doer,
 		SetMarksDoer:              doer,
+		ArchiveNotesDoer:          doer,
+		ArchiveCandidatesDoer:     doer,
 		SaveMarkNamesDoer:         doer,
 		CreateNotebookDoer:        doer,
 		SaveNotebookDoer:          doer,
@@ -689,6 +699,54 @@ func (c *Client) SetMarks() goa.Endpoint {
 		resp, err := c.SetMarksDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "set_marks", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// ArchiveNotes returns an endpoint that makes HTTP requests to the notes
+// service archive_notes server.
+func (c *Client) ArchiveNotes() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeArchiveNotesRequest(c.encoder)
+		decodeResponse = DecodeArchiveNotesResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildArchiveNotesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.ArchiveNotesDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "archive_notes", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// ArchiveCandidates returns an endpoint that makes HTTP requests to the notes
+// service archive_candidates server.
+func (c *Client) ArchiveCandidates() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeArchiveCandidatesRequest(c.encoder)
+		decodeResponse = DecodeArchiveCandidatesResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildArchiveCandidatesRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.ArchiveCandidatesDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "archive_candidates", err)
 		}
 		return decodeResponse(resp)
 	}

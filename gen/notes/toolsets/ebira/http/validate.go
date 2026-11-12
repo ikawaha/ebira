@@ -49,6 +49,73 @@ func ValidateAddAiFileResultTransport(body *AddAiFileResultTransport) (err error
 	return
 }
 
+// ValidateArchiveAiNotebookPayloadTransport runs the validations defined on ArchiveAiNotebookPayloadTransport.
+func ValidateArchiveAiNotebookPayloadTransport(body *ArchiveAiNotebookPayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Archived == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	return
+}
+
+// ValidateArchiveAiNotebookResultTransport runs the validations defined on ArchiveAiNotebookResultTransport.
+func ValidateArchiveAiNotebookResultTransport(body *ArchiveAiNotebookResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Order == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("order", "body"))
+	}
+	if body.Count == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
+	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
+	if body.Reserved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
+	}
+	if body.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if body.Sort == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("sort", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
+	if body.Kind != nil {
+		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.OwnKind != nil {
+		if !(*body.OwnKind == "default" || *body.OwnKind == "collab" || *body.OwnKind == "drop" || *body.OwnKind == "private") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.own_kind", *body.OwnKind, []any{"default", "collab", "drop", "private"}))
+		}
+	}
+	if body.Sort != nil {
+		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
+		}
+	}
+	return
+}
+
 // ValidateCreateAiNotePayloadTransport runs the validations defined on CreateAiNotePayloadTransport.
 func ValidateCreateAiNotePayloadTransport(body *CreateAiNotePayloadTransport) (err error) {
 	if body.Notebook == nil {
@@ -125,6 +192,9 @@ func ValidateCreateAiNoteResultTransport(body *CreateAiNoteResultTransport) (err
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
@@ -175,6 +245,9 @@ func ValidateCreateAiNotebookResultTransport(body *CreateAiNotebookResultTranspo
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -189,6 +262,9 @@ func ValidateCreateAiNotebookResultTransport(body *CreateAiNotebookResultTranspo
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -367,6 +443,9 @@ func ValidateGetNoteResultTransport(body *GetNoteResultTransport) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
@@ -498,6 +577,11 @@ func ValidateListNotesPayloadTransport(body *ListNotesPayloadTransport) (err err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
 	}
+	if body.Archived != nil {
+		if !(*body.Archived == "exclude" || *body.Archived == "include" || *body.Archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *body.Archived, []any{"exclude", "include", "only"}))
+		}
+	}
 	return
 }
 
@@ -530,6 +614,11 @@ func ValidateListNotesResultTransport(body *ListNotesResultTransport) (err error
 func ValidateListTagsPayloadTransport(body *ListTagsPayloadTransport) (err error) {
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Archived != nil {
+		if !(*body.Archived == "exclude" || *body.Archived == "include" || *body.Archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *body.Archived, []any{"exclude", "include", "only"}))
+		}
 	}
 	return
 }
@@ -628,6 +717,9 @@ func ValidateMoveAiNoteResultTransport(body *MoveAiNoteResultTransport) (err err
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
@@ -708,6 +800,11 @@ func ValidateSearchNotesPayloadTransport(body *SearchNotesPayloadTransport) (err
 	}
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Archived != nil {
+		if !(*body.Archived == "exclude" || *body.Archived == "include" || *body.Archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *body.Archived, []any{"exclude", "include", "only"}))
+		}
 	}
 	if body.Limit != nil {
 		if *body.Limit < 1 {
@@ -886,6 +983,9 @@ func ValidateUpdateAiNoteResultTransport(body *UpdateAiNoteResultTransport) (err
 	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -1143,6 +1243,9 @@ func ValidateNoteTransport(body *NoteTransport) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
@@ -1174,6 +1277,9 @@ func ValidateNotebookTransport(body *NotebookTransport) (err error) {
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -1188,6 +1294,9 @@ func ValidateNotebookTransport(body *NotebookTransport) (err error) {
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {

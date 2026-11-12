@@ -61,6 +61,11 @@ type Note struct {
 	Marks     []string  `yaml:"marks,omitempty"`
 	CreatedAt time.Time `yaml:"created_at"`
 	UpdatedAt time.Time `yaml:"updated_at"`
+	// ArchivedAt is when the note was put in the archive, nil when it is not
+	// there: it is kept, but left out of searches and lists unless they ask
+	// for it. A note is in the archive too when its notebook is (see
+	// NotebookMeta.ArchivedAt).
+	ArchivedAt *time.Time `yaml:"archived_at,omitempty"`
 	// TrashedFrom is the notebook a note deleted on its own came from.
 	TrashedFrom string `yaml:"trashed_from,omitempty"`
 	// Order is the note's place in the manual order of its notebook, set when
@@ -591,6 +596,10 @@ type NotebookMeta struct {
 	// Sort is the default order of the note list (one of Sorts); empty for
 	// SortOrder.
 	Sort string `yaml:"sort,omitempty"`
+	// ArchivedAt is when the notebook was put in the archive, with its notes
+	// and sub notebooks; nil when it is not there. A sub notebook is in the
+	// archive when it or its parent is.
+	ArchivedAt *time.Time `yaml:"archived_at,omitempty"`
 }
 
 // Orders of a note list (NotebookMeta.Sort).
@@ -747,6 +756,11 @@ func (s *Store) SaveNotebookMeta(nb string, m NotebookMeta) error {
 		set(root, "sort", str(m.Sort, 0))
 	} else {
 		unset(root, "sort")
+	}
+	if m.ArchivedAt != nil {
+		set(root, "archived_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: FormatTime(*m.ArchivedAt)})
+	} else {
+		unset(root, "archived_at")
 	}
 	root.Style = 0
 	if len(root.Content) == 0 {
@@ -1121,6 +1135,11 @@ func encode(old []byte, n *Note) ([]byte, error) {
 	}
 	set(m, "created_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: FormatTime(n.CreatedAt)})
 	set(m, "updated_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: FormatTime(n.UpdatedAt)})
+	if n.ArchivedAt != nil {
+		setBefore(m, "archived_at", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!timestamp", Value: FormatTime(*n.ArchivedAt)}, "body")
+	} else {
+		unset(m, "archived_at")
+	}
 	if n.TrashedFrom != "" {
 		set(m, "trashed_from", str(n.TrashedFrom, 0))
 	} else {
@@ -1205,7 +1224,7 @@ func setBefore(m *yaml.Node, key string, v *yaml.Node, next string) {
 }
 
 // noteKeys are the keys of note files that Note sets.
-var noteKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "body"}
+var noteKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "archived_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "body"}
 
 // has reports whether the mapping node m has key.
 func has(m *yaml.Node, key string) bool {

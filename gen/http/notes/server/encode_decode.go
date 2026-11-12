@@ -44,6 +44,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			offset          int
 			trashedNotebook *string
 			sort            *string
+			archived        string
 			session         *string
 			err             error
 			c               *http.Cookie
@@ -107,6 +108,15 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("sort", *sort, []any{"order", "created", "updated", "title"}))
 			}
 		}
+		archivedRaw := qp.Get("archived")
+		if archivedRaw != "" {
+			archived = archivedRaw
+		} else {
+			archived = "exclude"
+		}
+		if !(archived == "exclude" || archived == "include" || archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("archived", archived, []any{"exclude", "include", "only"}))
+		}
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -118,7 +128,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return payload, err
 		}
-		payload = NewListPayload(notebook, tag, limit, offset, trashedNotebook, sort, session)
+		payload = NewListPayload(notebook, tag, limit, offset, trashedNotebook, sort, archived, session)
 
 		return payload, nil
 	}
@@ -964,6 +974,7 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 			q        string
 			notebook *string
 			tag      *string
+			archived string
 			limit    int
 			session  *string
 			err      error
@@ -990,6 +1001,15 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		tagRaw := qp.Get("tag")
 		if tagRaw != "" {
 			tag = &tagRaw
+		}
+		archivedRaw := qp.Get("archived")
+		if archivedRaw != "" {
+			archived = archivedRaw
+		} else {
+			archived = "exclude"
+		}
+		if !(archived == "exclude" || archived == "include" || archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("archived", archived, []any{"exclude", "include", "only"}))
 		}
 		{
 			limitRaw := qp.Get("limit")
@@ -1020,7 +1040,7 @@ func DecodeSearchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if err != nil {
 			return payload, err
 		}
-		payload = NewSearchPayload(q, notebook, tag, limit, session)
+		payload = NewSearchPayload(q, notebook, tag, archived, limit, session)
 
 		return payload, nil
 	}
@@ -1901,16 +1921,27 @@ func DecodeTagsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		var payload *notes.TagsPayload
 		var (
 			notebook *string
+			archived string
 			session  *string
 			err      error
 			c        *http.Cookie
 		)
-		notebookRaw := r.URL.Query().Get("notebook")
+		qp := r.URL.Query()
+		notebookRaw := qp.Get("notebook")
 		if notebookRaw != "" {
 			notebook = &notebookRaw
 		}
 		if notebook != nil {
 			err = goa.MergeErrors(err, goa.ValidatePattern("notebook", *notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+		}
+		archivedRaw := qp.Get("archived")
+		if archivedRaw != "" {
+			archived = archivedRaw
+		} else {
+			archived = "exclude"
+		}
+		if !(archived == "exclude" || archived == "include" || archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("archived", archived, []any{"exclude", "include", "only"}))
 		}
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
@@ -1923,7 +1954,7 @@ func DecodeTagsRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return payload, err
 		}
-		payload = NewTagsPayload(notebook, session)
+		payload = NewTagsPayload(notebook, archived, session)
 
 		return payload, nil
 	}
@@ -2169,6 +2200,260 @@ func EncodeSetMarksError(encoder func(context.Context, http.ResponseWriter) goah
 				body = formatter(ctx, res)
 			} else {
 				body = NewSetMarksVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeArchiveNotesResponse returns an encoder for responses returned by the
+// notes archive_notes endpoint.
+func EncodeArchiveNotesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+}
+
+// DecodeArchiveNotesRequest returns a decoder for requests sent to the notes
+// archive_notes endpoint.
+func DecodeArchiveNotesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.ArchiveNotesPayload, error) {
+	return func(r *http.Request) (*notes.ArchiveNotesPayload, error) {
+		var payload *notes.ArchiveNotesPayload
+		var (
+			body ArchiveNotesRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateArchiveNotesRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			session *string
+			c       *http.Cookie
+		)
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewArchiveNotesPayload(&body, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeArchiveNotesError returns an encoder for errors returned by the
+// archive_notes notes endpoint.
+func EncodeArchiveNotesError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewArchiveNotesNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewArchiveNotesBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewArchiveNotesUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewArchiveNotesVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
+// EncodeArchiveCandidatesResponse returns an encoder for responses returned by
+// the notes archive_candidates endpoint.
+func EncodeArchiveCandidatesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.NoteList)
+		enc := encoder(ctx, w)
+		body := NewArchiveCandidatesResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeArchiveCandidatesRequest returns a decoder for requests sent to the
+// notes archive_candidates endpoint.
+func DecodeArchiveCandidatesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.ArchiveCandidatesPayload, error) {
+	return func(r *http.Request) (*notes.ArchiveCandidatesPayload, error) {
+		var payload *notes.ArchiveCandidatesPayload
+		var (
+			days    int
+			limit   int
+			offset  int
+			session *string
+			err     error
+			c       *http.Cookie
+		)
+		qp := r.URL.Query()
+		{
+			daysRaw := qp.Get("days")
+			if daysRaw == "" {
+				days = 180
+			} else {
+				v, err2 := strconv.ParseInt(daysRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("days", daysRaw, "integer"))
+				}
+				days = int(v)
+			}
+		}
+		if days < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("days", days, 1, true))
+		}
+		if days > 36500 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("days", days, 36500, false))
+		}
+		{
+			limitRaw := qp.Get("limit")
+			if limitRaw == "" {
+				limit = 100
+			} else {
+				v, err2 := strconv.ParseInt(limitRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("limit", limitRaw, "integer"))
+				}
+				limit = int(v)
+			}
+		}
+		if limit < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("limit", limit, 1, true))
+		}
+		if limit > 500 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("limit", limit, 500, false))
+		}
+		{
+			offsetRaw := qp.Get("offset")
+			if offsetRaw != "" {
+				v, err2 := strconv.ParseInt(offsetRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("offset", offsetRaw, "integer"))
+				}
+				offset = int(v)
+			}
+		}
+		if offset < 0 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("offset", offset, 0, true))
+		}
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewArchiveCandidatesPayload(days, limit, offset, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeArchiveCandidatesError returns an encoder for errors returned by the
+// archive_candidates notes endpoint.
+func EncodeArchiveCandidatesError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewArchiveCandidatesUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewArchiveCandidatesVerificationRequiredResponseBody(res)
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusForbidden)
@@ -5035,6 +5320,7 @@ func marshalNotesNoteSummaryToNoteSummaryResponseBody(v *notes.NoteSummary) *Not
 		UpdatedAt:       v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	if v.Tags != nil {
@@ -5105,15 +5391,18 @@ func marshalNotesSeparatorToSeparatorResponseBody(v *notes.Separator) *Separator
 // *NotebookResponse from a value of type *notes.Notebook.
 func marshalNotesNotebookToNotebookResponse(v *notes.Notebook) *NotebookResponse {
 	res := &NotebookResponse{
-		ID:       v.ID,
-		Parent:   v.Parent,
-		Name:     v.Name,
-		Order:    v.Order,
-		Count:    v.Count,
-		Reserved: v.Reserved,
-		Kind:     v.Kind,
-		OwnKind:  v.OwnKind,
-		Sort:     v.Sort,
+		ID:            v.ID,
+		Parent:        v.Parent,
+		Name:          v.Name,
+		Order:         v.Order,
+		Count:         v.Count,
+		ArchivedCount: v.ArchivedCount,
+		ArchivedAt:    v.ArchivedAt,
+		Archived:      v.Archived,
+		Reserved:      v.Reserved,
+		Kind:          v.Kind,
+		OwnKind:       v.OwnKind,
+		Sort:          v.Sort,
 	}
 
 	return res
@@ -5167,9 +5456,11 @@ func marshalNotesNoteToNoteResponseBody(v *notes.Note) *NoteResponseBody {
 		UpdatedAt:       v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Body:            v.Body,
 		Version:         v.Version,
 		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
 	}
 	if v.Tags != nil {
 		res.Tags = make([]string, len(v.Tags))

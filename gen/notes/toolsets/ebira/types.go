@@ -27,6 +27,58 @@ type (
 		// such as ![](<path>)
 		Path string
 	}
+	// ArchiveAiNotebookPayload defines the JSON payload for the ebira.archive_ai_notebook tool.
+	ArchiveAiNotebookPayload = struct {
+		// Notebook ID
+		ID string
+		// true to put the notebook in the archive, false to take it out
+		Archived bool
+	}
+	// ArchiveAiNotebookResult defines the JSON result for the ebira.archive_ai_notebook tool.
+	ArchiveAiNotebookResult = struct {
+		// Notebook ID, which is also its directory name, or <parent>/<sub> for a sub
+		// notebook. It is derived from the display name when the notebook is created:
+		// an ASCII name is lower-cased with dashes, and a name with other characters,
+		// such as Japanese, is Punycode-encoded into an ID that starts with xn--, as
+		// in internationalized domain names. Pass the ID as is wherever a notebook is
+		// asked for, and show people the name instead
+		ID string
+		// For a sub notebook: the notebook it is in, whose kind it takes unless it
+		// sets its own. The notes of a sub notebook are not among those of its parent
+		Parent *string
+		// Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)
+		Name string
+		// Sort key among the notebooks other than inbox and trash; lower comes first
+		Order int
+		// Number of notes, but those put in the archive on their own
+		Count int
+		// Number of notes put in the archive on their own
+		ArchivedCount int
+		// When the notebook was put in the archive, with its notes and sub notebooks;
+		// absent when it was not
+		ArchivedAt *string
+		// Whether the notebook is in the archive, put there itself or with its parent;
+		// absent when it is not. Lists and searches leave its notes out unless they
+		// ask for the archive
+		Archived *bool
+		// Whether this is a system notebook (inbox or trash)
+		Reserved bool
+		// Kind of the notebook. AI clients may only read notes in default notebooks,
+		// may also create, update and delete notes in collab notebooks, which people
+		// share with AI, may only add notes to drop notebooks, whose notes they cannot
+		// see, and cannot see private notebooks at all. In the notebook list, AI
+		// clients see drop notebooks with a count of 0. A notebook without a kind set
+		// is default, except the inbox, which is drop
+		Kind string
+		// For a sub notebook that sets a kind of its own: that kind. kind is the kind
+		// in effect, which is private in a private parent whatever the own kind.
+		// Absent when it takes the kind of its parent
+		OwnKind *string
+		// Order of the note list: order is the manual order (notes not moved with move
+		// come by creation time, newest first), created and updated are newest first,
+		// and title is by code point, ignoring case and width
+		Sort string
+	}
 	// CreateAiNotePayload defines the JSON payload for the ebira.create_ai_note tool.
 	CreateAiNotePayload = struct {
 		// ID of a notebook of the collab or drop kind
@@ -63,12 +115,19 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
 		Version string
 		// Notebook the note was in before it was moved to the trash
 		TrashedFrom *string
+		// When the note was put in the archive on its own; absent when it was not,
+		// though it may be in the archive with its notebook (see archived)
+		ArchivedAt *string
 		// Ranges of the title matched by the query of get, sorted and not overlapping
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -98,8 +157,17 @@ type (
 		Name string
 		// Sort key among the notebooks other than inbox and trash; lower comes first
 		Order int
-		// Number of notes
+		// Number of notes, but those put in the archive on their own
 		Count int
+		// Number of notes put in the archive on their own
+		ArchivedCount int
+		// When the notebook was put in the archive, with its notes and sub notebooks;
+		// absent when it was not
+		ArchivedAt *string
+		// Whether the notebook is in the archive, put there itself or with its parent;
+		// absent when it is not. Lists and searches leave its notes out unless they
+		// ask for the archive
+		Archived *bool
 		// Whether this is a system notebook (inbox or trash)
 		Reserved bool
 		// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -198,12 +266,19 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
 		Version string
 		// Notebook the note was in before it was moved to the trash
 		TrashedFrom *string
+		// When the note was put in the archive on its own; absent when it was not,
+		// though it may be in the archive with its notebook (see archived)
+		ArchivedAt *string
 		// Ranges of the title matched by the query of get, sorted and not overlapping
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -262,6 +337,11 @@ type (
 		// and title is by code point, ignoring case and width. Omit for the sort
 		// setting of the notebook (order without a notebook)
 		Sort *string
+		// The archive holds notes and notebooks kept but no longer in use, which lists
+		// and searches leave out unless they ask for them: exclude leaves the notes in
+		// the archive out, include takes them in with the others, and only takes them
+		// alone
+		Archived string
 	}
 	// ListNotesResult defines the JSON result for the ebira.list_notes tool.
 	ListNotesResult = struct {
@@ -279,6 +359,11 @@ type (
 		// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
 		// except the trash
 		Notebook *string
+		// The archive holds notes and notebooks kept but no longer in use, which lists
+		// and searches leave out unless they ask for them: exclude leaves the notes in
+		// the archive out, include takes them in with the others, and only takes them
+		// alone
+		Archived string
 	}
 	// ListTagsResult defines the JSON result for the ebira.list_tags tool.
 	ListTagsResult = []*TagCount
@@ -322,12 +407,19 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
 		Version string
 		// Notebook the note was in before it was moved to the trash
 		TrashedFrom *string
+		// When the note was put in the archive on its own; absent when it was not,
+		// though it may be in the archive with its notebook (see archived)
+		ArchivedAt *string
 		// Ranges of the title matched by the query of get, sorted and not overlapping
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -368,15 +460,21 @@ type (
 		// it. A minus before a term, a phrase, a tag or a mark, as in -word, -"two
 		// words", -tag:name and -mark:red, leaves out the notes with it. OR in
 		// capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks
-		// for notes with either, binding closer than AND. A query of tags and marks
-		// alone, or of what to leave out alone, lists the notes found, last updated
-		// first
+		// for notes with either, binding closer than AND. in:archive asks for the
+		// notes in the archive only, which are left out otherwise. A query of tags and
+		// marks alone, or of what to leave out alone, lists the notes found, last
+		// updated first
 		Q string
 		// Only notes in this notebook and in its sub notebooks. Omit for all notebooks
 		// except the trash
 		Notebook *string
 		// Only notes with this tag
 		Tag *string
+		// The archive holds notes and notebooks kept but no longer in use, which lists
+		// and searches leave out unless they ask for them: exclude leaves the notes in
+		// the archive out, include takes them in with the others, and only takes them
+		// alone
+		Archived string
 		// Maximum number of notes
 		Limit int
 	}
@@ -431,6 +529,10 @@ type (
 		// Marks of the note, one at most for now; an empty list takes them away. See
 		// list_marks for what each means
 		Marks []string
+		// Put the note in the archive, or take it out. The archive holds notes and
+		// notebooks kept but no longer in use, which lists and searches leave out
+		// unless they ask for them. Like marks, it changes nothing of the content
+		Archived *bool
 		// Leave the body out of the result (it comes back empty), as for a long note:
 		// the new version, the update time and the other attributes still come back
 		Brief *bool
@@ -460,12 +562,19 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
 		Version string
 		// Notebook the note was in before it was moved to the trash
 		TrashedFrom *string
+		// When the note was put in the archive on its own; absent when it was not,
+		// though it may be in the archive with its notebook (see archived)
+		ArchivedAt *string
 		// Ranges of the title matched by the query of get, sorted and not overlapping
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -545,12 +654,19 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool
 		// Body in Markdown
 		Body string
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
 		Version string
 		// Notebook the note was in before it was moved to the trash
 		TrashedFrom *string
+		// When the note was put in the archive on its own; absent when it was not,
+		// though it may be in the archive with its notebook (see archived)
+		ArchivedAt *string
 		// Ranges of the title matched by the query of get, sorted and not overlapping
 		TitleHighlights []*TextRange
 		// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -590,6 +706,10 @@ type (
 		// Marks of the note, to tell it at a glance, one at most for now: a color or a
 		// symbol (see list_marks for what each means to the user); absent for none
 		Marks []string
+		// Whether the note is in the archive, put there on its own or with its
+		// notebook: kept, but left out of lists and searches unless they ask for it;
+		// absent when it is not
+		Archived *bool
 		// Excerpt around the matched terms (search only)
 		Snippet *string
 		// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -615,8 +735,17 @@ type (
 		Name string
 		// Sort key among the notebooks other than inbox and trash; lower comes first
 		Order int
-		// Number of notes
+		// Number of notes, but those put in the archive on their own
 		Count int
+		// Number of notes put in the archive on their own
+		ArchivedCount int
+		// When the notebook was put in the archive, with its notes and sub notebooks;
+		// absent when it was not
+		ArchivedAt *string
+		// Whether the notebook is in the archive, put there itself or with its parent;
+		// absent when it is not. Lists and searches leave its notes out unless they
+		// ask for the archive
+		Archived *bool
 		// Whether this is a system notebook (inbox or trash)
 		Reserved bool
 		// Kind of the notebook. AI clients may only read notes in default notebooks,

@@ -112,6 +112,15 @@ type SetMarksRequestBody struct {
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
 }
 
+// ArchiveNotesRequestBody is the type of the "notes" service "archive_notes"
+// endpoint HTTP request body.
+type ArchiveNotesRequestBody struct {
+	// IDs of the notes
+	Ids []string `form:"ids" json:"ids" xml:"ids"`
+	// true to put the notes in the archive, false to take them out
+	Archived bool `form:"archived" json:"archived" xml:"archived"`
+}
+
 // SaveMarkNamesRequestBody is the type of the "notes" service
 // "save_mark_names" endpoint HTTP request body.
 type SaveMarkNamesRequestBody struct {
@@ -162,6 +171,11 @@ type SaveNotebookRequestBody struct {
 	// created and updated are newest first, and title is by code point, ignoring
 	// case and width
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
+	// Put the notebook in the archive, with its notes and sub notebooks, or take
+	// it out. The archive holds notes and notebooks kept but no longer in use,
+	// which lists and searches leave out unless they ask for them. Not for the
+	// inbox and the trash
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 }
 
 // MoveNotebookRequestBody is the type of the "notes" service "move_notebook"
@@ -246,10 +260,17 @@ type GetResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -282,10 +303,17 @@ type CreateResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -318,10 +346,17 @@ type UpdateResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -365,10 +400,17 @@ type RestoreResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -401,10 +443,17 @@ type MoveResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -491,16 +540,36 @@ type SetMarksResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
 	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
 	BodyHighlights []*TextRangeResponseBody `form:"body_highlights,omitempty" json:"body_highlights,omitempty" xml:"body_highlights,omitempty"`
+}
+
+// ArchiveCandidatesResponseBody is the type of the "notes" service
+// "archive_candidates" endpoint HTTP response body.
+type ArchiveCandidatesResponseBody struct {
+	// Number of notes in the whole list, regardless of limit and offset
+	Total *int `form:"total,omitempty" json:"total,omitempty" xml:"total,omitempty"`
+	// Notes from offset, at most limit; fewer than total when the list goes on
+	Notes []*NoteSummaryResponseBody `form:"notes,omitempty" json:"notes,omitempty" xml:"notes,omitempty"`
+	// Separators between the notes, in the manual order, each before the note
+	// named by its before: only for a notebook listed in the order sort without a
+	// tag, and then all of them, regardless of limit and offset
+	Separators []*SeparatorResponseBody `form:"separators,omitempty" json:"separators,omitempty" xml:"separators,omitempty"`
 }
 
 // CreateNotebookResponseBody is the type of the "notes" service
@@ -520,8 +589,17 @@ type CreateNotebookResponseBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *int `form:"archived_count,omitempty" json:"archived_count,omitempty" xml:"archived_count,omitempty"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -558,8 +636,17 @@ type SaveNotebookResponseBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *int `form:"archived_count,omitempty" json:"archived_count,omitempty" xml:"archived_count,omitempty"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -596,8 +683,17 @@ type MoveNotebookResponseBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *int `form:"archived_count,omitempty" json:"archived_count,omitempty" xml:"archived_count,omitempty"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -634,8 +730,17 @@ type RestoreNotebookResponseBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *int `form:"archived_count,omitempty" json:"archived_count,omitempty" xml:"archived_count,omitempty"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -776,8 +881,17 @@ type AddGuideResponseBody struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *int `form:"archived_count,omitempty" json:"archived_count,omitempty" xml:"archived_count,omitempty"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -2053,6 +2167,117 @@ type SetMarksUnauthorizedResponseBody struct {
 // "set_marks" endpoint HTTP response body for the "verification_required"
 // error.
 type SetMarksVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ArchiveNotesNotFoundResponseBody is the type of the "notes" service
+// "archive_notes" endpoint HTTP response body for the "not_found" error.
+type ArchiveNotesNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ArchiveNotesBadRequestResponseBody is the type of the "notes" service
+// "archive_notes" endpoint HTTP response body for the "bad_request" error.
+type ArchiveNotesBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ArchiveNotesUnauthorizedResponseBody is the type of the "notes" service
+// "archive_notes" endpoint HTTP response body for the "unauthorized" error.
+type ArchiveNotesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ArchiveNotesVerificationRequiredResponseBody is the type of the "notes"
+// service "archive_notes" endpoint HTTP response body for the
+// "verification_required" error.
+type ArchiveNotesVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ArchiveCandidatesUnauthorizedResponseBody is the type of the "notes" service
+// "archive_candidates" endpoint HTTP response body for the "unauthorized"
+// error.
+type ArchiveCandidatesUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ArchiveCandidatesVerificationRequiredResponseBody is the type of the "notes"
+// service "archive_candidates" endpoint HTTP response body for the
+// "verification_required" error.
+type ArchiveCandidatesVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3755,6 +3980,10 @@ type NoteSummaryResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `form:"snippet,omitempty" json:"snippet,omitempty" xml:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -3806,8 +4035,17 @@ type NotebookResponse struct {
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// Sort key among the notebooks other than inbox and trash; lower comes first
 	Order *int `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
-	// Number of notes
+	// Number of notes, but those put in the archive on their own
 	Count *int `form:"count,omitempty" json:"count,omitempty" xml:"count,omitempty"`
+	// Number of notes put in the archive on their own
+	ArchivedCount *int `form:"archived_count,omitempty" json:"archived_count,omitempty" xml:"archived_count,omitempty"`
+	// When the notebook was put in the archive, with its notes and sub notebooks;
+	// absent when it was not
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
+	// Whether the notebook is in the archive, put there itself or with its parent;
+	// absent when it is not. Lists and searches leave its notes out unless they
+	// ask for the archive
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Whether this is a system notebook (inbox or trash)
 	Reserved *bool `form:"reserved,omitempty" json:"reserved,omitempty" xml:"reserved,omitempty"`
 	// Kind of the notebook. AI clients may only read notes in default notebooks,
@@ -3887,12 +4125,19 @@ type NoteResponseBody struct {
 	// Marks of the note, to tell it at a glance, one at most for now: a color or a
 	// symbol (see list_marks for what each means to the user); absent for none
 	Marks []string `form:"marks,omitempty" json:"marks,omitempty" xml:"marks,omitempty"`
+	// Whether the note is in the archive, put there on its own or with its
+	// notebook: kept, but left out of lists and searches unless they ask for it;
+	// absent when it is not
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
 	Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
 	// Notebook the note was in before it was moved to the trash
 	TrashedFrom *string `form:"trashed_from,omitempty" json:"trashed_from,omitempty" xml:"trashed_from,omitempty"`
+	// When the note was put in the archive on its own; absent when it was not,
+	// though it may be in the archive with its notebook (see archived)
+	ArchivedAt *string `form:"archived_at,omitempty" json:"archived_at,omitempty" xml:"archived_at,omitempty"`
 	// Ranges of the title matched by the query of get, sorted and not overlapping
 	TitleHighlights []*TextRangeResponseBody `form:"title_highlights,omitempty" json:"title_highlights,omitempty" xml:"title_highlights,omitempty"`
 	// Ranges of the body matched by the query of get, sorted and not overlapping
@@ -4173,6 +4418,23 @@ func NewSetMarksRequestBody(p *notes.SetMarksPayload) *SetMarksRequestBody {
 	return body
 }
 
+// NewArchiveNotesRequestBody builds the HTTP request body from the payload of
+// the "archive_notes" endpoint of the "notes" service.
+func NewArchiveNotesRequestBody(p *notes.ArchiveNotesPayload) *ArchiveNotesRequestBody {
+	body := &ArchiveNotesRequestBody{
+		Archived: p.Archived,
+	}
+	if p.Ids != nil {
+		body.Ids = make([]string, len(p.Ids))
+		for i, val := range p.Ids {
+			body.Ids[i] = val
+		}
+	} else {
+		body.Ids = []string{}
+	}
+	return body
+}
+
 // NewSaveMarkNamesRequestBody builds the HTTP request body from the payload of
 // the "save_mark_names" endpoint of the "notes" service.
 func NewSaveMarkNamesRequestBody(p *notes.SaveMarkNamesPayload) *SaveMarkNamesRequestBody {
@@ -4210,10 +4472,11 @@ func NewCreateNotebookRequestBody(p *notes.CreateNotebookPayload) *CreateNoteboo
 // the "save_notebook" endpoint of the "notes" service.
 func NewSaveNotebookRequestBody(p *notes.SaveNotebookPayload) *SaveNotebookRequestBody {
 	body := &SaveNotebookRequestBody{
-		Name:  p.Name,
-		Order: p.Order,
-		Kind:  p.Kind,
-		Sort:  p.Sort,
+		Name:     p.Name,
+		Order:    p.Order,
+		Kind:     p.Kind,
+		Sort:     p.Sort,
+		Archived: p.Archived,
 	}
 	return body
 }
@@ -4351,8 +4614,10 @@ func NewGetNoteOK(body *GetResponseBody, version string) *notes.Note {
 		UpdatedAt:       *body.UpdatedAt,
 		TrashedNotebook: body.TrashedNotebook,
 		CreatedBy:       body.CreatedBy,
+		Archived:        body.Archived,
 		Body:            *body.Body,
 		TrashedFrom:     body.TrashedFrom,
+		ArchivedAt:      body.ArchivedAt,
 	}
 	v.Tags = make([]string, len(body.Tags))
 	for i, val := range body.Tags {
@@ -4457,8 +4722,10 @@ func NewCreateNoteCreated(body *CreateResponseBody, version string) *notes.Note 
 		UpdatedAt:       *body.UpdatedAt,
 		TrashedNotebook: body.TrashedNotebook,
 		CreatedBy:       body.CreatedBy,
+		Archived:        body.Archived,
 		Body:            *body.Body,
 		TrashedFrom:     body.TrashedFrom,
+		ArchivedAt:      body.ArchivedAt,
 	}
 	v.Tags = make([]string, len(body.Tags))
 	for i, val := range body.Tags {
@@ -4565,8 +4832,10 @@ func NewUpdateNoteOK(body *UpdateResponseBody, version string) *notes.Note {
 		UpdatedAt:       *body.UpdatedAt,
 		TrashedNotebook: body.TrashedNotebook,
 		CreatedBy:       body.CreatedBy,
+		Archived:        body.Archived,
 		Body:            *body.Body,
 		TrashedFrom:     body.TrashedFrom,
+		ArchivedAt:      body.ArchivedAt,
 	}
 	v.Tags = make([]string, len(body.Tags))
 	for i, val := range body.Tags {
@@ -4929,8 +5198,10 @@ func NewRestoreNoteOK(body *RestoreResponseBody, version string) *notes.Note {
 		UpdatedAt:       *body.UpdatedAt,
 		TrashedNotebook: body.TrashedNotebook,
 		CreatedBy:       body.CreatedBy,
+		Archived:        body.Archived,
 		Body:            *body.Body,
 		TrashedFrom:     body.TrashedFrom,
+		ArchivedAt:      body.ArchivedAt,
 	}
 	v.Tags = make([]string, len(body.Tags))
 	for i, val := range body.Tags {
@@ -5052,8 +5323,10 @@ func NewMoveNoteOK(body *MoveResponseBody, version string) *notes.Note {
 		UpdatedAt:       *body.UpdatedAt,
 		TrashedNotebook: body.TrashedNotebook,
 		CreatedBy:       body.CreatedBy,
+		Archived:        body.Archived,
 		Body:            *body.Body,
 		TrashedFrom:     body.TrashedFrom,
+		ArchivedAt:      body.ArchivedAt,
 	}
 	v.Tags = make([]string, len(body.Tags))
 	for i, val := range body.Tags {
@@ -5547,9 +5820,11 @@ func NewSetMarksNoteOK(body *SetMarksResponseBody) *notes.Note {
 		UpdatedAt:       *body.UpdatedAt,
 		TrashedNotebook: body.TrashedNotebook,
 		CreatedBy:       body.CreatedBy,
+		Archived:        body.Archived,
 		Body:            *body.Body,
 		Version:         *body.Version,
 		TrashedFrom:     body.TrashedFrom,
+		ArchivedAt:      body.ArchivedAt,
 	}
 	v.Tags = make([]string, len(body.Tags))
 	for i, val := range body.Tags {
@@ -5645,6 +5920,124 @@ func NewSetMarksVerificationRequired(body *SetMarksVerificationRequiredResponseB
 	return v
 }
 
+// NewArchiveNotesNotFound builds a notes service archive_notes endpoint
+// not_found error.
+func NewArchiveNotesNotFound(body *ArchiveNotesNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewArchiveNotesBadRequest builds a notes service archive_notes endpoint
+// bad_request error.
+func NewArchiveNotesBadRequest(body *ArchiveNotesBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewArchiveNotesUnauthorized builds a notes service archive_notes endpoint
+// unauthorized error.
+func NewArchiveNotesUnauthorized(body *ArchiveNotesUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewArchiveNotesVerificationRequired builds a notes service archive_notes
+// endpoint verification_required error.
+func NewArchiveNotesVerificationRequired(body *ArchiveNotesVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewArchiveCandidatesNoteListOK builds a "notes" service "archive_candidates"
+// endpoint result from a HTTP "OK" response.
+func NewArchiveCandidatesNoteListOK(body *ArchiveCandidatesResponseBody) *notes.NoteList {
+	v := &notes.NoteList{
+		Total: *body.Total,
+	}
+	v.Notes = make([]*notes.NoteSummary, len(body.Notes))
+	for i, val := range body.Notes {
+		if val == nil {
+			v.Notes[i] = nil
+			continue
+		}
+		v.Notes[i] = unmarshalNoteSummaryResponseBodyToNotesNoteSummary(val)
+	}
+	if body.Separators != nil {
+		v.Separators = make([]*notes.Separator, len(body.Separators))
+		for i, val := range body.Separators {
+			if val == nil {
+				v.Separators[i] = nil
+				continue
+			}
+			v.Separators[i] = unmarshalSeparatorResponseBodyToNotesSeparator(val)
+		}
+	}
+
+	return v
+}
+
+// NewArchiveCandidatesUnauthorized builds a notes service archive_candidates
+// endpoint unauthorized error.
+func NewArchiveCandidatesUnauthorized(body *ArchiveCandidatesUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewArchiveCandidatesVerificationRequired builds a notes service
+// archive_candidates endpoint verification_required error.
+func NewArchiveCandidatesVerificationRequired(body *ArchiveCandidatesVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewSaveMarkNamesMarkInfoOK builds a "notes" service "save_mark_names"
 // endpoint result from a HTTP "OK" response.
 func NewSaveMarkNamesMarkInfoOK(body []*MarkInfoResponse) []*notes.MarkInfo {
@@ -5694,15 +6087,18 @@ func NewSaveMarkNamesVerificationRequired(body *SaveMarkNamesVerificationRequire
 // endpoint result from a HTTP "Created" response.
 func NewCreateNotebookNotebookCreated(body *CreateNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
-		ID:       *body.ID,
-		Parent:   body.Parent,
-		Name:     *body.Name,
-		Order:    *body.Order,
-		Count:    *body.Count,
-		Reserved: *body.Reserved,
-		Kind:     *body.Kind,
-		OwnKind:  body.OwnKind,
-		Sort:     *body.Sort,
+		ID:            *body.ID,
+		Parent:        body.Parent,
+		Name:          *body.Name,
+		Order:         *body.Order,
+		Count:         *body.Count,
+		ArchivedCount: *body.ArchivedCount,
+		ArchivedAt:    body.ArchivedAt,
+		Archived:      body.Archived,
+		Reserved:      *body.Reserved,
+		Kind:          *body.Kind,
+		OwnKind:       body.OwnKind,
+		Sort:          *body.Sort,
 	}
 
 	return v
@@ -5787,15 +6183,18 @@ func NewCreateNotebookVerificationRequired(body *CreateNotebookVerificationRequi
 // result from a HTTP "OK" response.
 func NewSaveNotebookNotebookOK(body *SaveNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
-		ID:       *body.ID,
-		Parent:   body.Parent,
-		Name:     *body.Name,
-		Order:    *body.Order,
-		Count:    *body.Count,
-		Reserved: *body.Reserved,
-		Kind:     *body.Kind,
-		OwnKind:  body.OwnKind,
-		Sort:     *body.Sort,
+		ID:            *body.ID,
+		Parent:        body.Parent,
+		Name:          *body.Name,
+		Order:         *body.Order,
+		Count:         *body.Count,
+		ArchivedCount: *body.ArchivedCount,
+		ArchivedAt:    body.ArchivedAt,
+		Archived:      body.Archived,
+		Reserved:      *body.Reserved,
+		Kind:          *body.Kind,
+		OwnKind:       body.OwnKind,
+		Sort:          *body.Sort,
 	}
 
 	return v
@@ -5865,15 +6264,18 @@ func NewSaveNotebookVerificationRequired(body *SaveNotebookVerificationRequiredR
 // result from a HTTP "OK" response.
 func NewMoveNotebookNotebookOK(body *MoveNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
-		ID:       *body.ID,
-		Parent:   body.Parent,
-		Name:     *body.Name,
-		Order:    *body.Order,
-		Count:    *body.Count,
-		Reserved: *body.Reserved,
-		Kind:     *body.Kind,
-		OwnKind:  body.OwnKind,
-		Sort:     *body.Sort,
+		ID:            *body.ID,
+		Parent:        body.Parent,
+		Name:          *body.Name,
+		Order:         *body.Order,
+		Count:         *body.Count,
+		ArchivedCount: *body.ArchivedCount,
+		ArchivedAt:    body.ArchivedAt,
+		Archived:      body.Archived,
+		Reserved:      *body.Reserved,
+		Kind:          *body.Kind,
+		OwnKind:       body.OwnKind,
+		Sort:          *body.Sort,
 	}
 
 	return v
@@ -6078,15 +6480,18 @@ func NewTrashedNotebooksVerificationRequired(body *TrashedNotebooksVerificationR
 // endpoint result from a HTTP "OK" response.
 func NewRestoreNotebookNotebookOK(body *RestoreNotebookResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
-		ID:       *body.ID,
-		Parent:   body.Parent,
-		Name:     *body.Name,
-		Order:    *body.Order,
-		Count:    *body.Count,
-		Reserved: *body.Reserved,
-		Kind:     *body.Kind,
-		OwnKind:  body.OwnKind,
-		Sort:     *body.Sort,
+		ID:            *body.ID,
+		Parent:        body.Parent,
+		Name:          *body.Name,
+		Order:         *body.Order,
+		Count:         *body.Count,
+		ArchivedCount: *body.ArchivedCount,
+		ArchivedAt:    body.ArchivedAt,
+		Archived:      body.Archived,
+		Reserved:      *body.Reserved,
+		Kind:          *body.Kind,
+		OwnKind:       body.OwnKind,
+		Sort:          *body.Sort,
 	}
 
 	return v
@@ -7011,15 +7416,18 @@ func NewGitSyncUnauthorized(body *GitSyncUnauthorizedResponseBody) *goa.ServiceE
 // from a HTTP "OK" response.
 func NewAddGuideNotebookOK(body *AddGuideResponseBody) *notes.Notebook {
 	v := &notes.Notebook{
-		ID:       *body.ID,
-		Parent:   body.Parent,
-		Name:     *body.Name,
-		Order:    *body.Order,
-		Count:    *body.Count,
-		Reserved: *body.Reserved,
-		Kind:     *body.Kind,
-		OwnKind:  body.OwnKind,
-		Sort:     *body.Sort,
+		ID:            *body.ID,
+		Parent:        body.Parent,
+		Name:          *body.Name,
+		Order:         *body.Order,
+		Count:         *body.Count,
+		ArchivedCount: *body.ArchivedCount,
+		ArchivedAt:    body.ArchivedAt,
+		Archived:      body.Archived,
+		Reserved:      *body.Reserved,
+		Kind:          *body.Kind,
+		OwnKind:       body.OwnKind,
+		Sort:          *body.Sort,
 	}
 
 	return v
@@ -7458,6 +7866,9 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
@@ -7529,6 +7940,9 @@ func ValidateCreateResponseBody(body *CreateResponseBody) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
@@ -7599,6 +8013,9 @@ func ValidateUpdateResponseBody(body *UpdateResponseBody) (err error) {
 	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -7698,6 +8115,9 @@ func ValidateRestoreResponseBody(body *RestoreResponseBody) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
@@ -7768,6 +8188,9 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
@@ -7931,6 +8354,9 @@ func ValidateSetMarksResponseBody(body *SetMarksResponseBody) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
@@ -7941,6 +8367,32 @@ func ValidateSetMarksResponseBody(body *SetMarksResponseBody) (err error) {
 	for _, e := range body.BodyHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.body_highlights[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateArchiveCandidatesResponseBody runs the validations defined on
+// ArchiveCandidatesResponseBody
+func ValidateArchiveCandidatesResponseBody(body *ArchiveCandidatesResponseBody) (err error) {
+	if body.Total == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("total", "body"))
+	}
+	if body.Notes == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notes", "body"))
+	}
+	for _, e := range body.Notes {
+		if e != nil {
+			if err2 := validateNoteSummaryResponseBody(e, "body.notes[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	for _, e := range body.Separators {
+		if e != nil {
+			if err2 := validateSeparatorResponseBody(e, "body.separators[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -7963,6 +8415,9 @@ func ValidateCreateNotebookResponseBody(body *CreateNotebookResponseBody) (err e
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -7977,6 +8432,9 @@ func ValidateCreateNotebookResponseBody(body *CreateNotebookResponseBody) (err e
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -8011,6 +8469,9 @@ func ValidateSaveNotebookResponseBody(body *SaveNotebookResponseBody) (err error
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -8025,6 +8486,9 @@ func ValidateSaveNotebookResponseBody(body *SaveNotebookResponseBody) (err error
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -8059,6 +8523,9 @@ func ValidateMoveNotebookResponseBody(body *MoveNotebookResponseBody) (err error
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -8073,6 +8540,9 @@ func ValidateMoveNotebookResponseBody(body *MoveNotebookResponseBody) (err error
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -8107,6 +8577,9 @@ func ValidateRestoreNotebookResponseBody(body *RestoreNotebookResponseBody) (err
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -8121,6 +8594,9 @@ func ValidateRestoreNotebookResponseBody(body *RestoreNotebookResponseBody) (err
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -8318,6 +8794,9 @@ func ValidateAddGuideResponseBody(body *AddGuideResponseBody) (err error) {
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -8332,6 +8811,9 @@ func ValidateAddGuideResponseBody(body *AddGuideResponseBody) (err error) {
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -10031,6 +10513,150 @@ func ValidateSetMarksUnauthorizedResponseBody(body *SetMarksUnauthorizedResponse
 // ValidateSetMarksVerificationRequiredResponseBody runs the validations
 // defined on SetMarksVerificationRequiredResponseBody
 func ValidateSetMarksVerificationRequiredResponseBody(body *SetMarksVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateArchiveNotesNotFoundResponseBody runs the validations defined on
+// ArchiveNotesNotFoundResponseBody
+func ValidateArchiveNotesNotFoundResponseBody(body *ArchiveNotesNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateArchiveNotesBadRequestResponseBody runs the validations defined on
+// ArchiveNotesBadRequestResponseBody
+func ValidateArchiveNotesBadRequestResponseBody(body *ArchiveNotesBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateArchiveNotesUnauthorizedResponseBody runs the validations defined on
+// ArchiveNotesUnauthorizedResponseBody
+func ValidateArchiveNotesUnauthorizedResponseBody(body *ArchiveNotesUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateArchiveNotesVerificationRequiredResponseBody runs the validations
+// defined on ArchiveNotesVerificationRequiredResponseBody
+func ValidateArchiveNotesVerificationRequiredResponseBody(body *ArchiveNotesVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateArchiveCandidatesUnauthorizedResponseBody runs the validations
+// defined on ArchiveCandidatesUnauthorizedResponseBody
+func ValidateArchiveCandidatesUnauthorizedResponseBody(body *ArchiveCandidatesUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateArchiveCandidatesVerificationRequiredResponseBody runs the
+// validations defined on ArchiveCandidatesVerificationRequiredResponseBody
+func ValidateArchiveCandidatesVerificationRequiredResponseBody(body *ArchiveCandidatesVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -12461,6 +13087,9 @@ func ValidateNotebookResponse(body *NotebookResponse) (err error) {
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", "body"))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", "body"))
 	}
@@ -12475,6 +13104,9 @@ func ValidateNotebookResponse(body *NotebookResponse) (err error) {
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -12509,6 +13141,9 @@ func validateNotebookResponse(body *NotebookResponse, path string) (err error) {
 	if body.Count == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", path))
 	}
+	if body.ArchivedCount == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("archived_count", path))
+	}
 	if body.Reserved == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("reserved", path))
 	}
@@ -12523,6 +13158,9 @@ func validateNotebookResponse(body *NotebookResponse, path string) (err error) {
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	if body.Kind != nil {
 		if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private") {
@@ -12723,6 +13361,9 @@ func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
@@ -12797,6 +13438,9 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".archived_at", *body.ArchivedAt, goa.FormatDateTime))
 	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {

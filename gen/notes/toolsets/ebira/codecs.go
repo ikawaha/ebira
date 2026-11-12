@@ -38,6 +38,22 @@ func AddAiFileResultCodec() tools.JSONCodec[*AddAiFileResult] {
 	}
 }
 
+// ArchiveAiNotebookPayloadCodec returns a fresh codec for *ArchiveAiNotebookPayload.
+func ArchiveAiNotebookPayloadCodec() tools.JSONCodec[*ArchiveAiNotebookPayload] {
+	return tools.JSONCodec[*ArchiveAiNotebookPayload]{
+		ToJSON:   MarshalArchiveAiNotebookPayload,
+		FromJSON: UnmarshalArchiveAiNotebookPayload,
+	}
+}
+
+// ArchiveAiNotebookResultCodec returns a fresh codec for *ArchiveAiNotebookResult.
+func ArchiveAiNotebookResultCodec() tools.JSONCodec[*ArchiveAiNotebookResult] {
+	return tools.JSONCodec[*ArchiveAiNotebookResult]{
+		ToJSON:   MarshalArchiveAiNotebookResult,
+		FromJSON: UnmarshalArchiveAiNotebookResult,
+	}
+}
+
 // CreateAiNotePayloadCodec returns a fresh codec for *CreateAiNotePayload.
 func CreateAiNotePayloadCodec() tools.JSONCodec[*CreateAiNotePayload] {
 	return tools.JSONCodec[*CreateAiNotePayload]{
@@ -327,6 +343,32 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalAddAiFileResult(data)
+		},
+	}
+	// archiveAiNotebookPayloadCodec provides an untyped codec for *ArchiveAiNotebookPayload.
+	archiveAiNotebookPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*ArchiveAiNotebookPayload); ok {
+				return MarshalArchiveAiNotebookPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *ArchiveAiNotebookPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalArchiveAiNotebookPayload(data)
+		},
+	}
+	// archiveAiNotebookResultCodec provides an untyped codec for *ArchiveAiNotebookResult.
+	archiveAiNotebookResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*ArchiveAiNotebookResult); ok {
+				return MarshalArchiveAiNotebookResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *ArchiveAiNotebookResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalArchiveAiNotebookResult(data)
 		},
 	}
 	// createAiNotePayloadCodec provides an untyped codec for *CreateAiNotePayload.
@@ -794,6 +836,86 @@ var addAiFileResultFields = []tools.FieldMetadata{
 		Description: "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)",
 	},
 }
+var archiveAiNotebookPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Notebook ID",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "true to put the notebook in the archive, false to take it out",
+	},
+}
+var archiveAiNotebookResultFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("parent")},
+		JSONType:    "string",
+		Description: "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("order")},
+		JSONType:    "integer",
+		Description: "Sort key among the notebooks other than inbox and trash; lower comes first",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("count")},
+		JSONType:    "integer",
+		Description: "Number of notes, but those put in the archive on their own",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_count")},
+		JSONType:    "integer",
+		Description: "Number of notes put in the archive on their own",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("reserved")},
+		JSONType:    "boolean",
+		Description: "Whether this is a system notebook (inbox or trash)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("kind")},
+		JSONType:    "string",
+		Description: "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("own_kind")},
+		JSONType:    "string",
+		Description: "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("sort")},
+		JSONType:    "string",
+		Description: "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width",
+	},
+}
 var createAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		JSONType: "object",
@@ -884,6 +1006,11 @@ var createAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -897,6 +1024,11 @@ var createAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_from")},
 		JSONType:    "string",
 		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights")},
@@ -981,7 +1113,22 @@ var createAiNotebookResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("count")},
 		JSONType:    "integer",
-		Description: "Number of notes",
+		Description: "Number of notes, but those put in the archive on their own",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_count")},
+		JSONType:    "integer",
+		Description: "Number of notes put in the archive on their own",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("reserved")},
@@ -1175,6 +1322,11 @@ var getNoteResultFields = []tools.FieldMetadata{
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1188,6 +1340,11 @@ var getNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_from")},
 		JSONType:    "string",
 		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights")},
@@ -1345,6 +1502,11 @@ var importAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1358,6 +1520,11 @@ var importAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("trashed_from")},
 		JSONType:    "string",
 		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("title_highlights")},
@@ -1480,7 +1647,22 @@ var listNotebooksResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("count")},
 		JSONType:    "integer",
-		Description: "Number of notes",
+		Description: "Number of notes, but those put in the archive on their own",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("archived_count")},
+		JSONType:    "integer",
+		Description: "Number of notes put in the archive on their own",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.DynamicField{}, tools.FixedField("reserved")},
@@ -1536,6 +1718,11 @@ var listNotesPayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("sort")},
 		JSONType:    "string",
 		Description: "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "string",
+		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
 	},
 }
 var listNotesResultFields = []tools.FieldMetadata{
@@ -1611,6 +1798,11 @@ var listNotesResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks"), tools.DynamicField{}},
 		JSONType:    "string",
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
@@ -1706,6 +1898,11 @@ var listTagsPayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
 		JSONType:    "string",
 		Description: "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "string",
+		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
 	},
 }
 var listTagsResultFields = []tools.FieldMetadata{
@@ -1812,6 +2009,11 @@ var moveAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1825,6 +2027,11 @@ var moveAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_from")},
 		JSONType:    "string",
 		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights")},
@@ -1930,7 +2137,7 @@ var searchNotesPayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
 		JSONType:    "string",
-		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
+		Description: "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notebook")},
@@ -1941,6 +2148,11 @@ var searchNotesPayloadFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("tag")},
 		JSONType:    "string",
 		Description: "Only notes with this tag",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "string",
+		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("limit")},
@@ -2026,6 +2238,11 @@ var searchNotesResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("marks"), tools.DynamicField{}},
 		JSONType:    "string",
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
@@ -2183,6 +2400,11 @@ var updateAiNotePayloadFields = []tools.FieldMetadata{
 		Description: "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("brief")},
 		JSONType:    "boolean",
 		Description: "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back",
@@ -2248,6 +2470,11 @@ var updateAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
+		JSONType:    "boolean",
+		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -2261,6 +2488,11 @@ var updateAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("trashed_from")},
 		JSONType:    "string",
 		Description: "Notebook the note was in before it was moved to the trash",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("archived_at")},
+		JSONType:    "string",
+		Description: "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("title_highlights")},
@@ -2430,6 +2662,40 @@ func enrichAddAiFileResultValidationError(err error) error {
 	m := make(map[string]string)
 	for _, is := range issues {
 		if field, ok := tools.LookupFieldMetadata(addAiFileResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichArchiveAiNotebookPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(archiveAiNotebookPayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichArchiveAiNotebookResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(archiveAiNotebookResultFields, is.Field); ok && field.Description != "" {
 			m[is.Field] = field.Description
 		}
 	}
@@ -3004,6 +3270,68 @@ func invalidAddAiFileResultFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(addAiFileResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidArchiveAiNotebookPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "ArchiveAiNotebookPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(archiveAiNotebookPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidArchiveAiNotebookResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "ArchiveAiNotebookResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(archiveAiNotebookResultFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -4134,6 +4462,110 @@ func UnmarshalAddAiFileResult(data []byte) (*AddAiFileResult, error) {
 	return out, nil
 }
 
+// MarshalArchiveAiNotebookPayload serializes *ArchiveAiNotebookPayload into JSON.
+func MarshalArchiveAiNotebookPayload(v *ArchiveAiNotebookPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("archiveAiNotebookPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.ArchiveAiNotebookPayloadTransport
+	out = &toolhttp.ArchiveAiNotebookPayloadTransport{
+		ID:       &in.ID,
+		Archived: &in.Archived,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalArchiveAiNotebookPayload deserializes JSON into *ArchiveAiNotebookPayload.
+func UnmarshalArchiveAiNotebookPayload(data []byte) (*ArchiveAiNotebookPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("archiveAiNotebookPayload JSON is empty")
+	}
+	var tv toolhttp.ArchiveAiNotebookPayloadTransport
+	if err := validateArchiveAiNotebookPayloadJSON(data); err != nil {
+		return nil, invalidArchiveAiNotebookPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidArchiveAiNotebookPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateArchiveAiNotebookPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichArchiveAiNotebookPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *ArchiveAiNotebookPayload
+	out = &ArchiveAiNotebookPayload{
+		ID:       *in.ID,
+		Archived: *in.Archived,
+	}
+	return out, nil
+}
+
+// MarshalArchiveAiNotebookResult serializes *ArchiveAiNotebookResult into JSON.
+func MarshalArchiveAiNotebookResult(v *ArchiveAiNotebookResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("archiveAiNotebookResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.ArchiveAiNotebookResultTransport
+	out = &toolhttp.ArchiveAiNotebookResultTransport{
+		ID:            &in.ID,
+		Parent:        in.Parent,
+		Name:          &in.Name,
+		Order:         &in.Order,
+		Count:         &in.Count,
+		ArchivedCount: &in.ArchivedCount,
+		ArchivedAt:    in.ArchivedAt,
+		Archived:      in.Archived,
+		Reserved:      &in.Reserved,
+		Kind:          &in.Kind,
+		OwnKind:       in.OwnKind,
+		Sort:          &in.Sort,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalArchiveAiNotebookResult deserializes JSON into *ArchiveAiNotebookResult.
+func UnmarshalArchiveAiNotebookResult(data []byte) (*ArchiveAiNotebookResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("archiveAiNotebookResult JSON is empty")
+	}
+	var tv toolhttp.ArchiveAiNotebookResultTransport
+	if err := validateCreateAiNotebookResultJSON(data); err != nil {
+		return nil, invalidArchiveAiNotebookResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidArchiveAiNotebookResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateArchiveAiNotebookResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichArchiveAiNotebookResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *ArchiveAiNotebookResult
+	out = &ArchiveAiNotebookResult{
+		ID:            *in.ID,
+		Parent:        in.Parent,
+		Name:          *in.Name,
+		Order:         *in.Order,
+		Count:         *in.Count,
+		ArchivedCount: *in.ArchivedCount,
+		ArchivedAt:    in.ArchivedAt,
+		Archived:      in.Archived,
+		Reserved:      *in.Reserved,
+		Kind:          *in.Kind,
+		OwnKind:       in.OwnKind,
+		Sort:          *in.Sort,
+	}
+	return out, nil
+}
+
 // MarshalCreateAiNotePayload serializes *CreateAiNotePayload into JSON.
 func MarshalCreateAiNotePayload(v *CreateAiNotePayload) ([]byte, error) {
 	if v == nil {
@@ -4206,9 +4638,11 @@ func MarshalCreateAiNoteResult(v *CreateAiNoteResult) ([]byte, error) {
 		UpdatedAt:       &in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            &in.Body,
 		Version:         &in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -4271,9 +4705,11 @@ func UnmarshalCreateAiNoteResult(data []byte) (*CreateAiNoteResult, error) {
 		UpdatedAt:       *in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            *in.Body,
 		Version:         *in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -4359,15 +4795,18 @@ func MarshalCreateAiNotebookResult(v *CreateAiNotebookResult) ([]byte, error) {
 	_ = in
 	var out *toolhttp.CreateAiNotebookResultTransport
 	out = &toolhttp.CreateAiNotebookResultTransport{
-		ID:       &in.ID,
-		Parent:   in.Parent,
-		Name:     &in.Name,
-		Order:    &in.Order,
-		Count:    &in.Count,
-		Reserved: &in.Reserved,
-		Kind:     &in.Kind,
-		OwnKind:  in.OwnKind,
-		Sort:     &in.Sort,
+		ID:            &in.ID,
+		Parent:        in.Parent,
+		Name:          &in.Name,
+		Order:         &in.Order,
+		Count:         &in.Count,
+		ArchivedCount: &in.ArchivedCount,
+		ArchivedAt:    in.ArchivedAt,
+		Archived:      in.Archived,
+		Reserved:      &in.Reserved,
+		Kind:          &in.Kind,
+		OwnKind:       in.OwnKind,
+		Sort:          &in.Sort,
 	}
 	return json.Marshal(out)
 }
@@ -4393,15 +4832,18 @@ func UnmarshalCreateAiNotebookResult(data []byte) (*CreateAiNotebookResult, erro
 	_ = in
 	var out *CreateAiNotebookResult
 	out = &CreateAiNotebookResult{
-		ID:       *in.ID,
-		Parent:   in.Parent,
-		Name:     *in.Name,
-		Order:    *in.Order,
-		Count:    *in.Count,
-		Reserved: *in.Reserved,
-		Kind:     *in.Kind,
-		OwnKind:  in.OwnKind,
-		Sort:     *in.Sort,
+		ID:            *in.ID,
+		Parent:        in.Parent,
+		Name:          *in.Name,
+		Order:         *in.Order,
+		Count:         *in.Count,
+		ArchivedCount: *in.ArchivedCount,
+		ArchivedAt:    in.ArchivedAt,
+		Archived:      in.Archived,
+		Reserved:      *in.Reserved,
+		Kind:          *in.Kind,
+		OwnKind:       in.OwnKind,
+		Sort:          *in.Sort,
 	}
 	return out, nil
 }
@@ -4646,9 +5088,11 @@ func MarshalGetNoteResult(v *GetNoteResult) ([]byte, error) {
 		UpdatedAt:       &in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            &in.Body,
 		Version:         &in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -4711,9 +5155,11 @@ func UnmarshalGetNoteResult(data []byte) (*GetNoteResult, error) {
 		UpdatedAt:       *in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            *in.Body,
 		Version:         *in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -5043,6 +5489,7 @@ func MarshalListNotesPayload(v *ListNotesPayload) ([]byte, error) {
 		Offset:          &in.Offset,
 		TrashedNotebook: in.TrashedNotebook,
 		Sort:            in.Sort,
+		Archived:        &in.Archived,
 	}
 	return json.Marshal(out)
 }
@@ -5079,11 +5526,17 @@ func UnmarshalListNotesPayload(data []byte) (*ListNotesPayload, error) {
 	if in.Offset != nil {
 		out.Offset = *in.Offset
 	}
+	if in.Archived != nil {
+		out.Archived = *in.Archived
+	}
 	if in.Limit == nil {
 		out.Limit = 50
 	}
 	if in.Offset == nil {
 		out.Offset = 0
+	}
+	if in.Archived == nil {
+		out.Archived = "exclude"
 	}
 	return out, nil
 }
@@ -5174,6 +5627,7 @@ func MarshalListTagsPayload(v *ListTagsPayload) ([]byte, error) {
 	var out *toolhttp.ListTagsPayloadTransport
 	out = &toolhttp.ListTagsPayloadTransport{
 		Notebook: in.Notebook,
+		Archived: &in.Archived,
 	}
 	return json.Marshal(out)
 }
@@ -5200,6 +5654,12 @@ func UnmarshalListTagsPayload(data []byte) (*ListTagsPayload, error) {
 	var out *ListTagsPayload
 	out = &ListTagsPayload{
 		Notebook: in.Notebook,
+	}
+	if in.Archived != nil {
+		out.Archived = *in.Archived
+	}
+	if in.Archived == nil {
+		out.Archived = "exclude"
 	}
 	return out, nil
 }
@@ -5350,9 +5810,11 @@ func MarshalMoveAiNoteResult(v *MoveAiNoteResult) ([]byte, error) {
 		UpdatedAt:       &in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            &in.Body,
 		Version:         &in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -5415,9 +5877,11 @@ func UnmarshalMoveAiNoteResult(data []byte) (*MoveAiNoteResult, error) {
 		UpdatedAt:       *in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            *in.Body,
 		Version:         *in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -5558,6 +6022,7 @@ func MarshalSearchNotesPayload(v *SearchNotesPayload) ([]byte, error) {
 		Q:        &in.Q,
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
+		Archived: &in.Archived,
 		Limit:    &in.Limit,
 	}
 	return json.Marshal(out)
@@ -5588,8 +6053,14 @@ func UnmarshalSearchNotesPayload(data []byte) (*SearchNotesPayload, error) {
 		Notebook: in.Notebook,
 		Tag:      in.Tag,
 	}
+	if in.Archived != nil {
+		out.Archived = *in.Archived
+	}
 	if in.Limit != nil {
 		out.Limit = *in.Limit
+	}
+	if in.Archived == nil {
+		out.Archived = "exclude"
 	}
 	if in.Limit == nil {
 		out.Limit = 20
@@ -5756,6 +6227,7 @@ func MarshalUpdateAiNotePayload(v *UpdateAiNotePayload) ([]byte, error) {
 		Title:    in.Title,
 		Body:     in.Body,
 		Append:   in.Append,
+		Archived: in.Archived,
 		Brief:    in.Brief,
 	}
 	if in.Tags != nil {
@@ -5810,6 +6282,7 @@ func UnmarshalUpdateAiNotePayload(data []byte) (*UpdateAiNotePayload, error) {
 		Title:    in.Title,
 		Body:     in.Body,
 		Append:   in.Append,
+		Archived: in.Archived,
 		Brief:    in.Brief,
 	}
 	if in.Tags != nil {
@@ -5853,9 +6326,11 @@ func MarshalUpdateAiNoteResult(v *UpdateAiNoteResult) ([]byte, error) {
 		UpdatedAt:       &in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            &in.Body,
 		Version:         &in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -5918,9 +6393,11 @@ func UnmarshalUpdateAiNoteResult(data []byte) (*UpdateAiNoteResult, error) {
 		UpdatedAt:       *in.UpdatedAt,
 		TrashedNotebook: in.TrashedNotebook,
 		CreatedBy:       in.CreatedBy,
+		Archived:        in.Archived,
 		Body:            *in.Body,
 		Version:         *in.Version,
 		TrashedFrom:     in.TrashedFrom,
+		ArchivedAt:      in.ArchivedAt,
 	}
 	out.Tags = make([]string, len(in.Tags))
 	for i, val := range in.Tags {
@@ -6343,6 +6820,16 @@ func validateMakeNotebookPrivatePayloadJSON(data []byte) error {
 	return validateMakeNotebookPrivatePayloadJSONValue("", root, "")
 }
 
+// validateArchiveAiNotebookPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateArchiveAiNotebookPayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateArchiveAiNotebookPayloadJSONValue("", root, "")
+}
+
 // readStrictToolJSON checks the complete JSON document for malformed text and
 // duplicate members, then returns values with their original number text.
 func readStrictToolJSON(data []byte) (any, error) {
@@ -6485,6 +6972,13 @@ func validateListNotesPayloadJSONValue(path string, value any, description strin
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+			); err != nil {
+				return err
+			}
 		case "limit":
 			if err := validateIntJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -6529,6 +7023,7 @@ func validateListNotesPayloadJSONValue(path string, value any, description strin
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"limit",
 				"notebook",
 				"offset",
@@ -6537,6 +7032,22 @@ func validateListNotesPayloadJSONValue(path string, value any, description strin
 				"trashed_notebook",
 			})
 		}
+	}
+	return nil
+}
+
+// validateStringJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateStringJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -6556,22 +7067,6 @@ func validateIntJSONValue(path string, value any, description string) error {
 	}
 	if _, err := strconv.ParseInt(typed.String(), 10, strconv.IntSize); err != nil {
 		return invalidGeneratedFieldTypeError(field, "integer", "number", description)
-	}
-	return nil
-}
-
-// validateStringJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateStringJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -6672,6 +7167,13 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+			); err != nil {
+				return err
+			}
 		case "created_at":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -6758,6 +7260,7 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"created_at",
 				"created_by",
 				"id",
@@ -6772,6 +7275,22 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 				"updated_at",
 			})
 		}
+	}
+	return nil
+}
+
+// validateBooleanJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBooleanJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -7032,6 +7551,20 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+			); err != nil {
+				return err
+			}
+		case "archived_at":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
+			); err != nil {
+				return err
+			}
 		case "body":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -7132,6 +7665,8 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
+				"archived_at",
 				"body",
 				"body_highlights",
 				"created_at",
@@ -7172,6 +7707,13 @@ func validateSearchNotesPayloadJSONValue(path string, value any, description str
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+			); err != nil {
+				return err
+			}
 		case "limit":
 			if err := validateIntJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -7189,7 +7731,7 @@ func validateSearchNotesPayloadJSONValue(path string, value any, description str
 		case "q":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
+				typed[key], "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first",
 			); err != nil {
 				return err
 			}
@@ -7202,6 +7744,7 @@ func validateSearchNotesPayloadJSONValue(path string, value any, description str
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"limit",
 				"notebook",
 				"q",
@@ -7335,10 +7878,31 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive",
+			); err != nil {
+				return err
+			}
+		case "archived_at":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not",
+			); err != nil {
+				return err
+			}
+		case "archived_count":
+			if err := validateIntJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of notes put in the archive on their own",
+			); err != nil {
+				return err
+			}
 		case "count":
 			if err := validateIntJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Number of notes",
+				typed[key], "Number of notes, but those put in the archive on their own",
 			); err != nil {
 				return err
 			}
@@ -7400,6 +7964,9 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
+				"archived_at",
+				"archived_count",
 				"count",
 				"id",
 				"kind",
@@ -7411,22 +7978,6 @@ func validateListNotebooksResultNotebookTransportJSONValue(path string, value an
 				"sort",
 			})
 		}
-	}
-	return nil
-}
-
-// validateBooleanJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBooleanJSONValue(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -7451,6 +8002,13 @@ func validateListTagsPayloadJSONValue(path string, value any, description string
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "archived":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone",
+			); err != nil {
+				return err
+			}
 		case "notebook":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -7460,6 +8018,7 @@ func validateListTagsPayloadJSONValue(path string, value any, description string
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"archived",
 				"notebook",
 			})
 		}
@@ -8105,6 +8664,13 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 			); err != nil {
 				return err
 			}
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content",
+			); err != nil {
+				return err
+			}
 		case "body":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -8171,6 +8737,7 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"append",
+				"archived",
 				"body",
 				"brief",
 				"edits",
@@ -8654,6 +9221,50 @@ func validateMakeNotebookPrivatePayloadJSONValue(path string, value any, descrip
 	return nil
 }
 
+// validateArchiveAiNotebookPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateArchiveAiNotebookPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "archived":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "true to put the notebook in the archive, false to take it out",
+			); err != nil {
+				return err
+			}
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notebook ID",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"archived",
+				"id",
+			})
+		}
+	}
+	return nil
+}
+
 // generatedJSONChildPath keeps fixed object fields dotted. After an array index
 // or caller-defined map key, it uses slash-separated paths so later keys stay clear.
 func generatedJSONChildPath(path, key string, useSlashPath bool) string {
@@ -8800,9 +9411,11 @@ func decodeNoteTransportToNote(v *toolhttp.NoteTransport) *Note {
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Body:            *v.Body,
 		Version:         *v.Version,
 		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
 	}
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
@@ -8846,9 +9459,11 @@ func encodeNoteToNoteTransport(v *Note) *toolhttp.NoteTransport {
 		UpdatedAt:       &v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Body:            &v.Body,
 		Version:         &v.Version,
 		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
 	}
 	res.Tags = make([]string, len(v.Tags))
 	for i, val := range v.Tags {
@@ -8903,30 +9518,36 @@ func encodeMarkInfoToMarkInfoTransport(v *MarkInfo) *toolhttp.MarkInfoTransport 
 }
 func decodeNotebookTransportToNotebook(v *toolhttp.NotebookTransport) *Notebook {
 	res := &Notebook{
-		ID:       *v.ID,
-		Parent:   v.Parent,
-		Name:     *v.Name,
-		Order:    *v.Order,
-		Count:    *v.Count,
-		Reserved: *v.Reserved,
-		Kind:     *v.Kind,
-		OwnKind:  v.OwnKind,
-		Sort:     *v.Sort,
+		ID:            *v.ID,
+		Parent:        v.Parent,
+		Name:          *v.Name,
+		Order:         *v.Order,
+		Count:         *v.Count,
+		ArchivedCount: *v.ArchivedCount,
+		ArchivedAt:    v.ArchivedAt,
+		Archived:      v.Archived,
+		Reserved:      *v.Reserved,
+		Kind:          *v.Kind,
+		OwnKind:       v.OwnKind,
+		Sort:          *v.Sort,
 	}
 
 	return res
 }
 func encodeNotebookToNotebookTransport(v *Notebook) *toolhttp.NotebookTransport {
 	res := &toolhttp.NotebookTransport{
-		ID:       &v.ID,
-		Parent:   v.Parent,
-		Name:     &v.Name,
-		Order:    &v.Order,
-		Count:    &v.Count,
-		Reserved: &v.Reserved,
-		Kind:     &v.Kind,
-		OwnKind:  v.OwnKind,
-		Sort:     &v.Sort,
+		ID:            &v.ID,
+		Parent:        v.Parent,
+		Name:          &v.Name,
+		Order:         &v.Order,
+		Count:         &v.Count,
+		ArchivedCount: &v.ArchivedCount,
+		ArchivedAt:    v.ArchivedAt,
+		Archived:      v.Archived,
+		Reserved:      &v.Reserved,
+		Kind:          &v.Kind,
+		OwnKind:       v.OwnKind,
+		Sort:          &v.Sort,
 	}
 
 	return res
@@ -8940,6 +9561,7 @@ func decodeNoteSummaryTransportToNoteSummary(v *toolhttp.NoteSummaryTransport) *
 		UpdatedAt:       *v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))
@@ -8996,6 +9618,7 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 		UpdatedAt:       &v.UpdatedAt,
 		TrashedNotebook: v.TrashedNotebook,
 		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
 		Snippet:         v.Snippet,
 	}
 	res.Tags = make([]string, len(v.Tags))

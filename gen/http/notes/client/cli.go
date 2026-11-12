@@ -19,7 +19,7 @@ import (
 
 // BuildListPayload builds the payload for the notes list endpoint from CLI
 // flags.
-func BuildListPayload(notesListNotebook *string, notesListTag *string, notesListLimit string, notesListOffset string, notesListTrashedNotebook *string, notesListSort *string, notesListSession *string) (*notes.ListPayload, error) {
+func BuildListPayload(notesListNotebook *string, notesListTag *string, notesListLimit string, notesListOffset string, notesListTrashedNotebook *string, notesListSort *string, notesListArchived string, notesListSession *string) (*notes.ListPayload, error) {
 	var err error
 	var notebook *string
 	{
@@ -92,6 +92,16 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 			}
 		}
 	}
+	var archived string
+	{
+		archived = notesListArchived
+		if !(archived == "exclude" || archived == "include" || archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("archived", archived, []any{"exclude", "include", "only"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
 	var session *string
 	{
 		if notesListSession != nil {
@@ -105,6 +115,7 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	v.Offset = offset
 	v.TrashedNotebook = trashedNotebook
 	v.Sort = sort
+	v.Archived = archived
 	v.Session = session
 
 	return v, nil
@@ -403,7 +414,7 @@ func BuildTrashNotesPayload(notesTrashNotesBody *string, notesTrashNotesSession 
 
 // BuildSearchPayload builds the payload for the notes search endpoint from CLI
 // flags.
-func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notesSearchTag *string, notesSearchLimit string, notesSearchSession *string) (*notes.SearchPayload, error) {
+func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notesSearchTag *string, notesSearchArchived string, notesSearchLimit string, notesSearchSession *string) (*notes.SearchPayload, error) {
 	var err error
 	var q string
 	{
@@ -437,6 +448,16 @@ func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notes
 			tag = notesSearchTag
 		}
 	}
+	var archived string
+	{
+		archived = notesSearchArchived
+		if !(archived == "exclude" || archived == "include" || archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("archived", archived, []any{"exclude", "include", "only"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
 	var limit int
 	{
 		var v int64
@@ -465,6 +486,7 @@ func BuildSearchPayload(notesSearchQ *string, notesSearchNotebook *string, notes
 	v.Q = q
 	v.Notebook = notebook
 	v.Tag = tag
+	v.Archived = archived
 	v.Limit = limit
 	v.Session = session
 
@@ -769,7 +791,7 @@ func BuildNotebooksPayload(notesNotebooksSession *string) (*notes.NotebooksPaylo
 
 // BuildTagsPayload builds the payload for the notes tags endpoint from CLI
 // flags.
-func BuildTagsPayload(notesTagsNotebook *string, notesTagsSession *string) (*notes.TagsPayload, error) {
+func BuildTagsPayload(notesTagsNotebook *string, notesTagsArchived string, notesTagsSession *string) (*notes.TagsPayload, error) {
 	var err error
 	var notebook *string
 	{
@@ -781,6 +803,16 @@ func BuildTagsPayload(notesTagsNotebook *string, notesTagsSession *string) (*not
 			}
 		}
 	}
+	var archived string
+	{
+		archived = notesTagsArchived
+		if !(archived == "exclude" || archived == "include" || archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("archived", archived, []any{"exclude", "include", "only"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
 	var session *string
 	{
 		if notesTagsSession != nil {
@@ -789,6 +821,7 @@ func BuildTagsPayload(notesTagsNotebook *string, notesTagsSession *string) (*not
 	}
 	v := &notes.TagsPayload{}
 	v.Notebook = notebook
+	v.Archived = archived
 	v.Session = session
 
 	return v, nil
@@ -848,6 +881,127 @@ func BuildSetMarksPayload(notesSetMarksBody *string, notesSetMarksID *string, no
 		}
 	}
 	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildArchiveNotesPayload builds the payload for the notes archive_notes
+// endpoint from CLI flags.
+func BuildArchiveNotesPayload(notesArchiveNotesBody *string, notesArchiveNotesSession *string) (*notes.ArchiveNotesPayload, error) {
+	var err error
+	var body ArchiveNotesRequestBody
+	{
+		if notesArchiveNotesBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesArchiveNotesBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"archived\": true,\n      \"ids\": [\n         \"be4c1193735ee1\"\n      ]\n   }'")
+		}
+		if body.Ids == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("ids", "body"))
+		}
+		if len(body.Ids) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 1, true))
+		}
+		if len(body.Ids) > 500 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.ids", body.Ids, len(body.Ids), 500, false))
+		}
+		for _, e := range body.Ids {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.ids[*]", e, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesArchiveNotesSession != nil {
+			session = notesArchiveNotesSession
+		}
+	}
+	v := &notes.ArchiveNotesPayload{
+		Archived: body.Archived,
+	}
+	if body.Ids != nil {
+		v.Ids = make([]string, len(body.Ids))
+		for i, val := range body.Ids {
+			v.Ids[i] = val
+		}
+	} else {
+		v.Ids = []string{}
+	}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildArchiveCandidatesPayload builds the payload for the notes
+// archive_candidates endpoint from CLI flags.
+func BuildArchiveCandidatesPayload(notesArchiveCandidatesDays string, notesArchiveCandidatesLimit string, notesArchiveCandidatesOffset string, notesArchiveCandidatesSession *string) (*notes.ArchiveCandidatesPayload, error) {
+	var err error
+	var days int
+	{
+		var v int64
+		v, err = strconv.ParseInt(notesArchiveCandidatesDays, 10, strconv.IntSize)
+		days = int(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for days, must be INT")
+		}
+		if days < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("days", days, 1, true))
+		}
+		if days > 36500 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("days", days, 36500, false))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var limit int
+	{
+		var v int64
+		v, err = strconv.ParseInt(notesArchiveCandidatesLimit, 10, strconv.IntSize)
+		limit = int(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for limit, must be INT")
+		}
+		if limit < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("limit", limit, 1, true))
+		}
+		if limit > 500 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("limit", limit, 500, false))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var offset int
+	{
+		var v int64
+		v, err = strconv.ParseInt(notesArchiveCandidatesOffset, 10, strconv.IntSize)
+		offset = int(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for offset, must be INT")
+		}
+		if offset < 0 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("offset", offset, 0, true))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesArchiveCandidatesSession != nil {
+			session = notesArchiveCandidatesSession
+		}
+	}
+	v := &notes.ArchiveCandidatesPayload{}
+	v.Days = days
+	v.Limit = limit
+	v.Offset = offset
 	v.Session = session
 
 	return v, nil
@@ -964,7 +1118,7 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 		}
 		err = json.Unmarshal([]byte(*notesSaveNotebookBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"kind\": \"inherit\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"archived\": false,\n      \"kind\": \"inherit\",\n      \"name\": \"Commodi vel.\",\n      \"order\": 6133899287636492423,\n      \"sort\": \"updated\"\n   }'")
 		}
 		if body.Kind != nil {
 			if !(*body.Kind == "default" || *body.Kind == "collab" || *body.Kind == "drop" || *body.Kind == "private" || *body.Kind == "inherit") {
@@ -998,10 +1152,11 @@ func BuildSaveNotebookPayload(notesSaveNotebookBody *string, notesSaveNotebookID
 		}
 	}
 	v := &notes.SaveNotebookPayload{
-		Name:  body.Name,
-		Order: body.Order,
-		Kind:  body.Kind,
-		Sort:  body.Sort,
+		Name:     body.Name,
+		Order:    body.Order,
+		Kind:     body.Kind,
+		Sort:     body.Sort,
+		Archived: body.Archived,
 	}
 	v.ID = id
 	v.Session = session

@@ -99,6 +99,16 @@ func SetMarksNotesPath(id string) string {
 	return fmt.Sprintf("/notes/%v/marks", id)
 }
 
+// ArchiveNotesNotesPath returns the URL path to the notes service archive_notes HTTP endpoint.
+func ArchiveNotesNotesPath() string {
+	return "/archive/notes"
+}
+
+// ArchiveCandidatesNotesPath returns the URL path to the notes service archive_candidates HTTP endpoint.
+func ArchiveCandidatesNotesPath() string {
+	return "/archive/candidates"
+}
+
 // SaveMarkNamesNotesPath returns the URL path to the notes service save_mark_names HTTP endpoint.
 func SaveMarkNamesNotesPath() string {
 	return "/marks"

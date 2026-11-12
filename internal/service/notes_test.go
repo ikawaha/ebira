@@ -975,6 +975,9 @@ func TestPeopleOnly(t *testing.T) {
 		"trash_notes": func(ctx context.Context) error {
 			return svc.TrashNotes(ctx, &gennotes.TrashNotesPayload{Ids: []string{n.ID}})
 		},
+		"archive_notes": func(ctx context.Context) error {
+			return svc.ArchiveNotes(ctx, &gennotes.ArchiveNotesPayload{Ids: []string{n.ID}, Archived: true})
+		},
 		"move_notebook": func(ctx context.Context) error {
 			_, err := svc.MoveNotebook(ctx, &gennotes.MoveNotebookPayload{ID: diary.ID, Parent: ptr("inbox")})
 			return err

@@ -81,6 +81,9 @@ func ValidateGetResultTransport(body *GetResultTransport) (err error) {
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
+	if body.ArchivedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.archived_at", *body.ArchivedAt, goa.FormatDateTime))
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
@@ -113,6 +116,11 @@ func ValidateSearchPayloadTransport(body *SearchPayloadTransport) (err error) {
 	}
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	if body.Archived != nil {
+		if !(*body.Archived == "exclude" || *body.Archived == "include" || *body.Archived == "only") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *body.Archived, []any{"exclude", "include", "only"}))
+		}
 	}
 	if body.Limit != nil {
 		if *body.Limit < 1 {

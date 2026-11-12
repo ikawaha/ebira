@@ -372,7 +372,7 @@ func (s *Notes) importNote(ctx context.Context, a importArgs, createdBy string) 
 		return nil, err
 	}
 	s.events.publish(eventCreated, note.ID)
-	return &gennotes.ImportResult{Status: importCreated, Note: toNote(note), Warnings: append(warnings, imageWarnings...)}, nil
+	return &gennotes.ImportResult{Status: importCreated, Note: s.note(note), Warnings: append(warnings, imageWarnings...)}, nil
 }
 
 // drain reads the images of an import through, without keeping them.

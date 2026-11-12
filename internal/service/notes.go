@@ -105,14 +105,24 @@ func (s *Notes) List(ctx context.Context, p *gennotes.ListPayload) (*gennotes.No
 		m, _ := s.store.NotebookMeta(nb) // a broken settings file gives the default
 		sort = m.Sort
 	}
-	res, total, err := s.index.List(ctx, deref(p.Notebook), deref(p.Tag), sort, p.Limit, p.Offset, hidden...)
+	a, err := s.archive(p.Archived)
 	if err != nil {
 		return nil, err
 	}
-	list := &gennotes.NoteList{Total: total, Notes: summaries(res, false)}
+	exclude := hidden
+	if a.Mode == index.ArchiveOnly && deref(p.Notebook) == "" {
+		// The notes put in the archive on their own: those of the notebooks
+		// there are listed by their notebooks.
+		exclude = append(slices.Clone(hidden), a.Notebooks...)
+	}
+	res, total, err := s.index.List(ctx, deref(p.Notebook), deref(p.Tag), sort, a, p.Limit, p.Offset, exclude...)
+	if err != nil {
+		return nil, err
+	}
+	list := &gennotes.NoteList{Total: total, Notes: s.summaries(res, false, a.Notebooks)}
 	// Separators have a place only in the manual order of a notebook.
 	if nb := deref(p.Notebook); nb != "" && nb != store.Trash && deref(p.Tag) == "" && (sort == "" || sort == store.SortOrder) {
-		if list.Separators, err = s.separatorsOf(ctx, nb); err != nil {
+		if list.Separators, err = s.separatorsOf(ctx, nb, a); err != nil {
 			return nil, err
 		}
 	}
@@ -131,7 +141,7 @@ func (s *Notes) Get(ctx context.Context, p *gennotes.GetPayload) (*gennotes.Note
 	} else if !ok {
 		return nil, mapErr(store.ErrNotFound)
 	}
-	res := toNote(n)
+	res := s.note(n)
 	if q := deref(p.Q); strings.TrimSpace(q) != "" {
 		title, body := s.index.Highlight(q, n.Title, n.Body)
 		res.TitleHighlights, res.BodyHighlights = textRanges(title), textRanges(body)
@@ -180,7 +190,7 @@ func (s *Notes) create(ctx context.Context, p *gennotes.CreatePayload, createdBy
 		return nil, err
 	}
 	s.events.publish(eventCreated, n.ID)
-	return toNote(n), nil
+	return s.note(n), nil
 }
 
 // maxBody is the largest body a note gets through the API, in bytes: that
@@ -241,7 +251,7 @@ func (s *Notes) updateNote(ctx context.Context, p *gennotes.UpdatePayload) (*gen
 	if err := s.write(ctx, n, edited, to); err != nil {
 		return nil, err
 	}
-	return toNote(n), nil
+	return s.note(n), nil
 }
 
 func (s *Notes) Delete(ctx context.Context, p *gennotes.DeletePayload) error {
@@ -321,7 +331,7 @@ func (s *Notes) Restore(ctx context.Context, p *gennotes.RestorePayload) (*genno
 	if err := s.write(ctx, n, true, to); err != nil {
 		return nil, err
 	}
-	return toNote(n), nil
+	return s.note(n), nil
 }
 
 // MoveNotes moves notes to a notebook at once. The notes are read first, so
@@ -446,7 +456,7 @@ func (s *Notes) moveNote(ctx context.Context, p *gennotes.MovePayload) (*gennote
 	if n, err = s.load(p.ID, nil); err != nil {
 		return nil, err
 	}
-	return toNote(n), nil
+	return s.note(n), nil
 }
 
 // manualOrder returns the notes and the separators of notebook nb in the
@@ -590,7 +600,11 @@ func (s *Notes) Tags(ctx context.Context, p *gennotes.TagsPayload) ([]*gennotes.
 	if slices.Contains(hidden, deref(p.Notebook)) {
 		return []*gennotes.TagCount{}, nil // as if the notebook were empty
 	}
-	res, err := s.index.Tags(ctx, deref(p.Notebook), hidden...)
+	a, err := s.archive(p.Archived)
+	if err != nil {
+		return nil, err
+	}
+	res, err := s.index.Tags(ctx, deref(p.Notebook), a, hidden...)
 	if err != nil {
 		return nil, err
 	}
@@ -673,6 +687,16 @@ func (s *Notes) saveNotebook(ctx context.Context, p *gennotes.SaveNotebookPayloa
 			return nil, gennotes.MakeBadRequest(errors.New("the trash keeps the default kind; it is hidden from AI clients anyway"))
 		default:
 			m.Kind = storeKind(*p.Kind)
+		}
+	}
+	if p.Archived != nil && (m.ArchivedAt != nil) != *p.Archived {
+		if reserved {
+			return nil, gennotes.MakeBadRequest(errors.New("the inbox and the trash cannot be put in the archive"))
+		}
+		m.ArchivedAt = nil
+		if *p.Archived {
+			now := s.now()
+			m.ArchivedAt = &now
 		}
 	}
 	if err := s.store.SaveNotebookMeta(p.ID, m); err != nil {
@@ -1212,10 +1236,15 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 	} else if !store.MatchVersion(p.Version, n.Version) {
 		return nil, gennotes.MakePreconditionFailed(errVersionMismatch)
 	}
-	// The marks go last, as the content may have changed the version they
-	// were checked against.
+	// The marks and the archive go last, as the content may have changed the
+	// version they were checked against.
 	if p.Marks != nil {
 		if res, err = s.setMarks(ctx, p.ID, p.Marks); err != nil {
+			return nil, err
+		}
+	}
+	if p.Archived != nil {
+		if res, err = s.archiveNote(ctx, p.ID, *p.Archived); err != nil {
 			return nil, err
 		}
 	}
@@ -1294,6 +1323,10 @@ func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 	if err != nil {
 		return nil, err
 	}
+	archived, err := s.archivedNotebooks()
+	if err != nil {
+		return nil, err
+	}
 	var inbox, trash *gennotes.Notebook
 	var others []*gennotes.Notebook
 	subs := map[string][]*gennotes.Notebook{}
@@ -1302,7 +1335,13 @@ func (s *Notes) notebooks(ctx context.Context) ([]*gennotes.Notebook, error) {
 		if err != nil {
 			m = store.NotebookMeta{Kind: store.DefaultKind(id)} // a broken settings file falls back to the defaults
 		}
-		nb := &gennotes.Notebook{ID: id, Name: m.Name, Order: m.Order, Count: counts[id], Kind: apiKind(m.Kind), Sort: cmp.Or(m.Sort, store.SortOrder)}
+		nb := &gennotes.Notebook{ID: id, Name: m.Name, Order: m.Order, Count: counts[id].Notes, ArchivedCount: counts[id].Archived, Kind: apiKind(m.Kind), Sort: cmp.Or(m.Sort, store.SortOrder)}
+		if m.ArchivedAt != nil && id != store.Inbox && id != store.Trash {
+			nb.ArchivedAt = ptr(store.FormatTime(*m.ArchivedAt))
+		}
+		if slices.Contains(archived, id) {
+			nb.Archived = ptr(true)
+		}
 		if parent, sub := store.SplitNotebook(id); sub != "" {
 			nb.Parent = &parent
 			if m.OwnKind != nil {
@@ -1397,11 +1436,15 @@ func (s *Notes) Search(ctx context.Context, p *gennotes.SearchPayload) (*gennote
 	if slices.Contains(hidden, deref(p.Notebook)) {
 		return &gennotes.SearchResult{Mode: string(s.index.Mode()), Total: 0, Notes: []*gennotes.NoteSummary{}}, nil
 	}
-	res, total, err := s.index.Search(ctx, p.Q, deref(p.Notebook), deref(p.Tag), p.Limit, hidden...)
+	a, err := s.archive(p.Archived)
 	if err != nil {
 		return nil, err
 	}
-	return &gennotes.SearchResult{Mode: string(s.index.Mode()), Total: total, Notes: summaries(res, true)}, nil
+	res, total, err := s.index.Search(ctx, p.Q, deref(p.Notebook), deref(p.Tag), a, p.Limit, hidden...)
+	if err != nil {
+		return nil, err
+	}
+	return &gennotes.SearchResult{Mode: string(s.index.Mode()), Total: total, Notes: s.summaries(res, true, a.Notebooks)}, nil
 }
 
 func (s *Notes) Sync(ctx context.Context, _ *gennotes.SyncPayload) (*gennotes.SyncResult, error) {
@@ -1518,6 +1561,10 @@ func toNote(n *store.Note) *gennotes.Note {
 	}
 	res.CreatedBy = createdBy(n.CreatedBy)
 	res.Marks = store.CleanMarks(n.Marks)
+	if n.ArchivedAt != nil {
+		res.ArchivedAt = ptr(store.FormatTime(*n.ArchivedAt))
+		res.Archived = ptr(true)
+	}
 	return res
 }
 
@@ -1545,6 +1592,9 @@ func summaries(ss []*index.Summary, withSnippet bool) []*gennotes.NoteSummary {
 		}
 		r.CreatedBy = createdBy(s.CreatedBy)
 		r.Marks = store.CleanMarks(s.Marks)
+		if s.Archived {
+			r.Archived = ptr(true)
+		}
 		if withSnippet {
 			r.Snippet = &s.Snippet
 			r.TitleHighlights = textRanges(s.TitleHighlights)

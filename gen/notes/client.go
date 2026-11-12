@@ -34,6 +34,8 @@ type Client struct {
 	TagsEndpoint                  goa.Endpoint
 	MarksEndpoint                 goa.Endpoint
 	SetMarksEndpoint              goa.Endpoint
+	ArchiveNotesEndpoint          goa.Endpoint
+	ArchiveCandidatesEndpoint     goa.Endpoint
 	SaveMarkNamesEndpoint         goa.Endpoint
 	CreateNotebookEndpoint        goa.Endpoint
 	SaveNotebookEndpoint          goa.Endpoint
@@ -58,6 +60,7 @@ type Client struct {
 	MoveAiSeparatorEndpoint       goa.Endpoint
 	CreateAiNotebookEndpoint      goa.Endpoint
 	MakeNotebookPrivateEndpoint   goa.Endpoint
+	ArchiveAiNotebookEndpoint     goa.Endpoint
 	AddFileEndpoint               goa.Endpoint
 	GetFileEndpoint               goa.Endpoint
 	DeleteFileEndpoint            goa.Endpoint
@@ -77,7 +80,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -97,6 +100,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		TagsEndpoint:                  tags,
 		MarksEndpoint:                 marks,
 		SetMarksEndpoint:              setMarks,
+		ArchiveNotesEndpoint:          archiveNotes,
+		ArchiveCandidatesEndpoint:     archiveCandidates,
 		SaveMarkNamesEndpoint:         saveMarkNames,
 		CreateNotebookEndpoint:        createNotebook,
 		SaveNotebookEndpoint:          saveNotebook,
@@ -121,6 +126,7 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		MoveAiSeparatorEndpoint:       moveAiSeparator,
 		CreateAiNotebookEndpoint:      createAiNotebook,
 		MakeNotebookPrivateEndpoint:   makeNotebookPrivate,
+		ArchiveAiNotebookEndpoint:     archiveAiNotebook,
 		AddFileEndpoint:               addFile,
 		GetFileEndpoint:               getFile,
 		DeleteFileEndpoint:            deleteFile,
@@ -402,6 +408,33 @@ func (c *Client) SetMarks(ctx context.Context, p *SetMarksPayload) (res *Note, e
 		return
 	}
 	return ires.(*Note), nil
+}
+
+// ArchiveNotes calls the "archive_notes" endpoint of the "notes" service.
+// ArchiveNotes may return the following errors:
+//   - "not_found" (type *goa.ServiceError): A note does not exist
+//   - "bad_request" (type *goa.ServiceError): A note is in the trash, or its ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) ArchiveNotes(ctx context.Context, p *ArchiveNotesPayload) (err error) {
+	_, err = c.ArchiveNotesEndpoint(ctx, p)
+	return
+}
+
+// ArchiveCandidates calls the "archive_candidates" endpoint of the "notes"
+// service.
+// ArchiveCandidates may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) ArchiveCandidates(ctx context.Context, p *ArchiveCandidatesPayload) (res *NoteList, err error) {
+	var ires any
+	ires, err = c.ArchiveCandidatesEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*NoteList), nil
 }
 
 // SaveMarkNames calls the "save_mark_names" endpoint of the "notes" service.
@@ -781,6 +814,23 @@ func (c *Client) CreateAiNotebook(ctx context.Context, p *CreateAiNotebookPayloa
 func (c *Client) MakeNotebookPrivate(ctx context.Context, p *MakeNotebookPrivatePayload) (err error) {
 	_, err = c.MakeNotebookPrivateEndpoint(ctx, p)
 	return
+}
+
+// ArchiveAiNotebook calls the "archive_ai_notebook" endpoint of the "notes"
+// service.
+// ArchiveAiNotebook may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The notebook does not exist, or is hidden from AI clients
+//   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) ArchiveAiNotebook(ctx context.Context, p *ArchiveAiNotebookPayload) (res *Notebook, err error) {
+	var ires any
+	ires, err = c.ArchiveAiNotebookEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*Notebook), nil
 }
 
 // AddFile calls the "add_file" endpoint of the "notes" service.

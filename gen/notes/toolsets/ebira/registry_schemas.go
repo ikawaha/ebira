@@ -29,23 +29,24 @@ func ToolSchemas() []*genregistry.ToolSchema {
 	return []*genregistry.ToolSchema{
 		declarations.schema1(),
 		declarations.schema16(),
-		declarations.schema55(),
-		declarations.schema75(),
-		declarations.schema98(),
-		declarations.schema107(),
-		declarations.schema116(),
-		declarations.schema149(),
-		declarations.schema199(),
-		declarations.schema210(),
-		declarations.schema227(),
-		declarations.schema277(),
-		declarations.schema289(),
-		declarations.schema296(),
+		declarations.schema39(),
+		declarations.schema80(),
+		declarations.schema103(),
+		declarations.schema126(),
+		declarations.schema135(),
+		declarations.schema144(),
+		declarations.schema179(),
+		declarations.schema231(),
+		declarations.schema242(),
+		declarations.schema262(),
+		declarations.schema315(),
 		declarations.schema329(),
-		declarations.schema348(),
-		declarations.schema387(),
-		declarations.schema401(),
-		declarations.schema460(),
+		declarations.schema336(),
+		declarations.schema371(),
+		declarations.schema390(),
+		declarations.schema432(),
+		declarations.schema446(),
+		declarations.schema509(),
 	}
 } // schema1 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema1() *genregistry.ToolSchema {
@@ -254,13 +255,330 @@ func (registryDeclarations) field15() *genregistry.ToolFieldMetadata {
 
 // schema16 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema16() *genregistry.ToolSchema {
+	registryText1 := "Put a notebook shared with AI (kind collab) in the archive, where lists and searches leave it out unless they ask for it, or take it out"
+	return &genregistry.ToolSchema{
+		Name:                   "ebira.archive_ai_notebook",
+		Description:            &registryText1,
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"true to put the notebook in the archive, false to take it out\",\"type\":\"boolean\"},\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"archived\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"true to put the notebook in the archive, false to take it out\",\"type\":\"boolean\"},\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"archived\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"archived_count\":{\"description\":\"Number of notes put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"count\":{\"description\":\"Number of notes, but those put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"archived_count\",\"reserved\",\"kind\",\"sort\"],\"type\":\"object\"}"),
+		ConsumerContract: &genregistry.ConsumerContract{
+			Kind:  "service",
+			Title: "Archive Ai Notebook",
+			Search: &genregistry.ToolSearchDocument{
+				Length: 34,
+				Terms:  map[string]int{"a": 1, "ai": 3, "and": 1, "archive": 3, "ask": 1, "collab": 1, "ebira": 1, "for": 1, "in": 1, "it": 3, "kind": 1, "leave": 1, "lists": 1, "notebook": 3, "or": 1, "out": 2, "put": 1, "searches": 1, "shared": 1, "take": 1, "the": 1, "they": 1, "unless": 1, "where": 1, "with": 1},
+			},
+			RequiresUI: false,
+			TextOnly: &genregistry.TextOnlyToolContract{
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"true to put the notebook in the archive, false to take it out\",\"type\":\"boolean\"},\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"archived\"],\"type\":\"object\"}"),
+				Description:     "Put a notebook shared with AI (kind collab) in the archive, where lists and searches leave it out unless they ask for it, or take it out",
+				Search: &genregistry.ToolSearchDocument{
+					Length: 34,
+					Terms:  map[string]int{"a": 1, "ai": 3, "and": 1, "archive": 3, "ask": 1, "collab": 1, "ebira": 1, "for": 1, "in": 1, "it": 3, "kind": 1, "leave": 1, "lists": 1, "notebook": 3, "or": 1, "out": 2, "put": 1, "searches": 1, "shared": 1, "take": 1, "the": 1, "they": 1, "unless": 1, "where": 1, "with": 1},
+				},
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"true to put the notebook in the archive, false to take it out\",\"type\":\"boolean\"},\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"archived\"],\"type\":\"object\"}"),
+				Payload:       declarations.metadata35(),
+			},
+			Payload: declarations.metadata17(),
+			Result:  declarations.metadata21(),
+		},
+	}
+}
+
+// metadata17 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata17() *genregistry.ToolTypeMetadata {
+	registryText1 := "ArchiveAiNotebookPayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"true to put the notebook in the archive, false to take it out\",\"type\":\"boolean\"},\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"archived\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field18(),
+			declarations.field19(),
+			declarations.field20(),
+		},
+	}
+}
+
+// field18 constructs one generated field declaration.
+func (registryDeclarations) field18() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field19 constructs one generated field declaration.
+func (registryDeclarations) field19() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook ID"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field20 constructs one generated field declaration.
+func (registryDeclarations) field20() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "true to put the notebook in the archive, false to take it out"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata21 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata21() *genregistry.ToolTypeMetadata {
+	registryText1 := "ArchiveAiNotebookResult"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"archived_count\":{\"description\":\"Number of notes put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"count\":{\"description\":\"Number of notes, but those put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"archived_count\",\"reserved\",\"kind\",\"sort\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field22(),
+			declarations.field23(),
+			declarations.field24(),
+			declarations.field25(),
+			declarations.field26(),
+			declarations.field27(),
+			declarations.field28(),
+			declarations.field29(),
+			declarations.field30(),
+			declarations.field31(),
+			declarations.field32(),
+			declarations.field33(),
+			declarations.field34(),
+		},
+	}
+}
+
+// field22 constructs one generated field declaration.
+func (registryDeclarations) field22() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field23 constructs one generated field declaration.
+func (registryDeclarations) field23() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field24 constructs one generated field declaration.
+func (registryDeclarations) field24() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("parent")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field25 constructs one generated field declaration.
+func (registryDeclarations) field25() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("name")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field26 constructs one generated field declaration.
+func (registryDeclarations) field26() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Sort key among the notebooks other than inbox and trash; lower comes first"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("order")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field27 constructs one generated field declaration.
+func (registryDeclarations) field27() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Number of notes, but those put in the archive on their own"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("count")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field28 constructs one generated field declaration.
+func (registryDeclarations) field28() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Number of notes put in the archive on their own"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_count")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field29 constructs one generated field declaration.
+func (registryDeclarations) field29() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field30 constructs one generated field declaration.
+func (registryDeclarations) field30() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field31 constructs one generated field declaration.
+func (registryDeclarations) field31() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether this is a system notebook (inbox or trash)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("reserved")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field32 constructs one generated field declaration.
+func (registryDeclarations) field32() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("kind")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field33 constructs one generated field declaration.
+func (registryDeclarations) field33() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("own_kind")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field34 constructs one generated field declaration.
+func (registryDeclarations) field34() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("sort")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata35 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata35() *genregistry.ToolTypeMetadata {
+	registryText1 := "ArchiveAiNotebookPayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"true to put the notebook in the archive, false to take it out\",\"type\":\"boolean\"},\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"archived\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field36(),
+			declarations.field37(),
+			declarations.field38(),
+		},
+	}
+}
+
+// field36 constructs one generated field declaration.
+func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field37 constructs one generated field declaration.
+func (registryDeclarations) field37() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook ID"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field38 constructs one generated field declaration.
+func (registryDeclarations) field38() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "true to put the notebook in the archive, false to take it out"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// schema39 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema39() *genregistry.ToolSchema {
 	registryText1 := "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only. The result has the new ID and version, and leaves out the body"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.create_ai_note",
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"notebook\",\"title\"],\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"notebook\",\"title\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Create Ai Note",
@@ -277,41 +595,41 @@ func (declarations registryDeclarations) schema16() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 3, "add": 1, "afterwards": 1, "ai": 3, "and": 2, "are": 1, "body": 1, "cannot": 1, "collab": 1, "create": 3, "drop": 1, "ebira": 1, "has": 1, "id": 1, "in": 2, "kind": 2, "leaves": 1, "new": 1, "note": 3, "notebook": 2, "notebooks": 1, "notes": 2, "of": 1, "one": 1, "only": 1, "or": 1, "other": 1, "out": 1, "read": 1, "result": 1, "see": 1, "shared": 1, "the": 4, "to": 1, "version": 1, "whose": 1, "with": 1, "you": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"notebook\",\"title\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata48(),
+				Payload:       declarations.metadata73(),
 			},
-			Payload: declarations.metadata17(),
-			Result:  declarations.metadata24(),
+			Payload: declarations.metadata40(),
+			Result:  declarations.metadata47(),
 		},
 	}
 }
 
-// metadata17 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata17() *genregistry.ToolTypeMetadata {
+// metadata40 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata40() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"notebook\",\"title\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field18(),
-			declarations.field19(),
-			declarations.field20(),
-			declarations.field21(),
-			declarations.field22(),
-			declarations.field23(),
+			declarations.field41(),
+			declarations.field42(),
+			declarations.field43(),
+			declarations.field44(),
+			declarations.field45(),
+			declarations.field46(),
 		},
 	}
 }
 
-// field18 constructs one generated field declaration.
-func (registryDeclarations) field18() *genregistry.ToolFieldMetadata {
+// field41 constructs one generated field declaration.
+func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field19 constructs one generated field declaration.
-func (registryDeclarations) field19() *genregistry.ToolFieldMetadata {
+// field42 constructs one generated field declaration.
+func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab or drop kind"
 	return &genregistry.ToolFieldMetadata{
@@ -323,8 +641,8 @@ func (registryDeclarations) field19() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field20 constructs one generated field declaration.
-func (registryDeclarations) field20() *genregistry.ToolFieldMetadata {
+// field43 constructs one generated field declaration.
+func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -336,8 +654,8 @@ func (registryDeclarations) field20() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field21 constructs one generated field declaration.
-func (registryDeclarations) field21() *genregistry.ToolFieldMetadata {
+// field44 constructs one generated field declaration.
+func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -349,8 +667,8 @@ func (registryDeclarations) field21() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field22 constructs one generated field declaration.
-func (registryDeclarations) field22() *genregistry.ToolFieldMetadata {
+// field45 constructs one generated field declaration.
+func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -363,8 +681,8 @@ func (registryDeclarations) field22() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field23 constructs one generated field declaration.
-func (registryDeclarations) field23() *genregistry.ToolFieldMetadata {
+// field46 constructs one generated field declaration.
+func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Body in Markdown"
 	return &genregistry.ToolFieldMetadata{
@@ -376,50 +694,52 @@ func (registryDeclarations) field23() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata24 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata24() *genregistry.ToolTypeMetadata {
+// metadata47 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata47() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiNoteResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field25(),
-			declarations.field26(),
-			declarations.field27(),
-			declarations.field28(),
-			declarations.field29(),
-			declarations.field30(),
-			declarations.field31(),
-			declarations.field32(),
-			declarations.field33(),
-			declarations.field34(),
-			declarations.field35(),
-			declarations.field36(),
-			declarations.field37(),
-			declarations.field38(),
-			declarations.field39(),
-			declarations.field40(),
-			declarations.field41(),
-			declarations.field42(),
-			declarations.field43(),
-			declarations.field44(),
-			declarations.field45(),
-			declarations.field46(),
-			declarations.field47(),
+			declarations.field48(),
+			declarations.field49(),
+			declarations.field50(),
+			declarations.field51(),
+			declarations.field52(),
+			declarations.field53(),
+			declarations.field54(),
+			declarations.field55(),
+			declarations.field56(),
+			declarations.field57(),
+			declarations.field58(),
+			declarations.field59(),
+			declarations.field60(),
+			declarations.field61(),
+			declarations.field62(),
+			declarations.field63(),
+			declarations.field64(),
+			declarations.field65(),
+			declarations.field66(),
+			declarations.field67(),
+			declarations.field68(),
+			declarations.field69(),
+			declarations.field70(),
+			declarations.field71(),
+			declarations.field72(),
 		},
 	}
 }
 
-// field25 constructs one generated field declaration.
-func (registryDeclarations) field25() *genregistry.ToolFieldMetadata {
+// field48 constructs one generated field declaration.
+func (registryDeclarations) field48() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field26 constructs one generated field declaration.
-func (registryDeclarations) field26() *genregistry.ToolFieldMetadata {
+// field49 constructs one generated field declaration.
+func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -431,320 +751,10 @@ func (registryDeclarations) field26() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field27 constructs one generated field declaration.
-func (registryDeclarations) field27() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook (directory) the note is in"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field28 constructs one generated field declaration.
-func (registryDeclarations) field28() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Title"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field29 constructs one generated field declaration.
-func (registryDeclarations) field29() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field30 constructs one generated field declaration.
-func (registryDeclarations) field30() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field31 constructs one generated field declaration.
-func (registryDeclarations) field31() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Creation time"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("created_at")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field32 constructs one generated field declaration.
-func (registryDeclarations) field32() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Last update time"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("updated_at")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field33 constructs one generated field declaration.
-func (registryDeclarations) field33() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field34 constructs one generated field declaration.
-func (registryDeclarations) field34() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("created_by")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field35 constructs one generated field declaration.
-func (registryDeclarations) field35() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field36 constructs one generated field declaration.
-func (registryDeclarations) field36() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field37 constructs one generated field declaration.
-func (registryDeclarations) field37() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Body in Markdown"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field38 constructs one generated field declaration.
-func (registryDeclarations) field38() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("version")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field39 constructs one generated field declaration.
-func (registryDeclarations) field39() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook the note was in before it was moved to the trash"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_from")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field40 constructs one generated field declaration.
-func (registryDeclarations) field40() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field41 constructs one generated field declaration.
-func (registryDeclarations) field41() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field42 constructs one generated field declaration.
-func (registryDeclarations) field42() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field43 constructs one generated field declaration.
-func (registryDeclarations) field43() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field44 constructs one generated field declaration.
-func (registryDeclarations) field44() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field45 constructs one generated field declaration.
-func (registryDeclarations) field45() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field46 constructs one generated field declaration.
-func (registryDeclarations) field46() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field47 constructs one generated field declaration.
-func (registryDeclarations) field47() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// metadata48 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata48() *genregistry.ToolTypeMetadata {
-	registryText1 := "CreateAiNotePayload"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"notebook\",\"title\"],\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field49(),
-			declarations.field50(),
-			declarations.field51(),
-			declarations.field52(),
-			declarations.field53(),
-			declarations.field54(),
-		},
-	}
-}
-
-// field49 constructs one generated field declaration.
-func (registryDeclarations) field49() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
 // field50 constructs one generated field declaration.
 func (registryDeclarations) field50() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "ID of a notebook of the collab or drop kind"
+	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
@@ -797,6 +807,98 @@ func (registryDeclarations) field53() *genregistry.ToolFieldMetadata {
 // field54 constructs one generated field declaration.
 func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
+	registryText2 := "Creation time"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("created_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field55 constructs one generated field declaration.
+func (registryDeclarations) field55() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Last update time"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("updated_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field56 constructs one generated field declaration.
+func (registryDeclarations) field56() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field57 constructs one generated field declaration.
+func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("created_by")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field58 constructs one generated field declaration.
+func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field59 constructs one generated field declaration.
+func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field60 constructs one generated field declaration.
+func (registryDeclarations) field60() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field61 constructs one generated field declaration.
+func (registryDeclarations) field61() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
 	registryText2 := "Body in Markdown"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
@@ -807,15 +909,259 @@ func (registryDeclarations) field54() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema55 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema55() *genregistry.ToolSchema {
+// field62 constructs one generated field declaration.
+func (registryDeclarations) field62() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("version")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field63 constructs one generated field declaration.
+func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook the note was in before it was moved to the trash"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_from")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field64 constructs one generated field declaration.
+func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field65 constructs one generated field declaration.
+func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field66 constructs one generated field declaration.
+func (registryDeclarations) field66() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field67 constructs one generated field declaration.
+func (registryDeclarations) field67() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field68 constructs one generated field declaration.
+func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field69 constructs one generated field declaration.
+func (registryDeclarations) field69() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field70 constructs one generated field declaration.
+func (registryDeclarations) field70() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field71 constructs one generated field declaration.
+func (registryDeclarations) field71() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field72 constructs one generated field declaration.
+func (registryDeclarations) field72() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata73 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata73() *genregistry.ToolTypeMetadata {
+	registryText1 := "CreateAiNotePayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"notebook\",\"title\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field74(),
+			declarations.field75(),
+			declarations.field76(),
+			declarations.field77(),
+			declarations.field78(),
+			declarations.field79(),
+		},
+	}
+}
+
+// field74 constructs one generated field declaration.
+func (registryDeclarations) field74() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field75 constructs one generated field declaration.
+func (registryDeclarations) field75() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "ID of a notebook of the collab or drop kind"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field76 constructs one generated field declaration.
+func (registryDeclarations) field76() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Title"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field77 constructs one generated field declaration.
+func (registryDeclarations) field77() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field78 constructs one generated field declaration.
+func (registryDeclarations) field78() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field79 constructs one generated field declaration.
+func (registryDeclarations) field79() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Body in Markdown"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// schema80 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema80() *genregistry.ToolSchema {
 	registryText1 := "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name, with a random suffix; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.create_ai_notebook",
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"reserved\",\"kind\",\"sort\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"archived_count\":{\"description\":\"Number of notes put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"count\":{\"description\":\"Number of notes, but those put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"archived_count\",\"reserved\",\"kind\",\"sort\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Create Ai Notebook",
@@ -832,38 +1178,38 @@ func (declarations registryDeclarations) schema55() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 5, "ai": 4, "an": 1, "and": 1, "as": 2, "ascii": 1, "by": 1, "call": 1, "characters": 1, "collab": 1, "create": 3, "derived": 1, "ebira": 1, "expected": 1, "from": 1, "gives": 1, "id": 3, "in": 1, "is": 3, "its": 2, "japanese": 1, "kind": 1, "may": 1, "name": 3, "new": 1, "notebook": 6, "notes": 1, "of": 1, "or": 1, "other": 2, "parent": 1, "pass": 1, "people": 1, "punycode": 1, "random": 1, "result": 1, "shared": 2, "starts": 1, "sub": 1, "such": 1, "suffix": 1, "than": 1, "that": 1, "the": 4, "to": 2, "tools": 1, "where": 1, "which": 1, "with": 6, "write": 1, "xn": 1, "you": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata71(),
+				Payload:       declarations.metadata99(),
 			},
-			Payload: declarations.metadata56(),
-			Result:  declarations.metadata60(),
+			Payload: declarations.metadata81(),
+			Result:  declarations.metadata85(),
 		},
 	}
 }
 
-// metadata56 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata56() *genregistry.ToolTypeMetadata {
+// metadata81 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata81() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiNotebookPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field57(),
-			declarations.field58(),
-			declarations.field59(),
+			declarations.field82(),
+			declarations.field83(),
+			declarations.field84(),
 		},
 	}
 }
 
-// field57 constructs one generated field declaration.
-func (registryDeclarations) field57() *genregistry.ToolFieldMetadata {
+// field82 constructs one generated field declaration.
+func (registryDeclarations) field82() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field58 constructs one generated field declaration.
-func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
+// field83 constructs one generated field declaration.
+func (registryDeclarations) field83() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Display name, in any language; the ID is derived from it"
 	return &genregistry.ToolFieldMetadata{
@@ -875,8 +1221,8 @@ func (registryDeclarations) field58() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field59 constructs one generated field declaration.
-func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
+// field84 constructs one generated field declaration.
+func (registryDeclarations) field84() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top"
 	return &genregistry.ToolFieldMetadata{
@@ -888,37 +1234,40 @@ func (registryDeclarations) field59() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata60 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata60() *genregistry.ToolTypeMetadata {
+// metadata85 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata85() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiNotebookResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"reserved\",\"kind\",\"sort\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"archived_count\":{\"description\":\"Number of notes put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"count\":{\"description\":\"Number of notes, but those put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"archived_count\",\"reserved\",\"kind\",\"sort\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field61(),
-			declarations.field62(),
-			declarations.field63(),
-			declarations.field64(),
-			declarations.field65(),
-			declarations.field66(),
-			declarations.field67(),
-			declarations.field68(),
-			declarations.field69(),
-			declarations.field70(),
+			declarations.field86(),
+			declarations.field87(),
+			declarations.field88(),
+			declarations.field89(),
+			declarations.field90(),
+			declarations.field91(),
+			declarations.field92(),
+			declarations.field93(),
+			declarations.field94(),
+			declarations.field95(),
+			declarations.field96(),
+			declarations.field97(),
+			declarations.field98(),
 		},
 	}
 }
 
-// field61 constructs one generated field declaration.
-func (registryDeclarations) field61() *genregistry.ToolFieldMetadata {
+// field86 constructs one generated field declaration.
+func (registryDeclarations) field86() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field62 constructs one generated field declaration.
-func (registryDeclarations) field62() *genregistry.ToolFieldMetadata {
+// field87 constructs one generated field declaration.
+func (registryDeclarations) field87() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead"
 	return &genregistry.ToolFieldMetadata{
@@ -930,8 +1279,8 @@ func (registryDeclarations) field62() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field63 constructs one generated field declaration.
-func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
+// field88 constructs one generated field declaration.
+func (registryDeclarations) field88() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent"
 	return &genregistry.ToolFieldMetadata{
@@ -943,8 +1292,8 @@ func (registryDeclarations) field63() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field64 constructs one generated field declaration.
-func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
+// field89 constructs one generated field declaration.
+func (registryDeclarations) field89() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)"
 	return &genregistry.ToolFieldMetadata{
@@ -956,8 +1305,8 @@ func (registryDeclarations) field64() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field65 constructs one generated field declaration.
-func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
+// field90 constructs one generated field declaration.
+func (registryDeclarations) field90() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Sort key among the notebooks other than inbox and trash; lower comes first"
 	return &genregistry.ToolFieldMetadata{
@@ -969,10 +1318,10 @@ func (registryDeclarations) field65() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field66 constructs one generated field declaration.
-func (registryDeclarations) field66() *genregistry.ToolFieldMetadata {
+// field91 constructs one generated field declaration.
+func (registryDeclarations) field91() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
-	registryText2 := "Number of notes"
+	registryText2 := "Number of notes, but those put in the archive on their own"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("count")},
@@ -982,8 +1331,47 @@ func (registryDeclarations) field66() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field67 constructs one generated field declaration.
-func (registryDeclarations) field67() *genregistry.ToolFieldMetadata {
+// field92 constructs one generated field declaration.
+func (registryDeclarations) field92() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Number of notes put in the archive on their own"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_count")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field93 constructs one generated field declaration.
+func (registryDeclarations) field93() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field94 constructs one generated field declaration.
+func (registryDeclarations) field94() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field95 constructs one generated field declaration.
+func (registryDeclarations) field95() *genregistry.ToolFieldMetadata {
 	registryText1 := "boolean"
 	registryText2 := "Whether this is a system notebook (inbox or trash)"
 	return &genregistry.ToolFieldMetadata{
@@ -995,8 +1383,8 @@ func (registryDeclarations) field67() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field68 constructs one generated field declaration.
-func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
+// field96 constructs one generated field declaration.
+func (registryDeclarations) field96() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop"
 	return &genregistry.ToolFieldMetadata{
@@ -1008,8 +1396,8 @@ func (registryDeclarations) field68() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field69 constructs one generated field declaration.
-func (registryDeclarations) field69() *genregistry.ToolFieldMetadata {
+// field97 constructs one generated field declaration.
+func (registryDeclarations) field97() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent"
 	return &genregistry.ToolFieldMetadata{
@@ -1021,8 +1409,8 @@ func (registryDeclarations) field69() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field70 constructs one generated field declaration.
-func (registryDeclarations) field70() *genregistry.ToolFieldMetadata {
+// field98 constructs one generated field declaration.
+func (registryDeclarations) field98() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width"
 	return &genregistry.ToolFieldMetadata{
@@ -1034,30 +1422,30 @@ func (registryDeclarations) field70() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata71 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata71() *genregistry.ToolTypeMetadata {
+// metadata99 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata99() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiNotebookPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"Display name, in any language; the ID is derived from it\",\"maxLength\":100,\"minLength\":1,\"type\":\"string\"},\"parent\":{\"description\":\"Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field72(),
-			declarations.field73(),
-			declarations.field74(),
+			declarations.field100(),
+			declarations.field101(),
+			declarations.field102(),
 		},
 	}
 }
 
-// field72 constructs one generated field declaration.
-func (registryDeclarations) field72() *genregistry.ToolFieldMetadata {
+// field100 constructs one generated field declaration.
+func (registryDeclarations) field100() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field73 constructs one generated field declaration.
-func (registryDeclarations) field73() *genregistry.ToolFieldMetadata {
+// field101 constructs one generated field declaration.
+func (registryDeclarations) field101() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Display name, in any language; the ID is derived from it"
 	return &genregistry.ToolFieldMetadata{
@@ -1069,8 +1457,8 @@ func (registryDeclarations) field73() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field74 constructs one generated field declaration.
-func (registryDeclarations) field74() *genregistry.ToolFieldMetadata {
+// field102 constructs one generated field declaration.
+func (registryDeclarations) field102() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the collab kind to create the notebook in, as a sub notebook, one level deep: not a sub notebook. Omit for a notebook at the top"
 	return &genregistry.ToolFieldMetadata{
@@ -1082,8 +1470,8 @@ func (registryDeclarations) field74() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema75 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema75() *genregistry.ToolSchema {
+// schema103 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema103() *genregistry.ToolSchema {
 	registryText1 := "Put a separator (a bar with a heading, a date and a color, no body) between the notes of a notebook shared with AI (kind collab), after a note or a separator, or first"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.create_ai_separator",
@@ -1107,41 +1495,41 @@ func (declarations registryDeclarations) schema75() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 8, "after": 1, "ai": 3, "and": 1, "bar": 1, "between": 1, "body": 1, "collab": 1, "color": 1, "create": 2, "date": 1, "ebira": 1, "first": 1, "heading": 1, "kind": 1, "no": 1, "note": 1, "notebook": 1, "notes": 1, "of": 1, "or": 2, "put": 1, "separator": 4, "shared": 1, "the": 1, "with": 2},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"example\":\"October\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"notebook\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata91(),
+				Payload:       declarations.metadata119(),
 			},
-			Payload: declarations.metadata76(),
-			Result:  declarations.metadata83(),
+			Payload: declarations.metadata104(),
+			Result:  declarations.metadata111(),
 		},
 	}
 }
 
-// metadata76 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata76() *genregistry.ToolTypeMetadata {
+// metadata104 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata104() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"example\":\"October\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field77(),
-			declarations.field78(),
-			declarations.field79(),
-			declarations.field80(),
-			declarations.field81(),
-			declarations.field82(),
+			declarations.field105(),
+			declarations.field106(),
+			declarations.field107(),
+			declarations.field108(),
+			declarations.field109(),
+			declarations.field110(),
 		},
 	}
 }
 
-// field77 constructs one generated field declaration.
-func (registryDeclarations) field77() *genregistry.ToolFieldMetadata {
+// field105 constructs one generated field declaration.
+func (registryDeclarations) field105() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field78 constructs one generated field declaration.
-func (registryDeclarations) field78() *genregistry.ToolFieldMetadata {
+// field106 constructs one generated field declaration.
+func (registryDeclarations) field106() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab kind"
 	return &genregistry.ToolFieldMetadata{
@@ -1153,8 +1541,8 @@ func (registryDeclarations) field78() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field79 constructs one generated field declaration.
-func (registryDeclarations) field79() *genregistry.ToolFieldMetadata {
+// field107 constructs one generated field declaration.
+func (registryDeclarations) field107() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -1166,8 +1554,8 @@ func (registryDeclarations) field79() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field80 constructs one generated field declaration.
-func (registryDeclarations) field80() *genregistry.ToolFieldMetadata {
+// field108 constructs one generated field declaration.
+func (registryDeclarations) field108() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -1179,8 +1567,8 @@ func (registryDeclarations) field80() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field81 constructs one generated field declaration.
-func (registryDeclarations) field81() *genregistry.ToolFieldMetadata {
+// field109 constructs one generated field declaration.
+func (registryDeclarations) field109() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; omit for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -1192,8 +1580,8 @@ func (registryDeclarations) field81() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field82 constructs one generated field declaration.
-func (registryDeclarations) field82() *genregistry.ToolFieldMetadata {
+// field110 constructs one generated field declaration.
+func (registryDeclarations) field110() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 	return &genregistry.ToolFieldMetadata{
@@ -1205,26 +1593,26 @@ func (registryDeclarations) field82() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata83 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata83() *genregistry.ToolTypeMetadata {
+// metadata111 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata111() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiSeparatorResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field84(),
-			declarations.field85(),
-			declarations.field86(),
-			declarations.field87(),
-			declarations.field88(),
-			declarations.field89(),
-			declarations.field90(),
+			declarations.field112(),
+			declarations.field113(),
+			declarations.field114(),
+			declarations.field115(),
+			declarations.field116(),
+			declarations.field117(),
+			declarations.field118(),
 		},
 	}
 }
 
-// field84 constructs one generated field declaration.
-func (registryDeclarations) field84() *genregistry.ToolFieldMetadata {
+// field112 constructs one generated field declaration.
+func (registryDeclarations) field112() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook."
 	return &genregistry.ToolFieldMetadata{
@@ -1233,8 +1621,8 @@ func (registryDeclarations) field84() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field85 constructs one generated field declaration.
-func (registryDeclarations) field85() *genregistry.ToolFieldMetadata {
+// field113 constructs one generated field declaration.
+func (registryDeclarations) field113() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID"
 	return &genregistry.ToolFieldMetadata{
@@ -1246,8 +1634,8 @@ func (registryDeclarations) field85() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field86 constructs one generated field declaration.
-func (registryDeclarations) field86() *genregistry.ToolFieldMetadata {
+// field114 constructs one generated field declaration.
+func (registryDeclarations) field114() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the separator is in"
 	return &genregistry.ToolFieldMetadata{
@@ -1259,8 +1647,8 @@ func (registryDeclarations) field86() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field87 constructs one generated field declaration.
-func (registryDeclarations) field87() *genregistry.ToolFieldMetadata {
+// field115 constructs one generated field declaration.
+func (registryDeclarations) field115() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -1272,8 +1660,8 @@ func (registryDeclarations) field87() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field88 constructs one generated field declaration.
-func (registryDeclarations) field88() *genregistry.ToolFieldMetadata {
+// field116 constructs one generated field declaration.
+func (registryDeclarations) field116() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; absent for none. It does not change the order"
 	return &genregistry.ToolFieldMetadata{
@@ -1285,8 +1673,8 @@ func (registryDeclarations) field88() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field89 constructs one generated field declaration.
-func (registryDeclarations) field89() *genregistry.ToolFieldMetadata {
+// field117 constructs one generated field declaration.
+func (registryDeclarations) field117() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; absent for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -1298,8 +1686,8 @@ func (registryDeclarations) field89() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field90 constructs one generated field declaration.
-func (registryDeclarations) field90() *genregistry.ToolFieldMetadata {
+// field118 constructs one generated field declaration.
+func (registryDeclarations) field118() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note"
 	return &genregistry.ToolFieldMetadata{
@@ -1311,33 +1699,33 @@ func (registryDeclarations) field90() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata91 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata91() *genregistry.ToolTypeMetadata {
+// metadata119 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata119() *genregistry.ToolTypeMetadata {
 	registryText1 := "CreateAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"example\":\"October\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field92(),
-			declarations.field93(),
-			declarations.field94(),
-			declarations.field95(),
-			declarations.field96(),
-			declarations.field97(),
+			declarations.field120(),
+			declarations.field121(),
+			declarations.field122(),
+			declarations.field123(),
+			declarations.field124(),
+			declarations.field125(),
 		},
 	}
 }
 
-// field92 constructs one generated field declaration.
-func (registryDeclarations) field92() *genregistry.ToolFieldMetadata {
+// field120 constructs one generated field declaration.
+func (registryDeclarations) field120() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field93 constructs one generated field declaration.
-func (registryDeclarations) field93() *genregistry.ToolFieldMetadata {
+// field121 constructs one generated field declaration.
+func (registryDeclarations) field121() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab kind"
 	return &genregistry.ToolFieldMetadata{
@@ -1349,8 +1737,8 @@ func (registryDeclarations) field93() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field94 constructs one generated field declaration.
-func (registryDeclarations) field94() *genregistry.ToolFieldMetadata {
+// field122 constructs one generated field declaration.
+func (registryDeclarations) field122() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -1362,8 +1750,8 @@ func (registryDeclarations) field94() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field95 constructs one generated field declaration.
-func (registryDeclarations) field95() *genregistry.ToolFieldMetadata {
+// field123 constructs one generated field declaration.
+func (registryDeclarations) field123() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -1375,8 +1763,8 @@ func (registryDeclarations) field95() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field96 constructs one generated field declaration.
-func (registryDeclarations) field96() *genregistry.ToolFieldMetadata {
+// field124 constructs one generated field declaration.
+func (registryDeclarations) field124() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; omit for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -1388,8 +1776,8 @@ func (registryDeclarations) field96() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field97 constructs one generated field declaration.
-func (registryDeclarations) field97() *genregistry.ToolFieldMetadata {
+// field125 constructs one generated field declaration.
+func (registryDeclarations) field125() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 	return &genregistry.ToolFieldMetadata{
@@ -1401,8 +1789,8 @@ func (registryDeclarations) field97() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema98 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema98() *genregistry.ToolSchema {
+// schema126 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema126() *genregistry.ToolSchema {
 	registryText1 := "Move a note in a notebook shared with AI (kind collab) to the trash; pass the version from get_note"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.delete_ai_note",
@@ -1426,37 +1814,37 @@ func (declarations registryDeclarations) schema98() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 2, "ai": 3, "collab": 1, "delete": 2, "ebira": 1, "from": 1, "get": 1, "in": 1, "kind": 1, "move": 1, "note": 4, "notebook": 1, "pass": 1, "shared": 1, "the": 2, "to": 1, "trash": 1, "version": 1, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata103(),
+				Payload:       declarations.metadata131(),
 			},
-			Payload: declarations.metadata99(),
+			Payload: declarations.metadata127(),
 		},
 	}
 }
 
-// metadata99 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata99() *genregistry.ToolTypeMetadata {
+// metadata127 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata127() *genregistry.ToolTypeMetadata {
 	registryText1 := "DeleteAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field100(),
-			declarations.field101(),
-			declarations.field102(),
+			declarations.field128(),
+			declarations.field129(),
+			declarations.field130(),
 		},
 	}
 }
 
-// field100 constructs one generated field declaration.
-func (registryDeclarations) field100() *genregistry.ToolFieldMetadata {
+// field128 constructs one generated field declaration.
+func (registryDeclarations) field128() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field101 constructs one generated field declaration.
-func (registryDeclarations) field101() *genregistry.ToolFieldMetadata {
+// field129 constructs one generated field declaration.
+func (registryDeclarations) field129() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -1468,8 +1856,8 @@ func (registryDeclarations) field101() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field102 constructs one generated field declaration.
-func (registryDeclarations) field102() *genregistry.ToolFieldMetadata {
+// field130 constructs one generated field declaration.
+func (registryDeclarations) field130() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Version of the note as returned by get_note"
 	return &genregistry.ToolFieldMetadata{
@@ -1481,30 +1869,30 @@ func (registryDeclarations) field102() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata103 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata103() *genregistry.ToolTypeMetadata {
+// metadata131 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata131() *genregistry.ToolTypeMetadata {
 	registryText1 := "DeleteAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field104(),
-			declarations.field105(),
-			declarations.field106(),
+			declarations.field132(),
+			declarations.field133(),
+			declarations.field134(),
 		},
 	}
 }
 
-// field104 constructs one generated field declaration.
-func (registryDeclarations) field104() *genregistry.ToolFieldMetadata {
+// field132 constructs one generated field declaration.
+func (registryDeclarations) field132() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field105 constructs one generated field declaration.
-func (registryDeclarations) field105() *genregistry.ToolFieldMetadata {
+// field133 constructs one generated field declaration.
+func (registryDeclarations) field133() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -1516,8 +1904,8 @@ func (registryDeclarations) field105() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field106 constructs one generated field declaration.
-func (registryDeclarations) field106() *genregistry.ToolFieldMetadata {
+// field134 constructs one generated field declaration.
+func (registryDeclarations) field134() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Version of the note as returned by get_note"
 	return &genregistry.ToolFieldMetadata{
@@ -1529,8 +1917,8 @@ func (registryDeclarations) field106() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema107 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema107() *genregistry.ToolSchema {
+// schema135 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema135() *genregistry.ToolSchema {
 	registryText1 := "Remove a separator in a notebook shared with AI (kind collab)"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.delete_ai_separator",
@@ -1554,37 +1942,37 @@ func (declarations registryDeclarations) schema107() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 2, "ai": 3, "collab": 1, "delete": 2, "ebira": 1, "in": 1, "kind": 1, "notebook": 1, "remove": 1, "separator": 3, "shared": 1, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata112(),
+				Payload:       declarations.metadata140(),
 			},
-			Payload: declarations.metadata108(),
+			Payload: declarations.metadata136(),
 		},
 	}
 }
 
-// metadata108 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata108() *genregistry.ToolTypeMetadata {
+// metadata136 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata136() *genregistry.ToolTypeMetadata {
 	registryText1 := "DeleteAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field109(),
-			declarations.field110(),
-			declarations.field111(),
+			declarations.field137(),
+			declarations.field138(),
+			declarations.field139(),
 		},
 	}
 }
 
-// field109 constructs one generated field declaration.
-func (registryDeclarations) field109() *genregistry.ToolFieldMetadata {
+// field137 constructs one generated field declaration.
+func (registryDeclarations) field137() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field110 constructs one generated field declaration.
-func (registryDeclarations) field110() *genregistry.ToolFieldMetadata {
+// field138 constructs one generated field declaration.
+func (registryDeclarations) field138() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID, from list_notes"
 	return &genregistry.ToolFieldMetadata{
@@ -1596,8 +1984,8 @@ func (registryDeclarations) field110() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field111 constructs one generated field declaration.
-func (registryDeclarations) field111() *genregistry.ToolFieldMetadata {
+// field139 constructs one generated field declaration.
+func (registryDeclarations) field139() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the separator"
 	return &genregistry.ToolFieldMetadata{
@@ -1609,30 +1997,30 @@ func (registryDeclarations) field111() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata112 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata112() *genregistry.ToolTypeMetadata {
+// metadata140 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata140() *genregistry.ToolTypeMetadata {
 	registryText1 := "DeleteAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field113(),
-			declarations.field114(),
-			declarations.field115(),
+			declarations.field141(),
+			declarations.field142(),
+			declarations.field143(),
 		},
 	}
 }
 
-// field113 constructs one generated field declaration.
-func (registryDeclarations) field113() *genregistry.ToolFieldMetadata {
+// field141 constructs one generated field declaration.
+func (registryDeclarations) field141() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field114 constructs one generated field declaration.
-func (registryDeclarations) field114() *genregistry.ToolFieldMetadata {
+// field142 constructs one generated field declaration.
+func (registryDeclarations) field142() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID, from list_notes"
 	return &genregistry.ToolFieldMetadata{
@@ -1644,8 +2032,8 @@ func (registryDeclarations) field114() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field115 constructs one generated field declaration.
-func (registryDeclarations) field115() *genregistry.ToolFieldMetadata {
+// field143 constructs one generated field declaration.
+func (registryDeclarations) field143() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the separator"
 	return &genregistry.ToolFieldMetadata{
@@ -1657,15 +2045,15 @@ func (registryDeclarations) field115() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema116 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema116() *genregistry.ToolSchema {
+// schema144 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema144() *genregistry.ToolSchema {
 	registryText1 := "Get the full content of a note by ID, as found with search_notes or list_notes; read the notes a search finds before answering from them"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.get_note",
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Get Note",
@@ -1682,399 +2070,11 @@ func (declarations registryDeclarations) schema116() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 2, "answering": 1, "as": 1, "before": 1, "by": 1, "content": 1, "ebira": 1, "finds": 1, "found": 1, "from": 1, "full": 1, "get": 3, "id": 1, "list": 1, "note": 3, "notes": 3, "of": 1, "or": 1, "read": 1, "search": 2, "the": 2, "them": 1, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata145(),
+				Payload:       declarations.metadata175(),
 			},
-			Payload: declarations.metadata117(),
-			Result:  declarations.metadata121(),
+			Payload: declarations.metadata145(),
+			Result:  declarations.metadata149(),
 		},
-	}
-}
-
-// metadata117 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata117() *genregistry.ToolTypeMetadata {
-	registryText1 := "GetNotePayload"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field118(),
-			declarations.field119(),
-			declarations.field120(),
-		},
-	}
-}
-
-// field118 constructs one generated field declaration.
-func (registryDeclarations) field118() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// field119 constructs one generated field declaration.
-func (registryDeclarations) field119() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("id")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field120 constructs one generated field declaration.
-func (registryDeclarations) field120() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Search query to highlight, as search takes it; its tags are not highlighted"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("q")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// metadata121 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata121() *genregistry.ToolTypeMetadata {
-	registryText1 := "GetNoteResult"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field122(),
-			declarations.field123(),
-			declarations.field124(),
-			declarations.field125(),
-			declarations.field126(),
-			declarations.field127(),
-			declarations.field128(),
-			declarations.field129(),
-			declarations.field130(),
-			declarations.field131(),
-			declarations.field132(),
-			declarations.field133(),
-			declarations.field134(),
-			declarations.field135(),
-			declarations.field136(),
-			declarations.field137(),
-			declarations.field138(),
-			declarations.field139(),
-			declarations.field140(),
-			declarations.field141(),
-			declarations.field142(),
-			declarations.field143(),
-			declarations.field144(),
-		},
-	}
-}
-
-// field122 constructs one generated field declaration.
-func (registryDeclarations) field122() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// field123 constructs one generated field declaration.
-func (registryDeclarations) field123() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("id")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field124 constructs one generated field declaration.
-func (registryDeclarations) field124() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook (directory) the note is in"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field125 constructs one generated field declaration.
-func (registryDeclarations) field125() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Title"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field126 constructs one generated field declaration.
-func (registryDeclarations) field126() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field127 constructs one generated field declaration.
-func (registryDeclarations) field127() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field128 constructs one generated field declaration.
-func (registryDeclarations) field128() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Creation time"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("created_at")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field129 constructs one generated field declaration.
-func (registryDeclarations) field129() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Last update time"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("updated_at")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field130 constructs one generated field declaration.
-func (registryDeclarations) field130() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field131 constructs one generated field declaration.
-func (registryDeclarations) field131() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("created_by")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field132 constructs one generated field declaration.
-func (registryDeclarations) field132() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field133 constructs one generated field declaration.
-func (registryDeclarations) field133() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field134 constructs one generated field declaration.
-func (registryDeclarations) field134() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Body in Markdown"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field135 constructs one generated field declaration.
-func (registryDeclarations) field135() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("version")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field136 constructs one generated field declaration.
-func (registryDeclarations) field136() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook the note was in before it was moved to the trash"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_from")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field137 constructs one generated field declaration.
-func (registryDeclarations) field137() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field138 constructs one generated field declaration.
-func (registryDeclarations) field138() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field139 constructs one generated field declaration.
-func (registryDeclarations) field139() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field140 constructs one generated field declaration.
-func (registryDeclarations) field140() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field141 constructs one generated field declaration.
-func (registryDeclarations) field141() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field142 constructs one generated field declaration.
-func (registryDeclarations) field142() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field143 constructs one generated field declaration.
-func (registryDeclarations) field143() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field144 constructs one generated field declaration.
-func (registryDeclarations) field144() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
 	}
 }
 
@@ -2126,15 +2126,431 @@ func (registryDeclarations) field148() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema149 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema149() *genregistry.ToolSchema {
+// metadata149 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata149() *genregistry.ToolTypeMetadata {
+	registryText1 := "GetNoteResult"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field150(),
+			declarations.field151(),
+			declarations.field152(),
+			declarations.field153(),
+			declarations.field154(),
+			declarations.field155(),
+			declarations.field156(),
+			declarations.field157(),
+			declarations.field158(),
+			declarations.field159(),
+			declarations.field160(),
+			declarations.field161(),
+			declarations.field162(),
+			declarations.field163(),
+			declarations.field164(),
+			declarations.field165(),
+			declarations.field166(),
+			declarations.field167(),
+			declarations.field168(),
+			declarations.field169(),
+			declarations.field170(),
+			declarations.field171(),
+			declarations.field172(),
+			declarations.field173(),
+			declarations.field174(),
+		},
+	}
+}
+
+// field150 constructs one generated field declaration.
+func (registryDeclarations) field150() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field151 constructs one generated field declaration.
+func (registryDeclarations) field151() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field152 constructs one generated field declaration.
+func (registryDeclarations) field152() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook (directory) the note is in"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field153 constructs one generated field declaration.
+func (registryDeclarations) field153() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Title"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field154 constructs one generated field declaration.
+func (registryDeclarations) field154() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field155 constructs one generated field declaration.
+func (registryDeclarations) field155() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field156 constructs one generated field declaration.
+func (registryDeclarations) field156() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Creation time"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("created_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field157 constructs one generated field declaration.
+func (registryDeclarations) field157() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Last update time"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("updated_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field158 constructs one generated field declaration.
+func (registryDeclarations) field158() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field159 constructs one generated field declaration.
+func (registryDeclarations) field159() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("created_by")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field160 constructs one generated field declaration.
+func (registryDeclarations) field160() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field161 constructs one generated field declaration.
+func (registryDeclarations) field161() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field162 constructs one generated field declaration.
+func (registryDeclarations) field162() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field163 constructs one generated field declaration.
+func (registryDeclarations) field163() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Body in Markdown"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field164 constructs one generated field declaration.
+func (registryDeclarations) field164() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("version")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field165 constructs one generated field declaration.
+func (registryDeclarations) field165() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook the note was in before it was moved to the trash"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_from")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field166 constructs one generated field declaration.
+func (registryDeclarations) field166() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field167 constructs one generated field declaration.
+func (registryDeclarations) field167() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field168 constructs one generated field declaration.
+func (registryDeclarations) field168() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field169 constructs one generated field declaration.
+func (registryDeclarations) field169() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field170 constructs one generated field declaration.
+func (registryDeclarations) field170() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field171 constructs one generated field declaration.
+func (registryDeclarations) field171() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field172 constructs one generated field declaration.
+func (registryDeclarations) field172() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field173 constructs one generated field declaration.
+func (registryDeclarations) field173() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field174 constructs one generated field declaration.
+func (registryDeclarations) field174() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata175 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata175() *genregistry.ToolTypeMetadata {
+	registryText1 := "GetNotePayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field176(),
+			declarations.field177(),
+			declarations.field178(),
+		},
+	}
+}
+
+// field176 constructs one generated field declaration.
+func (registryDeclarations) field176() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field177 constructs one generated field declaration.
+func (registryDeclarations) field177() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field178 constructs one generated field declaration.
+func (registryDeclarations) field178() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Search query to highlight, as search takes it; its tags are not highlighted"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("q")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// schema179 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema179() *genregistry.ToolSchema {
 	registryText1 := "Import a Markdown file, with its front matter and the images it refers to (at most 10, 5 MB each, 20 MB in all), as a new note in a notebook shared with AI (kind collab) or of the drop kind"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.import_ai_note",
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$defs\":{\"AIImportFile\":{\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"ref\":{\"description\":\"Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to\",\"example\":\"images/chart.png\",\"type\":\"string\"}},\"required\":[\"ref\",\"name\",\"content\"],\"title\":\"AIImportFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"files\":{\"description\":\"Images the file refers to, at most 10 and 20 MB in all\",\"items\":{\"$ref\":\"#/$defs/AIImportFile\"},\"maxItems\":10,\"type\":\"array\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"example\":\"meeting.md\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$defs\":{\"AIImportFile\":{\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"ref\":{\"description\":\"Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to\",\"example\":\"images/chart.png\",\"type\":\"string\"}},\"required\":[\"ref\",\"name\",\"content\"],\"title\":\"AIImportFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"files\":{\"description\":\"Images the file refers to, at most 10 and 20 MB in all\",\"items\":{\"$ref\":\"#/$defs/AIImportFile\"},\"maxItems\":10,\"type\":\"array\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"example\":\"meeting.md\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"Note\":{\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"duplicate_of\":{\"description\":\"When skipped: the note imported from the same content before\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"note\":{\"$ref\":\"#/$defs/Note\",\"description\":\"The note created\"},\"status\":{\"description\":\"created, or skipped when a file with the same content was imported before\",\"enum\":[\"created\",\"skipped\"],\"type\":\"string\"},\"warnings\":{\"description\":\"What could not be converted as is, such as images left out\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"status\",\"warnings\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"Note\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"duplicate_of\":{\"description\":\"When skipped: the note imported from the same content before\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"note\":{\"$ref\":\"#/$defs/Note\",\"description\":\"The note created\"},\"status\":{\"description\":\"created, or skipped when a file with the same content was imported before\",\"enum\":[\"created\",\"skipped\"],\"type\":\"string\"},\"warnings\":{\"description\":\"What could not be converted as is, such as images left out\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"status\",\"warnings\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Import Ai Note",
@@ -2151,44 +2567,44 @@ func (declarations registryDeclarations) schema149() *genregistry.ToolSchema {
 					Terms:  map[string]int{"10": 1, "20": 1, "5": 1, "a": 3, "ai": 3, "all": 1, "and": 1, "as": 1, "at": 1, "collab": 1, "drop": 1, "each": 1, "ebira": 1, "file": 1, "front": 1, "images": 1, "import": 3, "in": 2, "it": 1, "its": 1, "kind": 2, "markdown": 1, "matter": 1, "mb": 2, "most": 1, "new": 1, "note": 3, "notebook": 1, "of": 1, "or": 1, "refers": 1, "shared": 1, "the": 2, "to": 1, "with": 2},
 				},
 				PayloadSchema: []byte("{\"$defs\":{\"AIImportFile\":{\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"ref\":{\"description\":\"Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to\",\"example\":\"images/chart.png\",\"type\":\"string\"}},\"required\":[\"ref\",\"name\",\"content\"],\"title\":\"AIImportFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"files\":{\"description\":\"Images the file refers to, at most 10 and 20 MB in all\",\"items\":{\"$ref\":\"#/$defs/AIImportFile\"},\"maxItems\":10,\"type\":\"array\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"example\":\"meeting.md\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata189(),
+				Payload:       declarations.metadata221(),
 			},
-			Payload: declarations.metadata150(),
-			Result:  declarations.metadata160(),
+			Payload: declarations.metadata180(),
+			Result:  declarations.metadata190(),
 		},
 	}
 }
 
-// metadata150 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata150() *genregistry.ToolTypeMetadata {
+// metadata180 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata180() *genregistry.ToolTypeMetadata {
 	registryText1 := "ImportAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$defs\":{\"AIImportFile\":{\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"ref\":{\"description\":\"Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to\",\"example\":\"images/chart.png\",\"type\":\"string\"}},\"required\":[\"ref\",\"name\",\"content\"],\"title\":\"AIImportFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"files\":{\"description\":\"Images the file refers to, at most 10 and 20 MB in all\",\"items\":{\"$ref\":\"#/$defs/AIImportFile\"},\"maxItems\":10,\"type\":\"array\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"example\":\"meeting.md\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field151(),
-			declarations.field152(),
-			declarations.field153(),
-			declarations.field154(),
-			declarations.field155(),
-			declarations.field156(),
-			declarations.field157(),
-			declarations.field158(),
-			declarations.field159(),
+			declarations.field181(),
+			declarations.field182(),
+			declarations.field183(),
+			declarations.field184(),
+			declarations.field185(),
+			declarations.field186(),
+			declarations.field187(),
+			declarations.field188(),
+			declarations.field189(),
 		},
 	}
 }
 
-// field151 constructs one generated field declaration.
-func (registryDeclarations) field151() *genregistry.ToolFieldMetadata {
+// field181 constructs one generated field declaration.
+func (registryDeclarations) field181() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field152 constructs one generated field declaration.
-func (registryDeclarations) field152() *genregistry.ToolFieldMetadata {
+// field182 constructs one generated field declaration.
+func (registryDeclarations) field182() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab or drop kind"
 	return &genregistry.ToolFieldMetadata{
@@ -2200,8 +2616,8 @@ func (registryDeclarations) field152() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field153 constructs one generated field declaration.
-func (registryDeclarations) field153() *genregistry.ToolFieldMetadata {
+// field183 constructs one generated field declaration.
+func (registryDeclarations) field183() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "File name of the Markdown file, the title when the file gives none"
 	return &genregistry.ToolFieldMetadata{
@@ -2213,8 +2629,8 @@ func (registryDeclarations) field153() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field154 constructs one generated field declaration.
-func (registryDeclarations) field154() *genregistry.ToolFieldMetadata {
+// field184 constructs one generated field declaration.
+func (registryDeclarations) field184() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name"
 	return &genregistry.ToolFieldMetadata{
@@ -2226,8 +2642,8 @@ func (registryDeclarations) field154() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field155 constructs one generated field declaration.
-func (registryDeclarations) field155() *genregistry.ToolFieldMetadata {
+// field185 constructs one generated field declaration.
+func (registryDeclarations) field185() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Images the file refers to, at most 10 and 20 MB in all"
 	return &genregistry.ToolFieldMetadata{
@@ -2239,8 +2655,8 @@ func (registryDeclarations) field155() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field156 constructs one generated field declaration.
-func (registryDeclarations) field156() *genregistry.ToolFieldMetadata {
+// field186 constructs one generated field declaration.
+func (registryDeclarations) field186() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Images the file refers to, at most 10 and 20 MB in all"
 	return &genregistry.ToolFieldMetadata{
@@ -2253,8 +2669,8 @@ func (registryDeclarations) field156() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field157 constructs one generated field declaration.
-func (registryDeclarations) field157() *genregistry.ToolFieldMetadata {
+// field187 constructs one generated field declaration.
+func (registryDeclarations) field187() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to"
 	return &genregistry.ToolFieldMetadata{
@@ -2268,8 +2684,8 @@ func (registryDeclarations) field157() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field158 constructs one generated field declaration.
-func (registryDeclarations) field158() *genregistry.ToolFieldMetadata {
+// field188 constructs one generated field declaration.
+func (registryDeclarations) field188() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "File name"
 	return &genregistry.ToolFieldMetadata{
@@ -2283,8 +2699,8 @@ func (registryDeclarations) field158() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field159 constructs one generated field declaration.
-func (registryDeclarations) field159() *genregistry.ToolFieldMetadata {
+// field189 constructs one generated field declaration.
+func (registryDeclarations) field189() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "The image, base64-encoded, at most 5 MB"
 	return &genregistry.ToolFieldMetadata{
@@ -2298,55 +2714,57 @@ func (registryDeclarations) field159() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata160 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata160() *genregistry.ToolTypeMetadata {
+// metadata190 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata190() *genregistry.ToolTypeMetadata {
 	registryText1 := "ImportAiNoteResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"Note\":{\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"duplicate_of\":{\"description\":\"When skipped: the note imported from the same content before\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"note\":{\"$ref\":\"#/$defs/Note\",\"description\":\"The note created\"},\"status\":{\"description\":\"created, or skipped when a file with the same content was imported before\",\"enum\":[\"created\",\"skipped\"],\"type\":\"string\"},\"warnings\":{\"description\":\"What could not be converted as is, such as images left out\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"status\",\"warnings\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"Note\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"title\":\"Note\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"duplicate_of\":{\"description\":\"When skipped: the note imported from the same content before\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"note\":{\"$ref\":\"#/$defs/Note\",\"description\":\"The note created\"},\"status\":{\"description\":\"created, or skipped when a file with the same content was imported before\",\"enum\":[\"created\",\"skipped\"],\"type\":\"string\"},\"warnings\":{\"description\":\"What could not be converted as is, such as images left out\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"status\",\"warnings\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field161(),
-			declarations.field162(),
-			declarations.field163(),
-			declarations.field164(),
-			declarations.field165(),
-			declarations.field166(),
-			declarations.field167(),
-			declarations.field168(),
-			declarations.field169(),
-			declarations.field170(),
-			declarations.field171(),
-			declarations.field172(),
-			declarations.field173(),
-			declarations.field174(),
-			declarations.field175(),
-			declarations.field176(),
-			declarations.field177(),
-			declarations.field178(),
-			declarations.field179(),
-			declarations.field180(),
-			declarations.field181(),
-			declarations.field182(),
-			declarations.field183(),
-			declarations.field184(),
-			declarations.field185(),
-			declarations.field186(),
-			declarations.field187(),
-			declarations.field188(),
+			declarations.field191(),
+			declarations.field192(),
+			declarations.field193(),
+			declarations.field194(),
+			declarations.field195(),
+			declarations.field196(),
+			declarations.field197(),
+			declarations.field198(),
+			declarations.field199(),
+			declarations.field200(),
+			declarations.field201(),
+			declarations.field202(),
+			declarations.field203(),
+			declarations.field204(),
+			declarations.field205(),
+			declarations.field206(),
+			declarations.field207(),
+			declarations.field208(),
+			declarations.field209(),
+			declarations.field210(),
+			declarations.field211(),
+			declarations.field212(),
+			declarations.field213(),
+			declarations.field214(),
+			declarations.field215(),
+			declarations.field216(),
+			declarations.field217(),
+			declarations.field218(),
+			declarations.field219(),
+			declarations.field220(),
 		},
 	}
 }
 
-// field161 constructs one generated field declaration.
-func (registryDeclarations) field161() *genregistry.ToolFieldMetadata {
+// field191 constructs one generated field declaration.
+func (registryDeclarations) field191() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field162 constructs one generated field declaration.
-func (registryDeclarations) field162() *genregistry.ToolFieldMetadata {
+// field192 constructs one generated field declaration.
+func (registryDeclarations) field192() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "created, or skipped when a file with the same content was imported before"
 	return &genregistry.ToolFieldMetadata{
@@ -2358,8 +2776,8 @@ func (registryDeclarations) field162() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field163 constructs one generated field declaration.
-func (registryDeclarations) field163() *genregistry.ToolFieldMetadata {
+// field193 constructs one generated field declaration.
+func (registryDeclarations) field193() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "The note created"
 	return &genregistry.ToolFieldMetadata{
@@ -2371,8 +2789,8 @@ func (registryDeclarations) field163() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field164 constructs one generated field declaration.
-func (registryDeclarations) field164() *genregistry.ToolFieldMetadata {
+// field194 constructs one generated field declaration.
+func (registryDeclarations) field194() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -2385,8 +2803,8 @@ func (registryDeclarations) field164() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field165 constructs one generated field declaration.
-func (registryDeclarations) field165() *genregistry.ToolFieldMetadata {
+// field195 constructs one generated field declaration.
+func (registryDeclarations) field195() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -2399,8 +2817,8 @@ func (registryDeclarations) field165() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field166 constructs one generated field declaration.
-func (registryDeclarations) field166() *genregistry.ToolFieldMetadata {
+// field196 constructs one generated field declaration.
+func (registryDeclarations) field196() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -2413,8 +2831,8 @@ func (registryDeclarations) field166() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field167 constructs one generated field declaration.
-func (registryDeclarations) field167() *genregistry.ToolFieldMetadata {
+// field197 constructs one generated field declaration.
+func (registryDeclarations) field197() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -2427,8 +2845,8 @@ func (registryDeclarations) field167() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field168 constructs one generated field declaration.
-func (registryDeclarations) field168() *genregistry.ToolFieldMetadata {
+// field198 constructs one generated field declaration.
+func (registryDeclarations) field198() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -2442,8 +2860,8 @@ func (registryDeclarations) field168() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field169 constructs one generated field declaration.
-func (registryDeclarations) field169() *genregistry.ToolFieldMetadata {
+// field199 constructs one generated field declaration.
+func (registryDeclarations) field199() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -2456,8 +2874,8 @@ func (registryDeclarations) field169() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field170 constructs one generated field declaration.
-func (registryDeclarations) field170() *genregistry.ToolFieldMetadata {
+// field200 constructs one generated field declaration.
+func (registryDeclarations) field200() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -2470,8 +2888,8 @@ func (registryDeclarations) field170() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field171 constructs one generated field declaration.
-func (registryDeclarations) field171() *genregistry.ToolFieldMetadata {
+// field201 constructs one generated field declaration.
+func (registryDeclarations) field201() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -2484,8 +2902,8 @@ func (registryDeclarations) field171() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field172 constructs one generated field declaration.
-func (registryDeclarations) field172() *genregistry.ToolFieldMetadata {
+// field202 constructs one generated field declaration.
+func (registryDeclarations) field202() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -2498,8 +2916,8 @@ func (registryDeclarations) field172() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field173 constructs one generated field declaration.
-func (registryDeclarations) field173() *genregistry.ToolFieldMetadata {
+// field203 constructs one generated field declaration.
+func (registryDeclarations) field203() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -2512,8 +2930,8 @@ func (registryDeclarations) field173() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field174 constructs one generated field declaration.
-func (registryDeclarations) field174() *genregistry.ToolFieldMetadata {
+// field204 constructs one generated field declaration.
+func (registryDeclarations) field204() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -2527,8 +2945,22 @@ func (registryDeclarations) field174() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field175 constructs one generated field declaration.
-func (registryDeclarations) field175() *genregistry.ToolFieldMetadata {
+// field205 constructs one generated field declaration.
+func (registryDeclarations) field205() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("note")},
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field206 constructs one generated field declaration.
+func (registryDeclarations) field206() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Body in Markdown"
 	return &genregistry.ToolFieldMetadata{
@@ -2541,8 +2973,8 @@ func (registryDeclarations) field175() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field176 constructs one generated field declaration.
-func (registryDeclarations) field176() *genregistry.ToolFieldMetadata {
+// field207 constructs one generated field declaration.
+func (registryDeclarations) field207() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
 	return &genregistry.ToolFieldMetadata{
@@ -2555,8 +2987,8 @@ func (registryDeclarations) field176() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field177 constructs one generated field declaration.
-func (registryDeclarations) field177() *genregistry.ToolFieldMetadata {
+// field208 constructs one generated field declaration.
+func (registryDeclarations) field208() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the note was in before it was moved to the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -2569,8 +3001,22 @@ func (registryDeclarations) field177() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field178 constructs one generated field declaration.
-func (registryDeclarations) field178() *genregistry.ToolFieldMetadata {
+// field209 constructs one generated field declaration.
+func (registryDeclarations) field209() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("note")},
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field210 constructs one generated field declaration.
+func (registryDeclarations) field210() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -2583,8 +3029,8 @@ func (registryDeclarations) field178() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field179 constructs one generated field declaration.
-func (registryDeclarations) field179() *genregistry.ToolFieldMetadata {
+// field211 constructs one generated field declaration.
+func (registryDeclarations) field211() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -2598,8 +3044,8 @@ func (registryDeclarations) field179() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field180 constructs one generated field declaration.
-func (registryDeclarations) field180() *genregistry.ToolFieldMetadata {
+// field212 constructs one generated field declaration.
+func (registryDeclarations) field212() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -2614,8 +3060,8 @@ func (registryDeclarations) field180() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field181 constructs one generated field declaration.
-func (registryDeclarations) field181() *genregistry.ToolFieldMetadata {
+// field213 constructs one generated field declaration.
+func (registryDeclarations) field213() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -2630,8 +3076,8 @@ func (registryDeclarations) field181() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field182 constructs one generated field declaration.
-func (registryDeclarations) field182() *genregistry.ToolFieldMetadata {
+// field214 constructs one generated field declaration.
+func (registryDeclarations) field214() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -2644,8 +3090,8 @@ func (registryDeclarations) field182() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field183 constructs one generated field declaration.
-func (registryDeclarations) field183() *genregistry.ToolFieldMetadata {
+// field215 constructs one generated field declaration.
+func (registryDeclarations) field215() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -2659,8 +3105,8 @@ func (registryDeclarations) field183() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field184 constructs one generated field declaration.
-func (registryDeclarations) field184() *genregistry.ToolFieldMetadata {
+// field216 constructs one generated field declaration.
+func (registryDeclarations) field216() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -2675,8 +3121,8 @@ func (registryDeclarations) field184() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field185 constructs one generated field declaration.
-func (registryDeclarations) field185() *genregistry.ToolFieldMetadata {
+// field217 constructs one generated field declaration.
+func (registryDeclarations) field217() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -2691,8 +3137,8 @@ func (registryDeclarations) field185() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field186 constructs one generated field declaration.
-func (registryDeclarations) field186() *genregistry.ToolFieldMetadata {
+// field218 constructs one generated field declaration.
+func (registryDeclarations) field218() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "When skipped: the note imported from the same content before"
 	return &genregistry.ToolFieldMetadata{
@@ -2704,8 +3150,8 @@ func (registryDeclarations) field186() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field187 constructs one generated field declaration.
-func (registryDeclarations) field187() *genregistry.ToolFieldMetadata {
+// field219 constructs one generated field declaration.
+func (registryDeclarations) field219() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "What could not be converted as is, such as images left out"
 	return &genregistry.ToolFieldMetadata{
@@ -2717,8 +3163,8 @@ func (registryDeclarations) field187() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field188 constructs one generated field declaration.
-func (registryDeclarations) field188() *genregistry.ToolFieldMetadata {
+// field220 constructs one generated field declaration.
+func (registryDeclarations) field220() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "What could not be converted as is, such as images left out"
 	return &genregistry.ToolFieldMetadata{
@@ -2731,36 +3177,36 @@ func (registryDeclarations) field188() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata189 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata189() *genregistry.ToolTypeMetadata {
+// metadata221 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata221() *genregistry.ToolTypeMetadata {
 	registryText1 := "ImportAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$defs\":{\"AIImportFile\":{\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The image, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"ref\":{\"description\":\"Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to\",\"example\":\"images/chart.png\",\"type\":\"string\"}},\"required\":[\"ref\",\"name\",\"content\"],\"title\":\"AIImportFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name\",\"maxLength\":5242880,\"type\":\"string\"},\"files\":{\"description\":\"Images the file refers to, at most 10 and 20 MB in all\",\"items\":{\"$ref\":\"#/$defs/AIImportFile\"},\"maxItems\":10,\"type\":\"array\"},\"name\":{\"description\":\"File name of the Markdown file, the title when the file gives none\",\"example\":\"meeting.md\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab or drop kind\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"notebook\",\"name\",\"content\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field190(),
-			declarations.field191(),
-			declarations.field192(),
-			declarations.field193(),
-			declarations.field194(),
-			declarations.field195(),
-			declarations.field196(),
-			declarations.field197(),
-			declarations.field198(),
+			declarations.field222(),
+			declarations.field223(),
+			declarations.field224(),
+			declarations.field225(),
+			declarations.field226(),
+			declarations.field227(),
+			declarations.field228(),
+			declarations.field229(),
+			declarations.field230(),
 		},
 	}
 }
 
-// field190 constructs one generated field declaration.
-func (registryDeclarations) field190() *genregistry.ToolFieldMetadata {
+// field222 constructs one generated field declaration.
+func (registryDeclarations) field222() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field191 constructs one generated field declaration.
-func (registryDeclarations) field191() *genregistry.ToolFieldMetadata {
+// field223 constructs one generated field declaration.
+func (registryDeclarations) field223() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab or drop kind"
 	return &genregistry.ToolFieldMetadata{
@@ -2772,8 +3218,8 @@ func (registryDeclarations) field191() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field192 constructs one generated field declaration.
-func (registryDeclarations) field192() *genregistry.ToolFieldMetadata {
+// field224 constructs one generated field declaration.
+func (registryDeclarations) field224() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "File name of the Markdown file, the title when the file gives none"
 	return &genregistry.ToolFieldMetadata{
@@ -2785,8 +3231,8 @@ func (registryDeclarations) field192() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field193 constructs one generated field declaration.
-func (registryDeclarations) field193() *genregistry.ToolFieldMetadata {
+// field225 constructs one generated field declaration.
+func (registryDeclarations) field225() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "The Markdown file, at most 5 MB. A YAML front matter gives the title, tags (a list or comma-separated), created (or date) and updated times; its other keys are kept in the note file. Without a title, the first heading of level 1 is the title, else the file name"
 	return &genregistry.ToolFieldMetadata{
@@ -2798,8 +3244,8 @@ func (registryDeclarations) field193() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field194 constructs one generated field declaration.
-func (registryDeclarations) field194() *genregistry.ToolFieldMetadata {
+// field226 constructs one generated field declaration.
+func (registryDeclarations) field226() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Images the file refers to, at most 10 and 20 MB in all"
 	return &genregistry.ToolFieldMetadata{
@@ -2811,8 +3257,8 @@ func (registryDeclarations) field194() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field195 constructs one generated field declaration.
-func (registryDeclarations) field195() *genregistry.ToolFieldMetadata {
+// field227 constructs one generated field declaration.
+func (registryDeclarations) field227() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Images the file refers to, at most 10 and 20 MB in all"
 	return &genregistry.ToolFieldMetadata{
@@ -2825,8 +3271,8 @@ func (registryDeclarations) field195() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field196 constructs one generated field declaration.
-func (registryDeclarations) field196() *genregistry.ToolFieldMetadata {
+// field228 constructs one generated field declaration.
+func (registryDeclarations) field228() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to"
 	return &genregistry.ToolFieldMetadata{
@@ -2840,8 +3286,8 @@ func (registryDeclarations) field196() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field197 constructs one generated field declaration.
-func (registryDeclarations) field197() *genregistry.ToolFieldMetadata {
+// field229 constructs one generated field declaration.
+func (registryDeclarations) field229() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "File name"
 	return &genregistry.ToolFieldMetadata{
@@ -2855,8 +3301,8 @@ func (registryDeclarations) field197() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field198 constructs one generated field declaration.
-func (registryDeclarations) field198() *genregistry.ToolFieldMetadata {
+// field230 constructs one generated field declaration.
+func (registryDeclarations) field230() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "The image, base64-encoded, at most 5 MB"
 	return &genregistry.ToolFieldMetadata{
@@ -2870,8 +3316,8 @@ func (registryDeclarations) field198() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema199 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema199() *genregistry.ToolSchema {
+// schema231 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema231() *genregistry.ToolSchema {
 	registryText1 := "List the marks a note can have, with what each means to the user; search_notes finds the notes with one by mark:<id or name>"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.list_marks",
@@ -2895,60 +3341,60 @@ func (declarations registryDeclarations) schema199() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 1, "by": 1, "can": 1, "each": 1, "ebira": 1, "finds": 1, "have": 1, "id": 1, "list": 3, "mark": 1, "marks": 3, "means": 1, "name": 1, "note": 1, "notes": 2, "one": 1, "or": 1, "search": 1, "the": 3, "to": 1, "user": 1, "what": 1, "with": 2},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
-				Payload:       declarations.metadata208(),
+				Payload:       declarations.metadata240(),
 			},
-			Payload: declarations.metadata200(),
-			Result:  declarations.metadata202(),
+			Payload: declarations.metadata232(),
+			Result:  declarations.metadata234(),
 		},
 	}
 }
 
-// metadata200 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata200() *genregistry.ToolTypeMetadata {
+// metadata232 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata232() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListMarksPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field201(),
+			declarations.field233(),
 		},
 	}
 }
 
-// field201 constructs one generated field declaration.
-func (registryDeclarations) field201() *genregistry.ToolFieldMetadata {
+// field233 constructs one generated field declaration.
+func (registryDeclarations) field233() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// metadata202 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata202() *genregistry.ToolTypeMetadata {
+// metadata234 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata234() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListMarksResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$defs\":{\"MarkInfo\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Mark ID\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"example\":\"red\",\"type\":\"string\"},\"kind\":{\"description\":\"color, or symbol for a mark drawn as an emoji\",\"enum\":[\"color\",\"symbol\"],\"type\":\"string\"},\"name\":{\"description\":\"Name the user gave the mark, which says what it means, such as important; absent for none\",\"example\":\"important\",\"type\":\"string\"}},\"required\":[\"id\",\"kind\"],\"title\":\"MarkInfo\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/MarkInfo\"},\"type\":\"array\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field203(),
-			declarations.field204(),
-			declarations.field205(),
-			declarations.field206(),
-			declarations.field207(),
+			declarations.field235(),
+			declarations.field236(),
+			declarations.field237(),
+			declarations.field238(),
+			declarations.field239(),
 		},
 	}
 }
 
-// field203 constructs one generated field declaration.
-func (registryDeclarations) field203() *genregistry.ToolFieldMetadata {
+// field235 constructs one generated field declaration.
+func (registryDeclarations) field235() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field204 constructs one generated field declaration.
-func (registryDeclarations) field204() *genregistry.ToolFieldMetadata {
+// field236 constructs one generated field declaration.
+func (registryDeclarations) field236() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
@@ -2958,8 +3404,8 @@ func (registryDeclarations) field204() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field205 constructs one generated field declaration.
-func (registryDeclarations) field205() *genregistry.ToolFieldMetadata {
+// field237 constructs one generated field declaration.
+func (registryDeclarations) field237() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Mark ID"
 	return &genregistry.ToolFieldMetadata{
@@ -2972,8 +3418,8 @@ func (registryDeclarations) field205() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field206 constructs one generated field declaration.
-func (registryDeclarations) field206() *genregistry.ToolFieldMetadata {
+// field238 constructs one generated field declaration.
+func (registryDeclarations) field238() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "color, or symbol for a mark drawn as an emoji"
 	return &genregistry.ToolFieldMetadata{
@@ -2986,8 +3432,8 @@ func (registryDeclarations) field206() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field207 constructs one generated field declaration.
-func (registryDeclarations) field207() *genregistry.ToolFieldMetadata {
+// field239 constructs one generated field declaration.
+func (registryDeclarations) field239() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Name the user gave the mark, which says what it means, such as important; absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -3000,35 +3446,35 @@ func (registryDeclarations) field207() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata208 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata208() *genregistry.ToolTypeMetadata {
+// metadata240 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata240() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListMarksPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field209(),
+			declarations.field241(),
 		},
 	}
 }
 
-// field209 constructs one generated field declaration.
-func (registryDeclarations) field209() *genregistry.ToolFieldMetadata {
+// field241 constructs one generated field declaration.
+func (registryDeclarations) field241() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// schema210 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema210() *genregistry.ToolSchema {
+// schema242 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema242() *genregistry.ToolSchema {
 	registryText1 := "List notebooks with their kinds and note counts; other tools take a notebook by its id, and people know it by its name"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.list_notebooks",
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"Notebook\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"reserved\",\"kind\",\"sort\"],\"title\":\"Notebook\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/Notebook\"},\"type\":\"array\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"Notebook\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"archived_count\":{\"description\":\"Number of notes put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"count\":{\"description\":\"Number of notes, but those put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"archived_count\",\"reserved\",\"kind\",\"sort\"],\"title\":\"Notebook\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/Notebook\"},\"type\":\"array\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "List Notebooks",
@@ -3045,374 +3491,41 @@ func (declarations registryDeclarations) schema210() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 1, "and": 2, "by": 2, "counts": 1, "ebira": 1, "id": 1, "it": 1, "its": 2, "kinds": 1, "know": 1, "list": 3, "name": 1, "note": 1, "notebook": 1, "notebooks": 3, "other": 1, "people": 1, "take": 1, "their": 1, "tools": 1, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
-				Payload:       declarations.metadata225(),
+				Payload:       declarations.metadata260(),
 			},
-			Payload: declarations.metadata211(),
-			Result:  declarations.metadata213(),
+			Payload: declarations.metadata243(),
+			Result:  declarations.metadata245(),
 		},
 	}
 }
 
-// metadata211 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata211() *genregistry.ToolTypeMetadata {
+// metadata243 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata243() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListNotebooksPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field212(),
+			declarations.field244(),
 		},
 	}
 }
 
-// field212 constructs one generated field declaration.
-func (registryDeclarations) field212() *genregistry.ToolFieldMetadata {
+// field244 constructs one generated field declaration.
+func (registryDeclarations) field244() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// metadata213 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata213() *genregistry.ToolTypeMetadata {
+// metadata245 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata245() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListNotebooksResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"Notebook\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"reserved\",\"kind\",\"sort\"],\"title\":\"Notebook\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/Notebook\"},\"type\":\"array\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"Notebook\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"archived_count\":{\"description\":\"Number of notes put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"count\":{\"description\":\"Number of notes, but those put in the archive on their own\",\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"description\":\"Notebook ID, which is also its directory name, or \\u003cparent\\u003e/\\u003csub\\u003e for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"kind\":{\"description\":\"Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"name\":{\"description\":\"Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)\",\"type\":\"string\"},\"order\":{\"description\":\"Sort key among the notebooks other than inbox and trash; lower comes first\",\"format\":\"int64\",\"type\":\"integer\"},\"own_kind\":{\"description\":\"For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent\",\"enum\":[\"default\",\"collab\",\"drop\",\"private\"],\"type\":\"string\"},\"parent\":{\"description\":\"For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"reserved\":{\"description\":\"Whether this is a system notebook (inbox or trash)\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"order\",\"count\",\"archived_count\",\"reserved\",\"kind\",\"sort\"],\"title\":\"Notebook\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/Notebook\"},\"type\":\"array\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field214(),
-			declarations.field215(),
-			declarations.field216(),
-			declarations.field217(),
-			declarations.field218(),
-			declarations.field219(),
-			declarations.field220(),
-			declarations.field221(),
-			declarations.field222(),
-			declarations.field223(),
-			declarations.field224(),
-		},
-	}
-}
-
-// field214 constructs one generated field declaration.
-func (registryDeclarations) field214() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// field215 constructs one generated field declaration.
-func (registryDeclarations) field215() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType: &registryText1,
-	}
-}
-
-// field216 constructs one generated field declaration.
-func (registryDeclarations) field216() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("id")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field217 constructs one generated field declaration.
-func (registryDeclarations) field217() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("parent")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field218 constructs one generated field declaration.
-func (registryDeclarations) field218() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("name")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field219 constructs one generated field declaration.
-func (registryDeclarations) field219() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Sort key among the notebooks other than inbox and trash; lower comes first"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("order")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field220 constructs one generated field declaration.
-func (registryDeclarations) field220() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Number of notes"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("count")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field221 constructs one generated field declaration.
-func (registryDeclarations) field221() *genregistry.ToolFieldMetadata {
-	registryText1 := "boolean"
-	registryText2 := "Whether this is a system notebook (inbox or trash)"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("reserved")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field222 constructs one generated field declaration.
-func (registryDeclarations) field222() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("kind")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field223 constructs one generated field declaration.
-func (registryDeclarations) field223() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("own_kind")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field224 constructs one generated field declaration.
-func (registryDeclarations) field224() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("sort")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// metadata225 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata225() *genregistry.ToolTypeMetadata {
-	registryText1 := "ListNotebooksPayload"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field226(),
-		},
-	}
-}
-
-// field226 constructs one generated field declaration.
-func (registryDeclarations) field226() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// schema227 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema227() *genregistry.ToolSchema {
-	registryText1 := "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more"
-	return &genregistry.ToolSchema{
-		Name:                   "ebira.list_notes",
-		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"Separator\":{\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"title\":\"Separator\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notes\":{\"description\":\"Notes from offset, at most limit; fewer than total when the list goes on\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"separators\":{\"description\":\"Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset\",\"items\":{\"$ref\":\"#/$defs/Separator\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of notes in the whole list, regardless of limit and offset\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"total\",\"notes\"],\"type\":\"object\"}"),
-		ConsumerContract: &genregistry.ConsumerContract{
-			Kind:  "service",
-			Title: "List Notes",
-			Search: &genregistry.ToolSearchDocument{
-				Length: 26,
-				Terms:  map[string]int{"ebira": 1, "for": 1, "given": 1, "in": 1, "is": 2, "list": 3, "more": 1, "notebook": 1, "notes": 4, "number": 1, "of": 1, "offset": 1, "order": 1, "s": 1, "sort": 1, "the": 2, "total": 1, "unless": 1, "use": 1},
-			},
-			RequiresUI: false,
-			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-				Description:     "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more",
-				Search: &genregistry.ToolSearchDocument{
-					Length: 26,
-					Terms:  map[string]int{"ebira": 1, "for": 1, "given": 1, "in": 1, "is": 2, "list": 3, "more": 1, "notebook": 1, "notes": 4, "number": 1, "of": 1, "offset": 1, "order": 1, "s": 1, "sort": 1, "the": 2, "total": 1, "unless": 1, "use": 1},
-				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-				Payload:       declarations.metadata269(),
-			},
-			Payload: declarations.metadata228(),
-			Result:  declarations.metadata236(),
-		},
-	}
-}
-
-// metadata228 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata228() *genregistry.ToolTypeMetadata {
-	registryText1 := "ListNotesPayload"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field229(),
-			declarations.field230(),
-			declarations.field231(),
-			declarations.field232(),
-			declarations.field233(),
-			declarations.field234(),
-			declarations.field235(),
-		},
-	}
-}
-
-// field229 constructs one generated field declaration.
-func (registryDeclarations) field229() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// field230 constructs one generated field declaration.
-func (registryDeclarations) field230() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Only notes in this notebook. Omit for all notebooks except the trash"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field231 constructs one generated field declaration.
-func (registryDeclarations) field231() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Only notes with this tag"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tag")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field232 constructs one generated field declaration.
-func (registryDeclarations) field232() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Maximum number of notes"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("limit")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field233 constructs one generated field declaration.
-func (registryDeclarations) field233() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Number of notes to skip"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("offset")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field234 constructs one generated field declaration.
-func (registryDeclarations) field234() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field235 constructs one generated field declaration.
-func (registryDeclarations) field235() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("sort")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// metadata236 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata236() *genregistry.ToolTypeMetadata {
-	registryText1 := "ListNotesResult"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"Separator\":{\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"title\":\"Separator\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notes\":{\"description\":\"Notes from offset, at most limit; fewer than total when the list goes on\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"separators\":{\"description\":\"Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset\",\"items\":{\"$ref\":\"#/$defs/Separator\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of notes in the whole list, regardless of limit and offset\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"total\",\"notes\"],\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field237(),
-			declarations.field238(),
-			declarations.field239(),
-			declarations.field240(),
-			declarations.field241(),
-			declarations.field242(),
-			declarations.field243(),
-			declarations.field244(),
-			declarations.field245(),
 			declarations.field246(),
 			declarations.field247(),
 			declarations.field248(),
@@ -3427,29 +3540,422 @@ func (declarations registryDeclarations) metadata236() *genregistry.ToolTypeMeta
 			declarations.field257(),
 			declarations.field258(),
 			declarations.field259(),
-			declarations.field260(),
-			declarations.field261(),
-			declarations.field262(),
-			declarations.field263(),
-			declarations.field264(),
-			declarations.field265(),
-			declarations.field266(),
-			declarations.field267(),
-			declarations.field268(),
 		},
 	}
 }
 
-// field237 constructs one generated field declaration.
-func (registryDeclarations) field237() *genregistry.ToolFieldMetadata {
+// field246 constructs one generated field declaration.
+func (registryDeclarations) field246() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field247 constructs one generated field declaration.
+func (registryDeclarations) field247() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType: &registryText1,
+	}
+}
+
+// field248 constructs one generated field declaration.
+func (registryDeclarations) field248() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field249 constructs one generated field declaration.
+func (registryDeclarations) field249() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("parent")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field250 constructs one generated field declaration.
+func (registryDeclarations) field250() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("name")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field251 constructs one generated field declaration.
+func (registryDeclarations) field251() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Sort key among the notebooks other than inbox and trash; lower comes first"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("order")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field252 constructs one generated field declaration.
+func (registryDeclarations) field252() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Number of notes, but those put in the archive on their own"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("count")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field253 constructs one generated field declaration.
+func (registryDeclarations) field253() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Number of notes put in the archive on their own"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived_count")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field254 constructs one generated field declaration.
+func (registryDeclarations) field254() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field255 constructs one generated field declaration.
+func (registryDeclarations) field255() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field256 constructs one generated field declaration.
+func (registryDeclarations) field256() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether this is a system notebook (inbox or trash)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("reserved")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field257 constructs one generated field declaration.
+func (registryDeclarations) field257() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("kind")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field258 constructs one generated field declaration.
+func (registryDeclarations) field258() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("own_kind")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field259 constructs one generated field declaration.
+func (registryDeclarations) field259() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("sort")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata260 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata260() *genregistry.ToolTypeMetadata {
+	registryText1 := "ListNotebooksPayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field261(),
+		},
+	}
+}
+
+// field261 constructs one generated field declaration.
+func (registryDeclarations) field261() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field238 constructs one generated field declaration.
-func (registryDeclarations) field238() *genregistry.ToolFieldMetadata {
+// schema262 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema262() *genregistry.ToolSchema {
+	registryText1 := "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more"
+	return &genregistry.ToolSchema{
+		Name:                   "ebira.list_notes",
+		Description:            &registryText1,
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"Separator\":{\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"title\":\"Separator\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notes\":{\"description\":\"Notes from offset, at most limit; fewer than total when the list goes on\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"separators\":{\"description\":\"Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset\",\"items\":{\"$ref\":\"#/$defs/Separator\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of notes in the whole list, regardless of limit and offset\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"total\",\"notes\"],\"type\":\"object\"}"),
+		ConsumerContract: &genregistry.ConsumerContract{
+			Kind:  "service",
+			Title: "List Notes",
+			Search: &genregistry.ToolSearchDocument{
+				Length: 26,
+				Terms:  map[string]int{"ebira": 1, "for": 1, "given": 1, "in": 1, "is": 2, "list": 3, "more": 1, "notebook": 1, "notes": 4, "number": 1, "of": 1, "offset": 1, "order": 1, "s": 1, "sort": 1, "the": 2, "total": 1, "unless": 1, "use": 1},
+			},
+			RequiresUI: false,
+			TextOnly: &genregistry.TextOnlyToolContract{
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+				Description:     "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more",
+				Search: &genregistry.ToolSearchDocument{
+					Length: 26,
+					Terms:  map[string]int{"ebira": 1, "for": 1, "given": 1, "in": 1, "is": 2, "list": 3, "more": 1, "notebook": 1, "notes": 4, "number": 1, "of": 1, "offset": 1, "order": 1, "s": 1, "sort": 1, "the": 2, "total": 1, "unless": 1, "use": 1},
+				},
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+				Payload:       declarations.metadata306(),
+			},
+			Payload: declarations.metadata263(),
+			Result:  declarations.metadata272(),
+		},
+	}
+}
+
+// metadata263 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata263() *genregistry.ToolTypeMetadata {
+	registryText1 := "ListNotesPayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field264(),
+			declarations.field265(),
+			declarations.field266(),
+			declarations.field267(),
+			declarations.field268(),
+			declarations.field269(),
+			declarations.field270(),
+			declarations.field271(),
+		},
+	}
+}
+
+// field264 constructs one generated field declaration.
+func (registryDeclarations) field264() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field265 constructs one generated field declaration.
+func (registryDeclarations) field265() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Only notes in this notebook. Omit for all notebooks except the trash"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field266 constructs one generated field declaration.
+func (registryDeclarations) field266() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Only notes with this tag"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tag")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field267 constructs one generated field declaration.
+func (registryDeclarations) field267() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Maximum number of notes"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("limit")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field268 constructs one generated field declaration.
+func (registryDeclarations) field268() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Number of notes to skip"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("offset")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field269 constructs one generated field declaration.
+func (registryDeclarations) field269() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field270 constructs one generated field declaration.
+func (registryDeclarations) field270() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("sort")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field271 constructs one generated field declaration.
+func (registryDeclarations) field271() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata272 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata272() *genregistry.ToolTypeMetadata {
+	registryText1 := "ListNotesResult"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"Separator\":{\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"title\":\"Separator\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notes\":{\"description\":\"Notes from offset, at most limit; fewer than total when the list goes on\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"separators\":{\"description\":\"Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset\",\"items\":{\"$ref\":\"#/$defs/Separator\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of notes in the whole list, regardless of limit and offset\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"total\",\"notes\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field273(),
+			declarations.field274(),
+			declarations.field275(),
+			declarations.field276(),
+			declarations.field277(),
+			declarations.field278(),
+			declarations.field279(),
+			declarations.field280(),
+			declarations.field281(),
+			declarations.field282(),
+			declarations.field283(),
+			declarations.field284(),
+			declarations.field285(),
+			declarations.field286(),
+			declarations.field287(),
+			declarations.field288(),
+			declarations.field289(),
+			declarations.field290(),
+			declarations.field291(),
+			declarations.field292(),
+			declarations.field293(),
+			declarations.field294(),
+			declarations.field295(),
+			declarations.field296(),
+			declarations.field297(),
+			declarations.field298(),
+			declarations.field299(),
+			declarations.field300(),
+			declarations.field301(),
+			declarations.field302(),
+			declarations.field303(),
+			declarations.field304(),
+			declarations.field305(),
+		},
+	}
+}
+
+// field273 constructs one generated field declaration.
+func (registryDeclarations) field273() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field274 constructs one generated field declaration.
+func (registryDeclarations) field274() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Number of notes in the whole list, regardless of limit and offset"
 	return &genregistry.ToolFieldMetadata{
@@ -3461,8 +3967,8 @@ func (registryDeclarations) field238() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field239 constructs one generated field declaration.
-func (registryDeclarations) field239() *genregistry.ToolFieldMetadata {
+// field275 constructs one generated field declaration.
+func (registryDeclarations) field275() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Notes from offset, at most limit; fewer than total when the list goes on"
 	return &genregistry.ToolFieldMetadata{
@@ -3474,8 +3980,8 @@ func (registryDeclarations) field239() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field240 constructs one generated field declaration.
-func (registryDeclarations) field240() *genregistry.ToolFieldMetadata {
+// field276 constructs one generated field declaration.
+func (registryDeclarations) field276() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Notes from offset, at most limit; fewer than total when the list goes on"
 	return &genregistry.ToolFieldMetadata{
@@ -3488,8 +3994,8 @@ func (registryDeclarations) field240() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field241 constructs one generated field declaration.
-func (registryDeclarations) field241() *genregistry.ToolFieldMetadata {
+// field277 constructs one generated field declaration.
+func (registryDeclarations) field277() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -3503,8 +4009,8 @@ func (registryDeclarations) field241() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field242 constructs one generated field declaration.
-func (registryDeclarations) field242() *genregistry.ToolFieldMetadata {
+// field278 constructs one generated field declaration.
+func (registryDeclarations) field278() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -3518,8 +4024,8 @@ func (registryDeclarations) field242() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field243 constructs one generated field declaration.
-func (registryDeclarations) field243() *genregistry.ToolFieldMetadata {
+// field279 constructs one generated field declaration.
+func (registryDeclarations) field279() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -3533,8 +4039,8 @@ func (registryDeclarations) field243() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field244 constructs one generated field declaration.
-func (registryDeclarations) field244() *genregistry.ToolFieldMetadata {
+// field280 constructs one generated field declaration.
+func (registryDeclarations) field280() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -3548,8 +4054,8 @@ func (registryDeclarations) field244() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field245 constructs one generated field declaration.
-func (registryDeclarations) field245() *genregistry.ToolFieldMetadata {
+// field281 constructs one generated field declaration.
+func (registryDeclarations) field281() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -3564,8 +4070,8 @@ func (registryDeclarations) field245() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field246 constructs one generated field declaration.
-func (registryDeclarations) field246() *genregistry.ToolFieldMetadata {
+// field282 constructs one generated field declaration.
+func (registryDeclarations) field282() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -3579,8 +4085,8 @@ func (registryDeclarations) field246() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field247 constructs one generated field declaration.
-func (registryDeclarations) field247() *genregistry.ToolFieldMetadata {
+// field283 constructs one generated field declaration.
+func (registryDeclarations) field283() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -3594,8 +4100,8 @@ func (registryDeclarations) field247() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field248 constructs one generated field declaration.
-func (registryDeclarations) field248() *genregistry.ToolFieldMetadata {
+// field284 constructs one generated field declaration.
+func (registryDeclarations) field284() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -3609,8 +4115,8 @@ func (registryDeclarations) field248() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field249 constructs one generated field declaration.
-func (registryDeclarations) field249() *genregistry.ToolFieldMetadata {
+// field285 constructs one generated field declaration.
+func (registryDeclarations) field285() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -3624,8 +4130,8 @@ func (registryDeclarations) field249() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field250 constructs one generated field declaration.
-func (registryDeclarations) field250() *genregistry.ToolFieldMetadata {
+// field286 constructs one generated field declaration.
+func (registryDeclarations) field286() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -3639,8 +4145,8 @@ func (registryDeclarations) field250() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field251 constructs one generated field declaration.
-func (registryDeclarations) field251() *genregistry.ToolFieldMetadata {
+// field287 constructs one generated field declaration.
+func (registryDeclarations) field287() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -3655,8 +4161,23 @@ func (registryDeclarations) field251() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field252 constructs one generated field declaration.
-func (registryDeclarations) field252() *genregistry.ToolFieldMetadata {
+// field288 constructs one generated field declaration.
+func (registryDeclarations) field288() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field289 constructs one generated field declaration.
+func (registryDeclarations) field289() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Excerpt around the matched terms (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -3670,8 +4191,8 @@ func (registryDeclarations) field252() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field253 constructs one generated field declaration.
-func (registryDeclarations) field253() *genregistry.ToolFieldMetadata {
+// field290 constructs one generated field declaration.
+func (registryDeclarations) field290() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -3685,8 +4206,8 @@ func (registryDeclarations) field253() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field254 constructs one generated field declaration.
-func (registryDeclarations) field254() *genregistry.ToolFieldMetadata {
+// field291 constructs one generated field declaration.
+func (registryDeclarations) field291() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -3701,8 +4222,8 @@ func (registryDeclarations) field254() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field255 constructs one generated field declaration.
-func (registryDeclarations) field255() *genregistry.ToolFieldMetadata {
+// field292 constructs one generated field declaration.
+func (registryDeclarations) field292() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -3718,8 +4239,8 @@ func (registryDeclarations) field255() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field256 constructs one generated field declaration.
-func (registryDeclarations) field256() *genregistry.ToolFieldMetadata {
+// field293 constructs one generated field declaration.
+func (registryDeclarations) field293() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -3735,8 +4256,8 @@ func (registryDeclarations) field256() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field257 constructs one generated field declaration.
-func (registryDeclarations) field257() *genregistry.ToolFieldMetadata {
+// field294 constructs one generated field declaration.
+func (registryDeclarations) field294() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -3750,8 +4271,8 @@ func (registryDeclarations) field257() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field258 constructs one generated field declaration.
-func (registryDeclarations) field258() *genregistry.ToolFieldMetadata {
+// field295 constructs one generated field declaration.
+func (registryDeclarations) field295() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -3766,8 +4287,8 @@ func (registryDeclarations) field258() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field259 constructs one generated field declaration.
-func (registryDeclarations) field259() *genregistry.ToolFieldMetadata {
+// field296 constructs one generated field declaration.
+func (registryDeclarations) field296() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -3783,8 +4304,8 @@ func (registryDeclarations) field259() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field260 constructs one generated field declaration.
-func (registryDeclarations) field260() *genregistry.ToolFieldMetadata {
+// field297 constructs one generated field declaration.
+func (registryDeclarations) field297() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -3800,8 +4321,8 @@ func (registryDeclarations) field260() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field261 constructs one generated field declaration.
-func (registryDeclarations) field261() *genregistry.ToolFieldMetadata {
+// field298 constructs one generated field declaration.
+func (registryDeclarations) field298() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset"
 	return &genregistry.ToolFieldMetadata{
@@ -3813,8 +4334,8 @@ func (registryDeclarations) field261() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field262 constructs one generated field declaration.
-func (registryDeclarations) field262() *genregistry.ToolFieldMetadata {
+// field299 constructs one generated field declaration.
+func (registryDeclarations) field299() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Separators between the notes, in the manual order, each before the note named by its before: only for a notebook listed in the order sort without a tag, and then all of them, regardless of limit and offset"
 	return &genregistry.ToolFieldMetadata{
@@ -3827,8 +4348,8 @@ func (registryDeclarations) field262() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field263 constructs one generated field declaration.
-func (registryDeclarations) field263() *genregistry.ToolFieldMetadata {
+// field300 constructs one generated field declaration.
+func (registryDeclarations) field300() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID"
 	return &genregistry.ToolFieldMetadata{
@@ -3842,8 +4363,8 @@ func (registryDeclarations) field263() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field264 constructs one generated field declaration.
-func (registryDeclarations) field264() *genregistry.ToolFieldMetadata {
+// field301 constructs one generated field declaration.
+func (registryDeclarations) field301() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the separator is in"
 	return &genregistry.ToolFieldMetadata{
@@ -3857,8 +4378,8 @@ func (registryDeclarations) field264() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field265 constructs one generated field declaration.
-func (registryDeclarations) field265() *genregistry.ToolFieldMetadata {
+// field302 constructs one generated field declaration.
+func (registryDeclarations) field302() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -3872,8 +4393,8 @@ func (registryDeclarations) field265() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field266 constructs one generated field declaration.
-func (registryDeclarations) field266() *genregistry.ToolFieldMetadata {
+// field303 constructs one generated field declaration.
+func (registryDeclarations) field303() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; absent for none. It does not change the order"
 	return &genregistry.ToolFieldMetadata{
@@ -3887,8 +4408,8 @@ func (registryDeclarations) field266() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field267 constructs one generated field declaration.
-func (registryDeclarations) field267() *genregistry.ToolFieldMetadata {
+// field304 constructs one generated field declaration.
+func (registryDeclarations) field304() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; absent for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -3902,8 +4423,8 @@ func (registryDeclarations) field267() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field268 constructs one generated field declaration.
-func (registryDeclarations) field268() *genregistry.ToolFieldMetadata {
+// field305 constructs one generated field declaration.
+func (registryDeclarations) field305() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note"
 	return &genregistry.ToolFieldMetadata{
@@ -3917,34 +4438,35 @@ func (registryDeclarations) field268() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata269 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata269() *genregistry.ToolTypeMetadata {
+// metadata306 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata306() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListNotesPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":50,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":500,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"offset\":{\"default\":0,\"description\":\"Number of notes to skip\",\"format\":\"int64\",\"minimum\":0,\"type\":\"integer\"},\"sort\":{\"description\":\"Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)\",\"enum\":[\"order\",\"created\",\"updated\",\"title\"],\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field270(),
-			declarations.field271(),
-			declarations.field272(),
-			declarations.field273(),
-			declarations.field274(),
-			declarations.field275(),
-			declarations.field276(),
+			declarations.field307(),
+			declarations.field308(),
+			declarations.field309(),
+			declarations.field310(),
+			declarations.field311(),
+			declarations.field312(),
+			declarations.field313(),
+			declarations.field314(),
 		},
 	}
 }
 
-// field270 constructs one generated field declaration.
-func (registryDeclarations) field270() *genregistry.ToolFieldMetadata {
+// field307 constructs one generated field declaration.
+func (registryDeclarations) field307() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field271 constructs one generated field declaration.
-func (registryDeclarations) field271() *genregistry.ToolFieldMetadata {
+// field308 constructs one generated field declaration.
+func (registryDeclarations) field308() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -3956,8 +4478,8 @@ func (registryDeclarations) field271() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field272 constructs one generated field declaration.
-func (registryDeclarations) field272() *genregistry.ToolFieldMetadata {
+// field309 constructs one generated field declaration.
+func (registryDeclarations) field309() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -3969,8 +4491,8 @@ func (registryDeclarations) field272() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field273 constructs one generated field declaration.
-func (registryDeclarations) field273() *genregistry.ToolFieldMetadata {
+// field310 constructs one generated field declaration.
+func (registryDeclarations) field310() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{
@@ -3982,8 +4504,8 @@ func (registryDeclarations) field273() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field274 constructs one generated field declaration.
-func (registryDeclarations) field274() *genregistry.ToolFieldMetadata {
+// field311 constructs one generated field declaration.
+func (registryDeclarations) field311() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Number of notes to skip"
 	return &genregistry.ToolFieldMetadata{
@@ -3995,8 +4517,8 @@ func (registryDeclarations) field274() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field275 constructs one generated field declaration.
-func (registryDeclarations) field275() *genregistry.ToolFieldMetadata {
+// field312 constructs one generated field declaration.
+func (registryDeclarations) field312() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own"
 	return &genregistry.ToolFieldMetadata{
@@ -4008,8 +4530,8 @@ func (registryDeclarations) field275() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field276 constructs one generated field declaration.
-func (registryDeclarations) field276() *genregistry.ToolFieldMetadata {
+// field313 constructs one generated field declaration.
+func (registryDeclarations) field313() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width. Omit for the sort setting of the notebook (order without a notebook)"
 	return &genregistry.ToolFieldMetadata{
@@ -4021,14 +4543,27 @@ func (registryDeclarations) field276() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema277 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema277() *genregistry.ToolSchema {
+// field314 constructs one generated field declaration.
+func (registryDeclarations) field314() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// schema315 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema315() *genregistry.ToolSchema {
 	registryText1 := "List tags with their note counts; filter list_notes or search_notes by one of them"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.list_tags",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
 		ResultSchema:           []byte("{\"$defs\":{\"TagCount\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes with the tag\",\"format\":\"int64\",\"type\":\"integer\"},\"name\":{\"description\":\"Tag\",\"type\":\"string\"}},\"required\":[\"name\",\"count\"],\"title\":\"TagCount\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/TagCount\"},\"type\":\"array\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
@@ -4039,44 +4574,45 @@ func (declarations registryDeclarations) schema277() *genregistry.ToolSchema {
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
 				Description:     "List tags with their note counts; filter list_notes or search_notes by one of them",
 				Search: &genregistry.ToolSearchDocument{
 					Length: 21,
 					Terms:  map[string]int{"by": 1, "counts": 1, "ebira": 1, "filter": 1, "list": 4, "note": 1, "notes": 2, "of": 1, "one": 1, "or": 1, "search": 1, "tags": 3, "their": 1, "them": 1, "with": 1},
 				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
-				Payload:       declarations.metadata286(),
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+				Payload:       declarations.metadata325(),
 			},
-			Payload: declarations.metadata278(),
-			Result:  declarations.metadata281(),
+			Payload: declarations.metadata316(),
+			Result:  declarations.metadata320(),
 		},
 	}
 }
 
-// metadata278 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata278() *genregistry.ToolTypeMetadata {
+// metadata316 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata316() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListTagsPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field279(),
-			declarations.field280(),
+			declarations.field317(),
+			declarations.field318(),
+			declarations.field319(),
 		},
 	}
 }
 
-// field279 constructs one generated field declaration.
-func (registryDeclarations) field279() *genregistry.ToolFieldMetadata {
+// field317 constructs one generated field declaration.
+func (registryDeclarations) field317() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field280 constructs one generated field declaration.
-func (registryDeclarations) field280() *genregistry.ToolFieldMetadata {
+// field318 constructs one generated field declaration.
+func (registryDeclarations) field318() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -4088,31 +4624,44 @@ func (registryDeclarations) field280() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata281 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata281() *genregistry.ToolTypeMetadata {
+// field319 constructs one generated field declaration.
+func (registryDeclarations) field319() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata320 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata320() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListTagsResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TagCount\":{\"additionalProperties\":false,\"properties\":{\"count\":{\"description\":\"Number of notes with the tag\",\"format\":\"int64\",\"type\":\"integer\"},\"name\":{\"description\":\"Tag\",\"type\":\"string\"}},\"required\":[\"name\",\"count\"],\"title\":\"TagCount\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"items\":{\"$ref\":\"#/$defs/TagCount\"},\"type\":\"array\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field282(),
-			declarations.field283(),
-			declarations.field284(),
-			declarations.field285(),
+			declarations.field321(),
+			declarations.field322(),
+			declarations.field323(),
+			declarations.field324(),
 		},
 	}
 }
 
-// field282 constructs one generated field declaration.
-func (registryDeclarations) field282() *genregistry.ToolFieldMetadata {
+// field321 constructs one generated field declaration.
+func (registryDeclarations) field321() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field283 constructs one generated field declaration.
-func (registryDeclarations) field283() *genregistry.ToolFieldMetadata {
+// field322 constructs one generated field declaration.
+func (registryDeclarations) field322() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
@@ -4122,8 +4671,8 @@ func (registryDeclarations) field283() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field284 constructs one generated field declaration.
-func (registryDeclarations) field284() *genregistry.ToolFieldMetadata {
+// field323 constructs one generated field declaration.
+func (registryDeclarations) field323() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tag"
 	return &genregistry.ToolFieldMetadata{
@@ -4136,8 +4685,8 @@ func (registryDeclarations) field284() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field285 constructs one generated field declaration.
-func (registryDeclarations) field285() *genregistry.ToolFieldMetadata {
+// field324 constructs one generated field declaration.
+func (registryDeclarations) field324() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Number of notes with the tag"
 	return &genregistry.ToolFieldMetadata{
@@ -4150,29 +4699,30 @@ func (registryDeclarations) field285() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata286 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata286() *genregistry.ToolTypeMetadata {
+// metadata325 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata325() *genregistry.ToolTypeMetadata {
 	registryText1 := "ListTagsPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field287(),
-			declarations.field288(),
+			declarations.field326(),
+			declarations.field327(),
+			declarations.field328(),
 		},
 	}
 }
 
-// field287 constructs one generated field declaration.
-func (registryDeclarations) field287() *genregistry.ToolFieldMetadata {
+// field326 constructs one generated field declaration.
+func (registryDeclarations) field326() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field288 constructs one generated field declaration.
-func (registryDeclarations) field288() *genregistry.ToolFieldMetadata {
+// field327 constructs one generated field declaration.
+func (registryDeclarations) field327() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -4184,8 +4734,21 @@ func (registryDeclarations) field288() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema289 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema289() *genregistry.ToolSchema {
+// field328 constructs one generated field declaration.
+func (registryDeclarations) field328() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// schema329 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema329() *genregistry.ToolSchema {
 	registryText1 := "Make a notebook private so that AI clients can no longer see it; only people can undo this"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.make_notebook_private",
@@ -4209,36 +4772,36 @@ func (declarations registryDeclarations) schema289() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 1, "ai": 1, "can": 2, "clients": 1, "ebira": 1, "it": 1, "longer": 1, "make": 3, "no": 1, "notebook": 3, "only": 1, "people": 1, "private": 3, "see": 1, "so": 1, "that": 1, "this": 1, "undo": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata293(),
+				Payload:       declarations.metadata333(),
 			},
-			Payload: declarations.metadata290(),
+			Payload: declarations.metadata330(),
 		},
 	}
 }
 
-// metadata290 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata290() *genregistry.ToolTypeMetadata {
+// metadata330 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata330() *genregistry.ToolTypeMetadata {
 	registryText1 := "MakeNotebookPrivatePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field291(),
-			declarations.field292(),
+			declarations.field331(),
+			declarations.field332(),
 		},
 	}
 }
 
-// field291 constructs one generated field declaration.
-func (registryDeclarations) field291() *genregistry.ToolFieldMetadata {
+// field331 constructs one generated field declaration.
+func (registryDeclarations) field331() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field292 constructs one generated field declaration.
-func (registryDeclarations) field292() *genregistry.ToolFieldMetadata {
+// field332 constructs one generated field declaration.
+func (registryDeclarations) field332() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook ID"
 	return &genregistry.ToolFieldMetadata{
@@ -4250,29 +4813,29 @@ func (registryDeclarations) field292() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata293 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata293() *genregistry.ToolTypeMetadata {
+// metadata333 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata333() *genregistry.ToolTypeMetadata {
 	registryText1 := "MakeNotebookPrivatePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Notebook ID\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field294(),
-			declarations.field295(),
+			declarations.field334(),
+			declarations.field335(),
 		},
 	}
 }
 
-// field294 constructs one generated field declaration.
-func (registryDeclarations) field294() *genregistry.ToolFieldMetadata {
+// field334 constructs one generated field declaration.
+func (registryDeclarations) field334() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field295 constructs one generated field declaration.
-func (registryDeclarations) field295() *genregistry.ToolFieldMetadata {
+// field335 constructs one generated field declaration.
+func (registryDeclarations) field335() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook ID"
 	return &genregistry.ToolFieldMetadata{
@@ -4284,15 +4847,15 @@ func (registryDeclarations) field295() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema296 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema296() *genregistry.ToolSchema {
+// schema336 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema336() *genregistry.ToolSchema {
 	registryText1 := "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.move_ai_note",
 		Description:            &registryText1,
 		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Move Ai Note",
@@ -4309,38 +4872,38 @@ func (declarations registryDeclarations) schema296() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 3, "after": 1, "ai": 3, "another": 1, "body": 1, "collab": 1, "ebira": 1, "first": 1, "in": 1, "it": 1, "kind": 1, "leaves": 1, "move": 2, "note": 4, "notebook": 2, "of": 1, "or": 2, "out": 1, "put": 1, "reorder": 1, "result": 1, "separator": 1, "shared": 1, "the": 3, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata325(),
+				Payload:       declarations.metadata367(),
 			},
-			Payload: declarations.metadata297(),
-			Result:  declarations.metadata301(),
+			Payload: declarations.metadata337(),
+			Result:  declarations.metadata341(),
 		},
 	}
 }
 
-// metadata297 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata297() *genregistry.ToolTypeMetadata {
+// metadata337 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata337() *genregistry.ToolTypeMetadata {
 	registryText1 := "MoveAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field298(),
-			declarations.field299(),
-			declarations.field300(),
+			declarations.field338(),
+			declarations.field339(),
+			declarations.field340(),
 		},
 	}
 }
 
-// field298 constructs one generated field declaration.
-func (registryDeclarations) field298() *genregistry.ToolFieldMetadata {
+// field338 constructs one generated field declaration.
+func (registryDeclarations) field338() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field299 constructs one generated field declaration.
-func (registryDeclarations) field299() *genregistry.ToolFieldMetadata {
+// field339 constructs one generated field declaration.
+func (registryDeclarations) field339() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -4352,8 +4915,8 @@ func (registryDeclarations) field299() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field300 constructs one generated field declaration.
-func (registryDeclarations) field300() *genregistry.ToolFieldMetadata {
+// field340 constructs one generated field declaration.
+func (registryDeclarations) field340() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 	return &genregistry.ToolFieldMetadata{
@@ -4365,50 +4928,52 @@ func (registryDeclarations) field300() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata301 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata301() *genregistry.ToolTypeMetadata {
+// metadata341 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata341() *genregistry.ToolTypeMetadata {
 	registryText1 := "MoveAiNoteResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field302(),
-			declarations.field303(),
-			declarations.field304(),
-			declarations.field305(),
-			declarations.field306(),
-			declarations.field307(),
-			declarations.field308(),
-			declarations.field309(),
-			declarations.field310(),
-			declarations.field311(),
-			declarations.field312(),
-			declarations.field313(),
-			declarations.field314(),
-			declarations.field315(),
-			declarations.field316(),
-			declarations.field317(),
-			declarations.field318(),
-			declarations.field319(),
-			declarations.field320(),
-			declarations.field321(),
-			declarations.field322(),
-			declarations.field323(),
-			declarations.field324(),
+			declarations.field342(),
+			declarations.field343(),
+			declarations.field344(),
+			declarations.field345(),
+			declarations.field346(),
+			declarations.field347(),
+			declarations.field348(),
+			declarations.field349(),
+			declarations.field350(),
+			declarations.field351(),
+			declarations.field352(),
+			declarations.field353(),
+			declarations.field354(),
+			declarations.field355(),
+			declarations.field356(),
+			declarations.field357(),
+			declarations.field358(),
+			declarations.field359(),
+			declarations.field360(),
+			declarations.field361(),
+			declarations.field362(),
+			declarations.field363(),
+			declarations.field364(),
+			declarations.field365(),
+			declarations.field366(),
 		},
 	}
 }
 
-// field302 constructs one generated field declaration.
-func (registryDeclarations) field302() *genregistry.ToolFieldMetadata {
+// field342 constructs one generated field declaration.
+func (registryDeclarations) field342() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field303 constructs one generated field declaration.
-func (registryDeclarations) field303() *genregistry.ToolFieldMetadata {
+// field343 constructs one generated field declaration.
+func (registryDeclarations) field343() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -4420,8 +4985,8 @@ func (registryDeclarations) field303() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field304 constructs one generated field declaration.
-func (registryDeclarations) field304() *genregistry.ToolFieldMetadata {
+// field344 constructs one generated field declaration.
+func (registryDeclarations) field344() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -4433,8 +4998,8 @@ func (registryDeclarations) field304() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field305 constructs one generated field declaration.
-func (registryDeclarations) field305() *genregistry.ToolFieldMetadata {
+// field345 constructs one generated field declaration.
+func (registryDeclarations) field345() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -4446,8 +5011,8 @@ func (registryDeclarations) field305() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field306 constructs one generated field declaration.
-func (registryDeclarations) field306() *genregistry.ToolFieldMetadata {
+// field346 constructs one generated field declaration.
+func (registryDeclarations) field346() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -4459,8 +5024,8 @@ func (registryDeclarations) field306() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field307 constructs one generated field declaration.
-func (registryDeclarations) field307() *genregistry.ToolFieldMetadata {
+// field347 constructs one generated field declaration.
+func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -4473,8 +5038,8 @@ func (registryDeclarations) field307() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field308 constructs one generated field declaration.
-func (registryDeclarations) field308() *genregistry.ToolFieldMetadata {
+// field348 constructs one generated field declaration.
+func (registryDeclarations) field348() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -4486,8 +5051,8 @@ func (registryDeclarations) field308() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field309 constructs one generated field declaration.
-func (registryDeclarations) field309() *genregistry.ToolFieldMetadata {
+// field349 constructs one generated field declaration.
+func (registryDeclarations) field349() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -4499,8 +5064,8 @@ func (registryDeclarations) field309() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field310 constructs one generated field declaration.
-func (registryDeclarations) field310() *genregistry.ToolFieldMetadata {
+// field350 constructs one generated field declaration.
+func (registryDeclarations) field350() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -4512,8 +5077,8 @@ func (registryDeclarations) field310() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field311 constructs one generated field declaration.
-func (registryDeclarations) field311() *genregistry.ToolFieldMetadata {
+// field351 constructs one generated field declaration.
+func (registryDeclarations) field351() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -4525,8 +5090,8 @@ func (registryDeclarations) field311() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field312 constructs one generated field declaration.
-func (registryDeclarations) field312() *genregistry.ToolFieldMetadata {
+// field352 constructs one generated field declaration.
+func (registryDeclarations) field352() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -4538,8 +5103,8 @@ func (registryDeclarations) field312() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field313 constructs one generated field declaration.
-func (registryDeclarations) field313() *genregistry.ToolFieldMetadata {
+// field353 constructs one generated field declaration.
+func (registryDeclarations) field353() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -4552,8 +5117,21 @@ func (registryDeclarations) field313() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field314 constructs one generated field declaration.
-func (registryDeclarations) field314() *genregistry.ToolFieldMetadata {
+// field354 constructs one generated field declaration.
+func (registryDeclarations) field354() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field355 constructs one generated field declaration.
+func (registryDeclarations) field355() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Body in Markdown"
 	return &genregistry.ToolFieldMetadata{
@@ -4565,8 +5143,8 @@ func (registryDeclarations) field314() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field315 constructs one generated field declaration.
-func (registryDeclarations) field315() *genregistry.ToolFieldMetadata {
+// field356 constructs one generated field declaration.
+func (registryDeclarations) field356() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
 	return &genregistry.ToolFieldMetadata{
@@ -4578,8 +5156,8 @@ func (registryDeclarations) field315() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field316 constructs one generated field declaration.
-func (registryDeclarations) field316() *genregistry.ToolFieldMetadata {
+// field357 constructs one generated field declaration.
+func (registryDeclarations) field357() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the note was in before it was moved to the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -4591,8 +5169,21 @@ func (registryDeclarations) field316() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field317 constructs one generated field declaration.
-func (registryDeclarations) field317() *genregistry.ToolFieldMetadata {
+// field358 constructs one generated field declaration.
+func (registryDeclarations) field358() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field359 constructs one generated field declaration.
+func (registryDeclarations) field359() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -4604,8 +5195,8 @@ func (registryDeclarations) field317() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field318 constructs one generated field declaration.
-func (registryDeclarations) field318() *genregistry.ToolFieldMetadata {
+// field360 constructs one generated field declaration.
+func (registryDeclarations) field360() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -4618,8 +5209,8 @@ func (registryDeclarations) field318() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field319 constructs one generated field declaration.
-func (registryDeclarations) field319() *genregistry.ToolFieldMetadata {
+// field361 constructs one generated field declaration.
+func (registryDeclarations) field361() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -4633,8 +5224,8 @@ func (registryDeclarations) field319() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field320 constructs one generated field declaration.
-func (registryDeclarations) field320() *genregistry.ToolFieldMetadata {
+// field362 constructs one generated field declaration.
+func (registryDeclarations) field362() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -4648,8 +5239,8 @@ func (registryDeclarations) field320() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field321 constructs one generated field declaration.
-func (registryDeclarations) field321() *genregistry.ToolFieldMetadata {
+// field363 constructs one generated field declaration.
+func (registryDeclarations) field363() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -4661,8 +5252,8 @@ func (registryDeclarations) field321() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field322 constructs one generated field declaration.
-func (registryDeclarations) field322() *genregistry.ToolFieldMetadata {
+// field364 constructs one generated field declaration.
+func (registryDeclarations) field364() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
 	return &genregistry.ToolFieldMetadata{
@@ -4675,8 +5266,8 @@ func (registryDeclarations) field322() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field323 constructs one generated field declaration.
-func (registryDeclarations) field323() *genregistry.ToolFieldMetadata {
+// field365 constructs one generated field declaration.
+func (registryDeclarations) field365() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -4690,8 +5281,8 @@ func (registryDeclarations) field323() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field324 constructs one generated field declaration.
-func (registryDeclarations) field324() *genregistry.ToolFieldMetadata {
+// field366 constructs one generated field declaration.
+func (registryDeclarations) field366() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -4705,30 +5296,30 @@ func (registryDeclarations) field324() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata325 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata325() *genregistry.ToolTypeMetadata {
+// metadata367 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata367() *genregistry.ToolTypeMetadata {
 	registryText1 := "MoveAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field326(),
-			declarations.field327(),
-			declarations.field328(),
+			declarations.field368(),
+			declarations.field369(),
+			declarations.field370(),
 		},
 	}
 }
 
-// field326 constructs one generated field declaration.
-func (registryDeclarations) field326() *genregistry.ToolFieldMetadata {
+// field368 constructs one generated field declaration.
+func (registryDeclarations) field368() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field327 constructs one generated field declaration.
-func (registryDeclarations) field327() *genregistry.ToolFieldMetadata {
+// field369 constructs one generated field declaration.
+func (registryDeclarations) field369() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -4740,8 +5331,8 @@ func (registryDeclarations) field327() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field328 constructs one generated field declaration.
-func (registryDeclarations) field328() *genregistry.ToolFieldMetadata {
+// field370 constructs one generated field declaration.
+func (registryDeclarations) field370() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 	return &genregistry.ToolFieldMetadata{
@@ -4753,8 +5344,8 @@ func (registryDeclarations) field328() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema329 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema329() *genregistry.ToolSchema {
+// schema371 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema371() *genregistry.ToolSchema {
 	registryText1 := "Reorder a separator in a notebook shared with AI (kind collab): put it after a note or another separator, or first"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.move_ai_separator",
@@ -4778,39 +5369,39 @@ func (declarations registryDeclarations) schema329() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 3, "after": 1, "ai": 3, "another": 1, "collab": 1, "ebira": 1, "first": 1, "in": 1, "it": 1, "kind": 1, "move": 2, "note": 1, "notebook": 1, "or": 2, "put": 1, "reorder": 1, "separator": 4, "shared": 1, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata343(),
+				Payload:       declarations.metadata385(),
 			},
-			Payload: declarations.metadata330(),
-			Result:  declarations.metadata335(),
+			Payload: declarations.metadata372(),
+			Result:  declarations.metadata377(),
 		},
 	}
 }
 
-// metadata330 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata330() *genregistry.ToolTypeMetadata {
+// metadata372 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata372() *genregistry.ToolTypeMetadata {
 	registryText1 := "MoveAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field331(),
-			declarations.field332(),
-			declarations.field333(),
-			declarations.field334(),
+			declarations.field373(),
+			declarations.field374(),
+			declarations.field375(),
+			declarations.field376(),
 		},
 	}
 }
 
-// field331 constructs one generated field declaration.
-func (registryDeclarations) field331() *genregistry.ToolFieldMetadata {
+// field373 constructs one generated field declaration.
+func (registryDeclarations) field373() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field332 constructs one generated field declaration.
-func (registryDeclarations) field332() *genregistry.ToolFieldMetadata {
+// field374 constructs one generated field declaration.
+func (registryDeclarations) field374() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID, from list_notes"
 	return &genregistry.ToolFieldMetadata{
@@ -4822,8 +5413,8 @@ func (registryDeclarations) field332() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field333 constructs one generated field declaration.
-func (registryDeclarations) field333() *genregistry.ToolFieldMetadata {
+// field375 constructs one generated field declaration.
+func (registryDeclarations) field375() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the separator"
 	return &genregistry.ToolFieldMetadata{
@@ -4835,8 +5426,8 @@ func (registryDeclarations) field333() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field334 constructs one generated field declaration.
-func (registryDeclarations) field334() *genregistry.ToolFieldMetadata {
+// field376 constructs one generated field declaration.
+func (registryDeclarations) field376() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 	return &genregistry.ToolFieldMetadata{
@@ -4848,26 +5439,26 @@ func (registryDeclarations) field334() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata335 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata335() *genregistry.ToolTypeMetadata {
+// metadata377 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata377() *genregistry.ToolTypeMetadata {
 	registryText1 := "MoveAiSeparatorResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field336(),
-			declarations.field337(),
-			declarations.field338(),
-			declarations.field339(),
-			declarations.field340(),
-			declarations.field341(),
-			declarations.field342(),
+			declarations.field378(),
+			declarations.field379(),
+			declarations.field380(),
+			declarations.field381(),
+			declarations.field382(),
+			declarations.field383(),
+			declarations.field384(),
 		},
 	}
 }
 
-// field336 constructs one generated field declaration.
-func (registryDeclarations) field336() *genregistry.ToolFieldMetadata {
+// field378 constructs one generated field declaration.
+func (registryDeclarations) field378() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook."
 	return &genregistry.ToolFieldMetadata{
@@ -4876,8 +5467,8 @@ func (registryDeclarations) field336() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field337 constructs one generated field declaration.
-func (registryDeclarations) field337() *genregistry.ToolFieldMetadata {
+// field379 constructs one generated field declaration.
+func (registryDeclarations) field379() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID"
 	return &genregistry.ToolFieldMetadata{
@@ -4889,8 +5480,8 @@ func (registryDeclarations) field337() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field338 constructs one generated field declaration.
-func (registryDeclarations) field338() *genregistry.ToolFieldMetadata {
+// field380 constructs one generated field declaration.
+func (registryDeclarations) field380() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the separator is in"
 	return &genregistry.ToolFieldMetadata{
@@ -4902,8 +5493,8 @@ func (registryDeclarations) field338() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field339 constructs one generated field declaration.
-func (registryDeclarations) field339() *genregistry.ToolFieldMetadata {
+// field381 constructs one generated field declaration.
+func (registryDeclarations) field381() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -4915,8 +5506,8 @@ func (registryDeclarations) field339() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field340 constructs one generated field declaration.
-func (registryDeclarations) field340() *genregistry.ToolFieldMetadata {
+// field382 constructs one generated field declaration.
+func (registryDeclarations) field382() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; absent for none. It does not change the order"
 	return &genregistry.ToolFieldMetadata{
@@ -4928,8 +5519,8 @@ func (registryDeclarations) field340() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field341 constructs one generated field declaration.
-func (registryDeclarations) field341() *genregistry.ToolFieldMetadata {
+// field383 constructs one generated field declaration.
+func (registryDeclarations) field383() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; absent for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -4941,8 +5532,8 @@ func (registryDeclarations) field341() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field342 constructs one generated field declaration.
-func (registryDeclarations) field342() *genregistry.ToolFieldMetadata {
+// field384 constructs one generated field declaration.
+func (registryDeclarations) field384() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note"
 	return &genregistry.ToolFieldMetadata{
@@ -4954,31 +5545,31 @@ func (registryDeclarations) field342() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata343 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata343() *genregistry.ToolTypeMetadata {
+// metadata385 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata385() *genregistry.ToolTypeMetadata {
 	registryText1 := "MoveAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field344(),
-			declarations.field345(),
-			declarations.field346(),
-			declarations.field347(),
+			declarations.field386(),
+			declarations.field387(),
+			declarations.field388(),
+			declarations.field389(),
 		},
 	}
 }
 
-// field344 constructs one generated field declaration.
-func (registryDeclarations) field344() *genregistry.ToolFieldMetadata {
+// field386 constructs one generated field declaration.
+func (registryDeclarations) field386() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field345 constructs one generated field declaration.
-func (registryDeclarations) field345() *genregistry.ToolFieldMetadata {
+// field387 constructs one generated field declaration.
+func (registryDeclarations) field387() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID, from list_notes"
 	return &genregistry.ToolFieldMetadata{
@@ -4990,8 +5581,8 @@ func (registryDeclarations) field345() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field346 constructs one generated field declaration.
-func (registryDeclarations) field346() *genregistry.ToolFieldMetadata {
+// field388 constructs one generated field declaration.
+func (registryDeclarations) field388() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the separator"
 	return &genregistry.ToolFieldMetadata{
@@ -5003,8 +5594,8 @@ func (registryDeclarations) field346() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field347 constructs one generated field declaration.
-func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
+// field389 constructs one generated field declaration.
+func (registryDeclarations) field389() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first"
 	return &genregistry.ToolFieldMetadata{
@@ -5016,67 +5607,68 @@ func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema348 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema348() *genregistry.ToolSchema {
-	registryText1 := "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either"
+// schema390 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema390() *genregistry.ToolSchema {
+	registryText1 := "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.search_notes",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Search Notes",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 109,
-				Terms:  map[string]int{"a": 5, "and": 3, "answering": 1, "any": 1, "are": 2, "as": 2, "asking": 1, "asks": 1, "before": 2, "between": 1, "capitals": 1, "combined": 1, "decisions": 1, "down": 1, "ebira": 1, "either": 1, "first": 1, "for": 2, "from": 1, "full": 1, "general": 1, "has": 1, "here": 1, "id": 1, "in": 3, "it": 1, "japanese": 1, "knowledge": 1, "leaves": 1, "list": 1, "mark": 2, "marks": 1, "may": 1, "memos": 1, "minus": 1, "name": 3, "notes": 4, "of": 2, "or": 5, "out": 1, "own": 1, "past": 1, "pasta": 1, "phrase": 1, "pizza": 1, "question": 1, "records": 1, "require": 2, "s": 1, "search": 5, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 4, "their": 1, "them": 1, "to": 2, "touch": 1, "two": 2, "use": 1, "user": 3, "what": 1, "when": 1, "with": 2, "word": 1, "words": 1, "work": 1, "written": 1},
+				Length: 130,
+				Terms:  map[string]int{"a": 5, "and": 3, "answering": 1, "any": 1, "archive": 2, "archived": 1, "are": 3, "as": 2, "asking": 1, "asks": 2, "before": 2, "between": 1, "but": 1, "capitals": 1, "combined": 1, "decisions": 1, "down": 1, "ebira": 1, "either": 1, "first": 1, "for": 3, "from": 1, "full": 1, "general": 1, "has": 1, "here": 1, "id": 1, "in": 6, "it": 1, "japanese": 1, "kept": 1, "knowledge": 1, "leaves": 1, "left": 1, "list": 1, "longer": 1, "mark": 2, "marks": 1, "may": 1, "memos": 1, "minus": 1, "name": 3, "no": 1, "notes": 5, "of": 2, "or": 6, "out": 2, "own": 1, "past": 1, "pasta": 1, "phrase": 1, "pizza": 1, "question": 1, "records": 1, "require": 2, "s": 1, "search": 5, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 5, "their": 1, "them": 2, "to": 2, "touch": 1, "two": 2, "unless": 1, "use": 2, "user": 3, "what": 1, "when": 1, "with": 2, "word": 1, "words": 1, "work": 1, "written": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-				Description:     "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either",
+				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+				Description:     "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 109,
-					Terms:  map[string]int{"a": 5, "and": 3, "answering": 1, "any": 1, "are": 2, "as": 2, "asking": 1, "asks": 1, "before": 2, "between": 1, "capitals": 1, "combined": 1, "decisions": 1, "down": 1, "ebira": 1, "either": 1, "first": 1, "for": 2, "from": 1, "full": 1, "general": 1, "has": 1, "here": 1, "id": 1, "in": 3, "it": 1, "japanese": 1, "knowledge": 1, "leaves": 1, "list": 1, "mark": 2, "marks": 1, "may": 1, "memos": 1, "minus": 1, "name": 3, "notes": 4, "of": 2, "or": 5, "out": 1, "own": 1, "past": 1, "pasta": 1, "phrase": 1, "pizza": 1, "question": 1, "records": 1, "require": 2, "s": 1, "search": 5, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 4, "their": 1, "them": 1, "to": 2, "touch": 1, "two": 2, "use": 1, "user": 3, "what": 1, "when": 1, "with": 2, "word": 1, "words": 1, "work": 1, "written": 1},
+					Length: 130,
+					Terms:  map[string]int{"a": 5, "and": 3, "answering": 1, "any": 1, "archive": 2, "archived": 1, "are": 3, "as": 2, "asking": 1, "asks": 2, "before": 2, "between": 1, "but": 1, "capitals": 1, "combined": 1, "decisions": 1, "down": 1, "ebira": 1, "either": 1, "first": 1, "for": 3, "from": 1, "full": 1, "general": 1, "has": 1, "here": 1, "id": 1, "in": 6, "it": 1, "japanese": 1, "kept": 1, "knowledge": 1, "leaves": 1, "left": 1, "list": 1, "longer": 1, "mark": 2, "marks": 1, "may": 1, "memos": 1, "minus": 1, "name": 3, "no": 1, "notes": 5, "of": 2, "or": 6, "out": 2, "own": 1, "past": 1, "pasta": 1, "phrase": 1, "pizza": 1, "question": 1, "records": 1, "require": 2, "s": 1, "search": 5, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 5, "their": 1, "them": 2, "to": 2, "touch": 1, "two": 2, "unless": 1, "use": 2, "user": 3, "what": 1, "when": 1, "with": 2, "word": 1, "words": 1, "work": 1, "written": 1},
 				},
-				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata381(),
+				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+				Payload:       declarations.metadata425(),
 			},
-			Payload: declarations.metadata349(),
-			Result:  declarations.metadata355(),
+			Payload: declarations.metadata391(),
+			Result:  declarations.metadata398(),
 		},
 	}
 }
 
-// metadata349 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata349() *genregistry.ToolTypeMetadata {
+// metadata391 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata391() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchNotesPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field350(),
-			declarations.field351(),
-			declarations.field352(),
-			declarations.field353(),
-			declarations.field354(),
+			declarations.field392(),
+			declarations.field393(),
+			declarations.field394(),
+			declarations.field395(),
+			declarations.field396(),
+			declarations.field397(),
 		},
 	}
 }
 
-// field350 constructs one generated field declaration.
-func (registryDeclarations) field350() *genregistry.ToolFieldMetadata {
+// field392 constructs one generated field declaration.
+func (registryDeclarations) field392() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field351 constructs one generated field declaration.
-func (registryDeclarations) field351() *genregistry.ToolFieldMetadata {
+// field393 constructs one generated field declaration.
+func (registryDeclarations) field393() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
+	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("q")},
@@ -5086,8 +5678,8 @@ func (registryDeclarations) field351() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field352 constructs one generated field declaration.
-func (registryDeclarations) field352() *genregistry.ToolFieldMetadata {
+// field394 constructs one generated field declaration.
+func (registryDeclarations) field394() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -5099,8 +5691,8 @@ func (registryDeclarations) field352() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field353 constructs one generated field declaration.
-func (registryDeclarations) field353() *genregistry.ToolFieldMetadata {
+// field395 constructs one generated field declaration.
+func (registryDeclarations) field395() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -5112,8 +5704,21 @@ func (registryDeclarations) field353() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field354 constructs one generated field declaration.
-func (registryDeclarations) field354() *genregistry.ToolFieldMetadata {
+// field396 constructs one generated field declaration.
+func (registryDeclarations) field396() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field397 constructs one generated field declaration.
+func (registryDeclarations) field397() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{
@@ -5125,52 +5730,53 @@ func (registryDeclarations) field354() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata355 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata355() *genregistry.ToolTypeMetadata {
+// metadata398 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata398() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchNotesResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteSummary\":{\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"snippet\":{\"description\":\"Excerpt around the matched terms (search only)\",\"type\":\"string\"},\"snippet_highlights\":{\"description\":\"Ranges of the snippet matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query, sorted and not overlapping (search only)\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\"],\"title\":\"NoteSummary\",\"type\":\"object\"},\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"mode\":{\"description\":\"Search mode used\",\"enum\":[\"like\",\"bigram\",\"trigram\",\"en\",\"ja\"],\"type\":\"string\"},\"notes\":{\"description\":\"Matched notes\",\"items\":{\"$ref\":\"#/$defs/NoteSummary\"},\"type\":\"array\"},\"total\":{\"description\":\"Number of matched notes\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"mode\",\"total\",\"notes\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field356(),
-			declarations.field357(),
-			declarations.field358(),
-			declarations.field359(),
-			declarations.field360(),
-			declarations.field361(),
-			declarations.field362(),
-			declarations.field363(),
-			declarations.field364(),
-			declarations.field365(),
-			declarations.field366(),
-			declarations.field367(),
-			declarations.field368(),
-			declarations.field369(),
-			declarations.field370(),
-			declarations.field371(),
-			declarations.field372(),
-			declarations.field373(),
-			declarations.field374(),
-			declarations.field375(),
-			declarations.field376(),
-			declarations.field377(),
-			declarations.field378(),
-			declarations.field379(),
-			declarations.field380(),
+			declarations.field399(),
+			declarations.field400(),
+			declarations.field401(),
+			declarations.field402(),
+			declarations.field403(),
+			declarations.field404(),
+			declarations.field405(),
+			declarations.field406(),
+			declarations.field407(),
+			declarations.field408(),
+			declarations.field409(),
+			declarations.field410(),
+			declarations.field411(),
+			declarations.field412(),
+			declarations.field413(),
+			declarations.field414(),
+			declarations.field415(),
+			declarations.field416(),
+			declarations.field417(),
+			declarations.field418(),
+			declarations.field419(),
+			declarations.field420(),
+			declarations.field421(),
+			declarations.field422(),
+			declarations.field423(),
+			declarations.field424(),
 		},
 	}
 }
 
-// field356 constructs one generated field declaration.
-func (registryDeclarations) field356() *genregistry.ToolFieldMetadata {
+// field399 constructs one generated field declaration.
+func (registryDeclarations) field399() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field357 constructs one generated field declaration.
-func (registryDeclarations) field357() *genregistry.ToolFieldMetadata {
+// field400 constructs one generated field declaration.
+func (registryDeclarations) field400() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Search mode used"
 	return &genregistry.ToolFieldMetadata{
@@ -5182,8 +5788,8 @@ func (registryDeclarations) field357() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field358 constructs one generated field declaration.
-func (registryDeclarations) field358() *genregistry.ToolFieldMetadata {
+// field401 constructs one generated field declaration.
+func (registryDeclarations) field401() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Number of matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -5195,8 +5801,8 @@ func (registryDeclarations) field358() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field359 constructs one generated field declaration.
-func (registryDeclarations) field359() *genregistry.ToolFieldMetadata {
+// field402 constructs one generated field declaration.
+func (registryDeclarations) field402() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -5208,8 +5814,8 @@ func (registryDeclarations) field359() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field360 constructs one generated field declaration.
-func (registryDeclarations) field360() *genregistry.ToolFieldMetadata {
+// field403 constructs one generated field declaration.
+func (registryDeclarations) field403() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Matched notes"
 	return &genregistry.ToolFieldMetadata{
@@ -5222,8 +5828,8 @@ func (registryDeclarations) field360() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field361 constructs one generated field declaration.
-func (registryDeclarations) field361() *genregistry.ToolFieldMetadata {
+// field404 constructs one generated field declaration.
+func (registryDeclarations) field404() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
 	return &genregistry.ToolFieldMetadata{
@@ -5237,8 +5843,8 @@ func (registryDeclarations) field361() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field362 constructs one generated field declaration.
-func (registryDeclarations) field362() *genregistry.ToolFieldMetadata {
+// field405 constructs one generated field declaration.
+func (registryDeclarations) field405() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook (directory) the note is in"
 	return &genregistry.ToolFieldMetadata{
@@ -5252,8 +5858,8 @@ func (registryDeclarations) field362() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field363 constructs one generated field declaration.
-func (registryDeclarations) field363() *genregistry.ToolFieldMetadata {
+// field406 constructs one generated field declaration.
+func (registryDeclarations) field406() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -5267,8 +5873,8 @@ func (registryDeclarations) field363() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field364 constructs one generated field declaration.
-func (registryDeclarations) field364() *genregistry.ToolFieldMetadata {
+// field407 constructs one generated field declaration.
+func (registryDeclarations) field407() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -5282,8 +5888,8 @@ func (registryDeclarations) field364() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field365 constructs one generated field declaration.
-func (registryDeclarations) field365() *genregistry.ToolFieldMetadata {
+// field408 constructs one generated field declaration.
+func (registryDeclarations) field408() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -5298,8 +5904,8 @@ func (registryDeclarations) field365() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field366 constructs one generated field declaration.
-func (registryDeclarations) field366() *genregistry.ToolFieldMetadata {
+// field409 constructs one generated field declaration.
+func (registryDeclarations) field409() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Creation time"
 	return &genregistry.ToolFieldMetadata{
@@ -5313,8 +5919,8 @@ func (registryDeclarations) field366() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field367 constructs one generated field declaration.
-func (registryDeclarations) field367() *genregistry.ToolFieldMetadata {
+// field410 constructs one generated field declaration.
+func (registryDeclarations) field410() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Last update time"
 	return &genregistry.ToolFieldMetadata{
@@ -5328,8 +5934,8 @@ func (registryDeclarations) field367() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field368 constructs one generated field declaration.
-func (registryDeclarations) field368() *genregistry.ToolFieldMetadata {
+// field411 constructs one generated field declaration.
+func (registryDeclarations) field411() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
 	return &genregistry.ToolFieldMetadata{
@@ -5343,8 +5949,8 @@ func (registryDeclarations) field368() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field369 constructs one generated field declaration.
-func (registryDeclarations) field369() *genregistry.ToolFieldMetadata {
+// field412 constructs one generated field declaration.
+func (registryDeclarations) field412() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
 	return &genregistry.ToolFieldMetadata{
@@ -5358,8 +5964,8 @@ func (registryDeclarations) field369() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field370 constructs one generated field declaration.
-func (registryDeclarations) field370() *genregistry.ToolFieldMetadata {
+// field413 constructs one generated field declaration.
+func (registryDeclarations) field413() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -5373,8 +5979,8 @@ func (registryDeclarations) field370() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field371 constructs one generated field declaration.
-func (registryDeclarations) field371() *genregistry.ToolFieldMetadata {
+// field414 constructs one generated field declaration.
+func (registryDeclarations) field414() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -5389,8 +5995,23 @@ func (registryDeclarations) field371() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field372 constructs one generated field declaration.
-func (registryDeclarations) field372() *genregistry.ToolFieldMetadata {
+// field415 constructs one generated field declaration.
+func (registryDeclarations) field415() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notes")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field416 constructs one generated field declaration.
+func (registryDeclarations) field416() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Excerpt around the matched terms (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -5404,8 +6025,8 @@ func (registryDeclarations) field372() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field373 constructs one generated field declaration.
-func (registryDeclarations) field373() *genregistry.ToolFieldMetadata {
+// field417 constructs one generated field declaration.
+func (registryDeclarations) field417() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -5419,8 +6040,8 @@ func (registryDeclarations) field373() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field374 constructs one generated field declaration.
-func (registryDeclarations) field374() *genregistry.ToolFieldMetadata {
+// field418 constructs one generated field declaration.
+func (registryDeclarations) field418() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the title matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -5435,8 +6056,8 @@ func (registryDeclarations) field374() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field375 constructs one generated field declaration.
-func (registryDeclarations) field375() *genregistry.ToolFieldMetadata {
+// field419 constructs one generated field declaration.
+func (registryDeclarations) field419() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -5452,8 +6073,8 @@ func (registryDeclarations) field375() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field376 constructs one generated field declaration.
-func (registryDeclarations) field376() *genregistry.ToolFieldMetadata {
+// field420 constructs one generated field declaration.
+func (registryDeclarations) field420() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -5469,8 +6090,8 @@ func (registryDeclarations) field376() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field377 constructs one generated field declaration.
-func (registryDeclarations) field377() *genregistry.ToolFieldMetadata {
+// field421 constructs one generated field declaration.
+func (registryDeclarations) field421() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -5484,8 +6105,8 @@ func (registryDeclarations) field377() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field378 constructs one generated field declaration.
-func (registryDeclarations) field378() *genregistry.ToolFieldMetadata {
+// field422 constructs one generated field declaration.
+func (registryDeclarations) field422() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Ranges of the snippet matched by the query, sorted and not overlapping (search only)"
 	return &genregistry.ToolFieldMetadata{
@@ -5500,8 +6121,8 @@ func (registryDeclarations) field378() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field379 constructs one generated field declaration.
-func (registryDeclarations) field379() *genregistry.ToolFieldMetadata {
+// field423 constructs one generated field declaration.
+func (registryDeclarations) field423() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset of the first character"
 	return &genregistry.ToolFieldMetadata{
@@ -5517,8 +6138,8 @@ func (registryDeclarations) field379() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field380 constructs one generated field declaration.
-func (registryDeclarations) field380() *genregistry.ToolFieldMetadata {
+// field424 constructs one generated field declaration.
+func (registryDeclarations) field424() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Offset just past the last character"
 	return &genregistry.ToolFieldMetadata{
@@ -5534,34 +6155,35 @@ func (registryDeclarations) field380() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata381 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata381() *genregistry.ToolTypeMetadata {
+// metadata425 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata425() *genregistry.ToolTypeMetadata {
 	registryText1 := "SearchNotesPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"default\":\"exclude\",\"description\":\"The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone\",\"enum\":[\"exclude\",\"include\",\"only\"],\"type\":\"string\"},\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field382(),
-			declarations.field383(),
-			declarations.field384(),
-			declarations.field385(),
-			declarations.field386(),
+			declarations.field426(),
+			declarations.field427(),
+			declarations.field428(),
+			declarations.field429(),
+			declarations.field430(),
+			declarations.field431(),
 		},
 	}
 }
 
-// field382 constructs one generated field declaration.
-func (registryDeclarations) field382() *genregistry.ToolFieldMetadata {
+// field426 constructs one generated field declaration.
+func (registryDeclarations) field426() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field383 constructs one generated field declaration.
-func (registryDeclarations) field383() *genregistry.ToolFieldMetadata {
+// field427 constructs one generated field declaration.
+func (registryDeclarations) field427() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
-	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
+	registryText2 := "Search terms separated by spaces, combined with AND. \"two words\" in double quotes is a phrase, matched in that order. tag:name, or tag:\"a name\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\"a name\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\"two words\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. in:archive asks for the notes in the archive only, which are left out otherwise. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first"
 	return &genregistry.ToolFieldMetadata{
 		Path: []*genregistry.ToolFieldPathSegment{
 			{Segment: genregistry.NewToolFieldSegmentField("q")},
@@ -5571,8 +6193,8 @@ func (registryDeclarations) field383() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field384 constructs one generated field declaration.
-func (registryDeclarations) field384() *genregistry.ToolFieldMetadata {
+// field428 constructs one generated field declaration.
+func (registryDeclarations) field428() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash"
 	return &genregistry.ToolFieldMetadata{
@@ -5584,8 +6206,8 @@ func (registryDeclarations) field384() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field385 constructs one generated field declaration.
-func (registryDeclarations) field385() *genregistry.ToolFieldMetadata {
+// field429 constructs one generated field declaration.
+func (registryDeclarations) field429() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Only notes with this tag"
 	return &genregistry.ToolFieldMetadata{
@@ -5597,8 +6219,21 @@ func (registryDeclarations) field385() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field386 constructs one generated field declaration.
-func (registryDeclarations) field386() *genregistry.ToolFieldMetadata {
+// field430 constructs one generated field declaration.
+func (registryDeclarations) field430() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field431 constructs one generated field declaration.
+func (registryDeclarations) field431() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "Maximum number of notes"
 	return &genregistry.ToolFieldMetadata{
@@ -5610,8 +6245,8 @@ func (registryDeclarations) field386() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema387 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema387() *genregistry.ToolSchema {
+// schema432 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema432() *genregistry.ToolSchema {
 	registryText1 := "Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.start_ai_upload",
@@ -5635,38 +6270,38 @@ func (declarations registryDeclarations) schema387() *genregistry.ToolSchema {
 					Terms:  map[string]int{"5": 1, "a": 4, "add": 2, "ai": 5, "as": 2, "at": 1, "base64": 1, "body": 1, "by": 1, "collab": 1, "curl": 1, "ebira": 1, "file": 3, "from": 1, "get": 1, "in": 2, "instead": 1, "is": 1, "it": 2, "kind": 1, "mb": 1, "most": 1, "note": 2, "notebook": 1, "of": 1, "path": 1, "refer": 1, "returned": 1, "sending": 1, "shared": 1, "ss": 1, "start": 2, "such": 1, "t": 1, "the": 2, "then": 1, "to": 3, "update": 1, "upload": 2, "url": 2, "using": 1, "with": 4},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata397(),
+				Payload:       declarations.metadata442(),
 			},
-			Payload: declarations.metadata388(),
-			Result:  declarations.metadata392(),
+			Payload: declarations.metadata433(),
+			Result:  declarations.metadata437(),
 		},
 	}
 }
 
-// metadata388 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata388() *genregistry.ToolTypeMetadata {
+// metadata433 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata433() *genregistry.ToolTypeMetadata {
 	registryText1 := "StartAiUploadPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field389(),
-			declarations.field390(),
-			declarations.field391(),
+			declarations.field434(),
+			declarations.field435(),
+			declarations.field436(),
 		},
 	}
 }
 
-// field389 constructs one generated field declaration.
-func (registryDeclarations) field389() *genregistry.ToolFieldMetadata {
+// field434 constructs one generated field declaration.
+func (registryDeclarations) field434() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field390 constructs one generated field declaration.
-func (registryDeclarations) field390() *genregistry.ToolFieldMetadata {
+// field435 constructs one generated field declaration.
+func (registryDeclarations) field435() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -5678,8 +6313,8 @@ func (registryDeclarations) field390() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field391 constructs one generated field declaration.
-func (registryDeclarations) field391() *genregistry.ToolFieldMetadata {
+// field436 constructs one generated field declaration.
+func (registryDeclarations) field436() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "File name"
 	return &genregistry.ToolFieldMetadata{
@@ -5691,31 +6326,31 @@ func (registryDeclarations) field391() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata392 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata392() *genregistry.ToolTypeMetadata {
+// metadata437 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata437() *genregistry.ToolTypeMetadata {
 	registryText1 := "StartAiUploadResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"expires_at\":{\"description\":\"When the URL stops working\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"max_size\":{\"description\":\"The largest file the URL takes, in bytes\",\"example\":5242880,\"format\":\"int64\",\"type\":\"integer\"},\"url\":{\"description\":\"The URL to send the file to, in the body of a PUT request\",\"example\":\"http://localhost:13579/uploads/2AFNWOF6NIQGEDS4QQ5JQCCRBM\",\"type\":\"string\"}},\"required\":[\"url\",\"expires_at\",\"max_size\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field393(),
-			declarations.field394(),
-			declarations.field395(),
-			declarations.field396(),
+			declarations.field438(),
+			declarations.field439(),
+			declarations.field440(),
+			declarations.field441(),
 		},
 	}
 }
 
-// field393 constructs one generated field declaration.
-func (registryDeclarations) field393() *genregistry.ToolFieldMetadata {
+// field438 constructs one generated field declaration.
+func (registryDeclarations) field438() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field394 constructs one generated field declaration.
-func (registryDeclarations) field394() *genregistry.ToolFieldMetadata {
+// field439 constructs one generated field declaration.
+func (registryDeclarations) field439() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "The URL to send the file to, in the body of a PUT request"
 	return &genregistry.ToolFieldMetadata{
@@ -5727,8 +6362,8 @@ func (registryDeclarations) field394() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field395 constructs one generated field declaration.
-func (registryDeclarations) field395() *genregistry.ToolFieldMetadata {
+// field440 constructs one generated field declaration.
+func (registryDeclarations) field440() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "When the URL stops working"
 	return &genregistry.ToolFieldMetadata{
@@ -5740,8 +6375,8 @@ func (registryDeclarations) field395() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field396 constructs one generated field declaration.
-func (registryDeclarations) field396() *genregistry.ToolFieldMetadata {
+// field441 constructs one generated field declaration.
+func (registryDeclarations) field441() *genregistry.ToolFieldMetadata {
 	registryText1 := "integer"
 	registryText2 := "The largest file the URL takes, in bytes"
 	return &genregistry.ToolFieldMetadata{
@@ -5753,30 +6388,30 @@ func (registryDeclarations) field396() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata397 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata397() *genregistry.ToolTypeMetadata {
+// metadata442 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata442() *genregistry.ToolTypeMetadata {
 	registryText1 := "StartAiUploadPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"example\":\"chart.png\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field398(),
-			declarations.field399(),
-			declarations.field400(),
+			declarations.field443(),
+			declarations.field444(),
+			declarations.field445(),
 		},
 	}
 }
 
-// field398 constructs one generated field declaration.
-func (registryDeclarations) field398() *genregistry.ToolFieldMetadata {
+// field443 constructs one generated field declaration.
+func (registryDeclarations) field443() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field399 constructs one generated field declaration.
-func (registryDeclarations) field399() *genregistry.ToolFieldMetadata {
+// field444 constructs one generated field declaration.
+func (registryDeclarations) field444() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -5788,8 +6423,8 @@ func (registryDeclarations) field399() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field400 constructs one generated field declaration.
-func (registryDeclarations) field400() *genregistry.ToolFieldMetadata {
+// field445 constructs one generated field declaration.
+func (registryDeclarations) field445() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "File name"
 	return &genregistry.ToolFieldMetadata{
@@ -5801,627 +6436,46 @@ func (registryDeclarations) field400() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema401 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema401() *genregistry.ToolSchema {
-	registryText1 := "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result"
+// schema446 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema446() *genregistry.ToolSchema {
+	registryText1 := "Update a note in a notebook shared with AI (kind collab), or set its marks or put it in the archive; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.update_ai_note",
 		Description:            &registryText1,
-		PayloadSchema:          []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-		ExecutionPayloadSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		PayloadSchema:          []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"archived\":{\"description\":\"Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content\",\"type\":\"boolean\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		ExecutionPayloadSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"archived\":{\"description\":\"Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content\",\"type\":\"boolean\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		ResultSchema:           []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
 		ConsumerContract: &genregistry.ConsumerContract{
 			Kind:  "service",
 			Title: "Update Ai Note",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 60,
-				Terms:  map[string]int{"a": 3, "ai": 3, "and": 2, "append": 1, "body": 3, "brief": 1, "change": 1, "collab": 1, "each": 1, "ebira": 1, "edits": 1, "exactly": 1, "from": 1, "get": 1, "in": 1, "instead": 1, "its": 1, "kind": 1, "leave": 1, "long": 1, "marks": 1, "note": 4, "notebook": 1, "of": 3, "old": 1, "once": 1, "or": 1, "out": 1, "part": 1, "pass": 1, "result": 1, "sending": 1, "set": 1, "shared": 1, "text": 1, "the": 4, "to": 2, "update": 3, "use": 1, "version": 1, "whole": 1, "with": 1},
+				Length: 66,
+				Terms:  map[string]int{"a": 3, "ai": 3, "and": 2, "append": 1, "archive": 1, "body": 3, "brief": 1, "change": 1, "collab": 1, "each": 1, "ebira": 1, "edits": 1, "exactly": 1, "from": 1, "get": 1, "in": 2, "instead": 1, "it": 1, "its": 1, "kind": 1, "leave": 1, "long": 1, "marks": 1, "note": 4, "notebook": 1, "of": 3, "old": 1, "once": 1, "or": 2, "out": 1, "part": 1, "pass": 1, "put": 1, "result": 1, "sending": 1, "set": 1, "shared": 1, "text": 1, "the": 5, "to": 2, "update": 3, "use": 1, "version": 1, "whole": 1, "with": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
-				ExecutionSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-				Description:     "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result",
+				ExecutionSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"archived\":{\"description\":\"Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content\",\"type\":\"boolean\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+				Description:     "Update a note in a notebook shared with AI (kind collab), or set its marks or put it in the archive; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 60,
-					Terms:  map[string]int{"a": 3, "ai": 3, "and": 2, "append": 1, "body": 3, "brief": 1, "change": 1, "collab": 1, "each": 1, "ebira": 1, "edits": 1, "exactly": 1, "from": 1, "get": 1, "in": 1, "instead": 1, "its": 1, "kind": 1, "leave": 1, "long": 1, "marks": 1, "note": 4, "notebook": 1, "of": 3, "old": 1, "once": 1, "or": 1, "out": 1, "part": 1, "pass": 1, "result": 1, "sending": 1, "set": 1, "shared": 1, "text": 1, "the": 4, "to": 2, "update": 3, "use": 1, "version": 1, "whole": 1, "with": 1},
+					Length: 66,
+					Terms:  map[string]int{"a": 3, "ai": 3, "and": 2, "append": 1, "archive": 1, "body": 3, "brief": 1, "change": 1, "collab": 1, "each": 1, "ebira": 1, "edits": 1, "exactly": 1, "from": 1, "get": 1, "in": 2, "instead": 1, "it": 1, "its": 1, "kind": 1, "leave": 1, "long": 1, "marks": 1, "note": 4, "notebook": 1, "of": 3, "old": 1, "once": 1, "or": 2, "out": 1, "part": 1, "pass": 1, "put": 1, "result": 1, "sending": 1, "set": 1, "shared": 1, "text": 1, "the": 5, "to": 2, "update": 3, "use": 1, "version": 1, "whole": 1, "with": 1},
 				},
-				PayloadSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata443(),
+				PayloadSchema: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"archived\":{\"description\":\"Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content\",\"type\":\"boolean\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+				Payload:       declarations.metadata491(),
 			},
-			Payload: declarations.metadata402(),
-			Result:  declarations.metadata419(),
+			Payload: declarations.metadata447(),
+			Result:  declarations.metadata465(),
 		},
 	}
 }
 
-// metadata402 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata402() *genregistry.ToolTypeMetadata {
+// metadata447 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata447() *genregistry.ToolTypeMetadata {
 	registryText1 := "UpdateAiNotePayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"archived\":{\"description\":\"Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content\",\"type\":\"boolean\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field403(),
-			declarations.field404(),
-			declarations.field405(),
-			declarations.field406(),
-			declarations.field407(),
-			declarations.field408(),
-			declarations.field409(),
-			declarations.field410(),
-			declarations.field411(),
-			declarations.field412(),
-			declarations.field413(),
-			declarations.field414(),
-			declarations.field415(),
-			declarations.field416(),
-			declarations.field417(),
-			declarations.field418(),
-		},
-	}
-}
-
-// field403 constructs one generated field declaration.
-func (registryDeclarations) field403() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// field404 constructs one generated field declaration.
-func (registryDeclarations) field404() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("id")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field405 constructs one generated field declaration.
-func (registryDeclarations) field405() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Version of the note as returned by get_note"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("version")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field406 constructs one generated field declaration.
-func (registryDeclarations) field406() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "ID of a notebook of the collab kind to move the note to"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field407 constructs one generated field declaration.
-func (registryDeclarations) field407() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Title"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field408 constructs one generated field declaration.
-func (registryDeclarations) field408() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field409 constructs one generated field declaration.
-func (registryDeclarations) field409() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field410 constructs one generated field declaration.
-func (registryDeclarations) field410() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Body in Markdown, replacing the whole body"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field411 constructs one generated field declaration.
-func (registryDeclarations) field411() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Text to add at the end of the body, on a new line when the body does not end with one"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("append")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field412 constructs one generated field declaration.
-func (registryDeclarations) field412() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Changes of parts of the body, applied in order, all or none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("edits")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field413 constructs one generated field declaration.
-func (registryDeclarations) field413() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Changes of parts of the body, applied in order, all or none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("edits")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field414 constructs one generated field declaration.
-func (registryDeclarations) field414() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("edits")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("old")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field415 constructs one generated field declaration.
-func (registryDeclarations) field415() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Text to put in its place; empty to remove it"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("edits")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("new")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field416 constructs one generated field declaration.
-func (registryDeclarations) field416() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field417 constructs one generated field declaration.
-func (registryDeclarations) field417() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field418 constructs one generated field declaration.
-func (registryDeclarations) field418() *genregistry.ToolFieldMetadata {
-	registryText1 := "boolean"
-	registryText2 := "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("brief")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// metadata419 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata419() *genregistry.ToolTypeMetadata {
-	registryText1 := "UpdateAiNoteResult"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field420(),
-			declarations.field421(),
-			declarations.field422(),
-			declarations.field423(),
-			declarations.field424(),
-			declarations.field425(),
-			declarations.field426(),
-			declarations.field427(),
-			declarations.field428(),
-			declarations.field429(),
-			declarations.field430(),
-			declarations.field431(),
-			declarations.field432(),
-			declarations.field433(),
-			declarations.field434(),
-			declarations.field435(),
-			declarations.field436(),
-			declarations.field437(),
-			declarations.field438(),
-			declarations.field439(),
-			declarations.field440(),
-			declarations.field441(),
-			declarations.field442(),
-		},
-	}
-}
-
-// field420 constructs one generated field declaration.
-func (registryDeclarations) field420() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	return &genregistry.ToolFieldMetadata{
-		JSONType: &registryText1,
-	}
-}
-
-// field421 constructs one generated field declaration.
-func (registryDeclarations) field421() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("id")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field422 constructs one generated field declaration.
-func (registryDeclarations) field422() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook (directory) the note is in"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field423 constructs one generated field declaration.
-func (registryDeclarations) field423() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Title"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field424 constructs one generated field declaration.
-func (registryDeclarations) field424() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field425 constructs one generated field declaration.
-func (registryDeclarations) field425() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Tags"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("tags")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field426 constructs one generated field declaration.
-func (registryDeclarations) field426() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Creation time"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("created_at")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field427 constructs one generated field declaration.
-func (registryDeclarations) field427() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Last update time"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("updated_at")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field428 constructs one generated field declaration.
-func (registryDeclarations) field428() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field429 constructs one generated field declaration.
-func (registryDeclarations) field429() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("created_by")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field430 constructs one generated field declaration.
-func (registryDeclarations) field430() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field431 constructs one generated field declaration.
-func (registryDeclarations) field431() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("marks")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field432 constructs one generated field declaration.
-func (registryDeclarations) field432() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Body in Markdown"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field433 constructs one generated field declaration.
-func (registryDeclarations) field433() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("version")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field434 constructs one generated field declaration.
-func (registryDeclarations) field434() *genregistry.ToolFieldMetadata {
-	registryText1 := "string"
-	registryText2 := "Notebook the note was in before it was moved to the trash"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("trashed_from")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field435 constructs one generated field declaration.
-func (registryDeclarations) field435() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field436 constructs one generated field declaration.
-func (registryDeclarations) field436() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field437 constructs one generated field declaration.
-func (registryDeclarations) field437() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field438 constructs one generated field declaration.
-func (registryDeclarations) field438() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field439 constructs one generated field declaration.
-func (registryDeclarations) field439() *genregistry.ToolFieldMetadata {
-	registryText1 := "array"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field440 constructs one generated field declaration.
-func (registryDeclarations) field440() *genregistry.ToolFieldMetadata {
-	registryText1 := "object"
-	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field441 constructs one generated field declaration.
-func (registryDeclarations) field441() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset of the first character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("start")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// field442 constructs one generated field declaration.
-func (registryDeclarations) field442() *genregistry.ToolFieldMetadata {
-	registryText1 := "integer"
-	registryText2 := "Offset just past the last character"
-	return &genregistry.ToolFieldMetadata{
-		Path: []*genregistry.ToolFieldPathSegment{
-			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
-			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
-			{Segment: genregistry.NewToolFieldSegmentField("end")},
-		},
-		JSONType:    &registryText1,
-		Description: &registryText2,
-	}
-}
-
-// metadata443 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata443() *genregistry.ToolTypeMetadata {
-	registryText1 := "UpdateAiNotePayload"
-	return &genregistry.ToolTypeMetadata{
-		Name:                     &registryText1,
-		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
-		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field444(),
-			declarations.field445(),
-			declarations.field446(),
-			declarations.field447(),
 			declarations.field448(),
 			declarations.field449(),
 			declarations.field450(),
@@ -6434,20 +6488,25 @@ func (declarations registryDeclarations) metadata443() *genregistry.ToolTypeMeta
 			declarations.field457(),
 			declarations.field458(),
 			declarations.field459(),
+			declarations.field460(),
+			declarations.field461(),
+			declarations.field462(),
+			declarations.field463(),
+			declarations.field464(),
 		},
 	}
 }
 
-// field444 constructs one generated field declaration.
-func (registryDeclarations) field444() *genregistry.ToolFieldMetadata {
+// field448 constructs one generated field declaration.
+func (registryDeclarations) field448() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field445 constructs one generated field declaration.
-func (registryDeclarations) field445() *genregistry.ToolFieldMetadata {
+// field449 constructs one generated field declaration.
+func (registryDeclarations) field449() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
 	return &genregistry.ToolFieldMetadata{
@@ -6459,8 +6518,8 @@ func (registryDeclarations) field445() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field446 constructs one generated field declaration.
-func (registryDeclarations) field446() *genregistry.ToolFieldMetadata {
+// field450 constructs one generated field declaration.
+func (registryDeclarations) field450() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Version of the note as returned by get_note"
 	return &genregistry.ToolFieldMetadata{
@@ -6472,8 +6531,8 @@ func (registryDeclarations) field446() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field447 constructs one generated field declaration.
-func (registryDeclarations) field447() *genregistry.ToolFieldMetadata {
+// field451 constructs one generated field declaration.
+func (registryDeclarations) field451() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of a notebook of the collab kind to move the note to"
 	return &genregistry.ToolFieldMetadata{
@@ -6485,8 +6544,8 @@ func (registryDeclarations) field447() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field448 constructs one generated field declaration.
-func (registryDeclarations) field448() *genregistry.ToolFieldMetadata {
+// field452 constructs one generated field declaration.
+func (registryDeclarations) field452() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Title"
 	return &genregistry.ToolFieldMetadata{
@@ -6498,8 +6557,8 @@ func (registryDeclarations) field448() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field449 constructs one generated field declaration.
-func (registryDeclarations) field449() *genregistry.ToolFieldMetadata {
+// field453 constructs one generated field declaration.
+func (registryDeclarations) field453() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -6511,8 +6570,8 @@ func (registryDeclarations) field449() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field450 constructs one generated field declaration.
-func (registryDeclarations) field450() *genregistry.ToolFieldMetadata {
+// field454 constructs one generated field declaration.
+func (registryDeclarations) field454() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Tags"
 	return &genregistry.ToolFieldMetadata{
@@ -6525,8 +6584,8 @@ func (registryDeclarations) field450() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field451 constructs one generated field declaration.
-func (registryDeclarations) field451() *genregistry.ToolFieldMetadata {
+// field455 constructs one generated field declaration.
+func (registryDeclarations) field455() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Body in Markdown, replacing the whole body"
 	return &genregistry.ToolFieldMetadata{
@@ -6538,8 +6597,8 @@ func (registryDeclarations) field451() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field452 constructs one generated field declaration.
-func (registryDeclarations) field452() *genregistry.ToolFieldMetadata {
+// field456 constructs one generated field declaration.
+func (registryDeclarations) field456() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Text to add at the end of the body, on a new line when the body does not end with one"
 	return &genregistry.ToolFieldMetadata{
@@ -6551,8 +6610,8 @@ func (registryDeclarations) field452() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field453 constructs one generated field declaration.
-func (registryDeclarations) field453() *genregistry.ToolFieldMetadata {
+// field457 constructs one generated field declaration.
+func (registryDeclarations) field457() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Changes of parts of the body, applied in order, all or none"
 	return &genregistry.ToolFieldMetadata{
@@ -6564,8 +6623,8 @@ func (registryDeclarations) field453() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field454 constructs one generated field declaration.
-func (registryDeclarations) field454() *genregistry.ToolFieldMetadata {
+// field458 constructs one generated field declaration.
+func (registryDeclarations) field458() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "Changes of parts of the body, applied in order, all or none"
 	return &genregistry.ToolFieldMetadata{
@@ -6578,8 +6637,8 @@ func (registryDeclarations) field454() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field455 constructs one generated field declaration.
-func (registryDeclarations) field455() *genregistry.ToolFieldMetadata {
+// field459 constructs one generated field declaration.
+func (registryDeclarations) field459() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it"
 	return &genregistry.ToolFieldMetadata{
@@ -6593,8 +6652,8 @@ func (registryDeclarations) field455() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field456 constructs one generated field declaration.
-func (registryDeclarations) field456() *genregistry.ToolFieldMetadata {
+// field460 constructs one generated field declaration.
+func (registryDeclarations) field460() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Text to put in its place; empty to remove it"
 	return &genregistry.ToolFieldMetadata{
@@ -6608,8 +6667,8 @@ func (registryDeclarations) field456() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field457 constructs one generated field declaration.
-func (registryDeclarations) field457() *genregistry.ToolFieldMetadata {
+// field461 constructs one generated field declaration.
+func (registryDeclarations) field461() *genregistry.ToolFieldMetadata {
 	registryText1 := "array"
 	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
 	return &genregistry.ToolFieldMetadata{
@@ -6621,8 +6680,8 @@ func (registryDeclarations) field457() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field458 constructs one generated field declaration.
-func (registryDeclarations) field458() *genregistry.ToolFieldMetadata {
+// field462 constructs one generated field declaration.
+func (registryDeclarations) field462() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
 	return &genregistry.ToolFieldMetadata{
@@ -6635,8 +6694,21 @@ func (registryDeclarations) field458() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field459 constructs one generated field declaration.
-func (registryDeclarations) field459() *genregistry.ToolFieldMetadata {
+// field463 constructs one generated field declaration.
+func (registryDeclarations) field463() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field464 constructs one generated field declaration.
+func (registryDeclarations) field464() *genregistry.ToolFieldMetadata {
 	registryText1 := "boolean"
 	registryText2 := "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back"
 	return &genregistry.ToolFieldMetadata{
@@ -6648,8 +6720,627 @@ func (registryDeclarations) field459() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// schema460 constructs one generated schema declaration.
-func (declarations registryDeclarations) schema460() *genregistry.ToolSchema {
+// metadata465 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata465() *genregistry.ToolTypeMetadata {
+	registryText1 := "UpdateAiNoteResult"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"TextRange\":{\"additionalProperties\":false,\"description\":\"Range of characters, in Unicode code point offsets\",\"properties\":{\"end\":{\"description\":\"Offset just past the last character\",\"format\":\"int64\",\"type\":\"integer\"},\"start\":{\"description\":\"Offset of the first character\",\"format\":\"int64\",\"type\":\"integer\"}},\"required\":[\"start\",\"end\"],\"title\":\"TextRange\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"archived\":{\"description\":\"Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not\",\"type\":\"boolean\"},\"archived_at\":{\"description\":\"When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"body\":{\"description\":\"Body in Markdown\",\"type\":\"string\"},\"body_highlights\":{\"description\":\"Ranges of the body matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"created_at\":{\"description\":\"Creation time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"created_by\":{\"description\":\"Who created the note: ai for a note created by an AI client (create_ai_note); absent for people\",\"enum\":[\"ai\"],\"type\":\"string\"},\"id\":{\"description\":\"Note ID: the file name without the extension (notes/\\u003cnotebook\\u003e/\\u003cid\\u003e.yaml), unique across notebooks\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"Notebook (directory) the note is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"example\":[\"DB\",\"postgres\"],\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"example\":\"Get the CREATE TABLE statement\",\"type\":\"string\"},\"title_highlights\":{\"description\":\"Ranges of the title matched by the query of get, sorted and not overlapping\",\"items\":{\"$ref\":\"#/$defs/TextRange\"},\"type\":\"array\"},\"trashed_from\":{\"description\":\"Notebook the note was in before it was moved to the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"trashed_notebook\":{\"description\":\"For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook\",\"example\":\"dev~design\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last update time\",\"example\":\"2026-10-16T09:30:00Z\",\"format\":\"date-time\",\"type\":\"string\"},\"version\":{\"description\":\"Strong entity tag of the note file. Sent as the ETag header over HTTP\",\"example\":\"\\\"87ef7c76b82c5b1d299b08b474f6a7bb\\\"\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\",\"title\",\"tags\",\"created_at\",\"updated_at\",\"body\",\"version\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field466(),
+			declarations.field467(),
+			declarations.field468(),
+			declarations.field469(),
+			declarations.field470(),
+			declarations.field471(),
+			declarations.field472(),
+			declarations.field473(),
+			declarations.field474(),
+			declarations.field475(),
+			declarations.field476(),
+			declarations.field477(),
+			declarations.field478(),
+			declarations.field479(),
+			declarations.field480(),
+			declarations.field481(),
+			declarations.field482(),
+			declarations.field483(),
+			declarations.field484(),
+			declarations.field485(),
+			declarations.field486(),
+			declarations.field487(),
+			declarations.field488(),
+			declarations.field489(),
+			declarations.field490(),
+		},
+	}
+}
+
+// field466 constructs one generated field declaration.
+func (registryDeclarations) field466() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field467 constructs one generated field declaration.
+func (registryDeclarations) field467() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field468 constructs one generated field declaration.
+func (registryDeclarations) field468() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook (directory) the note is in"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field469 constructs one generated field declaration.
+func (registryDeclarations) field469() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Title"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field470 constructs one generated field declaration.
+func (registryDeclarations) field470() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field471 constructs one generated field declaration.
+func (registryDeclarations) field471() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field472 constructs one generated field declaration.
+func (registryDeclarations) field472() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Creation time"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("created_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field473 constructs one generated field declaration.
+func (registryDeclarations) field473() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Last update time"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("updated_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field474 constructs one generated field declaration.
+func (registryDeclarations) field474() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field475 constructs one generated field declaration.
+func (registryDeclarations) field475() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("created_by")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field476 constructs one generated field declaration.
+func (registryDeclarations) field476() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field477 constructs one generated field declaration.
+func (registryDeclarations) field477() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field478 constructs one generated field declaration.
+func (registryDeclarations) field478() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field479 constructs one generated field declaration.
+func (registryDeclarations) field479() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Body in Markdown"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field480 constructs one generated field declaration.
+func (registryDeclarations) field480() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Strong entity tag of the note file. Sent as the ETag header over HTTP"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("version")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field481 constructs one generated field declaration.
+func (registryDeclarations) field481() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Notebook the note was in before it was moved to the trash"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("trashed_from")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field482 constructs one generated field declaration.
+func (registryDeclarations) field482() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived_at")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field483 constructs one generated field declaration.
+func (registryDeclarations) field483() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field484 constructs one generated field declaration.
+func (registryDeclarations) field484() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the title matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field485 constructs one generated field declaration.
+func (registryDeclarations) field485() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field486 constructs one generated field declaration.
+func (registryDeclarations) field486() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field487 constructs one generated field declaration.
+func (registryDeclarations) field487() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field488 constructs one generated field declaration.
+func (registryDeclarations) field488() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Ranges of the body matched by the query of get, sorted and not overlapping"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field489 constructs one generated field declaration.
+func (registryDeclarations) field489() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset of the first character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("start")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field490 constructs one generated field declaration.
+func (registryDeclarations) field490() *genregistry.ToolFieldMetadata {
+	registryText1 := "integer"
+	registryText2 := "Offset just past the last character"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body_highlights")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("end")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// metadata491 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata491() *genregistry.ToolTypeMetadata {
+	registryText1 := "UpdateAiNotePayload"
+	return &genregistry.ToolTypeMetadata{
+		Name:                     &registryText1,
+		SchemaWithoutRootExample: []byte("{\"$defs\":{\"NoteEdit\":{\"additionalProperties\":false,\"properties\":{\"new\":{\"description\":\"Text to put in its place; empty to remove it\",\"example\":\"- [x] write the tests\",\"type\":\"string\"},\"old\":{\"description\":\"Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it\",\"example\":\"- [ ] write the tests\",\"minLength\":1,\"type\":\"string\"}},\"required\":[\"old\",\"new\"],\"title\":\"NoteEdit\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"append\":{\"description\":\"Text to add at the end of the body, on a new line when the body does not end with one\",\"minLength\":1,\"type\":\"string\"},\"archived\":{\"description\":\"Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content\",\"type\":\"boolean\"},\"body\":{\"description\":\"Body in Markdown, replacing the whole body\",\"type\":\"string\"},\"brief\":{\"description\":\"Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back\",\"type\":\"boolean\"},\"edits\":{\"description\":\"Changes of parts of the body, applied in order, all or none\",\"items\":{\"$ref\":\"#/$defs/NoteEdit\"},\"maxItems\":100,\"type\":\"array\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"marks\":{\"description\":\"Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means\",\"example\":[\"red\"],\"items\":{\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"maxItems\":1,\"type\":\"array\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind to move the note to\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"tags\":{\"description\":\"Tags\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"title\":{\"description\":\"Title\",\"minLength\":1,\"type\":\"string\"},\"version\":{\"description\":\"Version of the note as returned by get_note\",\"type\":\"string\"}},\"required\":[\"id\",\"version\"],\"type\":\"object\"}"),
+		Fields: []*genregistry.ToolFieldMetadata{
+			declarations.field492(),
+			declarations.field493(),
+			declarations.field494(),
+			declarations.field495(),
+			declarations.field496(),
+			declarations.field497(),
+			declarations.field498(),
+			declarations.field499(),
+			declarations.field500(),
+			declarations.field501(),
+			declarations.field502(),
+			declarations.field503(),
+			declarations.field504(),
+			declarations.field505(),
+			declarations.field506(),
+			declarations.field507(),
+			declarations.field508(),
+		},
+	}
+}
+
+// field492 constructs one generated field declaration.
+func (registryDeclarations) field492() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	return &genregistry.ToolFieldMetadata{
+		JSONType: &registryText1,
+	}
+}
+
+// field493 constructs one generated field declaration.
+func (registryDeclarations) field493() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("id")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field494 constructs one generated field declaration.
+func (registryDeclarations) field494() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Version of the note as returned by get_note"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("version")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field495 constructs one generated field declaration.
+func (registryDeclarations) field495() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "ID of a notebook of the collab kind to move the note to"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("notebook")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field496 constructs one generated field declaration.
+func (registryDeclarations) field496() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Title"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("title")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field497 constructs one generated field declaration.
+func (registryDeclarations) field497() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field498 constructs one generated field declaration.
+func (registryDeclarations) field498() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Tags"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("tags")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field499 constructs one generated field declaration.
+func (registryDeclarations) field499() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Body in Markdown, replacing the whole body"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("body")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field500 constructs one generated field declaration.
+func (registryDeclarations) field500() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text to add at the end of the body, on a new line when the body does not end with one"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("append")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field501 constructs one generated field declaration.
+func (registryDeclarations) field501() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Changes of parts of the body, applied in order, all or none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field502 constructs one generated field declaration.
+func (registryDeclarations) field502() *genregistry.ToolFieldMetadata {
+	registryText1 := "object"
+	registryText2 := "Changes of parts of the body, applied in order, all or none"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field503 constructs one generated field declaration.
+func (registryDeclarations) field503() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("old")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field504 constructs one generated field declaration.
+func (registryDeclarations) field504() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Text to put in its place; empty to remove it"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("edits")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+			{Segment: genregistry.NewToolFieldSegmentField("new")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field505 constructs one generated field declaration.
+func (registryDeclarations) field505() *genregistry.ToolFieldMetadata {
+	registryText1 := "array"
+	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field506 constructs one generated field declaration.
+func (registryDeclarations) field506() *genregistry.ToolFieldMetadata {
+	registryText1 := "string"
+	registryText2 := "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("marks")},
+			{Segment: genregistry.NewToolFieldSegmentElement(&genregistry.ToolCollectionElement{})},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field507 constructs one generated field declaration.
+func (registryDeclarations) field507() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("archived")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// field508 constructs one generated field declaration.
+func (registryDeclarations) field508() *genregistry.ToolFieldMetadata {
+	registryText1 := "boolean"
+	registryText2 := "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back"
+	return &genregistry.ToolFieldMetadata{
+		Path: []*genregistry.ToolFieldPathSegment{
+			{Segment: genregistry.NewToolFieldSegmentField("brief")},
+		},
+		JSONType:    &registryText1,
+		Description: &registryText2,
+	}
+}
+
+// schema509 constructs one generated schema declaration.
+func (declarations registryDeclarations) schema509() *genregistry.ToolSchema {
 	registryText1 := "Replace the heading, the date and the color of a separator in a notebook shared with AI (kind collab); an omitted one is taken away"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.update_ai_separator",
@@ -6673,41 +7364,41 @@ func (declarations registryDeclarations) schema460() *genregistry.ToolSchema {
 					Terms:  map[string]int{"a": 2, "ai": 3, "an": 1, "and": 1, "away": 1, "collab": 1, "color": 1, "date": 1, "ebira": 1, "heading": 1, "in": 1, "is": 1, "kind": 1, "notebook": 1, "of": 1, "omitted": 1, "one": 1, "replace": 1, "separator": 3, "shared": 1, "taken": 1, "the": 3, "update": 2, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"example\":\"October\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
-				Payload:       declarations.metadata476(),
+				Payload:       declarations.metadata525(),
 			},
-			Payload: declarations.metadata461(),
-			Result:  declarations.metadata468(),
+			Payload: declarations.metadata510(),
+			Result:  declarations.metadata517(),
 		},
 	}
 }
 
-// metadata461 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata461() *genregistry.ToolTypeMetadata {
+// metadata510 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata510() *genregistry.ToolTypeMetadata {
 	registryText1 := "UpdateAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"example\":\"October\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field462(),
-			declarations.field463(),
-			declarations.field464(),
-			declarations.field465(),
-			declarations.field466(),
-			declarations.field467(),
+			declarations.field511(),
+			declarations.field512(),
+			declarations.field513(),
+			declarations.field514(),
+			declarations.field515(),
+			declarations.field516(),
 		},
 	}
 }
 
-// field462 constructs one generated field declaration.
-func (registryDeclarations) field462() *genregistry.ToolFieldMetadata {
+// field511 constructs one generated field declaration.
+func (registryDeclarations) field511() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field463 constructs one generated field declaration.
-func (registryDeclarations) field463() *genregistry.ToolFieldMetadata {
+// field512 constructs one generated field declaration.
+func (registryDeclarations) field512() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID, from list_notes"
 	return &genregistry.ToolFieldMetadata{
@@ -6719,8 +7410,8 @@ func (registryDeclarations) field463() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field464 constructs one generated field declaration.
-func (registryDeclarations) field464() *genregistry.ToolFieldMetadata {
+// field513 constructs one generated field declaration.
+func (registryDeclarations) field513() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the separator"
 	return &genregistry.ToolFieldMetadata{
@@ -6732,8 +7423,8 @@ func (registryDeclarations) field464() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field465 constructs one generated field declaration.
-func (registryDeclarations) field465() *genregistry.ToolFieldMetadata {
+// field514 constructs one generated field declaration.
+func (registryDeclarations) field514() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -6745,8 +7436,8 @@ func (registryDeclarations) field465() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field466 constructs one generated field declaration.
-func (registryDeclarations) field466() *genregistry.ToolFieldMetadata {
+// field515 constructs one generated field declaration.
+func (registryDeclarations) field515() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -6758,8 +7449,8 @@ func (registryDeclarations) field466() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field467 constructs one generated field declaration.
-func (registryDeclarations) field467() *genregistry.ToolFieldMetadata {
+// field516 constructs one generated field declaration.
+func (registryDeclarations) field516() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; omit for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -6771,26 +7462,26 @@ func (registryDeclarations) field467() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata468 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata468() *genregistry.ToolTypeMetadata {
+// metadata517 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata517() *genregistry.ToolTypeMetadata {
 	registryText1 := "UpdateAiSeparatorResult"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"example\":\"October\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field469(),
-			declarations.field470(),
-			declarations.field471(),
-			declarations.field472(),
-			declarations.field473(),
-			declarations.field474(),
-			declarations.field475(),
+			declarations.field518(),
+			declarations.field519(),
+			declarations.field520(),
+			declarations.field521(),
+			declarations.field522(),
+			declarations.field523(),
+			declarations.field524(),
 		},
 	}
 }
 
-// field469 constructs one generated field declaration.
-func (registryDeclarations) field469() *genregistry.ToolFieldMetadata {
+// field518 constructs one generated field declaration.
+func (registryDeclarations) field518() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	registryText2 := "A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook."
 	return &genregistry.ToolFieldMetadata{
@@ -6799,8 +7490,8 @@ func (registryDeclarations) field469() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field470 constructs one generated field declaration.
-func (registryDeclarations) field470() *genregistry.ToolFieldMetadata {
+// field519 constructs one generated field declaration.
+func (registryDeclarations) field519() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID"
 	return &genregistry.ToolFieldMetadata{
@@ -6812,8 +7503,8 @@ func (registryDeclarations) field470() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field471 constructs one generated field declaration.
-func (registryDeclarations) field471() *genregistry.ToolFieldMetadata {
+// field520 constructs one generated field declaration.
+func (registryDeclarations) field520() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook the separator is in"
 	return &genregistry.ToolFieldMetadata{
@@ -6825,8 +7516,8 @@ func (registryDeclarations) field471() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field472 constructs one generated field declaration.
-func (registryDeclarations) field472() *genregistry.ToolFieldMetadata {
+// field521 constructs one generated field declaration.
+func (registryDeclarations) field521() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; absent for none"
 	return &genregistry.ToolFieldMetadata{
@@ -6838,8 +7529,8 @@ func (registryDeclarations) field472() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field473 constructs one generated field declaration.
-func (registryDeclarations) field473() *genregistry.ToolFieldMetadata {
+// field522 constructs one generated field declaration.
+func (registryDeclarations) field522() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; absent for none. It does not change the order"
 	return &genregistry.ToolFieldMetadata{
@@ -6851,8 +7542,8 @@ func (registryDeclarations) field473() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field474 constructs one generated field declaration.
-func (registryDeclarations) field474() *genregistry.ToolFieldMetadata {
+// field523 constructs one generated field declaration.
+func (registryDeclarations) field523() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; absent for the plain one"
 	return &genregistry.ToolFieldMetadata{
@@ -6864,8 +7555,8 @@ func (registryDeclarations) field474() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field475 constructs one generated field declaration.
-func (registryDeclarations) field475() *genregistry.ToolFieldMetadata {
+// field524 constructs one generated field declaration.
+func (registryDeclarations) field524() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note"
 	return &genregistry.ToolFieldMetadata{
@@ -6877,33 +7568,33 @@ func (registryDeclarations) field475() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// metadata476 constructs one generated metadata declaration.
-func (declarations registryDeclarations) metadata476() *genregistry.ToolTypeMetadata {
+// metadata525 constructs one generated metadata declaration.
+func (declarations registryDeclarations) metadata525() *genregistry.ToolTypeMetadata {
 	registryText1 := "UpdateAiSeparatorPayload"
 	return &genregistry.ToolTypeMetadata{
 		Name:                     &registryText1,
 		SchemaWithoutRootExample: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"example\":\"blue\",\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"example\":\"2026-10-01\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID, from list_notes\",\"example\":\"sep-3f9a1c2b7d04\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook of the separator\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"example\":\"October\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"type\":\"object\"}"),
 		Fields: []*genregistry.ToolFieldMetadata{
-			declarations.field477(),
-			declarations.field478(),
-			declarations.field479(),
-			declarations.field480(),
-			declarations.field481(),
-			declarations.field482(),
+			declarations.field526(),
+			declarations.field527(),
+			declarations.field528(),
+			declarations.field529(),
+			declarations.field530(),
+			declarations.field531(),
 		},
 	}
 }
 
-// field477 constructs one generated field declaration.
-func (registryDeclarations) field477() *genregistry.ToolFieldMetadata {
+// field526 constructs one generated field declaration.
+func (registryDeclarations) field526() *genregistry.ToolFieldMetadata {
 	registryText1 := "object"
 	return &genregistry.ToolFieldMetadata{
 		JSONType: &registryText1,
 	}
 }
 
-// field478 constructs one generated field declaration.
-func (registryDeclarations) field478() *genregistry.ToolFieldMetadata {
+// field527 constructs one generated field declaration.
+func (registryDeclarations) field527() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Separator ID, from list_notes"
 	return &genregistry.ToolFieldMetadata{
@@ -6915,8 +7606,8 @@ func (registryDeclarations) field478() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field479 constructs one generated field declaration.
-func (registryDeclarations) field479() *genregistry.ToolFieldMetadata {
+// field528 constructs one generated field declaration.
+func (registryDeclarations) field528() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Notebook of the separator"
 	return &genregistry.ToolFieldMetadata{
@@ -6928,8 +7619,8 @@ func (registryDeclarations) field479() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field480 constructs one generated field declaration.
-func (registryDeclarations) field480() *genregistry.ToolFieldMetadata {
+// field529 constructs one generated field declaration.
+func (registryDeclarations) field529() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Heading; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -6941,8 +7632,8 @@ func (registryDeclarations) field480() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field481 constructs one generated field declaration.
-func (registryDeclarations) field481() *genregistry.ToolFieldMetadata {
+// field530 constructs one generated field declaration.
+func (registryDeclarations) field530() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Date to show, as YYYY-MM-DD; omit for none"
 	return &genregistry.ToolFieldMetadata{
@@ -6954,8 +7645,8 @@ func (registryDeclarations) field481() *genregistry.ToolFieldMetadata {
 	}
 }
 
-// field482 constructs one generated field declaration.
-func (registryDeclarations) field482() *genregistry.ToolFieldMetadata {
+// field531 constructs one generated field declaration.
+func (registryDeclarations) field531() *genregistry.ToolFieldMetadata {
 	registryText1 := "string"
 	registryText2 := "Color of the bar, one of the color marks; omit for the plain one"
 	return &genregistry.ToolFieldMetadata{
