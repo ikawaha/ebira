@@ -227,5 +227,20 @@
   "mark.dropped": "Dropped",
   "mark.reply": "Reply needed",
   "mark.waiting": "Waiting for a reply",
-  "mark.review": "In review"
+  "mark.review": "In review",
+  "notebook.archive": "Archive",
+  "list.archive": "No notes were put in the archive on their own. The notebooks in the archive are under the archive in the left column.",
+  "preview.archived": "in the archive since {time}",
+  "preview.archivedWithNotebook": "in the archive with its notebook",
+  "key.archive": "archive",
+  "key.unarchive": "take out of the archive",
+  "status.noteArchived": "Put the note in the archive",
+  "status.noteUnarchived": "Took the note out of the archive",
+  "status.notebookArchived": "Put the notebook in the archive",
+  "status.notebookUnarchived": "Took the notebook out of the archive",
+  "status.archiveFailed": "Could not change the archive: {err}",
+  "status.archiveTrash": "Notes in the trash cannot be put in the archive",
+  "status.archivedWithNotebook": "This note is in the archive with its notebook; take the notebook out instead",
+  "status.archivedWithParent": "This notebook is in the archive with its parent; take the parent out instead",
+  "status.archiveReserved": "inbox and trash cannot be put in the archive"
 }

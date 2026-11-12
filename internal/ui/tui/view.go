@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -248,6 +249,12 @@ func (m *Model) renderPreview(keepOffset bool) {
 		nb += " " + m.tr.t("preview.from", "notebook", m.notebookLabel(*m.note.TrashedFrom))
 	}
 	meta := []string{nb, formatTime(m.note.UpdatedAt), m.note.ID}
+	switch {
+	case m.note.ArchivedAt != nil:
+		meta = append(meta, archiveIcon+" "+m.tr.t("preview.archived", "time", formatTime(*m.note.ArchivedAt)))
+	case m.archivedNotebook(m.note.Notebook) != nil:
+		meta = append(meta, archiveIcon+" "+m.tr.t("preview.archivedWithNotebook"))
+	}
 	if len(m.note.Tags) > 0 {
 		meta = append([]string{tagList(m.note.Tags)}, meta...)
 	}
@@ -487,6 +494,9 @@ func (m Model) renderList(w, h int) string {
 		if _, ok := trashedID(m.notebook); ok {
 			msg = m.tr.t("list.trashedNotebook")
 		}
+		if m.notebook == archivePrefix && m.query == "" {
+			msg = m.tr.t("list.archive")
+		}
 		lines = append(lines, "", " "+m.th.style(m.th.dim).Render(msg))
 	}
 	layout := m.listLines(m.top, h-2)
@@ -584,8 +594,17 @@ func (m Model) renderNotebooks(w, h int) string {
 		if r.id == trashNotebook {
 			icon = trashIcon
 		}
+		if r.id == archivePrefix {
+			icon = archiveIcon
+		}
 		nest := ""
-		if tid, ok := trashedID(r.id); ok {
+		if id, ok := archivedID(r.id); ok {
+			nest, name = "↳ ", strings.TrimPrefix(name, "↳ ")
+			if nb := m.archivedNotebook(id); nb != nil && nb.Parent != nil && m.archivedNotebook(*nb.Parent) != nil {
+				// A sub notebook in the archive with its parent, under it.
+				nest, name = "  ↳ ", nb.Name
+			}
+		} else if tid, ok := trashedID(r.id); ok {
 			nest, name = "↳ ", strings.TrimPrefix(name, "↳ ")
 			if nb := m.trashedNotebook(tid); nb != nil && nb.Parent != nil {
 				// A sub notebook deleted with its parent, under it.
@@ -605,7 +624,7 @@ func (m Model) renderNotebooks(w, h int) string {
 			continue
 		}
 		st := lipgloss.NewStyle().Foreground(m.th.fg)
-		if r.id == trashNotebook {
+		if r.id == trashNotebook || inArchive(r.id) {
 			st = m.th.style(m.th.dim)
 		}
 		lines = append(lines, " "+st.Render(line))
@@ -640,6 +659,10 @@ func kindIcon(kind string) string {
 // selector for the emoji presentation.
 const trashIcon = "\U0001F6AE"
 
+// archiveIcon is the icon of the archive: a package, an emoji drawn as one by
+// default, two cells wide as the trash.
+const archiveIcon = "\U0001F4E6"
+
 // iconWidth is the width of the column of the icons in the notebook column:
 // the icons of the kinds are wide characters.
 const iconWidth = 2
@@ -660,6 +683,18 @@ func (m Model) notebookName(id string) string {
 	if t, ok := tagOf(id); ok {
 		return "# " + t
 	}
+	if id == archivePrefix {
+		return m.tr.t("notebook.archive")
+	}
+	if aid, ok := archivedID(id); ok {
+		if nb := m.archivedNotebook(aid); nb != nil {
+			if nb.Parent != nil && m.archivedNotebook(*nb.Parent) != nil {
+				return m.notebookName(archivePrefix+*nb.Parent) + " / " + nb.Name
+			}
+			return "↳ " + strings.TrimPrefix(m.notebookName(aid), "↳ ")
+		}
+		return "↳ " + aid
+	}
 	if tid, ok := trashedID(id); ok {
 		if nb := m.trashedNotebook(tid); nb != nil {
 			if nb.Parent != nil {
@@ -669,7 +704,11 @@ func (m Model) notebookName(id string) string {
 		}
 		return "↳ " + tid
 	}
-	if nb := m.notebookOf(id); nb != nil {
+	nb := m.notebookOf(id)
+	if nb == nil {
+		nb = m.archivedNotebook(id) // as where a note is
+	}
+	if nb != nil {
 		if nb.Parent != nil {
 			return m.notebookName(*nb.Parent) + " / " + nb.Name
 		}
@@ -727,7 +766,7 @@ func (m Model) notebookLabel(id string) string {
 			}
 		}
 	}
-	for _, nb := range m.notebooks {
+	for _, nb := range slices.Concat(m.notebooks, m.archived) {
 		if nb.ID == id {
 			if icon := kindIcon(nb.Kind); icon != "" {
 				return m.notebookName(id) + " " + icon
@@ -844,7 +883,7 @@ func (m Model) renderFooter() string {
 		}
 		hints = append(hints, [2]string{"q", "key.quit"})
 	case focusNotebooks:
-		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"m", "key.moveNotebook"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
+		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"m", "key.moveNotebook"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"x", "key.archive"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		if m.toMove != nil || m.nbToMove != nil {
 			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.moveHere"}, {"esc", "key.cancel"}}
 			break
@@ -854,6 +893,13 @@ func (m Model) renderFooter() string {
 		}
 		if _, ok := trashedID(m.selectedRow().id); ok && !m.sideTags {
 			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"u", "key.restore"}, {"d", "key.deletePermanently"}, {"T", "key.tags"}, {"q", "key.quit"}}
+		}
+		if id := m.selectedRow().id; inArchive(id) && !m.sideTags {
+			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}}
+			if nb := m.archivedNotebook(strings.TrimPrefix(id, archivePrefix)); nb != nil && nb.ArchivedAt != nil {
+				hints = append(hints, [2]string{"x", "key.unarchive"})
+			}
+			hints = append(hints, [2]string{"T", "key.tags"}, [2]string{"n", "key.newNote"}, [2]string{"q", "key.quit"})
 		}
 		if m.sideTags {
 			hints = [][2]string{{"j/k", "key.tag"}, {"enter", "key.notes"}, {"T", "key.notebooks"}, {"n", "key.newNote"}, {"q", "key.quit"}}
@@ -886,6 +932,13 @@ func (m Model) renderFooter() string {
 		}
 		if m.note != nil && m.note.Notebook == trashNotebook {
 			hints = append(hints, [2]string{"u", "key.restore"}, [2]string{"m", "key.moveTo"})
+		}
+		if n := m.note; n != nil && n.Notebook != trashNotebook && m.archivedNotebook(n.Notebook) == nil {
+			if n.ArchivedAt != nil {
+				hints = append(hints, [2]string{"x", "key.unarchive"})
+			} else {
+				hints = append(hints, [2]string{"x", "key.archive"})
+			}
 		}
 		if !m.computeLayout().showNotebooks {
 			if m.sideTags {
