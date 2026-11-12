@@ -35,6 +35,14 @@ The button shows only when the ebira server finds Claude Code (`claude`): the se
 
 If you registered ebira in the local scope of a project before (`--scope local`, the default of `claude mcp add`), that project uses that one. Run `claude mcp remove ebira -s local` in the directory of the project to use the one of the user scope.
 
+### After updating ebira
+
+A new version of ebira may change the arguments and the answers of its MCP tools. A Claude Code session that is running keeps the descriptions of the tools it read when it connected, and may call them as they were and fail ("unknown field", or an answer that does not match its schema). After updating ebira, reconnect running sessions with `/mcp`; if that does not help, start the session again.
+
+### Checking the connection
+
+To have an AI check that it is connected to ebira, have it use a tool that always answers, such as `list_notebooks`. Reading a note that does not exist with `get_note` leaves an error each time, which makes real failures harder to tell apart.
+
 ## Keeping the notes away from Claude Code
 
 The kinds of notebooks (private and the others) hold only for AI that goes through the MCP of ebira. Claude Code also has tools that read and write files, and a shell: reading the note files directly, it would see private notes too. To keep the notes away from Claude Code and have it handle them only through MCP, set up these three:

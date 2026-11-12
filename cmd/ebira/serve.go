@@ -347,7 +347,7 @@ func runServe(args []string) error {
 
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w; %s", err, addrHint())
 	}
 	// No WriteTimeout: the event stream (/events) and MCP streams stay open.
 	srv := &http.Server{
@@ -364,7 +364,7 @@ func runServe(args []string) error {
 	// and the TUI, the web UI and MCP clients would never reach this one.
 	if err := daemon.CheckSelf(ctx, *addr, state.PID, selfCheckWait); err != nil {
 		srv.Close()
-		return fmt.Errorf("%w; choose another address with -addr or addr in the settings file", err)
+		return fmt.Errorf("%w; %s", err, addrHint())
 	}
 	if err := daemon.WriteState(stateDir, state); err != nil {
 		return err
@@ -578,4 +578,16 @@ func withBaseURL(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r.WithContext(service.WithBaseURL(r.Context(), "http://"+r.Host)))
 	})
+}
+
+// addrHint tells what to do when the server cannot have its address, as when
+// another program uses the port: where to choose another, and that the MCP
+// clients, whose URL has the address, are to be registered again.
+func addrHint() string {
+	where := "addr in the settings file"
+	if p, err := config.Path(); err == nil {
+		where += " (" + p + ")"
+	}
+	return "choose another address, such as localhost:13580, with -addr, " + where + " or addr in the defaults of " + store.ConfigFile +
+		", then register ebira again with the MCP clients, as its URL has the address (ebira mcp add for Claude Code)"
 }

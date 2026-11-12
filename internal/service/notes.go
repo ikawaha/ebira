@@ -1164,7 +1164,12 @@ func (s *Notes) CreateAiNote(ctx context.Context, p *gennotes.CreateAiNotePayloa
 	if err := s.requireKind(p.Notebook, store.KindCollab, store.KindDrop); err != nil {
 		return nil, err
 	}
-	return s.create(ctx, &gennotes.CreatePayload{Notebook: &p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body}, store.CreatedByAI)
+	res, err := s.create(ctx, &gennotes.CreatePayload{Notebook: &p.Notebook, Title: p.Title, Tags: p.Tags, Body: p.Body}, store.CreatedByAI)
+	if err != nil {
+		return nil, err
+	}
+	res.Body = "" // the client sent it, so it is left out of the result
+	return res, nil
 }
 
 // UpdateAiNote updates a note for an AI client. The note must be in a notebook
@@ -1185,8 +1190,8 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 	body := p.Body
 	// An empty list of edits is none, as MCP clients may send one.
 	if p.Append != nil || len(p.Edits) > 0 {
-		if body != nil || (p.Append != nil && len(p.Edits) > 0) {
-			return nil, gennotes.MakeBadRequest(errors.New("give one of body, append and edits"))
+		if body != nil {
+			return nil, gennotes.MakeBadRequest(errors.New("give body alone, or append and edits without body"))
 		}
 		// The body is changed from the version the client read, which the
 		// update checks again.
@@ -1224,12 +1229,6 @@ func (s *Notes) UpdateAiNote(ctx context.Context, p *gennotes.UpdateAiNotePayloa
 // order, all or none: the old text of each must appear exactly once in the
 // body as the edits before it left it.
 func changedBody(body string, appended *string, edits []*gennotes.NoteEdit) (string, error) {
-	if appended != nil {
-		if body != "" && !strings.HasSuffix(body, "\n") {
-			body += "\n"
-		}
-		return body + *appended, nil
-	}
 	for i, e := range edits {
 		switch c := strings.Count(body, e.Old); c {
 		case 1:
@@ -1239,6 +1238,12 @@ func changedBody(body string, appended *string, edits []*gennotes.NoteEdit) (str
 		default:
 			return "", fmt.Errorf("edit %d: the old text appears %d times in the body; give more of the text around it; nothing was changed", i+1, c)
 		}
+	}
+	if appended != nil {
+		if body != "" && !strings.HasSuffix(body, "\n") {
+			body += "\n"
+		}
+		body += *appended
 	}
 	return body, nil
 }

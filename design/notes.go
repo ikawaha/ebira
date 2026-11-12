@@ -1066,7 +1066,7 @@ var _ = Service("notes", func() {
 	// edit notes with create, update and delete.
 	Method("create_ai_note", func() {
 		NoSecurity()
-		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note gets a random ID, which the result has, and is marked as created by AI (created_by).")
+		Description("Create a note in a notebook of the collab kind, which people share with AI, or add one to a notebook of the drop kind, such as an inbox, whose notes AI clients cannot see and therefore cannot update or delete. Other notebooks are read-only for AI clients: use list_notebooks to find the notebooks whose kind is collab or drop. The note gets a random ID, which the result has, and is marked as created by AI (created_by). The result leaves out the body (it comes back empty), as the client sent it.")
 		Payload(func() {
 			RequiredAttribute("notebook", String, "ID of a notebook of the collab or drop kind", notebookIDDSL)
 			RequiredAttribute("title", String, "Title", func() {
@@ -1078,7 +1078,7 @@ var _ = Service("notes", func() {
 		Result(Note)
 		Error("bad_request", ErrorResult, "The notebook is invalid")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
-		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only")
+		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only. The result has the new ID and version, and leaves out the body")
 	})
 
 	Method("import_ai_note", func() {
@@ -1162,7 +1162,7 @@ var _ = Service("notes", func() {
 
 	Method("update_ai_note", func() {
 		NoSecurity()
-		Description("Update a note in a notebook of the collab kind. Omitted attributes are left unchanged. The version from get_note is required, so that changes made by people meanwhile are not overwritten. Setting notebook moves the note to another notebook of the collab kind. The body is changed in one of three ways, one at a time: body replaces it as a whole, append adds text at its end, and edits replace parts of it, without sending the whole body again. The edits apply in order, all or none: each old text must appear exactly once in the body as the edits before it left it, else nothing is changed.")
+		Description("Update a note in a notebook of the collab kind. Omitted attributes are left unchanged. The version from get_note is required, so that changes made by people meanwhile are not overwritten. Setting notebook moves the note to another notebook of the collab kind. The body is changed in one of two ways: body replaces it as a whole, or edits replace parts of it and append adds text at its end, without sending the whole body again; edits and append may come together, the edits applied first. The edits apply in order, all or none: each old text must appear exactly once in the body as the edits before it left it, else nothing is changed.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("version", String, "Version of the note as returned by get_note")
@@ -1183,10 +1183,10 @@ var _ = Service("notes", func() {
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid, more than one of body, append and edits is given, or the old text of an edit does not appear exactly once")
+		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid, body is given with append or edits, or the old text of an edit does not appear exactly once")
 		Error("forbidden", ErrorResult, "The note, or the notebook to move it to, is not of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
-		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) or append instead of sending the whole body, and brief to leave the body out of the result")
+		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result")
 	})
 
 	Method("delete_ai_note", func() {
