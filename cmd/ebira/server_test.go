@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,5 +167,27 @@ func TestServerStatusJSON(t *testing.T) {
 	}
 	if got.NotesDir != dir || got.Running || got.State != nil {
 		t.Errorf("serverStatusJSON(%q) = %+v, want the directory, not running, without a state", dir, got)
+	}
+}
+
+// A server whose address another program has fails, telling how to choose
+// another and to register ebira again with the MCP clients.
+func TestServeAddrInUse(t *testing.T) {
+	home := setupEnv(t)
+	t.Setenv("XDG_STATE_HOME", filepath.Join(home, "state"))
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, "cache"))
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	err = runServe([]string{"-notes", filepath.Join(home, "notes"), "-addr", ln.Addr().String(), "-watch=false"})
+	if err == nil {
+		t.Fatal("no error with the address in use")
+	}
+	for _, want := range []string{"-addr", "settings file", "ebira mcp add"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error lacks %q: %v", want, err)
+		}
 	}
 }
