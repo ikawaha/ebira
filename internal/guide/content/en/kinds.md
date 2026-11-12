@@ -15,4 +15,4 @@ The Inbox starts as drop. This guide is default, so an AI asked how to use ebira
 
 - Notes an AI made have the mark of a plover (✦ in the TUI).
 - Making a private notebook visible asks first.
-- The limits hold for AI clients that go through the API of ebira, not for those that read the note files directly. Claude Code can be denied the notes directory in its settings ([Using AI](ai.md)).
+- The limits hold for AI clients that go through the API of ebira, not for those that read the note files directly. How to keep the notes away from Claude Code is in [Using AI](ai.md).

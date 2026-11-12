@@ -35,9 +35,15 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 
 前にローカルのスコープ（`--scope local`。そのプロジェクトだけで、`claude mcp add` の既定）で登録していると、そのプロジェクトではそちらが使われます。そのプロジェクトのディレクトリで `claude mcp remove ebira -s local` を実行すると、ユーザーのスコープの登録が使われます。
 
-## Claude Code にノートのファイルを触らせない
+## Claude Code からノートを切り離す
 
-ノートブックの種別（private など）の決まりは、ebira の MCP を通るときにだけ効きます。Claude Code はファイルを読み書きする道具やシェルも持っているので、ノートのディレクトリを直接読めば、private のノートも見えます。MCP だけでノートを扱わせるには、Claude Code の設定で、ノートのディレクトリを読む・書くことを禁じます。
+ノートブックの種別（private など）の決まりは、ebira の MCP を通るときにだけ効きます。Claude Code はファイルを読み書きする道具やシェルも持っているので、ノートのファイルを直接読めば、private のノートも見えます。ノートを Claude Code から切り離し、MCP だけで扱わせるには、次の 3 つを設定します。
+
+1. ノートと ebira のファイルを、Claude Code に読み書きさせない（Claude Code の設定）
+2. ebira を MCP のサーバーとして登録する（Claude Code の設定。上の「Claude Code に登録する」）
+3. パスキーを設定する（ebira の設定。[パスキー](passkey.md)）
+
+### 1. ファイルを読ませない
 
 ユーザーの設定 `~/.claude/settings.json` に次のように書くと、どのプロジェクトでも効きます（`~/notes` は、自分のノートのディレクトリ（設定ファイルの `notes_dir`）に置き換えてください）。
 
@@ -45,7 +51,12 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 {
   "permissions": {
     "allow": ["mcp__ebira__*"],
-    "deny": ["Read(~/notes/**)", "Edit(~/notes/**)"],
+    "deny": [
+      "Read(~/notes/**)", "Edit(~/notes/**)",
+      "Read(~/.cache/ebira/**)", "Edit(~/.cache/ebira/**)",
+      "Read(~/.local/state/ebira/**)", "Edit(~/.local/state/ebira/**)",
+      "Edit(~/.config/ebira/**)"
+    ],
     "disableBypassPermissionsMode": "disable"
   },
   "sandbox": {
@@ -53,19 +64,39 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
     "allowUnsandboxedCommands": false,
     "failIfUnavailable": true,
     "filesystem": {
-      "denyRead": ["~/notes"],
-      "denyWrite": ["~/notes"]
+      "denyRead": ["~/notes", "~/.cache/ebira", "~/.local/state/ebira"],
+      "denyWrite": ["~/notes", "~/.cache/ebira", "~/.local/state/ebira", "~/.config/ebira"]
     }
   }
 }
 ```
 
-- `permissions.deny`: ファイルを読む道具（Read・Grep・Glob と、シェルの `cat` などのよく使うコマンド）と、書く道具（Edit・Write など）に、ノートのディレクトリを使わせません。deny はほかの設定の allow より先に効きます。パスは `~/` か `//`（絶対パス）で書きます。`/` 1 つで始めると、設定ファイルの場所からのパスになります。
+- ノートのディレクトリのほかに、ebira が使う 3 つの場所も禁じます。
+  - `~/.cache/ebira`: 検索の索引。ノートの題名と本文を持っています。
+  - `~/.local/state/ebira`: ノートの前の版（履歴）と、パスキーとセッションの鍵。
+  - `~/.config/ebira`: 設定ファイル。書き換えられると、`auth: none` に戻されてしまうので、書くことを禁じます。
+  - `XDG_CACHE_HOME`・`XDG_STATE_HOME`・`XDG_CONFIG_HOME` を変えていれば、その場所にします。
+- `permissions.deny`: ファイルを読む道具（Read・Grep・Glob と、シェルの `cat` などのよく使うコマンド）と、書く道具（Edit・Write など）に、これらの場所を使わせません。deny はほかの設定の allow より先に効きます。パスは `~/` か `//`（絶対パス）で書きます。`/` 1 つで始めると、設定ファイルの場所からのパスになります。
 - `permissions.allow`: ebira の MCP のツールを、毎回確かめずに使わせます（確かめたいなら書かない）。
-- `sandbox`: シェルのコマンドを OS のサンドボックスの中で動かし、ノートのディレクトリを読み書きさせません。deny の決まりは、ファイルの名前を書かないコマンド（ノートのディレクトリでの `grep -r`）や、自分でファイルを開くスクリプト（Python など）には効かないので、これで防ぎます。`allowUnsandboxedCommands: false` は、サンドボックスの外でやり直すことを、`failIfUnavailable` は、サンドボックスが使えないときに外で動かすことを止めます。
+- `sandbox`: シェルのコマンドを OS のサンドボックスの中で動かし、これらの場所を読み書きさせません。deny の決まりは、ファイルの名前を書かないコマンド（ノートのディレクトリでの `grep -r`）や、自分でファイルを開くスクリプト（Python など）には効かないので、これで防ぎます。`allowUnsandboxedCommands: false` は、サンドボックスの外でやり直すことを、`failIfUnavailable` は、サンドボックスが使えないときに外で動かすことを止めます。
 - `disableBypassPermissionsMode`: 確かめと決まりを飛ばすモード（`--dangerously-skip-permissions`）を使えなくします。
 
-ebira の MCP のサーバーは、Claude Code の外で動く別のプロセスなので、これらの決まりに関係なくノートを扱えます（それが目的です）。
+ebira のサーバーは、Claude Code の外で動く別のプロセスなので、これらの決まりに関係なくノートを扱えます（それが目的です）。
+
+### 2. MCP を登録する
+
+上の「Claude Code に登録する」のとおりです。Claude Code は MCP を通してだけノートを扱い、種別の決まり（private は見えない、collab にだけ書ける）が効きます。
+
+### 3. パスキーを設定する
+
+サンドボックスの中からも、ebira のサーバー（`http://localhost:13579`）には届きます。既定（`auth: none`）の ebira は、REST API の呼び出しをすべて人として扱うので、Claude Code がシェルから REST API を呼べば、private のノートも読み書きできてしまいます。
+
+パスキーを設定する（`auth: passkey`）と、REST API はパスキーでログインしたセッションのある呼び出しだけを受け付けます。MCP は今までどおり AI として使えます。設定のしかたは[パスキー](passkey.md)のとおりです。
+
+- ebira のコマンド（`ebira sync` など）も、Web UI での承認を求めるようになります。Claude Code が出した承認の URL やコードは、承認しないでください。
+- パスキーの代わりに、Claude Code のサンドボックスのネットワークの設定で、ebira のサーバーへの接続を禁じる方法もあります。設定はそれだけで済みますが、Claude Code から手元のサーバー（開発中の別のサーバーなど）につなげなくなることがあります。環境が許せば、こちらのほうが簡単です。書き方は Claude Code の説明（sandboxing のネットワーク）を見てください。
+
+### 気をつけること
 
 - サンドボックスは macOS・Linux・WSL2 で動きます。Windows では、シェルのコマンドはサンドボックスなしで動くので、deny の決まりだけになります。
 - Claude Code のプロンプトで `!` を付けて自分で打ったコマンドは、サンドボックスの外で動きます。
