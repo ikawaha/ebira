@@ -208,3 +208,25 @@ func TestConnectRemote(t *testing.T) {
 		}
 	}
 }
+
+// The theme the page tells is kept for the frame of the main window, which
+// waits for it before it follows the page.
+func TestPageTheme(t *testing.T) {
+	s := &shell{}
+	if got := s.theme.Load(); got != themeUnknown {
+		t.Fatalf("before the page tells: %d", got)
+	}
+	for _, tt := range []struct {
+		msg  string
+		want int32
+	}{
+		{`{"type":"theme","dark":true}`, themeDark},
+		{`{"type":"theme","dark":false}`, themeLight},
+		{`{"type":"theme"}`, themeLight},
+	} {
+		s.onPageMessage(tt.msg)
+		if got := s.theme.Load(); got != tt.want {
+			t.Errorf("%s: theme %d, want %d", tt.msg, got, tt.want)
+		}
+	}
+}

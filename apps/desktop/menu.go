@@ -145,6 +145,7 @@ func (s *shell) onPageMessage(data string) {
 		pageState
 		Text string `json:"text"`
 		URL  string `json:"url"`
+		Dark bool   `json:"dark"` // theme: whether the page is dark
 		// download: a part of a file to save
 		ID   string `json:"id"`
 		Name string `json:"name"`
@@ -158,6 +159,8 @@ func (s *shell) onPageMessage(data string) {
 	switch m.Type {
 	case "state":
 		s.notes.update(m.pageState)
+	case "theme": // the theme the page shows (tellTheme)
+		s.pageTheme(m.Dark)
 	case "openURL": // a link to open in the browser
 		s.openURL(m.URL)
 	case "restart": // the mark of an outdated server (markOutdated)

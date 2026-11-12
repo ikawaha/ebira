@@ -133,6 +133,13 @@ func markDownloaded(path string) error {
 // runs in each page.
 func watchReady(*application.WebviewWindow) {}
 
+// themeFrame does nothing on macOS, whose title bar is hidden and shows the
+// page: the frame follows the system's appearance.
+func themeFrame(*application.WebviewWindow, bool) {}
+
+// watchSystemTheme does nothing on macOS (see themeFrame).
+func watchSystemTheme(*application.App, func()) {}
+
 // saveFrame is left to AppKit on macOS (showMain).
 func saveFrame(*application.WebviewWindow) {}
 

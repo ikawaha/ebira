@@ -44,9 +44,10 @@ const leaveFor = toApp + `.postMessage(` + leaves + ` ? "ebira:switch" : "ebira:
 type shell struct {
 	app       *application.App
 	messages  map[string]string
-	notes     *noteMenu   // the items of the menus that depend on the page
-	leaving   atomic.Bool // the page agreed to go: closing goes through
-	downloads downloads   // the files the page is sending to save
+	notes     *noteMenu    // the items of the menus that depend on the page
+	leaving   atomic.Bool  // the page agreed to go: closing goes through
+	downloads downloads    // the files the page is sending to save
+	theme     atomic.Int32 // the theme of the page: themeUnknown, themeLight or themeDark
 
 	mu       sync.Mutex
 	win      *application.WebviewWindow // the Web UI; nil until a server answers
@@ -84,6 +85,7 @@ func main() {
 	menu := s.appMenu()
 	translateMenu(menu, s.messages)
 	s.app.Menu.Set(menu)
+	watchSystemTheme(s.app, s.applyTheme)
 
 	h, err := connect(s.current)
 	if err != nil {
@@ -232,4 +234,32 @@ func (s *shell) openMain(url string) {
 	s.mu.Lock()
 	s.win = win
 	s.mu.Unlock()
+}
+
+// The themes of the page that pageTheme takes.
+const (
+	themeUnknown int32 = iota // no word from the page, as from a server of an earlier build
+	themeLight
+	themeDark
+)
+
+// pageTheme takes the theme the page shows, for the frame of the main window,
+// which follows the system's otherwise: a page dark on a light system would
+// have a light title bar.
+func (s *shell) pageTheme(dark bool) {
+	t := themeLight
+	if dark {
+		t = themeDark
+	}
+	s.theme.Store(t)
+	s.applyTheme()
+}
+
+// applyTheme gives the frame of the main window the theme of its page, once
+// the page has told it.
+func (s *shell) applyTheme() {
+	t := s.theme.Load()
+	if win := s.main(); win != nil && t != themeUnknown {
+		themeFrame(win, t == themeDark)
+	}
 }
