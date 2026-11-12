@@ -1658,7 +1658,7 @@ func (registryDeclarations) field115() *genregistry.ToolFieldMetadata {
 
 // schema116 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema116() *genregistry.ToolSchema {
-	registryText1 := "Get the full content of a note by ID"
+	registryText1 := "Get the full content of a note by ID, as found with search_notes or list_notes; read the notes a search finds before answering from them"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.get_note",
 		Description:            &registryText1,
@@ -1669,16 +1669,16 @@ func (declarations registryDeclarations) schema116() *genregistry.ToolSchema {
 			Kind:  "service",
 			Title: "Get Note",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 14,
-				Terms:  map[string]int{"a": 1, "by": 1, "content": 1, "ebira": 1, "full": 1, "get": 3, "id": 1, "note": 3, "of": 1, "the": 1},
+				Length: 32,
+				Terms:  map[string]int{"a": 2, "answering": 1, "as": 1, "before": 1, "by": 1, "content": 1, "ebira": 1, "finds": 1, "found": 1, "from": 1, "full": 1, "get": 3, "id": 1, "list": 1, "note": 3, "notes": 3, "of": 1, "or": 1, "read": 1, "search": 2, "the": 2, "them": 1, "with": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
 				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-				Description:     "Get the full content of a note by ID",
+				Description:     "Get the full content of a note by ID, as found with search_notes or list_notes; read the notes a search finds before answering from them",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 14,
-					Terms:  map[string]int{"a": 1, "by": 1, "content": 1, "ebira": 1, "full": 1, "get": 3, "id": 1, "note": 3, "of": 1, "the": 1},
+					Length: 32,
+					Terms:  map[string]int{"a": 2, "answering": 1, "as": 1, "before": 1, "by": 1, "content": 1, "ebira": 1, "finds": 1, "found": 1, "from": 1, "full": 1, "get": 3, "id": 1, "list": 1, "note": 3, "notes": 3, "of": 1, "or": 1, "read": 1, "search": 2, "the": 2, "them": 1, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"q\":{\"description\":\"Search query to highlight, as search takes it; its tags are not highlighted\",\"maxLength\":1000,\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 				Payload:       declarations.metadata145(),
@@ -5017,7 +5017,7 @@ func (registryDeclarations) field347() *genregistry.ToolFieldMetadata {
 
 // schema348 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema348() *genregistry.ToolSchema {
-	registryText1 := "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either"
+	registryText1 := "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.search_notes",
 		Description:            &registryText1,
@@ -5028,16 +5028,16 @@ func (declarations registryDeclarations) schema348() *genregistry.ToolSchema {
 			Kind:  "service",
 			Title: "Search Notes",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 74,
-				Terms:  map[string]int{"a": 4, "and": 2, "any": 1, "are": 2, "as": 2, "asks": 1, "before": 1, "between": 1, "capitals": 1, "combined": 1, "ebira": 1, "either": 1, "for": 2, "full": 1, "id": 1, "in": 3, "it": 1, "japanese": 1, "leaves": 1, "list": 1, "mark": 2, "marks": 1, "minus": 1, "name": 3, "notes": 4, "of": 1, "or": 4, "out": 1, "over": 1, "pasta": 1, "phrase": 1, "pizza": 1, "require": 2, "search": 3, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 1, "them": 1, "to": 2, "two": 2, "use": 1, "with": 2, "word": 1, "words": 1},
+				Length: 109,
+				Terms:  map[string]int{"a": 5, "and": 3, "answering": 1, "any": 1, "are": 2, "as": 2, "asking": 1, "asks": 1, "before": 2, "between": 1, "capitals": 1, "combined": 1, "decisions": 1, "down": 1, "ebira": 1, "either": 1, "first": 1, "for": 2, "from": 1, "full": 1, "general": 1, "has": 1, "here": 1, "id": 1, "in": 3, "it": 1, "japanese": 1, "knowledge": 1, "leaves": 1, "list": 1, "mark": 2, "marks": 1, "may": 1, "memos": 1, "minus": 1, "name": 3, "notes": 4, "of": 2, "or": 5, "out": 1, "own": 1, "past": 1, "pasta": 1, "phrase": 1, "pizza": 1, "question": 1, "records": 1, "require": 2, "s": 1, "search": 5, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 4, "their": 1, "them": 1, "to": 2, "touch": 1, "two": 2, "use": 1, "user": 3, "what": 1, "when": 1, "with": 2, "word": 1, "words": 1, "work": 1, "written": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
 				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
-				Description:     "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either",
+				Description:     "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 74,
-					Terms:  map[string]int{"a": 4, "and": 2, "any": 1, "are": 2, "as": 2, "asks": 1, "before": 1, "between": 1, "capitals": 1, "combined": 1, "ebira": 1, "either": 1, "for": 2, "full": 1, "id": 1, "in": 3, "it": 1, "japanese": 1, "leaves": 1, "list": 1, "mark": 2, "marks": 1, "minus": 1, "name": 3, "notes": 4, "of": 1, "or": 4, "out": 1, "over": 1, "pasta": 1, "phrase": 1, "pizza": 1, "require": 2, "search": 3, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 1, "them": 1, "to": 2, "two": 2, "use": 1, "with": 2, "word": 1, "words": 1},
+					Length: 109,
+					Terms:  map[string]int{"a": 5, "and": 3, "answering": 1, "any": 1, "are": 2, "as": 2, "asking": 1, "asks": 1, "before": 2, "between": 1, "capitals": 1, "combined": 1, "decisions": 1, "down": 1, "ebira": 1, "either": 1, "first": 1, "for": 2, "from": 1, "full": 1, "general": 1, "has": 1, "here": 1, "id": 1, "in": 3, "it": 1, "japanese": 1, "knowledge": 1, "leaves": 1, "list": 1, "mark": 2, "marks": 1, "may": 1, "memos": 1, "minus": 1, "name": 3, "notes": 4, "of": 2, "or": 5, "out": 1, "own": 1, "past": 1, "pasta": 1, "phrase": 1, "pizza": 1, "question": 1, "records": 1, "require": 2, "s": 1, "search": 5, "see": 1, "supported": 1, "tag": 3, "terms": 2, "text": 1, "the": 4, "their": 1, "them": 1, "to": 2, "touch": 1, "two": 2, "use": 1, "user": 3, "what": 1, "when": 1, "with": 2, "word": 1, "words": 1, "work": 1, "written": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"limit\":{\"default\":20,\"description\":\"Maximum number of notes\",\"format\":\"int64\",\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"notebook\":{\"description\":\"Only notes in this notebook and in its sub notebooks. Omit for all notebooks except the trash\",\"example\":\"inbox\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"q\":{\"description\":\"Search terms separated by spaces, combined with AND. \\\"two words\\\" in double quotes is a phrase, matched in that order. tag:name, or tag:\\\"a name\\\", asks for notes with the tag (case and width do not matter), and mark:red, or mark:\\\"a name\\\", for notes with the mark, by its ID or the name the user gave it. A minus before a term, a phrase, a tag or a mark, as in -word, -\\\"two words\\\", -tag:name and -mark:red, leaves out the notes with it. OR in capitals between two of them, as in pizza OR pasta or tag:a OR tag:b, asks for notes with either, binding closer than AND. A query of tags and marks alone, or of what to leave out alone, lists the notes found, last updated first\",\"maxLength\":1000,\"minLength\":1,\"type\":\"string\"},\"tag\":{\"description\":\"Only notes with this tag\",\"type\":\"string\"}},\"required\":[\"q\"],\"type\":\"object\"}"),
 				Payload:       declarations.metadata381(),

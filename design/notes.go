@@ -535,7 +535,7 @@ var _ = Service("notes", func() {
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
 		})
-		Tool("get_note", "Get the full content of a note by ID", func() {
+		Tool("get_note", "Get the full content of a note by ID, as found with search_notes or list_notes; read the notes a search finds before answering from them", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -675,7 +675,7 @@ var _ = Service("notes", func() {
 			Param("tag")
 			Param("limit")
 		})
-		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either", func() {
+		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either", func() {
 			ReadOnlyHint(true)
 		})
 	})
