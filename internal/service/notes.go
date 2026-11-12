@@ -1267,7 +1267,12 @@ func (s *Notes) MoveAiNote(ctx context.Context, p *gennotes.MoveAiNotePayload) (
 	if err := s.requireAINotebook(n.Notebook); err != nil {
 		return nil, err
 	}
-	return s.moveNote(ctx, &gennotes.MovePayload{ID: p.ID, After: p.After})
+	res, err := s.moveNote(ctx, &gennotes.MovePayload{ID: p.ID, After: p.After})
+	if err != nil {
+		return nil, err
+	}
+	res.Body = "" // a move does not change the body, so it is left out of the result
+	return res, nil
 }
 
 // notebooks lists the notebooks: inbox first, then the others by order, name

@@ -535,7 +535,7 @@ var _ = Service("notes", func() {
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
 		})
-		Tool("get_note", "Get the full content of a note by ID", func() {
+		Tool("get_note", "Get the full content of a note by ID, as found with search_notes or list_notes; read the notes a search finds before answering from them", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -675,7 +675,7 @@ var _ = Service("notes", func() {
 			Param("tag")
 			Param("limit")
 		})
-		Tool("search_notes", "Full-text search over notes. Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either", func() {
+		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -1148,7 +1148,7 @@ var _ = Service("notes", func() {
 
 	Method("move_ai_note", func() {
 		NoSecurity()
-		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
+		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. The result leaves out the body (it comes back empty), as the move does not change it. Notes of other notebooks are ordered by people only.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("after", String, separatorAfterDesc, noteIDDSL)
@@ -1157,7 +1157,7 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "after is not another note or a separator of the note's notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first")
+		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body")
 	})
 
 	Method("create_ai_separator", func() {

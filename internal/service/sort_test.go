@@ -242,7 +242,7 @@ func TestMoveAiNote(t *testing.T) {
 	}
 	for i, id := range []string{"a", "b", "c"} {
 		now = base.Add(time.Duration(i) * time.Minute)
-		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("shared"), Title: id}); err != nil {
+		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("shared"), Title: id, Body: ptr("body of " + id)}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -274,6 +274,13 @@ func TestMoveAiNote(t *testing.T) {
 	}
 	if want := store.FormatTime(base.Add(2 * time.Minute)); n.UpdatedAt != want {
 		t.Errorf("updated_at changed: %v", n.UpdatedAt)
+	}
+	// The result leaves out the body, which the move keeps.
+	if n.Body != "" || n.Title != "c" || n.Version == "" {
+		t.Errorf("result: body %q, title %q, version %q", n.Body, n.Title, n.Version)
+	}
+	if got, err := svc.Get(ai, &gennotes.GetPayload{ID: "c"}); err != nil || got.Body != "body of c" || got.Version != n.Version {
+		t.Errorf("after the move: %+v, %v", got, err)
 	}
 	if got := order(); !slices.Equal(got, []string{"b", "a", "c"}) {
 		t.Errorf("after the move: %v", got)
