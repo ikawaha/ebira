@@ -166,6 +166,20 @@ type Service interface {
 	// in other notebooks are read-only for AI clients; to add a note with images
 	// to a notebook of the drop kind, use import_ai_note.
 	AddAiFile(context.Context, *AddAiFilePayload) (res *NoteFile, err error)
+	// Begin adding a file of at most 5 MB to a note in a notebook of the collab
+	// kind, sent as is rather than base64-encoded as with add_ai_file: the result
+	// is a URL for one upload, valid for 10 minutes. Send the file in the body of
+	// a PUT request to the URL, such as with curl -sS -T <file> <url>; the
+	// response is the JSON of add_ai_file, with the name and the path of the file.
+	// The name is cleaned up as with add_ai_file. Refer to the file from the body
+	// with the returned path, with update_ai_note: ![description](path) for an
+	// image and [name](path) for another file. A client that cannot run commands
+	// uses add_ai_file.
+	StartAiUpload(context.Context, *StartAiUploadPayload) (res *AIUpload, err error)
+	// Add a file to a note for an AI client, with a URL from start_ai_upload. The
+	// request body is the file, at most 5 MB. A URL works once, until it expires;
+	// the note must still be in a notebook of the collab kind.
+	UploadAiFile(context.Context, *UploadAiFilePayload, io.ReadCloser) (res *NoteFile, err error)
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
 	// people meanwhile are not overwritten. Setting notebook moves the note to
@@ -318,7 +332,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [56]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+var MethodNames = [58]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -346,6 +360,16 @@ type AIImportFile struct {
 	Name string
 	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
 	Content []byte
+}
+
+// AIUpload is the result type of the notes service start_ai_upload method.
+type AIUpload struct {
+	// The URL to send the file to, in the body of a PUT request
+	URL string
+	// When the URL stops working
+	ExpiresAt string
+	// The largest file the URL takes, in bytes
+	MaxSize int64
 }
 
 // AddAiFilePayload is the payload type of the notes service add_ai_file method.
@@ -1296,6 +1320,17 @@ type SettingsPayload struct {
 	Session *string
 }
 
+// StartAiUploadPayload is the payload type of the notes service
+// start_ai_upload method.
+type StartAiUploadPayload struct {
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID string
+	// File name
+	Name string
+}
+
 // A stop list of the ja search mode
 type StopList struct {
 	// default for the list of kagome's ja filter, from Lucene; none for no list;
@@ -1482,6 +1517,15 @@ type UpdateSeparatorPayload struct {
 	Color *string
 }
 
+// UploadAiFilePayload is the payload type of the notes service upload_ai_file
+// method.
+type UploadAiFilePayload struct {
+	// Not used
+	Session *string
+	// The token of the upload, from the URL start_ai_upload gave
+	Token string
+}
+
 // MakeUnauthorized builds a goa.ServiceError from an error.
 func MakeUnauthorized(err error) *goa.ServiceError {
 	return goa.NewServiceError(err, "unauthorized", false, false, false)
@@ -1525,6 +1569,26 @@ func MakeTooLarge(err error) *goa.ServiceError {
 // MakeUnavailable builds a goa.ServiceError from an error.
 func MakeUnavailable(err error) *goa.ServiceError {
 	return goa.NewServiceError(err, "unavailable", false, false, false)
+}
+
+// aIUploadInt64Transport stores JSON fields until they have been validated.
+type aIUploadInt64Transport int64
+
+// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
+// declared range. Decimal and exponent spellings do not change its value.
+func (value *aIUploadInt64Transport) UnmarshalJSON(data []byte) error {
+	number, err := rawjson.DecodeInteger[int64](data)
+	if err != nil {
+		return fmt.Errorf("decode aIUploadInt64Transport integer: %w", err)
+	}
+	*value = aIUploadInt64Transport(number)
+	return nil
+}
+
+// ValidateaIUploadInt64Transport checks decoded JSON before it becomes a service value.
+func ValidateaIUploadInt64Transport(value aIUploadInt64Transport) (err error) {
+
+	return err
 }
 
 // fileCheckInt64Transport stores JSON fields until they have been validated.
@@ -1619,6 +1683,36 @@ func validatejsonAIImportFileTransport(value *jsonAIImportFileTransport) (err er
 		if utf8.RuneCountInString(*value.Name) > 255 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *value.Name, utf8.RuneCountInString(*value.Name), 255, false))
 		}
+	}
+	return err
+}
+
+// jsonAIUploadTransport stores JSON fields until they have been validated.
+type jsonAIUploadTransport struct {
+	// The URL to send the file to, in the body of a PUT request
+	URL *string `json:"url"`
+	// When the URL stops working
+	ExpiresAt *string `json:"expires_at"`
+	// The largest file the URL takes, in bytes
+	MaxSize *aIUploadInt64Transport `json:"max_size"`
+}
+
+// validatejsonAIUploadTransport checks decoded JSON before it becomes a service value.
+func validatejsonAIUploadTransport(value *jsonAIUploadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if value.ExpiresAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("expires_at", "body"))
+	}
+	if value.MaxSize == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("max_size", "body"))
+	}
+	if value.ExpiresAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.expires_at", *value.ExpiresAt, goa.FormatDateTime))
 	}
 	return err
 }
@@ -3038,6 +3132,12 @@ func validateAIImportFileOriginal(value *AIImportFile) (err error) {
 	return err
 }
 
+// validateAIUploadOriginal checks the original typed value before JSON conversion.
+func validateAIUploadOriginal(value *AIUpload) (err error) {
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.expires_at", value.ExpiresAt, goa.FormatDateTime))
+	return err
+}
+
 // validateBrokenFileRefOriginal checks the original typed value before JSON conversion.
 func validateBrokenFileRefOriginal(value *BrokenFileRef) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
@@ -3521,6 +3621,97 @@ func DecodeAIImportFile(data []byte) (out *AIImportFile, err error) {
 			Ref:     *body.Ref,
 			Name:    *body.Name,
 			Content: body.Content,
+		}
+	}
+	return out, nil
+}
+
+// EncodeAIUpload turns a service value into JSON using the field names in the Goa design.
+func EncodeAIUpload(in *AIUpload) ([]byte, error) {
+	if err := checkAIUploadValue(in); err != nil {
+		return nil, fmt.Errorf("encode AIUpload JSON: %w", err)
+	}
+	if err := validateAIUploadOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate AIUpload value: %w", err)
+	}
+	var body *jsonAIUploadTransport
+	{
+		body = &jsonAIUploadTransport{
+			URL:       &in.URL,
+			ExpiresAt: &in.ExpiresAt,
+		}
+		maxSize := aIUploadInt64Transport(in.MaxSize)
+		body.MaxSize = &maxSize
+	}
+	if err := validatejsonAIUploadTransport(body); err != nil {
+		return nil, fmt.Errorf("validate AIUpload JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode AIUpload JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateAIUploadValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateAIUploadValue(in *AIUpload) error {
+	if err := checkAIUploadValue(in); err != nil {
+		return fmt.Errorf("validate AIUpload value: %w", err)
+	}
+	if err := validateAIUploadOriginal(in); err != nil {
+		return fmt.Errorf("validate AIUpload value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "AIUpload")
+	}
+
+	var body *jsonAIUploadTransport
+	{
+		body = &jsonAIUploadTransport{
+			URL:       &in.URL,
+			ExpiresAt: &in.ExpiresAt,
+		}
+		maxSize := aIUploadInt64Transport(in.MaxSize)
+		body.MaxSize = &maxSize
+	}
+	if err := validatejsonAIUploadTransport(body); err != nil {
+		return fmt.Errorf("validate AIUpload value: %w", err)
+	}
+	return nil
+}
+
+// DecodeAIUpload checks JSON field names from the Goa design and returns a service value.
+func DecodeAIUpload(data []byte) (out *AIUpload, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode AIUpload JSON: %w", err)
+	}
+	if err := validateAIUploadJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode AIUpload JSON: %w", err)
+	}
+	var body *jsonAIUploadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode AIUpload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode AIUpload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode AIUpload JSON after first value: %w", err)
+	}
+	if err := validatejsonAIUploadTransport(body); err != nil {
+		return out, fmt.Errorf("validate AIUpload JSON: %w", err)
+	}
+	{
+		out = &AIUpload{
+			URL:       *body.URL,
+			ExpiresAt: *body.ExpiresAt,
+			MaxSize:   int64(*body.MaxSize),
 		}
 	}
 	return out, nil
@@ -7047,6 +7238,74 @@ func validateAIImportFileJSONValue3(path string, value any, description string) 
 	return nil
 }
 
+// validateAIUploadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIUploadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "expires_at":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the URL stops working",
+			); err != nil {
+				return err
+			}
+		case "max_size":
+			if err := validateAIUploadJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The largest file the URL takes, in bytes",
+			); err != nil {
+				return err
+			}
+		case "url":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The URL to send the file to, in the body of a PUT request",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"expires_at",
+				"max_size",
+				"url",
+			})
+		}
+	}
+	return nil
+}
+
+// validateAIUploadJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIUploadJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	_, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	return nil
+}
+
 // validateBrokenFileRefJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateBrokenFileRefJSONValue(path string, value any, description string) error {
 	field := path
@@ -7260,7 +7519,7 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 				return err
 			}
 		case "size":
-			if err := validateFileCheckJSONValue6(
+			if err := validateAIUploadJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Size in bytes",
 			); err != nil {
@@ -7301,22 +7560,6 @@ func validateFileCheckJSONValue5(path string, value any, description string) err
 	_, ok := value.(bool)
 	if !ok {
 		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateFileCheckJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateFileCheckJSONValue6(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
-	}
-	_, ok := value.(json.Number)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -9707,6 +9950,39 @@ func checkAIImportFileAIImportFileValue(in *AIImportFile, field string, active m
 		}
 		if !utf8.ValidString(string(in.Name)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+	}
+	return nil
+}
+
+// checkAIUploadValue checks text and cycles before conversion.
+func checkAIUploadValue(in *AIUpload) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkAIUploadAIUploadValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkAIUploadAIUploadValue checks one generated value on the active path.
+func checkAIUploadAIUploadValue(in *AIUpload, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.URL)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
+		}
+		if !utf8.ValidString(string(in.ExpiresAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "expires_at", false))
 		}
 	}
 	return nil

@@ -254,6 +254,22 @@ func SearchNotesResultCodec() tools.JSONCodec[*SearchNotesResult] {
 	}
 }
 
+// StartAiUploadPayloadCodec returns a fresh codec for *StartAiUploadPayload.
+func StartAiUploadPayloadCodec() tools.JSONCodec[*StartAiUploadPayload] {
+	return tools.JSONCodec[*StartAiUploadPayload]{
+		ToJSON:   MarshalStartAiUploadPayload,
+		FromJSON: UnmarshalStartAiUploadPayload,
+	}
+}
+
+// StartAiUploadResultCodec returns a fresh codec for *StartAiUploadResult.
+func StartAiUploadResultCodec() tools.JSONCodec[*StartAiUploadResult] {
+	return tools.JSONCodec[*StartAiUploadResult]{
+		ToJSON:   MarshalStartAiUploadResult,
+		FromJSON: UnmarshalStartAiUploadResult,
+	}
+}
+
 // UpdateAiNotePayloadCodec returns a fresh codec for *UpdateAiNotePayload.
 func UpdateAiNotePayloadCodec() tools.JSONCodec[*UpdateAiNotePayload] {
 	return tools.JSONCodec[*UpdateAiNotePayload]{
@@ -662,6 +678,32 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalSearchNotesResult(data)
+		},
+	}
+	// startAiUploadPayloadCodec provides an untyped codec for *StartAiUploadPayload.
+	startAiUploadPayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*StartAiUploadPayload); ok {
+				return MarshalStartAiUploadPayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *StartAiUploadPayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalStartAiUploadPayload(data)
+		},
+	}
+	// startAiUploadResultCodec provides an untyped codec for *StartAiUploadResult.
+	startAiUploadResultCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*StartAiUploadResult); ok {
+				return MarshalStartAiUploadResult(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *StartAiUploadResult: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalStartAiUploadResult(data)
 		},
 	}
 	// updateAiNotePayloadCodec provides an untyped codec for *UpdateAiNotePayload.
@@ -2031,6 +2073,41 @@ var searchNotesResultFields = []tools.FieldMetadata{
 		Description: "Offset just past the last character",
 	},
 }
+var startAiUploadPayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "File name",
+	},
+}
+var startAiUploadResultFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "The URL to send the file to, in the body of a PUT request",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("expires_at")},
+		JSONType:    "string",
+		Description: "When the URL stops working",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("max_size")},
+		JSONType:    "integer",
+		Description: "The largest file the URL takes, in bytes",
+	},
+}
 var updateAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		JSONType: "object",
@@ -2778,6 +2855,40 @@ func enrichSearchNotesResultValidationError(err error) error {
 	m := make(map[string]string)
 	for _, is := range issues {
 		if field, ok := tools.LookupFieldMetadata(searchNotesResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichStartAiUploadPayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(startAiUploadPayloadFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichStartAiUploadResultValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(startAiUploadResultFields, is.Field); ok && field.Description != "" {
 			m[is.Field] = field.Description
 		}
 	}
@@ -3730,6 +3841,68 @@ func invalidSearchNotesResultFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(searchNotesResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidStartAiUploadPayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "StartAiUploadPayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(startAiUploadPayloadFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidStartAiUploadResultFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "StartAiUploadResultTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(startAiUploadResultFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -5482,6 +5655,92 @@ func UnmarshalSearchNotesResult(data []byte) (*SearchNotesResult, error) {
 	return out, nil
 }
 
+// MarshalStartAiUploadPayload serializes *StartAiUploadPayload into JSON.
+func MarshalStartAiUploadPayload(v *StartAiUploadPayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("startAiUploadPayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.StartAiUploadPayloadTransport
+	out = &toolhttp.StartAiUploadPayloadTransport{
+		ID:   &in.ID,
+		Name: &in.Name,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalStartAiUploadPayload deserializes JSON into *StartAiUploadPayload.
+func UnmarshalStartAiUploadPayload(data []byte) (*StartAiUploadPayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("startAiUploadPayload JSON is empty")
+	}
+	var tv toolhttp.StartAiUploadPayloadTransport
+	if err := validateStartAiUploadPayloadJSON(data); err != nil {
+		return nil, invalidStartAiUploadPayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidStartAiUploadPayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateStartAiUploadPayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichStartAiUploadPayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *StartAiUploadPayload
+	out = &StartAiUploadPayload{
+		ID:   *in.ID,
+		Name: *in.Name,
+	}
+	return out, nil
+}
+
+// MarshalStartAiUploadResult serializes *StartAiUploadResult into JSON.
+func MarshalStartAiUploadResult(v *StartAiUploadResult) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("startAiUploadResult is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.StartAiUploadResultTransport
+	out = &toolhttp.StartAiUploadResultTransport{
+		URL:       &in.URL,
+		ExpiresAt: &in.ExpiresAt,
+		MaxSize:   &in.MaxSize,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalStartAiUploadResult deserializes JSON into *StartAiUploadResult.
+func UnmarshalStartAiUploadResult(data []byte) (*StartAiUploadResult, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("startAiUploadResult JSON is empty")
+	}
+	var tv toolhttp.StartAiUploadResultTransport
+	if err := validateStartAiUploadResultJSON(data); err != nil {
+		return nil, invalidStartAiUploadResultFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidStartAiUploadResultFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateStartAiUploadResultTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichStartAiUploadResultValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *StartAiUploadResult
+	out = &StartAiUploadResult{
+		URL:       *in.URL,
+		ExpiresAt: *in.ExpiresAt,
+		MaxSize:   *in.MaxSize,
+	}
+	return out, nil
+}
+
 // MarshalUpdateAiNotePayload serializes *UpdateAiNotePayload into JSON.
 func MarshalUpdateAiNotePayload(v *UpdateAiNotePayload) ([]byte, error) {
 	if v == nil {
@@ -5952,6 +6211,26 @@ func validateAddAiFileResultJSON(data []byte) error {
 		return err
 	}
 	return validateAddAiFileResultJSONValue("", root, "")
+}
+
+// validateStartAiUploadPayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateStartAiUploadPayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateStartAiUploadPayloadJSONValue("", root, "")
+}
+
+// validateStartAiUploadResultJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateStartAiUploadResultJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateStartAiUploadResultJSONValue("", root, "")
 }
 
 // validateUpdateAiNotePayloadJSON parses one JSON document and checks the exact value
@@ -7680,6 +7959,121 @@ func validateAddAiFileResultJSONValue(path string, value any, description string
 				"path",
 			})
 		}
+	}
+	return nil
+}
+
+// validateStartAiUploadPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateStartAiUploadPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"id",
+				"name",
+			})
+		}
+	}
+	return nil
+}
+
+// validateStartAiUploadResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateStartAiUploadResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "expires_at":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the URL stops working",
+			); err != nil {
+				return err
+			}
+		case "max_size":
+			if err := validateInt64JSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The largest file the URL takes, in bytes",
+			); err != nil {
+				return err
+			}
+		case "url":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The URL to send the file to, in the body of a PUT request",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"expires_at",
+				"max_size",
+				"url",
+			})
+		}
+	}
+	return nil
+}
+
+// validateInt64JSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateInt64JSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "null", description)
+	}
+	typed, ok := value.(json.Number)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "integer", decodedJSONType(value), description)
+	}
+	if _, err := strconv.ParseInt(typed.String(), 10, 64); err != nil {
+		return invalidGeneratedFieldTypeError(field, "integer", "number", description)
 	}
 	return nil
 }

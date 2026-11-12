@@ -34,7 +34,7 @@ func TestMCPTools(t *testing.T) {
 	want := []string{
 		"add_ai_file", "create_ai_note", "create_ai_notebook", "create_ai_separator", "delete_ai_note", "delete_ai_separator",
 		"get_note", "import_ai_note", "list_marks", "list_notebooks", "list_notes", "list_tags", "make_notebook_private",
-		"move_ai_note", "move_ai_separator", "search_notes", "update_ai_note", "update_ai_separator",
+		"move_ai_note", "move_ai_separator", "search_notes", "start_ai_upload", "update_ai_note", "update_ai_separator",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("MCP tools = %v, want %v", got, want)

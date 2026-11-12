@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-request|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -200,6 +200,11 @@ func ParseEndpoint(
 		notesImportContentTypeFlag = new(cliStringFlag)
 		notesImportSessionFlag     = new(cliStringFlag)
 		notesImportStreamFlag      = new(cliStringFlag)
+
+		notesUploadAiFileFlags       = flag.NewFlagSet("upload-ai-file", flag.ExitOnError)
+		notesUploadAiFileTokenFlag   = new(cliStringFlag)
+		notesUploadAiFileSessionFlag = new(cliStringFlag)
+		notesUploadAiFileStreamFlag  = new(cliStringFlag)
 
 		notesAddFileFlags       = flag.NewFlagSet("add-file", flag.ExitOnError)
 		notesAddFileIDFlag      = new(cliStringFlag)
@@ -387,6 +392,9 @@ func ParseEndpoint(
 	notesImportFlags.Var(notesImportContentTypeFlag, "content-type", "")
 	notesImportFlags.Var(notesImportSessionFlag, "session", "")
 	notesImportFlags.Var(notesImportStreamFlag, "stream", "path to file containing the streamed request body")
+	notesUploadAiFileFlags.Var(notesUploadAiFileTokenFlag, "token", "The token of the upload, from the URL start_ai_upload gave")
+	notesUploadAiFileFlags.Var(notesUploadAiFileSessionFlag, "session", "")
+	notesUploadAiFileFlags.Var(notesUploadAiFileStreamFlag, "stream", "path to file containing the streamed request body")
 	notesAddFileFlags.Var(notesAddFileIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesAddFileFlags.Var(notesAddFileNameFlag, "name", "")
 	notesAddFileFlags.Var(notesAddFileSessionFlag, "session", "")
@@ -465,6 +473,7 @@ func ParseEndpoint(
 	notesDeleteTrashedNotebookFlags.Usage = notesDeleteTrashedNotebookUsage
 	notesEmptyTrashFlags.Usage = notesEmptyTrashUsage
 	notesImportFlags.Usage = notesImportUsage
+	notesUploadAiFileFlags.Usage = notesUploadAiFileUsage
 	notesAddFileFlags.Usage = notesAddFileUsage
 	notesGetFileFlags.Usage = notesGetFileUsage
 	notesDeleteFileFlags.Usage = notesDeleteFileUsage
@@ -622,6 +631,9 @@ func ParseEndpoint(
 
 			case "import":
 				epf = notesImportFlags
+
+			case "upload-ai-file":
+				epf = notesUploadAiFileFlags
 
 			case "add-file":
 				epf = notesAddFileFlags
@@ -840,6 +852,16 @@ func ParseEndpoint(
 						data, err = notesc.BuildImportStreamPayload(data, *notesImportStreamFlag.value)
 					}
 				}
+			case "upload-ai-file":
+				endpoint = c.UploadAiFile()
+				data, err = notesc.BuildUploadAiFilePayload(notesUploadAiFileTokenFlag.value, notesUploadAiFileSessionFlag.value)
+				if err == nil {
+					if notesUploadAiFileStreamFlag.value == nil {
+						err = fmt.Errorf("missing required flag --stream")
+					} else {
+						data, err = notesc.BuildUploadAiFileStreamPayload(data, *notesUploadAiFileStreamFlag.value)
+					}
+				}
 			case "add-file":
 				endpoint = c.AddFile()
 				data, err = notesc.BuildAddFilePayload(notesAddFileIDFlag.value, notesAddFileNameFlag.value, notesAddFileSessionFlag.value)
@@ -989,6 +1011,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes and sub notebooks.`)
 	fmt.Fprintln(os.Stderr, `    empty-trash: Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
 	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them. The request body is multipart/form-data: the fields name (the file name), content (the Markdown file, at most 5 MB) and modified_at (optional; the modification time of the file, for the times the front matter does not give, in RFC 3339), then, for each image, a field ref with the path as the file refers to it, followed by a file field file with the image, whose file name is the name of the image. The images are streamed to disk, each up to 50 MB and 1 GB in all; nothing is imported when the request is cut off. A JSON body with the attributes name, content, modified_at, notebook, force and files (the images, each with ref, name and the content base64-encoded) is accepted as well.`)
+	fmt.Fprintln(os.Stderr, `    upload-ai-file: Add a file to a note for an AI client, with a URL from start_ai_upload. The request body is the file, at most 5 MB. A URL works once, until it expires; the note must still be in a notebook of the collab kind.`)
 	fmt.Fprintln(os.Stderr, `    add-file: Add a file to a note. The request body is the file, of any type, at most 50 MB. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path: ![description](path) shows an image, and [name](path) links to a file.`)
 	fmt.Fprintln(os.Stderr, `    get-file: Get a file of a note. The response body is the file. Images (PNG, JPEG, GIF and WebP, told by their content) and PDF files are served as their type to be shown; other files, which might run scripts if shown, as application/octet-stream to be downloaded.`)
 	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it.`)
@@ -1605,6 +1628,28 @@ func notesImportUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes import --notebook \"inbox\" --force false --content-type \"multipart/form-data; boundary=x\" --session \"Et labore.\" --stream \"goa.png\"")
+}
+
+func notesUploadAiFileUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes upload-ai-file", os.Args[0])
+	fmt.Fprint(os.Stderr, " -token STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprint(os.Stderr, " -stream STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Add a file to a note for an AI client, with a URL from start_ai_upload. The request body is the file, at most 5 MB. A URL works once, until it expires; the note must still be in a notebook of the collab kind.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -token STRING: The token of the upload, from the URL start_ai_upload gave`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+	fmt.Fprintln(os.Stderr, `    -stream STRING: path to file containing the streamed request body`)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes upload-ai-file --token \"Earum veniam quia.\" --session \"Ratione sint error ad.\" --stream \"goa.png\"")
 }
 
 func notesAddFileUsage() {

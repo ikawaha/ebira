@@ -4218,6 +4218,220 @@ func BuildImportStreamPayload(payload any, fpath string) (*notes.ImportRequestDa
 	}, nil
 }
 
+// BuildUploadAiFileRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "upload_ai_file" endpoint
+func (c *Client) BuildUploadAiFileRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		token string
+		body  io.Reader
+	)
+	{
+		rd, ok := v.(*notes.UploadAiFileRequestData)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "upload_ai_file", "notes.UploadAiFileRequestData", v)
+		}
+		p := rd.Payload
+		body = rd.Body
+		token = p.Token
+	}
+
+	rawPath := fmt.Sprintf("/uploads/%v", url.PathEscape(fmt.Sprint(token)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: UploadAiFileNotesPath(token), RawPath: rawPath}
+	req, err := http.NewRequest("PUT", u.String(), body)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "upload_ai_file", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeUploadAiFileRequest returns an encoder for requests sent to the notes
+// upload_ai_file server.
+func EncodeUploadAiFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		data, ok := v.(*notes.UploadAiFileRequestData)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "upload_ai_file", "*notes.UploadAiFileRequestData", v)
+		}
+		p := data.Payload
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodeUploadAiFileResponse returns a decoder for responses returned by the
+// notes upload_ai_file endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+// DecodeUploadAiFileResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "forbidden" (type *goa.ServiceError): http.StatusForbidden
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - "too_large" (type *goa.ServiceError): http.StatusRequestEntityTooLarge
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - error: internal error
+func DecodeUploadAiFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "upload_ai_file", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusCreated:
+			var (
+				body UploadAiFileResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			err = ValidateUploadAiFileResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+			}
+			res := NewUploadAiFileNoteFileCreated(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body UploadAiFileNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			err = ValidateUploadAiFileNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+			}
+			return nil, NewUploadAiFileNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body UploadAiFileBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			err = ValidateUploadAiFileBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+			}
+			return nil, NewUploadAiFileBadRequest(&body)
+		case http.StatusForbidden:
+			en := resp.Header.Get("goa-error")
+			switch en {
+			case "forbidden":
+				var (
+					body UploadAiFileForbiddenResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+				}
+				err = ValidateUploadAiFileForbiddenResponseBody(&body)
+				if err != nil {
+					return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+				}
+				return nil, NewUploadAiFileForbidden(&body)
+			case "verification_required":
+				var (
+					body UploadAiFileVerificationRequiredResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+				}
+				err = ValidateUploadAiFileVerificationRequiredResponseBody(&body)
+				if err != nil {
+					return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+				}
+				return nil, NewUploadAiFileVerificationRequired(&body)
+			default:
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+				}
+				return nil, goahttp.ErrInvalidResponse("notes", "upload_ai_file", resp.StatusCode, string(body))
+			}
+		case http.StatusRequestEntityTooLarge:
+			var (
+				body UploadAiFileTooLargeResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			err = ValidateUploadAiFileTooLargeResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+			}
+			return nil, NewUploadAiFileTooLarge(&body)
+		case http.StatusUnauthorized:
+			var (
+				body UploadAiFileUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			err = ValidateUploadAiFileUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "upload_ai_file", err)
+			}
+			return nil, NewUploadAiFileUnauthorized(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "upload_ai_file", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "upload_ai_file", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// // BuildUploadAiFileStreamPayload creates a streaming endpoint request payload
+// from the method payload and the path to the file to be streamed
+func BuildUploadAiFileStreamPayload(payload any, fpath string) (*notes.UploadAiFileRequestData, error) {
+	f, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+	return &notes.UploadAiFileRequestData{
+		Payload: payload.(*notes.UploadAiFilePayload),
+		Body:    f,
+	}, nil
+}
+
 // BuildAddFileRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "add_file" endpoint
 func (c *Client) BuildAddFileRequest(ctx context.Context, v any) (*http.Request, error) {

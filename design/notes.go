@@ -139,6 +139,17 @@ var NoteFile = Type("NoteFile", func() {
 	})
 })
 
+// AIUpload is a URL for an AI client to send one file to (start_ai_upload).
+var AIUpload = Type("AIUpload", func() {
+	RequiredAttribute("url", String, "The URL to send the file to, in the body of a PUT request", func() {
+		Example("http://localhost:13579/uploads/2AFNWOF6NIQGEDS4QQ5JQCCRBM")
+	})
+	RequiredAttribute("expires_at", String, "When the URL stops working", timeDSL)
+	RequiredAttribute("max_size", Int64, "The largest file the URL takes, in bytes", func() {
+		Example(5 << 20)
+	})
+})
+
 // NoteVersionTrait is the attributes that NoteVersion and
 // NoteVersionSummary share.
 var NoteVersionTrait = func() {
@@ -456,7 +467,9 @@ var _ = Service("notes", func() {
 	//     (update_ai_note), and read the names of the marks (list_marks).
 	//   - They may add images and other files to notes in notebooks of the
 	//     collab kind (add_ai_file), and send images with a new note (import_ai_note),
-	//     in smaller sizes than people.
+	//     in smaller sizes than people. Clients with a shell may send a file
+	//     as is instead of in base64: start_ai_upload gives a URL for one file,
+	//     which upload_ai_file (PUT /uploads/{token}, not a tool) takes.
 	// Never add Tool to create_notebook or save_notebook, which set any kind,
 	// or to create, update, delete and import, which are for people. Reading,
 	// deleting and checking the files of notes (get_file, delete_file,
@@ -1101,7 +1114,50 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
 		Error("too_large", ErrorResult, "The file is larger than 5 MB")
-		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note")
+		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is")
+	})
+
+	Method("start_ai_upload", func() {
+		NoSecurity()
+		Description("Begin adding a file of at most 5 MB to a note in a notebook of the collab kind, sent as is rather than base64-encoded as with add_ai_file: the result is a URL for one upload, valid for 10 minutes. Send the file in the body of a PUT request to the URL, such as with curl -sS -T <file> <url>; the response is the JSON of add_ai_file, with the name and the path of the file. The name is cleaned up as with add_ai_file. Refer to the file from the body with the returned path, with update_ai_note: ![description](path) for an image and [name](path) for another file. A client that cannot run commands uses add_ai_file.")
+		Payload(func() {
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
+			RequiredAttribute("name", String, "File name", func() {
+				MinLength(1)
+				MaxLength(255)
+				Example("chart.png")
+			})
+		})
+		Result(AIUpload)
+		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
+		Tool("start_ai_upload", "Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note")
+	})
+
+	Method("upload_ai_file", func() {
+		NoSecurity()
+		Description("Add a file to a note for an AI client, with a URL from start_ai_upload. The request body is the file, at most 5 MB. A URL works once, until it expires; the note must still be in a notebook of the collab kind.")
+		Payload(func() {
+			// The service reads the cookie on every REST endpoint; here it
+			// is not checked, as the token allows the upload.
+			Attribute("session", String, "Not used")
+			RequiredAttribute("token", String, "The token of the upload, from the URL start_ai_upload gave")
+		})
+		Result(NoteFile)
+		Error("not_found", ErrorResult, "The URL is unknown, used or expired, or the note does not exist or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		Error("forbidden", ErrorResult, "The note is no longer in a notebook of the collab kind")
+		Error("too_large", ErrorResult, "The file is larger than 5 MB")
+		HTTP(func() {
+			PUT("/uploads/{token}")
+			SkipRequestBodyEncodeDecode()
+			Response(StatusCreated)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+			Response("forbidden", StatusForbidden)
+			Response("too_large", StatusRequestEntityTooLarge)
+		})
 	})
 
 	Method("update_ai_note", func() {

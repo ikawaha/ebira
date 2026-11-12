@@ -149,6 +149,11 @@ func ImportNotesPath() string {
 	return "/import"
 }
 
+// UploadAiFileNotesPath returns the URL path to the notes service upload_ai_file HTTP endpoint.
+func UploadAiFileNotesPath(token string) string {
+	return fmt.Sprintf("/uploads/%v", token)
+}
+
 // AddFileNotesPath returns the URL path to the notes service add_file HTTP endpoint.
 func AddFileNotesPath(id string) string {
 	return fmt.Sprintf("/notes/%v/files", id)

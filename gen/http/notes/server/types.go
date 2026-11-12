@@ -690,6 +690,16 @@ type ImportResponseBody struct {
 	Warnings []string `form:"warnings" json:"warnings" xml:"warnings"`
 }
 
+// UploadAiFileResponseBody is the type of the "notes" service "upload_ai_file"
+// endpoint HTTP response body.
+type UploadAiFileResponseBody struct {
+	// File name
+	Name string `form:"name" json:"name" xml:"name"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path string `form:"path" json:"path" xml:"path"`
+}
+
 // AddFileResponseBody is the type of the "notes" service "add_file" endpoint
 // HTTP response body.
 type AddFileResponseBody struct {
@@ -2763,6 +2773,115 @@ type ImportVerificationRequiredResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// UploadAiFileNotFoundResponseBody is the type of the "notes" service
+// "upload_ai_file" endpoint HTTP response body for the "not_found" error.
+type UploadAiFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiFileBadRequestResponseBody is the type of the "notes" service
+// "upload_ai_file" endpoint HTTP response body for the "bad_request" error.
+type UploadAiFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiFileForbiddenResponseBody is the type of the "notes" service
+// "upload_ai_file" endpoint HTTP response body for the "forbidden" error.
+type UploadAiFileForbiddenResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiFileVerificationRequiredResponseBody is the type of the "notes"
+// service "upload_ai_file" endpoint HTTP response body for the
+// "verification_required" error.
+type UploadAiFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiFileTooLargeResponseBody is the type of the "notes" service
+// "upload_ai_file" endpoint HTTP response body for the "too_large" error.
+type UploadAiFileTooLargeResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiFileUnauthorizedResponseBody is the type of the "notes" service
+// "upload_ai_file" endpoint HTTP response body for the "unauthorized" error.
+type UploadAiFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // AddFileNotFoundResponseBody is the type of the "notes" service "add_file"
 // endpoint HTTP response body for the "not_found" error.
 type AddFileNotFoundResponseBody struct {
@@ -4515,6 +4634,16 @@ func NewImportResponseBody(res *notes.ImportResult) *ImportResponseBody {
 	return body
 }
 
+// NewUploadAiFileResponseBody builds the HTTP response body from the result of
+// the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileResponseBody(res *notes.NoteFile) *UploadAiFileResponseBody {
+	body := &UploadAiFileResponseBody{
+		Name: res.Name,
+		Path: res.Path,
+	}
+	return body
+}
+
 // NewAddFileResponseBody builds the HTTP response body from the result of the
 // "add_file" endpoint of the "notes" service.
 func NewAddFileResponseBody(res *notes.NoteFile) *AddFileResponseBody {
@@ -6206,6 +6335,90 @@ func NewImportVerificationRequiredResponseBody(res *goa.ServiceError) *ImportVer
 	return body
 }
 
+// NewUploadAiFileNotFoundResponseBody builds the HTTP response body from the
+// result of the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileNotFoundResponseBody(res *goa.ServiceError) *UploadAiFileNotFoundResponseBody {
+	body := &UploadAiFileNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiFileBadRequestResponseBody builds the HTTP response body from the
+// result of the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileBadRequestResponseBody(res *goa.ServiceError) *UploadAiFileBadRequestResponseBody {
+	body := &UploadAiFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiFileForbiddenResponseBody builds the HTTP response body from the
+// result of the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileForbiddenResponseBody(res *goa.ServiceError) *UploadAiFileForbiddenResponseBody {
+	body := &UploadAiFileForbiddenResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiFileVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileVerificationRequiredResponseBody(res *goa.ServiceError) *UploadAiFileVerificationRequiredResponseBody {
+	body := &UploadAiFileVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiFileTooLargeResponseBody builds the HTTP response body from the
+// result of the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileTooLargeResponseBody(res *goa.ServiceError) *UploadAiFileTooLargeResponseBody {
+	body := &UploadAiFileTooLargeResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiFileUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "upload_ai_file" endpoint of the "notes" service.
+func NewUploadAiFileUnauthorizedResponseBody(res *goa.ServiceError) *UploadAiFileUnauthorizedResponseBody {
+	body := &UploadAiFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewAddFileNotFoundResponseBody builds the HTTP response body from the result
 // of the "add_file" endpoint of the "notes" service.
 func NewAddFileNotFoundResponseBody(res *goa.ServiceError) *AddFileNotFoundResponseBody {
@@ -7218,6 +7431,16 @@ func NewImportPayload(notebook *string, force *bool, contentType *string, sessio
 	v.Notebook = notebook
 	v.Force = force
 	v.ContentType = contentType
+	v.Session = session
+
+	return v
+}
+
+// NewUploadAiFilePayload builds a notes service upload_ai_file endpoint
+// payload.
+func NewUploadAiFilePayload(token string, session *string) *notes.UploadAiFilePayload {
+	v := &notes.UploadAiFilePayload{}
+	v.Token = token
 	v.Session = session
 
 	return v

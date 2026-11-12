@@ -43,6 +43,8 @@ type Notes struct {
 	// settings tells how to check the settings and restart the server (see
 	// SetSettings).
 	settings Settings
+	// uploads are the files AI clients are to send (see StartAiUpload).
+	uploads uploads
 }
 
 var _ gennotes.Service = (*Notes)(nil)
