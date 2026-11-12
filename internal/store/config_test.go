@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestConfig(t *testing.T) {
@@ -23,7 +25,7 @@ func TestConfig(t *testing.T) {
 		{"# shared settings\nsearch: ja  # like, bigram or ja\n", "ja", ""},
 		{"", "", ""},
 		{"# only a comment\n", "", ""},
-		{"serach: ja\n", "", "field serach not found"},
+		{"serach: ja\n", "", "unknown key serach (misspelled, or written by a newer ebira: update ebira)"},
 		{"search: [ja]\n", "", "cannot unmarshal"},
 	}
 	for _, tt := range tests {
@@ -109,5 +111,56 @@ func TestSaveSearch(t *testing.T) {
 	b, _ = os.ReadFile(s.ConfigPath())
 	if strings.Contains(string(b), "search") || strings.Contains(string(b), "stop_") || !strings.Contains(string(b), "red: important") {
 		t.Errorf("defaults:\n%s", b)
+	}
+}
+
+func TestSaveDefaults(t *testing.T) {
+	s, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := "# shared settings\nsearch: ja # mode\ndefaults:\n  # the language\n  lang: ja\nmarks:\n  red: important\n"
+	if err := os.WriteFile(s.ConfigPath(), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	set := func(key, value string) func(m *yaml.Node) {
+		return func(m *yaml.Node) {
+			for i := 0; i+1 < len(m.Content); i += 2 {
+				if m.Content[i].Value == key {
+					if value == "" {
+						m.Content = append(m.Content[:i], m.Content[i+2:]...)
+					} else {
+						m.Content[i+1].Value = value
+					}
+					return
+				}
+			}
+			m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, &yaml.Node{Kind: yaml.ScalarNode, Value: value})
+		}
+	}
+	if err := s.SaveDefaults(set("lang", "en")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveDefaults(set("theme", "dark")); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(s.ConfigPath())
+	want := "# shared settings\nsearch: ja # mode\ndefaults:\n  # the language\n  lang: en\n  theme: dark\nmarks:\n  red: important\n"
+	if string(b) != want {
+		t.Errorf("got:\n%s\nwant:\n%s", b, want)
+	}
+	c, err := s.Config()
+	if err != nil || c.Search != "ja" || c.Defaults.Kind != yaml.MappingNode {
+		t.Errorf("Config: %+v, %v", c, err)
+	}
+	// The defaults left empty are removed.
+	if err := s.SaveDefaults(set("lang", "")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveDefaults(set("theme", "")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(s.ConfigPath()); strings.Contains(string(b), "defaults") {
+		t.Errorf("empty defaults kept:\n%s", b)
 	}
 }

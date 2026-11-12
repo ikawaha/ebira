@@ -381,6 +381,7 @@ var NotesSettings = Type("NotesSettings", func() {
 	})
 	RequiredAttribute("stop_words", StopList, "Stop words of the ja mode")
 	RequiredAttribute("stop_tags", StopList, "Stop parts of speech of the ja mode, each written as the IPA dictionary names of its levels joined by -")
+	Attribute("defaults", MachineSettings, "Defaults of the settings of each machine, which a value in the settings file of a machine wins over. auth is never a default: it is left out. Left out of save_settings, the defaults are kept as they are")
 })
 
 var Settings = Type("Settings", func() {

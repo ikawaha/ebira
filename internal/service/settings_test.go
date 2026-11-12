@@ -132,3 +132,60 @@ func TestSaveSettingsVerification(t *testing.T) {
 		}
 	}
 }
+
+// The defaults of the settings shared with the notes are read and written
+// with the settings synced with the notes; auth is never one of them, and
+// settings without defaults keep them.
+func TestSettingsDefaults(t *testing.T) {
+	t.Setenv(config.Env, filepath.Join(t.TempDir(), "config.yaml"))
+	person := AsPerson(context.Background())
+	svc, dir := newTestService(t)
+	svc.SetSettings(Settings{Check: func(c config.Config) error {
+		if c.Lang == "fr" {
+			return errors.New("unknown lang")
+		}
+		return nil
+	}})
+	shared := "search: ja\ndefaults:\n  # mine\n  addr: localhost:13600\n  lang: en\n"
+	if err := os.WriteFile(filepath.Join(dir, "_ebira.yaml"), []byte(shared), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Settings(person, &gennotes.SettingsPayload{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := got.Notes.Defaults; d == nil || d.Lang == nil || *d.Lang != "en" || got.Machine.Lang != nil {
+		t.Fatalf("defaults = %+v, machine %+v", d, got.Machine)
+	}
+
+	ja, dark, none := "ja", "dark", "none"
+	search := "ja"
+	saved, err := svc.SaveSettings(person, &gennotes.SaveSettingsPayload{
+		Machine: &gennotes.MachineSettings{},
+		Notes:   &gennotes.NotesSettings{Search: &search, StopWords: &gennotes.StopList{Use: "default"}, StopTags: &gennotes.StopList{Use: "default"}, Defaults: &gennotes.MachineSettings{Lang: &ja, Theme: &dark, Auth: &none}},
+		Version: got.Version,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(filepath.Join(dir, "_ebira.yaml"))
+	// addr, which the web UI does not change, is kept; auth is not written.
+	if want := "search: ja\ndefaults:\n  # mine\n  addr: localhost:13600\n  lang: ja\n  theme: dark\n"; string(b) != want {
+		t.Errorf("_ebira.yaml:\n%s\nwant:\n%s", b, want)
+	}
+	if d := saved.Notes.Defaults; d == nil || d.Theme == nil || *d.Theme != "dark" || d.Auth != nil {
+		t.Errorf("saved defaults = %+v", d)
+	}
+
+	// Invalid defaults are refused; settings without defaults keep them.
+	fr := "fr"
+	if _, err := svc.SaveSettings(person, &gennotes.SaveSettingsPayload{Machine: &gennotes.MachineSettings{}, Notes: &gennotes.NotesSettings{StopWords: &gennotes.StopList{Use: "default"}, StopTags: &gennotes.StopList{Use: "default"}, Defaults: &gennotes.MachineSettings{Lang: &fr}}, Version: saved.Version}); errorName(err) != "bad_request" {
+		t.Errorf("invalid defaults = %v, want bad_request", err)
+	}
+	if _, err := svc.SaveSettings(person, &gennotes.SaveSettingsPayload{Machine: &gennotes.MachineSettings{}, Notes: &gennotes.NotesSettings{Search: &search, StopWords: &gennotes.StopList{Use: "default"}, StopTags: &gennotes.StopList{Use: "default"}}, Version: saved.Version}); err != nil {
+		t.Fatal(err)
+	}
+	if b2, _ := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); string(b2) != string(b) {
+		t.Errorf("defaults changed without them:\n%s", b2)
+	}
+}

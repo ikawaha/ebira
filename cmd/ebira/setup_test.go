@@ -22,9 +22,9 @@ func setupEnv(t *testing.T) string {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv(config.Env, "")
 	t.Setenv("LANG", "ja_JP.UTF-8")
-	old, oldFlags, oldLang := settings, setupFlags, setupLang
-	settings, setupFlags, setupLang = config.Config{}, nil, ""
-	t.Cleanup(func() { settings, setupFlags, setupLang = old, oldFlags, oldLang })
+	old, oldMachine, oldFlags, oldLang := settings, machineSettings, setupFlags, setupLang
+	settings, machineSettings, setupFlags, setupLang = config.Config{}, config.Config{}, nil, ""
+	t.Cleanup(func() { settings, machineSettings, setupFlags, setupLang = old, oldMachine, oldFlags, oldLang })
 	return home
 }
 
@@ -84,7 +84,9 @@ func TestSetup(t *testing.T) {
 	cwd := t.TempDir()
 	var out strings.Builder
 
-	// All defaults: ~/notes, no git, ja search, ja for $LANG, saved.
+	// All defaults: ~/notes, no git, ja search, ja for $LANG, saved. New
+	// notes share the language and the address as their defaults; the
+	// settings file has the directory.
 	dir, err := setup(cwd, strings.NewReader("\n\n\n\n\n\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
@@ -93,17 +95,20 @@ func TestSetup(t *testing.T) {
 		t.Errorf("dir: %s, want %s", dir, want)
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml"))
-	if err != nil || string(b) != "search: ja\n" {
+	if err != nil || string(b) != "search: ja\ndefaults:\n  addr: "+fallbackAddr+"\n  lang: ja\n" {
 		t.Errorf("_ebira.yaml: %q, %v", b, err)
 	}
 	b, err = os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml"))
-	if err != nil || string(b) != "notes_dir: ~/notes\naddr: "+fallbackAddr+"\nlang: ja\n" {
+	if err != nil || string(b) != "notes_dir: ~/notes\n" {
 		t.Errorf("config.yaml: %q, %v", b, err)
 	}
 	if c, err := config.Load(); err != nil || c.NotesDir != dir {
 		t.Errorf("Load: %+v, %v", c, err)
 	}
-	if settings.NotesDir != dir || settings.Addr != fallbackAddr || settings.Lang != "ja" || setupFlags != nil {
+	if d, _, err := config.LoadDefaults(dir); err != nil || d.Addr != fallbackAddr || d.Lang != "ja" {
+		t.Errorf("LoadDefaults: %+v, %v", d, err)
+	}
+	if settings.NotesDir != dir || setupFlags != nil {
 		t.Errorf("settings: %+v, flags %v", settings, setupFlags)
 	}
 }
@@ -114,7 +119,8 @@ func TestSetupAnswers(t *testing.T) {
 	var out strings.Builder
 
 	// A relative directory, bigram, en, not saved; a wrong answer is asked
-	// again.
+	// again. The language goes to the defaults of the new notes, which the
+	// server reads, so it needs no flag.
 	dir, err := setup(cwd, strings.NewReader("my notes\n\nmaybe\nbigram\nfr\nEN\nmaybe\nno\ny\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
@@ -122,10 +128,10 @@ func TestSetupAnswers(t *testing.T) {
 	if want := filepath.Join(cwd, "my notes"); dir != want {
 		t.Errorf("dir: %s, want %s", dir, want)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); string(b) != "search: bigram\n" {
+	if b, _ := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); string(b) != "search: bigram\ndefaults:\n  addr: "+fallbackAddr+"\n  lang: en\n" {
 		t.Errorf("_ebira.yaml: %q", b)
 	}
-	if !slices.Equal(setupFlags, []string{"-lang", "en"}) {
+	if setupFlags != nil {
 		t.Errorf("flags of the server: %v", setupFlags)
 	}
 	if setupLang != "en" {
@@ -195,7 +201,7 @@ func TestSetupGit(t *testing.T) {
 	}
 
 	// The first machine: an empty repository, after a wrong URL; the notes
-	// are pushed, and every answer saved.
+	// are pushed with the answers as their defaults, and the directory saved.
 	home := setupEnv(t)
 	cwd := t.TempDir()
 	var out strings.Builder
@@ -208,7 +214,7 @@ func TestSetupGit(t *testing.T) {
 		t.Errorf("output:\n%s", out.String())
 	}
 	b, err := os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml"))
-	if err != nil || !strings.HasSuffix(string(b), "lang: ja\ngit_sync: 10m\n") {
+	if err != nil || string(b) != "notes_dir: "+dir+"\n" {
 		t.Errorf("config.yaml: %q, %v", b, err)
 	}
 	if log, err := exec.Command("git", "-C", remote, "log", "--format=%s", "--all").CombinedOutput(); err != nil || !strings.Contains(string(log), "Update notes") {
@@ -218,22 +224,43 @@ func TestSetupGit(t *testing.T) {
 		t.Errorf("the notes are not a repository: %v", err)
 	}
 
-	// The second machine clones them, with their search mode; not saved,
-	// so the server gets the interval and the language.
+	// The second machine clones them, with their search mode and defaults,
+	// so the interval and the language are not asked; not saved.
 	setupEnv(t)
 	out.Reset()
-	dir, err = setup(cwd, strings.NewReader("second\n"+remote+"\n5m\nen\nn\n\n"), &out)
+	dir, err = setup(cwd, strings.NewReader("second\n"+remote+"\nn\n\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
-	if strings.Contains(out.String(), "Search mode (") || !strings.Contains(out.String(), "Git:          clone "+remote) {
+	if strings.Contains(out.String(), "Search mode (") || strings.Contains(out.String(), "Language of") || strings.Contains(out.String(), "Sync with git automatically") ||
+		!strings.Contains(out.String(), "Git:          clone "+remote) || !strings.Contains(out.String(), "Web UI:       ja, from the defaults of the notes") {
 		t.Errorf("output:\n%s", out.String())
 	}
-	if b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); err != nil || string(b) != "search: ja\n" {
+	if b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); err != nil || string(b) != "search: ja\ndefaults:\n  addr: "+fallbackAddr+"\n  lang: ja\n  git_sync: 10m\n" {
 		t.Errorf("cloned _ebira.yaml: %q, %v", b, err)
 	}
-	if !slices.Equal(setupFlags, []string{"-lang", "en", "-git-sync", "5m"}) {
+	if setupFlags != nil {
 		t.Errorf("flags of the server: %v", setupFlags)
+	}
+
+	// A third machine clones notes without defaults, as of an earlier
+	// build: the interval and the language are asked after cloning, and go
+	// to the flags of the server, as they are not saved.
+	if err := os.WriteFile(filepath.Join(dir, "_ebira.yaml"), []byte("search: ja\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"add", "_ebira.yaml"}, {"commit", "-q", "-m", "no defaults"}, {"push", "-q"}} {
+		if b, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, b)
+		}
+	}
+	setupEnv(t)
+	out.Reset()
+	if _, err := setup(cwd, strings.NewReader("third\n"+remote+"\nn\n\n5m\nen\n"), &out); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !slices.Equal(setupFlags, []string{"-lang", "en", "-git-sync", "5m"}) {
+		t.Errorf("flags of the server: %v\n%s", setupFlags, out.String())
 	}
 }
 
@@ -268,5 +295,38 @@ func TestSyncedFolder(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "The notes are in Dropbox") || strings.Contains(out.String(), "URL of the repository") {
 		t.Errorf("output:\n%s", out.String())
+	}
+}
+
+func TestApplyDefaults(t *testing.T) {
+	setupEnv(t)
+	dir := t.TempDir()
+	shared := "search: ja\ndefaults:\n  lang: ja\n  theme: light\n  model: shared-model\n  watch: false\n  addr: localhost:13600\n  auth: none\n  notes_dir: /elsewhere\n"
+	if err := os.WriteFile(filepath.Join(dir, "_ebira.yaml"), []byte(shared), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The settings file of this machine has its own model; -lang is given.
+	machineSettings = config.Config{Model: "my-model", Auth: "passkey"}
+	settings = machineSettings
+	fs, o := newServeFlags("serve")
+	light := fs.Bool("light", false, "")
+	if err := fs.Parse([]string{"-notes", dir, "-lang", "en"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := notesDirOf(fs, *o.notesDir, false, nil, nil); err != nil || got != dir {
+		t.Fatalf("notesDirOf: %s, %v", got, err)
+	}
+	// The flag and the settings file win; the defaults fill the rest, but
+	// not auth and notes_dir, which belong to a machine.
+	if *o.lang != "en" || *o.model != "my-model" || *o.theme != "light" || *o.watch || *o.addr != "localhost:13600" || !*light || *o.auth != "passkey" {
+		t.Errorf("flags: lang %s, model %s, theme %s, watch %v, addr %s, light %v, auth %s", *o.lang, *o.model, *o.theme, *o.watch, *o.addr, *light, *o.auth)
+	}
+	if settings.Lang != "ja" || settings.Model != "my-model" || settings.Auth != "passkey" || settings.NotesDir != "" {
+		t.Errorf("settings: %+v", settings)
+	}
+	// Only the flags given are recorded, so a restart takes the defaults
+	// again.
+	if flags := setFlags(fs); !slices.Equal(flags, []string{"-lang=en"}) {
+		t.Errorf("setFlags: %v", flags)
 	}
 }

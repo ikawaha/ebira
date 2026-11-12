@@ -1078,6 +1078,10 @@ type NotesSettings struct {
 	// Stop parts of speech of the ja mode, each written as the IPA dictionary
 	// names of its levels joined by -
 	StopTags *StopList
+	// Defaults of the settings of each machine, which a value in the settings file
+	// of a machine wins over. auth is never a default: it is left out. Left out of
+	// save_settings, the defaults are kept as they are
+	Defaults *MachineSettings
 }
 
 // PreviewStyle is the result type of the notes service preview_style method.
@@ -2439,6 +2443,10 @@ type jsonNotesSettingsTransport struct {
 	// Stop parts of speech of the ja mode, each written as the IPA dictionary
 	// names of its levels joined by -
 	StopTags *jsonStopListTransport `json:"stop_tags"`
+	// Defaults of the settings of each machine, which a value in the settings file
+	// of a machine wins over. auth is never a default: it is left out. Left out of
+	// save_settings, the defaults are kept as they are
+	Defaults *jsonMachineSettingsTransport `json:"defaults,omitempty"`
 }
 
 // validatejsonNotesSettingsTransport checks decoded JSON before it becomes a service value.
@@ -2464,6 +2472,11 @@ func validatejsonNotesSettingsTransport(value *jsonNotesSettingsTransport) (err 
 	}
 	if value.StopTags != nil {
 		if err2 := validatejsonStopListTransport(value.StopTags); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if value.Defaults != nil {
+		if err2 := validatejsonMachineSettingsTransport(value.Defaults); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -3326,6 +3339,11 @@ func validateNotesSettingsOriginal(value *NotesSettings) (err error) {
 	}
 	if value.StopTags != nil {
 		if err2 := validateStopListOriginal(value.StopTags); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if value.Defaults != nil {
+		if err2 := validateMachineSettingsOriginal(value.Defaults); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -5433,6 +5451,9 @@ func EncodeNotesSettings(in *NotesSettings) ([]byte, error) {
 		}
 		body.StopWords = encodeStopListToStopListTransport2(in.StopWords)
 		body.StopTags = encodeStopListToStopListTransport(in.StopTags)
+		if in.Defaults != nil {
+			body.Defaults = encodeMachineSettingsToMachineSettingsTransport(in.Defaults)
+		}
 	}
 	if err := validatejsonNotesSettingsTransport(body); err != nil {
 		return nil, fmt.Errorf("validate NotesSettings JSON: %w", err)
@@ -5466,6 +5487,9 @@ func ValidateNotesSettingsValue(in *NotesSettings) error {
 		}
 		body.StopWords = encodeStopListToStopListTransport2(in.StopWords)
 		body.StopTags = encodeStopListToStopListTransport(in.StopTags)
+		if in.Defaults != nil {
+			body.Defaults = encodeMachineSettingsToMachineSettingsTransport(in.Defaults)
+		}
 	}
 	if err := validatejsonNotesSettingsTransport(body); err != nil {
 		return fmt.Errorf("validate NotesSettings value: %w", err)
@@ -5503,6 +5527,9 @@ func DecodeNotesSettings(data []byte) (out *NotesSettings, err error) {
 		}
 		out.StopWords = decodeStopListTransportToStopList(body.StopWords)
 		out.StopTags = decodeStopListTransportToStopList(body.StopTags)
+		if body.Defaults != nil {
+			out.Defaults = decodeMachineSettingsTransportToMachineSettings(body.Defaults)
+		}
 	}
 	return out, nil
 }
@@ -5829,7 +5856,7 @@ func EncodeSettings(in *Settings) ([]byte, error) {
 			RestartUnavailable: in.RestartUnavailable,
 			Passkeys:           &in.Passkeys,
 		}
-		body.Machine = encodeMachineSettingsToMachineSettingsTransport(in.Machine)
+		body.Machine = encodeMachineSettingsToMachineSettingsTransport2(in.Machine)
 		body.Notes = encodeNotesSettingsToNotesSettingsTransport(in.Notes)
 		body.Overridden = make([]string, len(in.Overridden))
 		for i, val := range in.Overridden {
@@ -5879,7 +5906,7 @@ func ValidateSettingsValue(in *Settings) error {
 			RestartUnavailable: in.RestartUnavailable,
 			Passkeys:           &in.Passkeys,
 		}
-		body.Machine = encodeMachineSettingsToMachineSettingsTransport(in.Machine)
+		body.Machine = encodeMachineSettingsToMachineSettingsTransport2(in.Machine)
 		body.Notes = encodeNotesSettingsToNotesSettingsTransport(in.Notes)
 		body.Overridden = make([]string, len(in.Overridden))
 		for i, val := range in.Overridden {
@@ -6655,6 +6682,9 @@ func decodeNotesSettingsTransportToNotesSettings(v *jsonNotesSettingsTransport) 
 	}
 	res.StopWords = decodeStopListTransportToStopList(v.StopWords)
 	res.StopTags = decodeStopListTransportToStopList(v.StopTags)
+	if v.Defaults != nil {
+		res.Defaults = decodeMachineSettingsTransportToMachineSettings(v.Defaults)
+	}
 
 	return res
 }
@@ -6731,6 +6761,21 @@ func encodeGitConflictToGitConflictTransport(v *GitConflict) *jsonGitConflictTra
 }
 
 func encodeMachineSettingsToMachineSettingsTransport(v *MachineSettings) *jsonMachineSettingsTransport {
+	res := &jsonMachineSettingsTransport{
+		Lang:       v.Lang,
+		Theme:      v.Theme,
+		Auth:       v.Auth,
+		GitSync:    v.GitSync,
+		Watch:      v.Watch,
+		Provider:   v.Provider,
+		Model:      v.Model,
+		TuiPreview: v.TuiPreview,
+	}
+
+	return res
+}
+
+func encodeMachineSettingsToMachineSettingsTransport2(v *MachineSettings) *jsonMachineSettingsTransport {
 	res := &jsonMachineSettingsTransport{
 		Lang:       v.Lang,
 		Theme:      v.Theme,
@@ -6843,6 +6888,9 @@ func encodeNotesSettingsToNotesSettingsTransport(v *NotesSettings) *jsonNotesSet
 	}
 	res.StopWords = encodeStopListToStopListTransport2(v.StopWords)
 	res.StopTags = encodeStopListToStopListTransport(v.StopTags)
+	if v.Defaults != nil {
+		res.Defaults = encodeMachineSettingsToMachineSettingsTransport(v.Defaults)
+	}
 
 	return res
 }
@@ -8853,6 +8901,13 @@ func validateNotesSettingsJSONValue(path string, value any, description string) 
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "defaults":
+			if err := validateMachineSettingsJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Defaults of the settings of each machine, which a value in the settings file of a machine wins over. auth is never a default: it is left out. Left out of save_settings, the defaults are kept as they are",
+			); err != nil {
+				return err
+			}
 		case "search":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -8876,6 +8931,7 @@ func validateNotesSettingsJSONValue(path string, value any, description string) 
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"defaults",
 				"search",
 				"stop_tags",
 				"stop_words",
@@ -10573,6 +10629,9 @@ func checkNotesSettingsNotesSettingsValue(in *NotesSettings, field string, activ
 			return err
 		}
 		if err := checkNotesSettingsStopListValue(in.StopTags, generatedJSONChildPath(field, "stop_tags", false), active); err != nil {
+			return err
+		}
+		if err := checkMachineSettingsMachineSettingsValue(in.Defaults, generatedJSONChildPath(field, "defaults", false), active); err != nil {
 			return err
 		}
 	}

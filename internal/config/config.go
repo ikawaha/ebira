@@ -408,20 +408,8 @@ func Update(c Config) (string, error) {
 	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
 		doc = yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}}
 	}
+	SetKeys(doc.Content[0], c, UpdatedKeys)
 	m := doc.Content[0]
-	values := map[string]string{"lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview}
-	for _, k := range UpdatedKeys {
-		var v *yaml.Node
-		switch {
-		case k == "watch":
-			if c.Watch != nil {
-				v = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: fmt.Sprint(*c.Watch)}
-			}
-		case values[k] != "":
-			v = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: values[k]}
-		}
-		setKey(m, k, v)
-	}
 	var buf bytes.Buffer
 	if len(m.Content) > 0 {
 		enc := yaml.NewEncoder(&buf)
@@ -434,6 +422,26 @@ func Update(c Config) (string, error) {
 		}
 	}
 	return Write(buf.Bytes())
+}
+
+// SetKeys sets keys of the mapping node m, of a settings file or of the
+// defaults in _ebira.yaml, to their values in c, keeping the comments of the
+// old values; a zero value removes its key, for the default. keys are of
+// those of the settings file other than notes_dir.
+func SetKeys(m *yaml.Node, c Config, keys []string) {
+	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview}
+	for _, k := range keys {
+		var v *yaml.Node
+		switch {
+		case k == "watch":
+			if c.Watch != nil {
+				v = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: fmt.Sprint(*c.Watch)}
+			}
+		case values[k] != "":
+			v = &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: values[k]}
+		}
+		setKey(m, k, v)
+	}
 }
 
 // setKey sets key of the mapping node m to v, keeping the comments of the old

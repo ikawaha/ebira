@@ -11400,6 +11400,15 @@ definitions:
                 tui_preview: rendered
                 watch: true
             notes:
+                defaults:
+                    auth: none
+                    git_sync: 10m
+                    lang: ja
+                    model: Vel sit soluta aut corporis nostrum.
+                    provider: anthropic
+                    theme: auto
+                    tui_preview: rendered
+                    watch: true
                 search: bigram
                 stop_tags:
                     use: none
@@ -11903,6 +11912,8 @@ definitions:
         title: NotesSettings
         type: object
         properties:
+            defaults:
+                $ref: '#/definitions/MachineSettings'
             search:
                 type: string
                 description: Search mode; empty for bigram. Another mode makes the index again when the server starts, on every machine
@@ -11919,6 +11930,15 @@ definitions:
                 $ref: '#/definitions/StopList'
         description: Settings synced with the notes, in _ebira.yaml of the notes directory, that the web UI changes
         example:
+            defaults:
+                auth: none
+                git_sync: 10m
+                lang: ja
+                model: Vel sit soluta aut corporis nostrum.
+                provider: anthropic
+                theme: auto
+                tui_preview: rendered
+                watch: true
             search: bigram
             stop_tags:
                 use: none
@@ -13271,6 +13291,15 @@ definitions:
                 watch: true
             machine_path: /Users/you/.config/ebira/config.yaml
             notes:
+                defaults:
+                    auth: none
+                    git_sync: 10m
+                    lang: ja
+                    model: Vel sit soluta aut corporis nostrum.
+                    provider: anthropic
+                    theme: auto
+                    tui_preview: rendered
+                    watch: true
                 search: bigram
                 stop_tags:
                     use: none

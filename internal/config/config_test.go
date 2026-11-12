@@ -319,3 +319,60 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("read back = %+v, %v", c, err)
 	}
 }
+
+func TestDefaults(t *testing.T) {
+	setHome(t)
+	dir := t.TempDir()
+	if d, w, err := LoadDefaults(dir); err != nil || d != (Config{}) || w != nil {
+		t.Errorf("without _ebira.yaml: %+v, %v, %v", d, w, err)
+	}
+	write := func(s string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, "_ebira.yaml"), []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("search: ja\n")
+	if d, w, err := LoadDefaults(dir); err != nil || d != (Config{}) || w != nil {
+		t.Errorf("without defaults: %+v, %v, %v", d, w, err)
+	}
+	// The keys of a machine alone are left out, with a warning each.
+	write("search: ja\ndefaults:\n  lang: ja\n  git_sync: 10m\n  auth: none\n  notes_dir: ~/x\n  addr: 0.0.0.0:13579\n")
+	d, w, err := LoadDefaults(dir)
+	if err != nil || d.Lang != "ja" || d.GitSync != "10m" || d.Auth != "" || d.NotesDir != "" || d.Addr != "" || len(w) != 3 {
+		t.Errorf("left out: %+v, %v, %v", d, w, err)
+	}
+	for i, key := range []string{"notes_dir", "auth", "addr 0.0.0.0:13579"} {
+		if i < len(w) && !strings.Contains(w[i], "defaults: "+key) {
+			t.Errorf("warning %d: %s", i, w[i])
+		}
+	}
+	// An unknown key is an error, as in the settings file.
+	write("defaults:\n  lnag: ja\n")
+	if _, _, err := LoadDefaults(dir); err == nil || !strings.Contains(err.Error(), "unknown key lnag") {
+		t.Errorf("unknown key: %v", err)
+	}
+	write("defaults: ja\n")
+	if _, _, err := LoadDefaults(dir); err == nil {
+		t.Error("defaults not a mapping: no error")
+	}
+}
+
+func TestLoopback(t *testing.T) {
+	for addr, want := range map[string]bool{
+		"localhost:13579": true, "127.0.0.1:13579": true, "127.0.0.2:1": true, "[::1]:13579": true,
+		":13579": false, "0.0.0.0:13579": false, "[::]:13579": false, "example.com:80": false, "192.168.1.2:13579": false, "localhost": false,
+	} {
+		if got := Loopback(addr); got != want {
+			t.Errorf("Loopback(%q) = %v, want %v", addr, got, want)
+		}
+	}
+}
+
+func TestMerge(t *testing.T) {
+	no, yes := false, true
+	c := Merge(Config{Lang: "en", Watch: &no}, Config{Lang: "ja", Theme: "dark", Watch: &yes, Model: "m"})
+	if c.Lang != "en" || c.Theme != "dark" || c.Watch != &no || c.Model != "m" {
+		t.Errorf("Merge: %+v", c)
+	}
+}

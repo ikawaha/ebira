@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/ikawaha/ebira/internal/store"
 	"github.com/ikawaha/ebira/internal/ui/web"
 	"golang.org/x/term"
+	"gopkg.in/yaml.v3"
 )
 
 // defaultSetupDir is the directory setup suggests for the notes.
@@ -50,22 +53,82 @@ var errNoNotes = errors.New("no notes found")
 // used when it exists; when it does not, setup asks where to keep the notes
 // if interactive, else it fails, so that notes/ is not made in a place by
 // accident.
+//
+// The defaults of the settings shared with the notes are then applied to the
+// settings and to the flags of fs not given (applyDefaults).
 func notesDirOf(fs *flag.FlagSet, notesDir string, interactive bool, in io.Reader, out io.Writer) (string, error) {
 	dir, err := absDir(notesDir)
 	if err != nil {
 		return "", err
 	}
-	if flagSet(fs, "notes") || settings.NotesDir != "" || isDir(dir) {
-		return dir, nil
+	if !flagSet(fs, "notes") && settings.NotesDir == "" && !isDir(dir) {
+		if !interactive {
+			return "", fmt.Errorf("%w: no %s; run ebira in a terminal to set up, or pass -notes", errNoNotes, dir)
+		}
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		if dir, err = setup(cwd, in, out); err != nil {
+			return "", err
+		}
 	}
-	if !interactive {
-		return "", fmt.Errorf("%w: no %s; run ebira in a terminal to set up, or pass -notes", errNoNotes, dir)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
+	if err := applyDefaults(fs, dir); err != nil {
 		return "", err
 	}
-	return setup(cwd, in, out)
+	return dir, nil
+}
+
+// defaultFlags are the flags whose defaults come from keys of the settings
+// file, by their names.
+var defaultFlags = map[string]func(config.Config) (string, bool){
+	"addr":     func(c config.Config) (string, bool) { return c.Addr, c.Addr != "" },
+	"provider": func(c config.Config) (string, bool) { return c.Provider, c.Provider != "" },
+	"model":    func(c config.Config) (string, bool) { return c.Model, c.Model != "" },
+	"lang":     func(c config.Config) (string, bool) { return c.Lang, c.Lang != "" },
+	"theme":    func(c config.Config) (string, bool) { return c.Theme, c.Theme != "" },
+	"git-sync": func(c config.Config) (string, bool) { return c.GitSync, c.GitSync != "" },
+	"watch": func(c config.Config) (string, bool) {
+		if c.Watch == nil {
+			return "", false
+		}
+		return strconv.FormatBool(*c.Watch), true
+	},
+	// The TUI takes light colors for the theme light.
+	"light": func(c config.Config) (string, bool) { return strconv.FormatBool(c.Theme == "light"), c.Theme != "" },
+}
+
+// applyDefaults reads the defaults of the settings shared with the notes in
+// dir, and sets each value that the settings file does not to its default:
+// in settings, and on the flags of fs that were not given. A flag gets the
+// value without being marked as given, so the flags that a server records
+// and keeps on a restart stay those given.
+func applyDefaults(fs *flag.FlagSet, dir string) error {
+	d, warnings, err := config.LoadDefaults(dir)
+	if err != nil {
+		return err
+	}
+	for _, w := range warnings {
+		slog.Warn(w)
+	}
+	settings = config.Merge(settings, d)
+	for name, get := range defaultFlags {
+		f := fs.Lookup(name)
+		if f == nil || flagSet(fs, name) {
+			continue
+		}
+		if _, ok := get(machineSettings); ok {
+			continue
+		}
+		v, ok := get(d)
+		if !ok {
+			continue
+		}
+		if err := f.Value.Set(v); err != nil {
+			return fmt.Errorf("%s of the defaults in %s: %w", name, store.ConfigFile, err)
+		}
+	}
+	return nil
 }
 
 // flagSet reports whether the flag name was given on fs.
@@ -112,8 +175,14 @@ func interactive() bool {
 // them, whether to sync them with a git repository and how often, how to
 // search them and, unless the settings file has it, the language of the web
 // UI; it creates the notes directory, cloning the notes from the repository
-// when it has some, else pushing them to it, and saves the directory, the
-// language and the interval to the settings file if the user agrees.
+// when it has some, else pushing them to it.
+//
+// New notes get the language, the interval and the address as the defaults
+// shared with the notes (_ebira.yaml), so that other machines take them with
+// the notes; the settings file gets the directory as notes_dir, if the user
+// agrees. For notes that exist, the defaults they have are not asked; the
+// others are asked, those of cloned notes after cloning, and saved in the
+// settings file with the directory.
 func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	ctx := context.Background()
 	r := bufio.NewReader(in)
@@ -135,11 +204,20 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		return "", err
 	}
 
+	// The defaults of notes that exist here are known now; those of notes in
+	// the repository, once they are cloned or merged.
+	var defaults config.Config
 	mode := ""
+	local := hasNotes(dir)
+	cloned := !local && remoteNotes
+	fresh := !local && !remoteNotes
 	switch {
-	case hasNotes(dir):
+	case local:
 		fmt.Fprintf(out, "Found notes in %s; its settings are kept.\n", dir)
-	case remoteNotes:
+		if defaults, err = loadDefaults(dir); err != nil {
+			return "", err
+		}
+	case cloned:
 		fmt.Fprintf(out, "Found notes in %s; they are cloned, with their settings.\n", url)
 	default:
 		fmt.Fprintln(out, "\nSearch mode:\n  ja      analyzes Japanese into words, so that a search finds other forms of a word, such as\n          the past tense of a verb; for notes mostly in Japanese.\n  en      takes English words with their stems, so that plan finds plans and planning, and\n          Japanese text as pairs of characters; for notes mostly in English.\n  bigram  matches pairs of characters only, in any language, including parts of words.\n  trigram matches runs of three characters, as bigram does; a term of one or two characters,\n          such as many Japanese words, is searched more slowly, through every note.\nAfter their own matches, ja also matches pairs of characters, and en runs of three characters.")
@@ -147,35 +225,38 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 			return "", err
 		}
 	}
-	gitSync := ""
-	if url != "" {
-		fmt.Fprintln(out)
-		if gitSync, err = askGitSync(r, out); err != nil {
+	var gitSync, lang string
+	if !cloned {
+		if gitSync, lang, err = askShared(r, out, url != "", defaults); err != nil {
 			return "", err
 		}
-	}
-	lang := ""
-	if settings.Lang == "" {
-		fmt.Fprintln(out)
-		if lang, err = askLang(r, out); err != nil {
-			return "", err
-		}
-		setupLang = lang
 	}
 	fmt.Fprintln(out)
-	what := "the directory as notes_dir"
-	// The address goes to the settings file too, so that the URLs given to
-	// MCP clients keep working when the default changes.
+	// The address is written too, so that the URLs given to MCP clients keep
+	// working when the default changes.
 	addr := ""
-	if settings.Addr == "" {
+	if settings.Addr == "" && defaults.Addr == "" {
 		addr = fallbackAddr
-		what += ", the address " + addr + " as addr"
 	}
-	if lang != "" {
+	// New notes share their defaults; the settings file has the rest.
+	shared := config.Config{}
+	machine := config.Config{NotesDir: dir, Addr: addr, Lang: lang, GitSync: gitSync}
+	if fresh {
+		shared = config.Config{Addr: addr, Lang: lang, GitSync: gitSync}
+		machine = config.Config{NotesDir: dir}
+	}
+	what := "the directory as notes_dir"
+	if machine.Addr != "" {
+		what += ", the address " + machine.Addr + " as addr"
+	}
+	if machine.Lang != "" {
 		what += ", the language as lang"
 	}
-	if gitSync != "" {
+	if machine.GitSync != "" {
 		what += ", the interval of syncing as git_sync"
+	}
+	if cloned {
+		what += ", and the settings asked after cloning that the notes do not have"
 	}
 	save, err := confirm(r, out, fmt.Sprintf("Save %s in %s, to use them from any directory", what, cfgPath), true)
 	if err != nil {
@@ -199,6 +280,9 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	if lang != "" {
 		fmt.Fprintf(out, "Web UI:       %s\n", lang)
 	}
+	if shared != (config.Config{}) {
+		fmt.Fprintf(out, "Defaults:     %s in %s, shared with the notes; a machine can change them in its settings file\n", sharedKeys(shared), store.ConfigFile)
+	}
 	if save {
 		fmt.Fprintf(out, "Settings:     saved in %s\n", cfgPath)
 	}
@@ -208,27 +292,89 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 		return "", errors.New("setup canceled")
 	}
 
-	if err := makeNotes(ctx, dir, url, remoteNotes, mode, cmp.Or(lang, settings.Lang), out); err != nil {
+	if err := makeNotes(ctx, dir, url, remoteNotes, mode, shared, cmp.Or(lang, settings.Lang), out); err != nil {
 		return "", err
 	}
+	if cloned {
+		if defaults, err = loadDefaults(dir); err != nil {
+			return "", err
+		}
+		if gitSync, lang, err = askShared(r, out, true, defaults); err != nil {
+			return "", err
+		}
+		machine.GitSync, machine.Lang = gitSync, lang
+		if settings.Addr == "" && defaults.Addr == "" {
+			machine.Addr = fallbackAddr
+		}
+	}
 	if save {
-		if _, err := config.Save(config.Config{NotesDir: dir, Addr: addr, Lang: lang, GitSync: gitSync}); err != nil {
+		if _, err := config.Save(machine); err != nil {
 			return "", err
 		}
 		settings.NotesDir = dir
-		settings.Addr = cmp.Or(addr, settings.Addr)
-		settings.Lang = cmp.Or(lang, settings.Lang)
-		settings.GitSync = cmp.Or(gitSync, settings.GitSync)
+		machineSettings.NotesDir = dir
+		settings.Addr = cmp.Or(machine.Addr, settings.Addr)
+		machineSettings.Addr = cmp.Or(machine.Addr, machineSettings.Addr)
+		settings.Lang = cmp.Or(machine.Lang, settings.Lang)
+		machineSettings.Lang = cmp.Or(machine.Lang, machineSettings.Lang)
+		settings.GitSync = cmp.Or(machine.GitSync, settings.GitSync)
+		machineSettings.GitSync = cmp.Or(machine.GitSync, machineSettings.GitSync)
 	} else {
-		if lang != "" {
-			setupFlags = append(setupFlags, "-lang", lang)
+		if machine.Lang != "" {
+			setupFlags = append(setupFlags, "-lang", machine.Lang)
 		}
-		if gitSync != "" {
-			setupFlags = append(setupFlags, "-git-sync", gitSync)
+		if machine.GitSync != "" {
+			setupFlags = append(setupFlags, "-git-sync", machine.GitSync)
 		}
 	}
 	fmt.Fprintln(out)
 	return dir, nil
+}
+
+// askShared asks the interval of syncing with git, when the notes have a
+// repository (git), and the language, unless the defaults of the notes or
+// the settings file have them.
+func askShared(r *bufio.Reader, out io.Writer, git bool, defaults config.Config) (gitSync, lang string, err error) {
+	if git && defaults.GitSync == "" {
+		fmt.Fprintln(out)
+		if gitSync, err = askGitSync(r, out); err != nil {
+			return "", "", err
+		}
+	}
+	if settings.Lang == "" && defaults.Lang == "" {
+		fmt.Fprintln(out)
+		if lang, err = askLang(r, out); err != nil {
+			return "", "", err
+		}
+		setupLang = lang
+	}
+	for _, kv := range [][2]string{{"Sync", defaults.GitSync}, {"Web UI", defaults.Lang}} {
+		if kv[1] != "" {
+			fmt.Fprintf(out, "%-13s %s, from the defaults of the notes (%s)\n", kv[0]+":", kv[1], store.ConfigFile)
+		}
+	}
+	return gitSync, lang, nil
+}
+
+// loadDefaults reads the defaults shared with the notes in dir, telling the
+// keys left out of them.
+func loadDefaults(dir string) (config.Config, error) {
+	d, warnings, err := config.LoadDefaults(dir)
+	for _, w := range warnings {
+		slog.Warn(w)
+	}
+	return d, err
+}
+
+// sharedKeys names the keys that c sets, of those setup shares.
+func sharedKeys(c config.Config) string {
+	var keys []string
+	for _, kv := range [][2]string{{"addr", c.Addr}, {"lang", c.Lang}, {"git_sync", c.GitSync}} {
+		if kv[1] != "" {
+			keys = append(keys, kv[0])
+		}
+	}
+	return strings.Join(keys, ", ")
 }
 
 // makeNotes creates the notes directory dir: it clones the notes from the git
@@ -236,7 +382,7 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 // else creates them with the search mode, unless empty, and pushes them to
 // url, unless empty, with the guide in language lang when dir is new, as the
 // server would add it. A directory dir made here is removed on a failure.
-func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode, lang string, out io.Writer) (err error) {
+func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode string, shared config.Config, lang string, out io.Writer) (err error) {
 	if _, statErr := os.Stat(dir); errors.Is(statErr, fs.ErrNotExist) {
 		defer func() {
 			if err != nil {
@@ -253,6 +399,14 @@ func makeNotes(ctx context.Context, dir, url string, remoteNotes bool, mode, lan
 			return err
 		}
 		if err := os.WriteFile(filepath.Join(dir, store.ConfigFile), []byte("search: "+mode+"\n"), 0o644); err != nil {
+			return err
+		}
+	}
+	if shared != (config.Config{}) {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		if err := store.SaveDefaults(dir, func(m *yaml.Node) { config.SetKeys(m, shared, []string{"addr", "lang", "git_sync"}) }); err != nil {
 			return err
 		}
 	}

@@ -38,21 +38,26 @@ func runTUI(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unknown command %q (see ebira help)", fs.Arg(0))
 	}
-	if p := settings.TUIPreview; p != "" && p != "rendered" && p != "source" {
-		return fmt.Errorf("unknown tui_preview %q in the settings file (rendered, source)", p)
-	}
-	if *lang != "" && !tui.ValidLang(*lang) {
-		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *lang, strings.Join(tui.Langs, ", "))
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	url := *server
-	if url == "" {
-		dir, err := notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout)
-		if err != nil {
+	// With the notes directory, the defaults shared with the notes apply; a
+	// server given by -server has only the settings file.
+	dir := ""
+	if *server == "" {
+		var err error
+		if dir, err = notesDirOf(fs, *notesDir, interactive(), os.Stdin, os.Stdout); err != nil {
 			return err
 		}
+	}
+	if p := settings.TUIPreview; p != "" && p != "rendered" && p != "source" {
+		return fmt.Errorf("unknown tui_preview %q in the settings file or its defaults (rendered, source)", p)
+	}
+	if *lang != "" && !tui.ValidLang(*lang) {
+		return fmt.Errorf("unknown language %q of -lang, lang in the settings file or its defaults (%s)", *lang, strings.Join(tui.Langs, ", "))
+	}
+	url := *server
+	if url == "" {
 		a, err := ensureServer(ctx, dir, *addr, os.Stdin, os.Stdout)
 		if err != nil {
 			return err

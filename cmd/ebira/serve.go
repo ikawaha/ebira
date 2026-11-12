@@ -105,21 +105,22 @@ func runServe(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
+	notesDir, addr, search, stopW, stopT, prov, modelF, watchF := o.notesDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
+	// The defaults shared with the notes are known with the notes directory.
+	abs, err := notesDirOf(fs, *notesDir, false, nil, nil)
+	if err != nil {
+		return err
+	}
 	if *o.theme != "" && !web.ValidTheme(*o.theme) {
-		return fmt.Errorf("unknown theme %q of -theme or theme in the settings file (%s)", *o.theme, strings.Join(web.Themes, ", "))
+		return fmt.Errorf("unknown theme %q of -theme, theme in the settings file or its defaults (%s)", *o.theme, strings.Join(web.Themes, ", "))
 	}
 	if !auth.ValidMode(*o.auth) {
 		return fmt.Errorf("unknown mode %q of -auth or auth in the settings file (%s)", *o.auth, strings.Join(auth.Modes, ", "))
 	}
 	if *o.lang != "" && !web.ValidLang(*o.lang) {
-		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *o.lang, strings.Join(web.Langs, ", "))
+		return fmt.Errorf("unknown language %q of -lang, lang in the settings file or its defaults (%s)", *o.lang, strings.Join(web.Langs, ", "))
 	}
 	gitEvery, err := gitSyncInterval(*o.gitSync)
-	if err != nil {
-		return err
-	}
-	notesDir, addr, search, stopW, stopT, prov, modelF, watchF := o.notesDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
-	abs, err := notesDirOf(fs, *notesDir, false, nil, nil)
 	if err != nil {
 		return err
 	}
