@@ -163,20 +163,30 @@ func showMain(win *application.WebviewWindow) {
 }
 
 // themeFrame gives the frame of win, its title bar, the dark or the light
-// theme. Wails gives it the system's when it makes the window, and again when
-// the system's changes (see watchSystemTheme).
+// theme.
 func themeFrame(win *application.WebviewWindow, dark bool) {
 	application.InvokeAsync(func() { w32.SetTheme(uintptr(win.NativeWindow()), dark) })
 }
 
-// watchSystemTheme calls again when the theme of the system changes, after
-// Wails has given the frames of the windows the system's theme: again runs
-// on the main thread after the work queued there by then, whose themeFrame is
-// queued after that of Wails.
+// frameTheme is the theme the main window is made with: the system's now,
+// fixed rather than SystemDefault, under which Wails would set the frame to
+// the system's theme on each change of it, racing with the page's theme (its
+// listeners run in goroutines of their own). The app follows the changes
+// itself (watchSystemTheme).
+func frameTheme() application.Theme {
+	if systemDark() {
+		return application.Dark
+	}
+	return application.Light
+}
+
+// systemDark reports whether the system's apps are in the dark mode.
+func systemDark() bool { return w32.IsCurrentlyDarkMode() }
+
+// watchSystemTheme calls again when the theme of the system changes, for the
+// frame of a page that follows the system, or of one that tells no theme.
 func watchSystemTheme(app *application.App, again func()) {
-	app.Event.OnApplicationEvent(events.Windows.SystemThemeChanged, func(*application.ApplicationEvent) {
-		application.InvokeAsync(again)
-	})
+	app.Event.OnApplicationEvent(events.Windows.SystemThemeChanged, func(*application.ApplicationEvent) { again() })
 }
 
 // saveFrame keeps the frame of the main window as the app ends. A minimised,

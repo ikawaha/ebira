@@ -215,6 +215,9 @@ func (s *shell) openMain(url string) {
 		// The page shows the name; the title stays for the Window menu and
 		// Mission Control.
 		Mac: application.MacWindow{TitleBar: application.MacTitleBar{HideTitle: true}},
+		// The frame takes the theme of the page (applyTheme): a theme fixed
+		// here keeps Wails from setting the system's again when it changes.
+		Windows: application.WindowsWindow{Theme: frameTheme()},
 	})
 	var shown sync.Once
 	// The runtime is ready once a page is up: on macOS when the JS of the window
@@ -255,11 +258,19 @@ func (s *shell) pageTheme(dark bool) {
 	s.applyTheme()
 }
 
-// applyTheme gives the frame of the main window the theme of its page, once
-// the page has told it.
+// applyTheme gives the frame of the main window the theme of its page, or
+// the system's while the page has told none, as one of an earlier build.
 func (s *shell) applyTheme() {
-	t := s.theme.Load()
-	if win := s.main(); win != nil && t != themeUnknown {
-		themeFrame(win, t == themeDark)
+	win := s.main()
+	if win == nil {
+		return
+	}
+	switch s.theme.Load() {
+	case themeDark:
+		themeFrame(win, true)
+	case themeLight:
+		themeFrame(win, false)
+	default:
+		themeFrame(win, systemDark())
 	}
 }
