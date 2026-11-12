@@ -4055,18 +4055,50 @@ async function deleteUnusedFiles(boxes) {
 }
 
 // Server status (GET /debug/stats): the memory of the server and the state of
-// its search index, read again every few seconds while the dialog is open.
+// its search index, read again every few seconds while the dialog is open,
+// with a button that starts the server again (restartServer), as the
+// settings can.
 
 const STATS_EVERY = 5; // seconds
 let statsTimer = 0;
+// Whether the server can start itself again, from GET /settings: null when
+// unknown, as from an older server.
+let statsRestart = null;
 
 async function openServerStats() {
   const d = $("server-stats");
   if (!d.open) {
     d.replaceChildren(statsHead(d), el("p", "", t("statsLoading")));
     d.showModal();
+    try {
+      const cur = await api("/settings");
+      statsRestart = { restart: cur.restart, reason: cur.restart_unavailable };
+    } catch (_) {
+      statsRestart = null;
+    }
   }
   await loadServerStats(d);
+}
+
+// statsFoot returns the button that starts the server again, or why it
+// cannot; nothing when that is unknown.
+function statsFoot() {
+  if (!statsRestart) return el("div");
+  if (!statsRestart.restart) {
+    return el("p", "hint", t(statsRestart.reason === "executable_gone" ? "settingsExecutableGone" : "settingsNoRestart"));
+  }
+  const go = button(t("statsRestart"), async () => {
+    if (!confirm(t("statsRestartConfirm")) || !leaveEditor()) return;
+    clearTimeout(statsTimer); // the page reloads once the server answers again
+    go.disabled = true;
+    try {
+      await restartServer();
+    } catch (e) {
+      go.disabled = false;
+      alert(t("statsRestartFailed", { error: e.message }));
+    }
+  }, { title: t("statsRestartTitle") });
+  return el("div", "files-actions", go);
 }
 
 async function loadServerStats(d) {
@@ -4076,7 +4108,7 @@ async function loadServerStats(d) {
   try {
     renderServerStats(d, await api("/debug/stats"));
   } catch (e) {
-    d.replaceChildren(statsHead(d), el("p", "error", t("statsFailed", { error: e.message })));
+    d.replaceChildren(statsHead(d), el("p", "error", t("statsFailed", { error: e.message })), statsFoot());
   }
   d.scrollTop = top;
   if (d.open) statsTimer = setTimeout(() => loadServerStats(d), STATS_EVERY * 1000);
@@ -4140,7 +4172,7 @@ function renderServerStats(d, s) {
     el("table", "stats-tables", el("thead", "", head), tbody));
   const time = new Date().toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   d.replaceChildren(statsHead(d), el("div", "stats-cols", process, index), table,
-    el("p", "empty stats-updated", t("statsUpdated", { time, n: STATS_EVERY })));
+    el("p", "empty stats-updated", t("statsUpdated", { time, n: STATS_EVERY })), statsFoot());
 }
 
 $("server-stats").addEventListener("close", () => clearTimeout(statsTimer));
