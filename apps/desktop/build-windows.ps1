@@ -11,15 +11,17 @@ function Invoke-Go {
 	if ($LASTEXITCODE -ne 0) { throw "go $args failed" }
 }
 
-Set-Location $PSScriptRoot
 $arch = if ($env:GOARCH) { $env:GOARCH } else { 'amd64' }
 $out = "build/windows-$arch/ebira"
 
-# The settings of go are for this script only, not the rest of the session.
+# The settings of go and the current directory are for this script only, not
+# the rest of the session: run as .\apps\desktop\build-windows.ps1, the script
+# runs in the session, which is left where it was, also on an error.
 $saved = @{}
 foreach ($name in 'GOOS', 'GOARCH', 'CGO_ENABLED') {
 	$saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
+Push-Location $PSScriptRoot
 try {
 	$env:GOOS = 'windows'
 	$env:GOARCH = $arch
@@ -58,5 +60,6 @@ try {
 	foreach ($name in $saved.Keys) {
 		[Environment]::SetEnvironmentVariable($name, $saved[$name], 'Process')
 	}
+	Pop-Location
 }
-Write-Output $out
+Write-Output (Join-Path $PSScriptRoot $out)
