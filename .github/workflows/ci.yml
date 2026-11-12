@@ -129,8 +129,12 @@ jobs:
       - name: build-windows.ps1
         shell: powershell
         run: |
-          powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Run in this session, as .\apps\desktop\build-windows.ps1 is, which
+          # must leave the session in the directory it was in.
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          $before = (Get-Location).Path
+          & .\apps\desktop\build-windows.ps1
+          if ((Get-Location).Path -ne $before) { throw "the script left the session in $((Get-Location).Path)" }
           $out = 'apps\desktop\build\windows-amd64\ebira'
           foreach ($f in 'ebira.exe', 'ebira-desktop.exe', 'favicon.LICENSE') {
             if (-not (Test-Path "$out\$f")) { throw "$f is missing" }
