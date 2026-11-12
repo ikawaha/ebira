@@ -140,9 +140,11 @@ func themeFrame(*application.WebviewWindow, bool) {}
 // watchSystemTheme does nothing on macOS (see themeFrame).
 func watchSystemTheme(*application.App, func()) {}
 
-// frameTheme is the theme the main window is made with, which only Windows
-// reads.
-func frameTheme() application.Theme { return application.SystemDefault }
+// windowsOptions are the options of the main window that only Windows reads.
+func windowsOptions() application.WindowsWindow { return application.WindowsWindow{} }
+
+// keepPageTheme does nothing on macOS (see themeFrame).
+func keepPageTheme(bool) {}
 
 // systemDark is unused on macOS (see themeFrame).
 func systemDark() bool { return false }
