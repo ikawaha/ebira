@@ -234,8 +234,10 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 	fmt.Fprintln(out)
 	// The address is written too, so that the URLs given to MCP clients keep
 	// working when the default changes.
+	// For notes from the repository, it is decided once their defaults are
+	// known, after cloning.
 	addr := ""
-	if settings.Addr == "" && defaults.Addr == "" {
+	if settings.Addr == "" && defaults.Addr == "" && !cloned {
 		addr = fallbackAddr
 	}
 	// New notes share their defaults; the settings file has the rest.
@@ -303,6 +305,8 @@ func setup(cwd string, in io.Reader, out io.Writer) (string, error) {
 			return "", err
 		}
 		machine.GitSync, machine.Lang = gitSync, lang
+		// The address of the notes is followed, not written over.
+		machine.Addr = ""
 		if settings.Addr == "" && defaults.Addr == "" {
 			machine.Addr = fallbackAddr
 		}

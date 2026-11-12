@@ -147,6 +147,11 @@ func startWithFlags(ctx context.Context, dir string, flags []string) error {
 	if err := fs.Parse(flags); err != nil {
 		return err
 	}
+	// The server takes the address of the defaults shared with the notes
+	// when flags have none, so it is waited for there.
+	if err := applyDefaults(fs, dir); err != nil {
+		return err
+	}
 	// The notes directory goes as an absolute path.
 	s, err := startServer(ctx, dir, *o.addr, append([]string{"-notes", dir}, flags...), os.Stdout)
 	if err != nil {

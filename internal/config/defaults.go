@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 
@@ -60,8 +61,22 @@ func ParseDefaults(d *yaml.Node, p string) (Config, []string, error) {
 	if d.Kind != yaml.MappingNode {
 		return c, nil, fmt.Errorf("%s: defaults: not a mapping of the keys of the settings file", p)
 	}
+	var warnings []string
+	drop := func(key string) {
+		warnings = append(warnings, fmt.Sprintf("%s: defaults: %s is left out: write it in the settings file of each machine", p, key))
+	}
+	// The keys of a machine alone are left out before decoding, so that a
+	// value of any form is ignored rather than refused.
+	kept := &yaml.Node{Kind: yaml.MappingNode, Tag: d.Tag}
+	for i := 0; i+1 < len(d.Content); i += 2 {
+		if k := d.Content[i].Value; slices.Contains(machineKeys, k) {
+			drop(k)
+			continue
+		}
+		kept.Content = append(kept.Content, d.Content[i], d.Content[i+1])
+	}
 	// Decoding the node itself cannot refuse unknown keys.
-	b, err := yaml.Marshal(d)
+	b, err := yaml.Marshal(kept)
 	if err != nil {
 		return c, nil, err
 	}
@@ -70,28 +85,16 @@ func ParseDefaults(d *yaml.Node, p string) (Config, []string, error) {
 	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) {
 		return Config{}, nil, fmt.Errorf("%s: defaults: %w", p, plainError(err))
 	}
-	var warnings []string
-	drop := func(key string) {
-		warnings = append(warnings, fmt.Sprintf("%s: defaults: %s is left out: write it in the settings file of each machine", p, key))
-	}
-	if c.NotesDir != "" {
-		drop("notes_dir")
-		c.NotesDir = ""
-	}
-	if c.LegacyDataDir != "" {
-		drop("data_dir")
-		c.LegacyDataDir = ""
-	}
-	if c.Auth != "" {
-		drop("auth")
-		c.Auth = ""
-	}
 	if c.Addr != "" && !Loopback(c.Addr) {
 		drop("addr " + c.Addr + ", not of the loopback,")
 		c.Addr = ""
 	}
 	return c, warnings, nil
 }
+
+// machineKeys are the keys of the settings file that are each machine's own,
+// never defaults: the notes directory, and how the server authenticates.
+var machineKeys = []string{"notes_dir", "data_dir", "auth"}
 
 // Loopback reports whether the address addr, host:port, listens only on the
 // loopback: localhost or a loopback IP address. An empty host listens on all

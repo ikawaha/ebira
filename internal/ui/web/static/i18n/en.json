@@ -320,6 +320,8 @@
   "settingsGitSyncPlaceholder": "Such as 10m (empty for none)",
   "settingsWatch": "Watch files",
   "settingsWatchLabel": "Watch the files of the notes for changes, and update the index",
+  "settingsThemeDefault": "Auto (default)",
+  "settingsTUIPreview_rendered": "Preview",
   "settingsWatchDefault": "Watch (default)",
   "settingsWatchOn": "Watch",
   "settingsWatchOff": "Do not watch",

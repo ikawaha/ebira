@@ -225,10 +225,11 @@ func TestSetupGit(t *testing.T) {
 	}
 
 	// The second machine clones them, with their search mode and defaults,
-	// so the interval and the language are not asked; not saved.
-	setupEnv(t)
+	// so the interval and the language are not asked; saved, the settings
+	// file has the directory alone, following the address of the notes.
+	home = setupEnv(t)
 	out.Reset()
-	dir, err = setup(cwd, strings.NewReader("second\n"+remote+"\nn\n\n"), &out)
+	dir, err = setup(cwd, strings.NewReader("second\n"+remote+"\ny\n\n"), &out)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}
@@ -238,6 +239,9 @@ func TestSetupGit(t *testing.T) {
 	}
 	if b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml")); err != nil || string(b) != "search: ja\ndefaults:\n  addr: "+fallbackAddr+"\n  lang: ja\n  git_sync: 10m\n" {
 		t.Errorf("cloned _ebira.yaml: %q, %v", b, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(home, ".config", "ebira", "config.yaml")); err != nil || string(b) != "notes_dir: "+dir+"\n" {
+		t.Errorf("config.yaml of the second machine: %q, %v", b, err)
 	}
 	if setupFlags != nil {
 		t.Errorf("flags of the server: %v", setupFlags)

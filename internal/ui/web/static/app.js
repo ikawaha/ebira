@@ -2654,22 +2654,24 @@ async function openSettings() {
   // the file leaves out.
   const options = {
     lang: [["", t("settingsLangDefault")], ...LANGS.map((l) => [l, langName(l)])],
-    theme: [["", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]],
+    theme: [["", t("settingsThemeDefault")], ["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]],
     watch: [["", t("settingsWatchDefault")], ["true", t("settingsWatchOn")], ["false", t("settingsWatchOff")]],
     provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]],
-    tui_preview: [["", t("settingsTUIRendered")], ["source", t("settingsTUISource")]],
+    tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreview_rendered")], ["source", t("settingsTUISource")]],
   };
   const watchValue = (w) => (w === undefined || w === null ? "" : String(w));
   // The controls of the settings of a machine, for the settings file of this
-  // machine (c) and for the defaults shared with the notes (dc).
+  // machine (c) and for the defaults shared with the notes (dc). A value
+  // written, even the built-in one such as theme: auto, stays a choice of its
+  // own: the empty one follows the defaults shared with the notes.
   const machineControls = (v) => ({
     lang: select(v.lang, options.lang),
-    theme: select(v.theme === "auto" ? "" : v.theme, options.theme),
+    theme: select(v.theme, options.theme),
     git_sync: text(v.git_sync, t("settingsGitSyncPlaceholder")),
     watch: select(watchValue(v.watch), options.watch),
     provider: select(v.provider, options.provider),
     model: text(v.model),
-    tui_preview: select(v.tui_preview === "rendered" ? "" : v.tui_preview, options.tui_preview),
+    tui_preview: select(v.tui_preview, options.tui_preview),
   });
   const c = {
     ...machineControls(m),

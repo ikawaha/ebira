@@ -342,10 +342,15 @@ func TestDefaults(t *testing.T) {
 	if err != nil || d.Lang != "ja" || d.GitSync != "10m" || d.Auth != "" || d.NotesDir != "" || d.Addr != "" || len(w) != 3 {
 		t.Errorf("left out: %+v, %v, %v", d, w, err)
 	}
-	for i, key := range []string{"notes_dir", "auth", "addr 0.0.0.0:13579"} {
+	for i, key := range []string{"auth", "notes_dir", "addr 0.0.0.0:13579"} { // in the order of the file
 		if i < len(w) && !strings.Contains(w[i], "defaults: "+key) {
 			t.Errorf("warning %d: %s", i, w[i])
 		}
+	}
+	// They are left out whatever their form, without a type error.
+	write("defaults:\n  auth: [none]\n  notes_dir: {a: b}\n  lang: en\n")
+	if d, w, err := LoadDefaults(dir); err != nil || d.Lang != "en" || len(w) != 2 {
+		t.Errorf("left out in any form: %+v, %v, %v", d, w, err)
 	}
 	// An unknown key is an error, as in the settings file.
 	write("defaults:\n  lnag: ja\n")

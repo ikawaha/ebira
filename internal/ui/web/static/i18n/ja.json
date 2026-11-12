@@ -320,6 +320,8 @@
   "settingsGitSyncPlaceholder": "10m など（空なら同期しない）",
   "settingsWatch": "ファイルの監視",
   "settingsWatchLabel": "ノートのファイルの変更を見張って、索引に反映する",
+  "settingsThemeDefault": "自動（既定）",
+  "settingsTUIPreview_rendered": "プレビュー",
   "settingsWatchDefault": "見張る（既定）",
   "settingsWatchOn": "見張る",
   "settingsWatchOff": "見張らない",
