@@ -44,9 +44,10 @@ const leaveFor = toApp + `.postMessage(` + leaves + ` ? "ebira:switch" : "ebira:
 type shell struct {
 	app       *application.App
 	messages  map[string]string
-	notes     *noteMenu   // the items of the menus that depend on the page
-	leaving   atomic.Bool // the page agreed to go: closing goes through
-	downloads downloads   // the files the page is sending to save
+	notes     *noteMenu    // the items of the menus that depend on the page
+	leaving   atomic.Bool  // the page agreed to go: closing goes through
+	downloads downloads    // the files the page is sending to save
+	theme     atomic.Int32 // the theme of the page: themeUnknown, themeLight or themeDark
 
 	mu       sync.Mutex
 	win      *application.WebviewWindow // the Web UI; nil until a server answers
@@ -84,6 +85,7 @@ func main() {
 	menu := s.appMenu()
 	translateMenu(menu, s.messages)
 	s.app.Menu.Set(menu)
+	watchSystemTheme(s.app, s.applyTheme)
 
 	h, err := connect(s.current)
 	if err != nil {
@@ -213,6 +215,9 @@ func (s *shell) openMain(url string) {
 		// The page shows the name; the title stays for the Window menu and
 		// Mission Control.
 		Mac: application.MacWindow{TitleBar: application.MacTitleBar{HideTitle: true}},
+		// The frame takes the theme of the page (applyTheme): a theme fixed
+		// here keeps Wails from setting the system's again when it changes.
+		Windows: application.WindowsWindow{Theme: frameTheme()},
 	})
 	var shown sync.Once
 	// The runtime is ready once a page is up: on macOS when the JS of the window
@@ -232,4 +237,49 @@ func (s *shell) openMain(url string) {
 	s.mu.Lock()
 	s.win = win
 	s.mu.Unlock()
+}
+
+// The themes of the page that pageTheme takes.
+const (
+	themeUnknown int32 = iota // no word from the page, as from a server of an earlier build
+	themeLight
+	themeDark
+)
+
+// pageTheme takes the theme the page shows, for the frame of the main window,
+// which follows the system's otherwise: a page dark on a light system would
+// have a light title bar.
+func (s *shell) pageTheme(dark bool) {
+	t := themeLight
+	if dark {
+		t = themeDark
+	}
+	s.theme.Store(t)
+	s.applyTheme()
+}
+
+// forgetTheme forgets the theme of the page, before the main window goes to
+// another server, whose page may be of an earlier build that tells none: the
+// frame follows the system's until the new page tells its theme. It is done
+// before the page loads, so that it does not forget what the new page tells.
+func (s *shell) forgetTheme() {
+	s.theme.Store(themeUnknown)
+	s.applyTheme()
+}
+
+// applyTheme gives the frame of the main window the theme of its page, or
+// the system's while the page has told none, as one of an earlier build.
+func (s *shell) applyTheme() {
+	win := s.main()
+	if win == nil {
+		return
+	}
+	switch s.theme.Load() {
+	case themeDark:
+		themeFrame(win, true)
+	case themeLight:
+		themeFrame(win, false)
+	default:
+		themeFrame(win, systemDark())
+	}
 }

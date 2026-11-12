@@ -4744,6 +4744,16 @@ function tellState() {
   tellApp("state", JSON.parse(s));
 }
 
+// tellTheme tells the desktop app the theme the page shows, light or dark, for
+// the frame of its window, which would follow the system's otherwise: when the
+// page loads, when the theme is changed, and when the system's changes under
+// the automatic one.
+function tellTheme() {
+  if (inApp()) tellApp("theme", { dark: isDark() });
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", tellTheme);
+tellTheme();
+
 // writeClipboard writes text to the clipboard. WebKit lets a page write it only
 // in answer to the user's input, which a menu of the app is not, so the app
 // writes it then.
@@ -5098,6 +5108,7 @@ function setTheme(choice) {
   const root = document.documentElement;
   if (choice === "auto") delete root.dataset.theme;
   else root.dataset.theme = choice;
+  tellTheme();
   // Diagrams are drawn in the colors of the theme; draw them again.
   mermaidReady = null;
   if (!state.editing && state.note) loadNote();
