@@ -360,7 +360,7 @@ type AIImportFile struct {
 	Ref string
 	// File name
 	Name string
-	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	// The image, base64-encoded, at most 5 MB
 	Content []byte
 }
 
@@ -1660,7 +1660,7 @@ type jsonAIImportFileTransport struct {
 	Ref *string `json:"ref"`
 	// File name
 	Name *string `json:"name"`
-	// The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB
+	// The image, base64-encoded, at most 5 MB
 	Content []byte `json:"content"`
 }
 
@@ -7179,7 +7179,7 @@ func validateAIImportFileJSONValue(path string, value any, description string) e
 		case "content":
 			if err := validateAIImportFileJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB",
+				typed[key], "The image, base64-encoded, at most 5 MB",
 			); err != nil {
 				return err
 			}

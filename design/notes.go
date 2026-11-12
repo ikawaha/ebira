@@ -213,7 +213,7 @@ var AIImportFile = Type("AIImportFile", func() {
 		MaxLength(255)
 		Example("chart.png")
 	})
-	RequiredAttribute("content", Bytes, "The image, base64-encoded: PNG, JPEG, GIF or WebP, at most 5 MB")
+	RequiredAttribute("content", Bytes, "The image, base64-encoded, at most 5 MB")
 })
 
 // ImportResult is the outcome of importing a Markdown file.
