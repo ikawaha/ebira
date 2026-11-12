@@ -145,7 +145,8 @@ type Service interface {
 	// clients cannot see and therefore cannot update or delete. Other notebooks
 	// are read-only for AI clients: use list_notebooks to find the notebooks whose
 	// kind is collab or drop. The note gets a random ID, which the result has, and
-	// is marked as created by AI (created_by).
+	// is marked as created by AI (created_by). The result leaves out the body (it
+	// comes back empty), as the client sent it.
 	CreateAiNote(context.Context, *CreateAiNotePayload) (res *Note, err error)
 	// Import a Markdown file as a new note in a notebook of the collab or drop
 	// kind, as create_ai_note does, converting it as people's imports do: the
@@ -169,11 +170,12 @@ type Service interface {
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
 	// people meanwhile are not overwritten. Setting notebook moves the note to
-	// another notebook of the collab kind. The body is changed in one of three
-	// ways, one at a time: body replaces it as a whole, append adds text at its
-	// end, and edits replace parts of it, without sending the whole body again.
-	// The edits apply in order, all or none: each old text must appear exactly
-	// once in the body as the edits before it left it, else nothing is changed.
+	// another notebook of the collab kind. The body is changed in one of two ways:
+	// body replaces it as a whole, or edits replace parts of it and append adds
+	// text at its end, without sending the whole body again; edits and append may
+	// come together, the edits applied first. The edits apply in order, all or
+	// none: each old text must appear exactly once in the body as the edits before
+	// it left it, else nothing is changed.
 	UpdateAiNote(context.Context, *UpdateAiNotePayload) (res *Note, err error)
 	// Move a note in a notebook of the collab kind to the trash, where people can
 	// restore it. The version from get_note is required.
