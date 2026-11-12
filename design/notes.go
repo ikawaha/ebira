@@ -1148,7 +1148,7 @@ var _ = Service("notes", func() {
 
 	Method("move_ai_note", func() {
 		NoSecurity()
-		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. Notes of other notebooks are ordered by people only.")
+		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. The result leaves out the body (it comes back empty), as the move does not change it. Notes of other notebooks are ordered by people only.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("after", String, separatorAfterDesc, noteIDDSL)
@@ -1157,7 +1157,7 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "after is not another note or a separator of the note's notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first")
+		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body")
 	})
 
 	Method("create_ai_separator", func() {

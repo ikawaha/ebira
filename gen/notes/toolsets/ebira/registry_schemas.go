@@ -4285,7 +4285,7 @@ func (registryDeclarations) field295() *genregistry.ToolFieldMetadata {
 
 // schema296 constructs one generated schema declaration.
 func (declarations registryDeclarations) schema296() *genregistry.ToolSchema {
-	registryText1 := "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first"
+	registryText1 := "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body"
 	return &genregistry.ToolSchema{
 		Name:                   "ebira.move_ai_note",
 		Description:            &registryText1,
@@ -4296,16 +4296,16 @@ func (declarations registryDeclarations) schema296() *genregistry.ToolSchema {
 			Kind:  "service",
 			Title: "Move Ai Note",
 			Search: &genregistry.ToolSearchDocument{
-				Length: 31,
-				Terms:  map[string]int{"a": 3, "after": 1, "ai": 3, "another": 1, "collab": 1, "ebira": 1, "first": 1, "in": 1, "it": 1, "kind": 1, "move": 2, "note": 4, "notebook": 2, "of": 1, "or": 2, "put": 1, "reorder": 1, "separator": 1, "shared": 1, "the": 1, "with": 1},
+				Length: 37,
+				Terms:  map[string]int{"a": 3, "after": 1, "ai": 3, "another": 1, "body": 1, "collab": 1, "ebira": 1, "first": 1, "in": 1, "it": 1, "kind": 1, "leaves": 1, "move": 2, "note": 4, "notebook": 2, "of": 1, "or": 2, "out": 1, "put": 1, "reorder": 1, "result": 1, "separator": 1, "shared": 1, "the": 3, "with": 1},
 			},
 			RequiresUI: false,
 			TextOnly: &genregistry.TextOnlyToolContract{
 				ExecutionSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
-				Description:     "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first",
+				Description:     "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body",
 				Search: &genregistry.ToolSearchDocument{
-					Length: 31,
-					Terms:  map[string]int{"a": 3, "after": 1, "ai": 3, "another": 1, "collab": 1, "ebira": 1, "first": 1, "in": 1, "it": 1, "kind": 1, "move": 2, "note": 4, "notebook": 2, "of": 1, "or": 2, "put": 1, "reorder": 1, "separator": 1, "shared": 1, "the": 1, "with": 1},
+					Length: 37,
+					Terms:  map[string]int{"a": 3, "after": 1, "ai": 3, "another": 1, "body": 1, "collab": 1, "ebira": 1, "first": 1, "in": 1, "it": 1, "kind": 1, "leaves": 1, "move": 2, "note": 4, "notebook": 2, "of": 1, "or": 2, "out": 1, "put": 1, "reorder": 1, "result": 1, "separator": 1, "shared": 1, "the": 3, "with": 1},
 				},
 				PayloadSchema: []byte("{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"example\":\"be4c1193735ee1\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}"),
 				Payload:       declarations.metadata325(),
