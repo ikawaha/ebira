@@ -182,8 +182,9 @@ type Service interface {
 	// separator of the same notebook in the manual order (the order sort of
 	// list_notes), or first when after is omitted. To put it last, pass the ID of
 	// the last note of list_notes with sort order. Only the order changes; the
-	// content and updated_at are kept, so no version is needed. Notes of other
-	// notebooks are ordered by people only.
+	// content and updated_at are kept, so no version is needed. The result leaves
+	// out the body (it comes back empty), as the move does not change it. Notes of
+	// other notebooks are ordered by people only.
 	MoveAiNote(context.Context, *MoveAiNotePayload) (res *Note, err error)
 	// Put a new separator between the notes of a notebook of the collab kind in
 	// the manual order (the order sort of list_notes), right after a note or a
