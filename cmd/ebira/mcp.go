@@ -57,6 +57,12 @@ servers in a JSON file. AI clients can connect only while the server runs.`)
 	if err != nil {
 		return err
 	}
+	// The address may be a default shared with the notes.
+	if isDir(dir) {
+		if err := applyDefaults(fs, dir); err != nil {
+			return err
+		}
+	}
 	a, running := *addr, false
 	if sd, ok, err := serverDir(dir); err == nil && ok {
 		if st, err := daemon.ReadState(sd); err == nil {

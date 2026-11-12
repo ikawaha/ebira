@@ -3893,6 +3893,10 @@ type NotesSettingsResponseBody struct {
 	// Stop parts of speech of the ja mode, each written as the IPA dictionary
 	// names of its levels joined by -
 	StopTags *StopListResponseBody `form:"stop_tags" json:"stop_tags" xml:"stop_tags"`
+	// Defaults of the settings of each machine, which a value in the settings file
+	// of a machine wins over. auth is never a default: it is left out. Left out of
+	// save_settings, the defaults are kept as they are
+	Defaults *MachineSettingsResponseBody `form:"defaults,omitempty" json:"defaults,omitempty" xml:"defaults,omitempty"`
 }
 
 // StopListResponseBody is used to define fields on response body types.
@@ -3935,6 +3939,10 @@ type NotesSettingsRequestBody struct {
 	// Stop parts of speech of the ja mode, each written as the IPA dictionary
 	// names of its levels joined by -
 	StopTags *StopListRequestBody `form:"stop_tags,omitempty" json:"stop_tags,omitempty" xml:"stop_tags,omitempty"`
+	// Defaults of the settings of each machine, which a value in the settings file
+	// of a machine wins over. auth is never a default: it is left out. Left out of
+	// save_settings, the defaults are kept as they are
+	Defaults *MachineSettingsRequestBody `form:"defaults,omitempty" json:"defaults,omitempty" xml:"defaults,omitempty"`
 }
 
 // StopListRequestBody is used to define fields on request body types.
@@ -7716,6 +7724,11 @@ func ValidateNotesSettingsRequestBody(body *NotesSettingsRequestBody) (err error
 			err = goa.MergeErrors(err, err2)
 		}
 	}
+	if body.Defaults != nil {
+		if err2 := validateMachineSettingsRequestBody(body.Defaults, "body.defaults"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	return
 }
 
@@ -7740,6 +7753,11 @@ func validateNotesSettingsRequestBody(body *NotesSettingsRequestBody, path strin
 	}
 	if body.StopTags != nil {
 		if err2 := validateStopListRequestBody(body.StopTags, path+".stop_tags"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Defaults != nil {
+		if err2 := validateMachineSettingsRequestBody(body.Defaults, path+".defaults"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}

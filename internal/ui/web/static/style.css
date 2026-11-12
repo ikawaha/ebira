@@ -659,6 +659,7 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 .settings-body { height: 60vh; overflow-y: auto; }
 .settings-panel[hidden] { display: none; }
 .settings-section { margin: 12px 0; }
+.settings-section .settings-subhead { margin: 16px 0 4px; }
 .settings-section h3 { font-size: var(--fs-md); margin: 0 0 4px; }
 .settings-section .path { margin: 0 0 8px; font-size: var(--fs-xs); color: var(--fg-muted); overflow-wrap: anywhere; }
 .settings-section code { font: var(--fs-xs)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); overflow-wrap: anywhere; }

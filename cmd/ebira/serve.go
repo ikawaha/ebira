@@ -62,11 +62,11 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		stopW    = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		stopT    = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
-		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else the browser's language)")
-		theme    = fs.String("theme", settings.Theme, "color theme of the web UI: auto (the system's light or dark mode), light or dark; a theme chosen in the web UI's settings menu wins (default: theme of the settings file, else auto)")
+		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+"; a language chosen in the web UI's settings menu wins (default: lang of the settings file, else of the defaults in "+store.ConfigFile+", else the browser's language)")
+		theme    = fs.String("theme", settings.Theme, "color theme of the web UI: auto (the system's light or dark mode), light or dark; a theme chosen in the web UI's settings menu wins (default: theme of the settings file, else of the defaults in "+store.ConfigFile+", else auto)")
 		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
 		authF    = fs.String("auth", cmp.Or(settings.Auth, auth.ModeNone), "how the REST API authenticates people: none treats every request as from people; passkey serves only requests signed in with a passkey, as from people, and refuses the others; MCP stays open to AI clients (register a passkey with ebira auth passkey) (default: auth of the settings file, else none)")
-		gitSync  = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file)")
+		gitSync  = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file, else of the defaults in "+store.ConfigFile+")")
 	)
 	return fs, &serveOptions{notesDir: notesDir, addr: addr, search: search, stopW: stopW, stopT: stopT, prov: prov, model: modelF, lang: lang, theme: theme, gitSync: gitSync, auth: authF, watch: watchF}
 }
@@ -105,21 +105,22 @@ func runServe(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
+	notesDir, addr, search, stopW, stopT, prov, modelF, watchF := o.notesDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
+	// The defaults shared with the notes are known with the notes directory.
+	abs, err := notesDirOf(fs, *notesDir, false, nil, nil)
+	if err != nil {
+		return err
+	}
 	if *o.theme != "" && !web.ValidTheme(*o.theme) {
-		return fmt.Errorf("unknown theme %q of -theme or theme in the settings file (%s)", *o.theme, strings.Join(web.Themes, ", "))
+		return fmt.Errorf("unknown theme %q of -theme, theme in the settings file or its defaults (%s)", *o.theme, strings.Join(web.Themes, ", "))
 	}
 	if !auth.ValidMode(*o.auth) {
 		return fmt.Errorf("unknown mode %q of -auth or auth in the settings file (%s)", *o.auth, strings.Join(auth.Modes, ", "))
 	}
 	if *o.lang != "" && !web.ValidLang(*o.lang) {
-		return fmt.Errorf("unknown language %q of -lang or lang in the settings file (%s)", *o.lang, strings.Join(web.Langs, ", "))
+		return fmt.Errorf("unknown language %q of -lang, lang in the settings file or its defaults (%s)", *o.lang, strings.Join(web.Langs, ", "))
 	}
 	gitEvery, err := gitSyncInterval(*o.gitSync)
-	if err != nil {
-		return err
-	}
-	notesDir, addr, search, stopW, stopT, prov, modelF, watchF := o.notesDir, o.addr, o.search, o.stopW, o.stopT, o.prov, o.model, o.watch
-	abs, err := notesDirOf(fs, *notesDir, false, nil, nil)
 	if err != nil {
 		return err
 	}

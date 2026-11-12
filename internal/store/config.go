@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -31,6 +33,10 @@ type Config struct {
 	// "red: important", which say what they mean. A mark without a name is
 	// shown by what it looks like.
 	Marks map[string]string `yaml:"marks,omitempty"`
+	// Defaults are the defaults of the settings file of each machine, with
+	// its keys, which the settings file of a machine wins over. They are kept
+	// as written; internal/config reads them (config.ParseDefaults).
+	Defaults yaml.Node `yaml:"defaults,omitempty"`
 }
 
 // Config reads ConfigFile. A missing file gives the zero value, and an unknown
@@ -48,9 +54,32 @@ func (s *Store) Config() (Config, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(true)
 	if err := dec.Decode(&c); err != nil && !errors.Is(err, io.EOF) { // io.EOF: an empty file
-		return c, fmt.Errorf("%s: %w", p, err)
+		return c, fmt.Errorf("%s: %w", p, unknownKeys(err))
 	}
 	return c, nil
+}
+
+// unknownKey matches an error of yaml for an unknown key, which names the Go
+// type.
+var unknownKey = regexp.MustCompile(`^line (\d+): field (\S+) not found in type \S+$`)
+
+// unknownKeys says the errors of yaml for unknown keys without the Go type,
+// and that a newer ebira may have written them: an unknown key stops the
+// server, so that a misspelled setting is not ignored.
+func unknownKeys(err error) error {
+	var te *yaml.TypeError
+	if !errors.As(err, &te) {
+		return err
+	}
+	msgs := make([]string, len(te.Errors))
+	for i, e := range te.Errors {
+		if m := unknownKey.FindStringSubmatch(e); m != nil {
+			msgs[i] = fmt.Sprintf("line %s: unknown key %s (misspelled, or written by a newer ebira: update ebira)", m[1], m[2])
+		} else {
+			msgs[i] = e
+		}
+	}
+	return errors.New(strings.Join(msgs, "; "))
 }
 
 // ConfigPath returns the path of ConfigFile.
@@ -111,3 +140,62 @@ func (s *Store) SaveSearch(c Config) error {
 	}
 	return writeFileAtomic(p, buf.Bytes())
 }
+
+// SaveDefaults changes the defaults of the settings file of each machine in
+// ConfigFile: update changes their mapping, made when there is none, and a
+// mapping left empty is removed. The rest of the file, with its comments, is
+// kept.
+func (s *Store) SaveDefaults(update func(m *yaml.Node)) error {
+	return SaveDefaults(s.dir, update)
+}
+
+// SaveDefaults is Store.SaveDefaults for the notes directory dir, which need
+// not be set up as a store yet, such as one made by setup before the server
+// starts.
+func SaveDefaults(dir string, update func(m *yaml.Node)) error {
+	p := filepath.Join(dir, ConfigFile)
+	old, err := readFile(p)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	var doc yaml.Node
+	if len(bytes.TrimSpace(old)) > 0 {
+		if err := yaml.Unmarshal(old, &doc); err != nil {
+			return fmt.Errorf("%s: %w", p, err)
+		}
+	}
+	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		doc = yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}}
+	}
+	m := doc.Content[0]
+	var d *yaml.Node
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == defaultsKey && m.Content[i+1].Kind == yaml.MappingNode {
+			d = m.Content[i+1]
+		}
+	}
+	if d == nil {
+		d = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	}
+	update(d)
+	if len(d.Content) > 0 {
+		set(m, defaultsKey, d)
+	} else {
+		unset(m, defaultsKey)
+	}
+	var buf bytes.Buffer
+	if len(m.Content) > 0 {
+		enc := yaml.NewEncoder(&buf)
+		enc.SetIndent(2)
+		if err := enc.Encode(&doc); err != nil {
+			return err
+		}
+		if err := enc.Close(); err != nil {
+			return err
+		}
+	}
+	return writeFileAtomic(p, buf.Bytes())
+}
+
+// defaultsKey is the key of Defaults in ConfigFile.
+const defaultsKey = "defaults"

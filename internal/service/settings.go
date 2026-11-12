@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
@@ -13,6 +14,7 @@ import (
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/store"
+	"gopkg.in/yaml.v3"
 )
 
 // Settings is what the command running the server tells about its settings:
@@ -105,11 +107,27 @@ func (s *Notes) SaveSettings(ctx context.Context, p *gennotes.SaveSettingsPayloa
 		return nil, gennotes.MakeBadRequest(errors.New("register a passkey with ebira auth passkey before auth: passkey, or nobody can sign in"))
 	}
 	n := notesConfig(p.Notes)
+	var defaults *config.Config
+	if p.Notes != nil && p.Notes.Defaults != nil {
+		d := machineConfig(p.Notes.Defaults)
+		d.Auth = "" // a machine's own
+		if s.settings.Check != nil {
+			if err := s.settings.Check(d); err != nil {
+				return nil, gennotes.MakeBadRequest(fmt.Errorf("defaults: %w", err))
+			}
+		}
+		defaults = &d
+	}
 	if _, err := config.Update(m); err != nil {
 		return nil, err
 	}
 	if err := s.store.SaveSearch(n); err != nil {
 		return nil, err
+	}
+	if defaults != nil {
+		if err := s.store.SaveDefaults(func(m *yaml.Node) { config.SetKeys(m, *defaults, config.DefaultKeys) }); err != nil {
+			return nil, err
+		}
 	}
 	return s.readSettings()
 }
@@ -169,6 +187,11 @@ func (s *Notes) readSettings() (*gennotes.Settings, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The keys left out of the defaults are told when a command reads them.
+	d, _, err := config.ParseDefaults(&n.Defaults, np)
+	if err != nil {
+		return nil, err
+	}
 	sum := sha256.New()
 	sum.Write(mb)
 	sum.Write([]byte{0})
@@ -181,7 +204,7 @@ func (s *Notes) readSettings() (*gennotes.Settings, error) {
 	maps.Copy(models, s.settings.DefaultModels)
 	return &gennotes.Settings{
 		Machine:            machineSettings(m),
-		Notes:              notesSettings(n),
+		Notes:              notesSettings(n, d),
 		MachinePath:        mp,
 		NotesPath:          np,
 		NotesDir:           s.store.Dir(),
@@ -227,7 +250,7 @@ func machineConfig(m *gennotes.MachineSettings) config.Config {
 	}
 }
 
-func notesSettings(c store.Config) *gennotes.NotesSettings {
+func notesSettings(c store.Config, defaults config.Config) *gennotes.NotesSettings {
 	list := func(words []string) *gennotes.StopList {
 		switch {
 		case words == nil:
@@ -241,7 +264,7 @@ func notesSettings(c store.Config) *gennotes.NotesSettings {
 	if c.Search != "" {
 		search = &c.Search
 	}
-	return &gennotes.NotesSettings{Search: search, StopWords: list(c.StopWords), StopTags: list(c.StopTags)}
+	return &gennotes.NotesSettings{Search: search, StopWords: list(c.StopWords), StopTags: list(c.StopTags), Defaults: machineSettings(defaults)}
 }
 
 // notesConfig returns the search settings of n. A list without words is

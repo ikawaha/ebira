@@ -74,7 +74,7 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 - ノートのディレクトリのほかに、ebira が使う 3 つの場所も禁じます。
   - `~/.cache/ebira`: 検索の索引。ノートの題名と本文を持っています。
   - `~/.local/state/ebira`: ノートの前の版（履歴）と、パスキーとセッションの鍵。
-  - `~/.config/ebira`: 設定ファイル。書き換えられると、`auth: none` に戻されてしまうので、書くことを禁じます。
+  - `~/.config/ebira`: 設定ファイル。書き換えられると、`auth: none` に戻されてしまうので、書くことを禁じます。ノートと共有する設定の既定（`_ebira.yaml` の `defaults`）には `auth` を書けないので、ノートの側から戻されることはありません（[設定](settings.md)）。
   - `XDG_CACHE_HOME`・`XDG_STATE_HOME`・`XDG_CONFIG_HOME` を変えていれば、その場所にします。
 - `permissions.deny`: ファイルを読む道具（Read・Grep・Glob と、シェルの `cat` などのよく使うコマンド）と、書く道具（Edit・Write など）に、これらの場所を使わせません。deny はほかの設定の allow より先に効きます。パスは `~/` か `//`（絶対パス）で書きます。`/` 1 つで始めると、設定ファイルの場所からのパスになります。
 - `permissions.allow`: ebira の MCP のツールを、毎回確かめずに使わせます（確かめたいなら書かない）。

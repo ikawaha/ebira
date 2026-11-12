@@ -2630,9 +2630,12 @@ async function openSettings() {
   }
   const overridden = new Set(cur.overridden);
   const langName = (l) => langNames[l] || l;
-  // A control for a value; "" is the default, which the file leaves out.
+  // A control for a value; "" is the default, which the file leaves out. A
+  // value the options lack, such as one written by hand or by a newer ebira,
+  // is kept as a choice of its own, so that saving does not drop it.
   const select = (value, options) => {
     const s = el("select");
+    if (value && !options.some(([v]) => v === value)) options = [...options, [value, value]];
     for (const [v, label] of options) {
       const o = el("option", "", label);
       o.value = v;
@@ -2650,26 +2653,57 @@ async function openSettings() {
     return i;
   };
   const m = cur.machine;
+  // The options of the settings chosen from a list; "" is the default, which
+  // the file leaves out.
+  const options = {
+    lang: [["", t("settingsLangDefault")], ...LANGS.map((l) => [l, langName(l)])],
+    theme: [["", t("settingsThemeDefault")], ["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]],
+    watch: [["", t("settingsWatchDefault")], ["true", t("settingsWatchOn")], ["false", t("settingsWatchOff")]],
+    provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]],
+    tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreviewRendered")], ["source", t("settingsTUISource")]],
+  };
+  const watchValue = (w) => (w === undefined || w === null ? "" : String(w));
+  // The controls of the settings of a machine, for the settings file of this
+  // machine (c) and for the defaults shared with the notes (dc). A value
+  // written, even the built-in one such as theme: auto, stays a choice of its
+  // own: the empty one follows the defaults shared with the notes.
+  const machineControls = (v) => ({
+    lang: select(v.lang, options.lang),
+    theme: select(v.theme, options.theme),
+    git_sync: text(v.git_sync, t("settingsGitSyncPlaceholder")),
+    watch: select(watchValue(v.watch), options.watch),
+    provider: select(v.provider, options.provider),
+    model: text(v.model),
+    tui_preview: select(v.tui_preview, options.tui_preview),
+  });
   const c = {
-    lang: select(m.lang, [["", t("settingsLangDefault")], ...LANGS.map((l) => [l, langName(l)])]),
-    theme: select(m.theme === "auto" ? "" : m.theme, [["", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]]),
+    ...machineControls(m),
     auth: select(m.auth === "none" ? "" : m.auth, [["", t("settingsAuthNone")], ["passkey", t("settingsAuthPasskey")]]),
-    git_sync: text(m.git_sync, t("settingsGitSyncPlaceholder")),
-    watch: el("input"),
-    provider: select(m.provider, [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]]),
-    model: text(m.model),
-    tui_preview: select(m.tui_preview === "rendered" ? "" : m.tui_preview, [["", t("settingsTUIRendered")], ["source", t("settingsTUISource")]]),
     search: select(cur.notes.search === "bigram" ? "" : cur.notes.search, [["", "bigram"], ["like", "like"], ["trigram", "trigram"], ["en", "en"], ["ja", "ja"]]),
   };
-  c.watch.type = "checkbox";
-  c.watch.checked = m.watch !== false;
+  // An earlier server has no defaults shared with the notes.
+  const dc = cur.notes.defaults ? machineControls(cur.notes.defaults) : null;
   // The placeholder of the model is the default of the provider chosen.
-  const modelPlaceholder = () => {
-    const p = c.provider.value;
-    c.model.placeholder = p ? cur.default_models[p] || "" : Object.values(cur.default_models).join(" / ");
+  const modelDefault = (provider) => (provider ? cur.default_models[provider] || "" : Object.values(cur.default_models).join(" / "));
+  // A value of this machine left empty follows the default shared with the
+  // notes, which the empty choice and the placeholders tell.
+  const follow = () => {
+    for (const k of Object.keys(options)) {
+      const shared = dc && dc[k].value;
+      const label = shared ? (options[k].find(([v]) => v === shared) || [shared, shared])[1] : "";
+      c[k].options[0].textContent = shared ? t("settingsFollowShared", { value: label }) : options[k][0][1];
+    }
+    for (const [k, def] of [["git_sync", t("settingsGitSyncPlaceholder")], ["model", modelDefault(c.provider.value || (dc && dc.provider.value))]]) {
+      const shared = dc && dc[k].value.trim();
+      c[k].placeholder = shared ? t("settingsFollowShared", { value: shared }) : def;
+    }
+    if (dc) dc.model.placeholder = modelDefault(dc.provider.value);
   };
-  c.provider.addEventListener("change", modelPlaceholder);
-  modelPlaceholder();
+  for (const e of [c.provider, ...(dc ? Object.values(dc) : [])]) {
+    e.addEventListener("change", follow);
+    e.addEventListener("input", follow);
+  }
+  follow();
   // auth: passkey needs a passkey, or nobody can sign in after a restart.
   if (!cur.passkeys && c.auth.value !== "passkey") c.auth.querySelector('option[value="passkey"]').disabled = true;
 
@@ -2717,15 +2751,19 @@ async function openSettings() {
   c.search.addEventListener("change", showJa);
   showJa();
 
-  const machineValue = () => {
-    const v = (k) => c[k].value.trim() || undefined;
+  const valuesOf = (cs) => {
+    const v = (k) => cs[k].value.trim() || undefined;
     return {
-      lang: v("lang"), theme: v("theme"), auth: v("auth"), git_sync: v("git_sync"),
-      watch: c.watch.checked ? undefined : false,
+      lang: v("lang"), theme: v("theme"), git_sync: v("git_sync"),
+      watch: cs.watch.value === "" ? undefined : cs.watch.value === "true",
       provider: v("provider"), model: v("model"), tui_preview: v("tui_preview"),
     };
   };
-  const notesValue = () => ({ search: c.search.value || undefined, stop_words: stopWords.value(), stop_tags: stopTags.value() });
+  const machineValue = () => ({ ...valuesOf(c), auth: c.auth.value.trim() || undefined });
+  const notesValue = () => ({
+    search: c.search.value || undefined, stop_words: stopWords.value(), stop_tags: stopTags.value(),
+    defaults: dc ? valuesOf(dc) : undefined,
+  });
   // The names of the marks are in the settings synced with the notes too:
   // once saved, the settings have another version.
   const markNamesSaved = async () => {
@@ -2840,11 +2878,12 @@ async function openSettings() {
     ["machine", t("settingsTabMachine"), el("div", "",
       el("p", "hint", t("settingsApply")),
       section(cur.machine_path,
+        ...(dc ? [el("p", "hint", t("settingsMachineHint"))] : []),
         row("lang", t("settingsLang"), c.lang),
         row("theme", t("settingsTheme"), c.theme),
         row("auth", t("settingsAuth"), c.auth, cur.passkeys ? "" : t("settingsAuthNoPasskey")),
         row("git_sync", t("settingsGitSync"), c.git_sync),
-        row("watch", t("settingsWatch"), el("label", "settings-check", c.watch, " ", t("settingsWatchLabel"))),
+        row("watch", t("settingsWatch"), c.watch, t("settingsWatchLabel")),
         row("provider", t("settingsProvider"), c.provider),
         row("model", t("settingsModel"), c.model),
         row("tui_preview", t("settingsTUIPreview"), c.tui_preview, t("settingsTUIPreviewHint")),
@@ -2859,7 +2898,19 @@ async function openSettings() {
         row("search", t("settingsSearch"), c.search, t("settingsSearchHint")),
         ...jaRows,
         el("div", "settings-row", el("span", "settings-label", t("markNames")),
-          el("div", "settings-control", button(t("markNamesMenu"), () => openMarkNames(markNamesSaved))))))]);
+          el("div", "settings-control", button(t("markNamesMenu"), () => openMarkNames(markNamesSaved)))),
+        // The defaults of each machine; its own settings file wins.
+        ...(dc ? [
+          el("h3", "settings-subhead", t("settingsDefaults")),
+          el("p", "hint", t("settingsDefaultsHint")),
+          row("", t("settingsLang"), dc.lang),
+          row("", t("settingsTheme"), dc.theme),
+          row("", t("settingsGitSync"), dc.git_sync),
+          row("", t("settingsWatch"), dc.watch, t("settingsWatchLabel")),
+          row("", t("settingsProvider"), dc.provider),
+          row("", t("settingsModel"), dc.model),
+          row("", t("settingsTUIPreview"), dc.tui_preview),
+        ] : [])))]);
   const bar = el("div", "settings-tabs");
   bar.setAttribute("role", "tablist");
   const panels = [];

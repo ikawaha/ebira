@@ -6648,6 +6648,9 @@ func unmarshalNotesSettingsResponseBodyToNotesNotesSettings(v *NotesSettingsResp
 	}
 	res.StopWords = unmarshalStopListResponseBodyToNotesStopList(v.StopWords)
 	res.StopTags = unmarshalStopListResponseBodyToNotesStopList(v.StopTags)
+	if v.Defaults != nil {
+		res.Defaults = unmarshalMachineSettingsResponseBodyToNotesMachineSettings(v.Defaults)
+	}
 
 	return res
 }
@@ -6697,6 +6700,9 @@ func marshalNotesNotesSettingsToNotesSettingsRequestBody(v *notes.NotesSettings)
 	if v.StopTags != nil {
 		res.StopTags = marshalNotesStopListToStopListRequestBody(v.StopTags)
 	}
+	if v.Defaults != nil {
+		res.Defaults = marshalNotesMachineSettingsToMachineSettingsRequestBody(v.Defaults)
+	}
 
 	return res
 }
@@ -6745,6 +6751,9 @@ func marshalNotesSettingsRequestBodyToNotesNotesSettings(v *NotesSettingsRequest
 	}
 	if v.StopTags != nil {
 		res.StopTags = marshalStopListRequestBodyToNotesStopList(v.StopTags)
+	}
+	if v.Defaults != nil {
+		res.Defaults = marshalMachineSettingsRequestBodyToNotesMachineSettings(v.Defaults)
 	}
 
 	return res

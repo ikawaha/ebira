@@ -31,8 +31,13 @@ import (
 	"github.com/ikawaha/ebira/internal/config"
 )
 
-// settings is the settings file, read by run before the flags.
+// settings is the settings file, read by run before the flags, with the
+// defaults shared with the notes once the notes directory is known
+// (applyDefaults).
 var settings config.Config
+
+// machineSettings is the settings file alone, without the defaults.
+var machineSettings config.Config
 
 // defaultNotesDir returns the default of -notes: notes_dir of the settings
 // file, else notes in the current directory.
@@ -73,7 +78,10 @@ Run a command with -h for its flags.
 The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
 file of $EBIRA_CONFIG), gives the defaults of the flags: notes_dir, addr,
 watch, provider, model, lang, theme, git_sync and auth, and tui_preview, how the
-TUI shows notes (rendered or source; v switches it). Without -notes, notes_dir and notes/
+TUI shows notes (rendered or source; v switches it). The same keys under
+defaults: in _ebira.yaml of the notes directory are the defaults of every
+machine that syncs the notes, which the settings file wins over; notes_dir,
+auth and an addr other than the loopback are each machine's own. Without -notes, notes_dir and notes/
 in the current directory, the commands that open the notes in a terminal ask
 where to keep them, how to search them and the language of the web UI and
 the TUI, and set them up. The index is kept in ~/.cache/ebira and the server's state and
@@ -103,6 +111,7 @@ func run(args []string) error {
 	if settings, err = config.Load(); err != nil {
 		return err
 	}
+	machineSettings = settings
 	if len(args) > 0 {
 		switch args[0] {
 		case "web":
