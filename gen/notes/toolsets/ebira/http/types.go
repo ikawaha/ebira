@@ -406,6 +406,11 @@ type (
 		// alone. The archive holds both the notes put there on their own and the
 		// notebooks there with all their notes
 		Archived *string `json:"archived,omitempty"`
+		// Only notes matching this query, as search takes it, kept in the order of the
+		// list with its separators: unlike search, which ranks the notes found by
+		// relevance and takes in the sub notebooks of a notebook, a notebook does not
+		// take in its sub notebooks, and the title highlights alone are given
+		Q *string `json:"q,omitempty"`
 	}
 	// ListNotesResultTransport is the internal JSON transport type for ListNotesResult.
 	// It lives in the toolset-local http package and is used only for JSON

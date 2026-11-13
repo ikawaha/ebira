@@ -228,7 +228,7 @@ func machineSettings(c config.Config) *gennotes.MachineSettings {
 	}
 	return &gennotes.MachineSettings{
 		Lang: opt(c.Lang), Theme: opt(c.Theme), Auth: opt(c.Auth), GitSync: opt(c.GitSync),
-		Watch: c.Watch, Provider: opt(c.Provider), Model: opt(c.Model), TuiPreview: opt(c.TUIPreview),
+		Watch: c.Watch, Provider: opt(c.Provider), Model: opt(c.Model), TuiPreview: opt(c.TUIPreview), TuiSearch: opt(c.TUISearch),
 	}
 }
 
@@ -246,7 +246,7 @@ func machineConfig(m *gennotes.MachineSettings) config.Config {
 	}
 	return config.Config{
 		Lang: v(m.Lang), Theme: v(m.Theme), Auth: v(m.Auth), GitSync: v(m.GitSync),
-		Watch: m.Watch, Provider: v(m.Provider), Model: v(m.Model), TUIPreview: v(m.TuiPreview),
+		Watch: m.Watch, Provider: v(m.Provider), Model: v(m.Model), TUIPreview: v(m.TuiPreview), TUISearch: v(m.TuiSearch),
 	}
 }
 

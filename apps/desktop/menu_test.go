@@ -47,6 +47,11 @@ func TestArchiveItems(t *testing.T) {
 	n.add(n.archive, archivable)
 	n.nbArchive = menu.Add(archiveLabel(false))
 	n.add(n.nbArchive, nbArchivable)
+	n.filter = menu.AddCheckbox("Filter the List", false)
+	n.update(pageState{Filter: true})
+	if !n.filter.Checked() {
+		t.Error("the filter item is not checked while the page filters")
+	}
 	for _, tt := range []struct {
 		name         string
 		p            pageState

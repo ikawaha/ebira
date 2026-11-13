@@ -665,17 +665,87 @@ func titleKey(title string) string { return strings.ToLower(norm.NFKC.String(tit
 // List returns notes in notebook (all but the trash and exclude if empty)
 // taken by a, in the order sort, and the number of all of them.
 func (ix *Index) List(ctx context.Context, notebook, tag, sort string, a Archive, limit, offset int, exclude ...string) ([]*Summary, int, error) {
+	return ix.Filter(ctx, "", notebook, tag, sort, a, limit, offset, exclude...)
+}
+
+// Filter is List of the notes matching q as Search finds them, kept in the
+// order of the list; an empty q lists them all. Unlike Search, a notebook
+// does not take in its sub notebooks, and matches are not highlighted.
+func (ix *Index) Filter(ctx context.Context, q, notebook, tag, sort string, a Archive, limit, offset int, exclude ...string) ([]*Summary, int, error) {
+	filter, fargs, a, err := ix.filterCond(ctx, q, a)
+	if err != nil {
+		return nil, 0, err
+	}
 	cond, args := a.and(notebookCond(notebook, exclude))
-	return ix.list(ctx, cond, args, tag, sort, limit, offset)
+	res, total, err := ix.list(ctx, cond, args, filter, fargs, tag, sort, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	ix.highlightTitles(q, res)
+	return res, total, nil
+}
+
+// highlightTitles sets the title highlights of the notes res filtered by q.
+func (ix *Index) highlightTitles(q string, res []*Summary) {
+	found := ParseQuery(q).found()
+	if len(found) == 0 {
+		return
+	}
+	h := ix.highlighter(found)
+	for _, s := range res {
+		s.TitleHighlights = h.find(s.Title)
+	}
 }
 
 // ListTrashedNotebook returns the notes of notebook nb in the trash in the
 // order sort, and the number of all of them.
 func (ix *Index) ListTrashedNotebook(ctx context.Context, nb, tag, sort string, limit, offset int) ([]*Summary, int, error) {
-	return ix.list(ctx, `n.notebook = ? AND n.trashed_notebook = ?`, []any{store.Trash, nb}, tag, sort, limit, offset)
+	return ix.FilterTrashedNotebook(ctx, "", nb, tag, sort, limit, offset)
 }
 
-func (ix *Index) list(ctx context.Context, cond string, args []any, tag, sort string, limit, offset int) ([]*Summary, int, error) {
+// FilterTrashedNotebook is ListTrashedNotebook of the notes matching q, as
+// Filter takes it.
+func (ix *Index) FilterTrashedNotebook(ctx context.Context, q, nb, tag, sort string, limit, offset int) ([]*Summary, int, error) {
+	filter, fargs, _, err := ix.filterCond(ctx, q, Archive{Mode: ArchiveInclude})
+	if err != nil {
+		return nil, 0, err
+	}
+	res, total, err := ix.list(ctx, `n.notebook = ? AND n.trashed_notebook = ?`, []any{store.Trash, nb}, filter, fargs, tag, sort, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	ix.highlightTitles(q, res)
+	return res, total, nil
+}
+
+// Matching returns the notes of notebook (without its sub notebooks) taken by
+// a and matching q, as Filter lists them.
+func (ix *Index) Matching(ctx context.Context, q, notebook string, a Archive) (map[string]bool, error) {
+	filter, fargs, a, err := ix.filterCond(ctx, q, a)
+	if err != nil {
+		return nil, err
+	}
+	cond, args := a.and(notebookCond(notebook, nil))
+	if filter != "" {
+		cond, args = cond+` AND `+filter, append(args, fargs...)
+	}
+	rows, err := ix.db.QueryContext(ctx, `SELECT n.id FROM notes n WHERE `+cond, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	res := map[string]bool{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		res[id] = true
+	}
+	return res, rows.Err()
+}
+
+func (ix *Index) list(ctx context.Context, cond string, args []any, filter string, fargs []any, tag, sort string, limit, offset int) ([]*Summary, int, error) {
 	order, err := orderBy(sort)
 	if err != nil {
 		return nil, 0, err
@@ -683,6 +753,10 @@ func (ix *Index) list(ctx context.Context, cond string, args []any, tag, sort st
 	if tag != "" {
 		cond += ` AND n.id IN (SELECT id FROM note_tags WHERE tag = ?)`
 		args = append(args, tag)
+	}
+	if filter != "" {
+		cond += ` AND ` + filter
+		args = append(args, fargs...)
 	}
 	var total int
 	if err := ix.db.QueryRowContext(ctx, `SELECT count(*) FROM notes n WHERE `+cond, args...).Scan(&total); err != nil {
@@ -760,32 +834,14 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, a Archive,
 	if query.InArchive {
 		a.Mode = ArchiveOnly
 	}
-	orTags := false
-	for _, g := range query.Or {
-		for _, a := range g {
-			orTags = orTags || a.Kind == AltTag
-		}
-	}
-	forms, err := ix.tagForms(ctx, len(tags)+len(query.NotTags) > 0 || orTags)
+	forms, conds, tagArgs, err := ix.queryConds(ctx, query, tags)
 	if err != nil {
 		return nil, 0, err
 	}
-	// The conditions besides the terms to find: the tags and the marks, and
-	// what to leave out.
-	var conds []string
-	var tagArgs []any
-	add := func(cond string, args []any) {
-		if cond != "" {
-			conds = append(conds, cond)
-			tagArgs = append(tagArgs, args...)
-		}
+	if cond, args := a.cond(); cond != "" {
+		conds = append(conds, cond)
+		tagArgs = append(tagArgs, args...)
 	}
-	add(tagCond(forms, tags))
-	add(ix.markCond(query.Marks))
-	add(notTagCond(forms, query.NotTags))
-	add(ix.notMarkCond(query.NotMarks))
-	add(ix.notTermCond(query.NotTerms))
-	add(a.cond())
 	tagWhere := strings.Join(conds, " AND ")
 	var ids []string
 	seen := map[string]bool{}
@@ -825,38 +881,9 @@ func (ix *Index) Search(ctx context.Context, q, notebook, tag string, a Archive,
 func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, or [][]Alt, forms map[string][]any, notebook, tagWhere string, tagArgs []any, exclude []string) ([]string, error) {
 	var (
 		from  = `notes n`
-		where []string
-		args  []any
 		order = `n.updated_at DESC`
-		match []string
 	)
-	for _, term := range terms {
-		// A term with no tokens (a single character in the bigram mode, only
-		// stop words in the ja mode, or only symbols) is searched with LIKE
-		// so that it still narrows the result.
-		if t.an != nil {
-			if tokens := t.an.query(term); tokens != "" {
-				match = append(match, phrase(tokens))
-				continue
-			}
-		}
-		where = append(where, `(n.title LIKE ? ESCAPE '\' OR n.body LIKE ? ESCAPE '\')`)
-		p := "%" + escapeLike(term) + "%"
-		args = append(args, p, p)
-	}
-	for _, g := range or {
-		if phrases := t.phrases(g); phrases != nil {
-			match = append(match, "("+strings.Join(phrases, " OR ")+")")
-			continue
-		}
-		var parts []string
-		for _, a := range g {
-			cond, condArgs := ix.altCond(t, forms, a)
-			parts = append(parts, cond)
-			args = append(args, condArgs...)
-		}
-		where = append(where, "("+strings.Join(parts, " OR ")+")")
-	}
+	match, where, args := ix.termConds(t, terms, or, forms)
 	if len(match) > 0 {
 		from = t.name + ` f JOIN notes n ON n.seq = f.rowid`
 		where = append(where, t.name+` MATCH ?`)
@@ -884,6 +911,100 @@ func (ix *Index) searchIDs(ctx context.Context, t ftsTable, terms []string, or [
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
+}
+
+// queryConds returns the conditions of query besides the terms to find: the
+// tags (those of query and tags) and the marks, and what to leave out, with
+// their arguments, and the tags in the index by their keys (see tagForms).
+func (ix *Index) queryConds(ctx context.Context, query Query, tags []string) (forms map[string][]any, conds []string, args []any, err error) {
+	orTags := false
+	for _, g := range query.Or {
+		for _, a := range g {
+			orTags = orTags || a.Kind == AltTag
+		}
+	}
+	if forms, err = ix.tagForms(ctx, len(tags)+len(query.NotTags) > 0 || orTags); err != nil {
+		return nil, nil, nil, err
+	}
+	add := func(cond string, condArgs []any) {
+		if cond != "" {
+			conds = append(conds, cond)
+			args = append(args, condArgs...)
+		}
+	}
+	add(tagCond(forms, tags))
+	add(ix.markCond(query.Marks))
+	add(notTagCond(forms, query.NotTags))
+	add(ix.notMarkCond(query.NotMarks))
+	add(ix.notTermCond(query.NotTerms))
+	return forms, conds, args, nil
+}
+
+// termConds returns what a note matches in the full-text table t to have the
+// terms and one of each group of or: the phrases to MATCH in t, and the other
+// conditions with their arguments.
+func (ix *Index) termConds(t ftsTable, terms []string, or [][]Alt, forms map[string][]any) (match, where []string, args []any) {
+	for _, term := range terms {
+		// A term with no tokens (a single character in the bigram mode, only
+		// stop words in the ja mode, or only symbols) is searched with LIKE
+		// so that it still narrows the result.
+		if t.an != nil {
+			if tokens := t.an.query(term); tokens != "" {
+				match = append(match, phrase(tokens))
+				continue
+			}
+		}
+		where = append(where, `(n.title LIKE ? ESCAPE '\' OR n.body LIKE ? ESCAPE '\')`)
+		p := "%" + escapeLike(term) + "%"
+		args = append(args, p, p)
+	}
+	for _, g := range or {
+		if phrases := t.phrases(g); phrases != nil {
+			match = append(match, "("+strings.Join(phrases, " OR ")+")")
+			continue
+		}
+		var parts []string
+		for _, a := range g {
+			cond, condArgs := ix.altCond(t, forms, a)
+			parts = append(parts, cond)
+			args = append(args, condArgs...)
+		}
+		where = append(where, "("+strings.Join(parts, " OR ")+")")
+	}
+	return match, where, args
+}
+
+// filterCond returns the condition that a note matches q as Search finds
+// notes, but for the order, "" if q asks for nothing, and a as in:archive in q
+// changes it.
+func (ix *Index) filterCond(ctx context.Context, q string, a Archive) (string, []any, Archive, error) {
+	query := ParseQuery(q)
+	if query.InArchive {
+		a.Mode = ArchiveOnly
+	}
+	forms, conds, args, err := ix.queryConds(ctx, query, query.Tags)
+	if err != nil {
+		return "", nil, a, err
+	}
+	if len(query.Terms)+len(query.Or) > 0 {
+		// A note found in any of the full-text tables, as Search merges them.
+		tables := ix.fts
+		if len(tables) == 0 {
+			tables = []ftsTable{{}}
+		}
+		var found []string
+		for _, t := range tables {
+			match, where, targs := ix.termConds(t, query.Terms, query.Or, forms)
+			if len(match) > 0 {
+				where = append([]string{`n.seq IN (SELECT rowid FROM ` + t.name + ` WHERE ` + t.name + ` MATCH ?)`}, where...)
+				targs = append([]any{strings.Join(match, " AND ")}, targs...)
+			}
+			found = append(found, "("+strings.Join(where, " AND ")+")")
+			args = append(args, targs...)
+		}
+		conds = append(conds, "("+strings.Join(found, " OR ")+")")
+	}
+	return strings.Join(conds, " AND "), args, a, nil
 }
 
 // phrases returns the phrases of the terms of group to match in t, or nil if t

@@ -1512,6 +1512,12 @@ paths:
                   description: Only notes with this tag
                   required: false
                   type: string
+                - name: q
+                  in: query
+                  description: 'Only notes matching this query, as search takes it, kept in the order of the list with its separators: unlike search, which ranks the notes found by relevance and takes in the sub notebooks of a notebook, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                  required: false
+                  type: string
+                  maxLength: 1000
                 - name: limit
                   in: query
                   description: Maximum number of notes
@@ -5315,6 +5321,13 @@ definitions:
                 enum:
                     - rendered
                     - source
+            tui_search:
+                type: string
+                description: 'What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search'
+                example: search
+                enum:
+                    - search
+                    - filter
             watch:
                 type: boolean
                 description: Whether the server watches the notes directory; left out for true
@@ -5328,6 +5341,7 @@ definitions:
             provider: anthropic
             theme: auto
             tui_preview: rendered
+            tui_search: search
             watch: true
     MarkInfo:
         title: MarkInfo
@@ -11997,6 +12011,7 @@ definitions:
                 provider: anthropic
                 theme: auto
                 tui_preview: rendered
+                tui_search: search
                 watch: true
             notes:
                 defaults:
@@ -12007,6 +12022,7 @@ definitions:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 search: bigram
                 stop_tags:
@@ -12537,6 +12553,7 @@ definitions:
                 provider: anthropic
                 theme: auto
                 tui_preview: rendered
+                tui_search: search
                 watch: true
             search: bigram
             stop_tags:
@@ -14157,6 +14174,7 @@ definitions:
                 provider: anthropic
                 theme: auto
                 tui_preview: rendered
+                tui_search: search
                 watch: true
             machine_path: /Users/you/.config/ebira/config.yaml
             notes:
@@ -14168,6 +14186,7 @@ definitions:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 search: bigram
                 stop_tags:

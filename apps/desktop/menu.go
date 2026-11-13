@@ -26,6 +26,9 @@ type pageState struct {
 	Archived           bool `json:"archived"`
 	NotebookArchivable bool `json:"notebookArchivable"`
 	NotebookArchived   bool `json:"notebookArchived"`
+	// Filter tells that the search box filters the list, kept in its order,
+	// instead of searching.
+	Filter bool `json:"filter"`
 }
 
 // editMenu fills the edit menu of Windows with the items of the roles of Wails,
@@ -63,7 +66,10 @@ type noteMenu struct {
 	// archive and nbArchive put the note and the notebook shown in the
 	// archive, or take them out.
 	archive, nbArchive *application.MenuItem
-	text               func(string) string
+	// filter switches the search box between searching and filtering,
+	// checked while it filters.
+	filter *application.MenuItem
+	text   func(string) string
 }
 
 type stateItem struct {
@@ -101,6 +107,9 @@ func (n *noteMenu) update(p pageState) {
 	}
 	n.archive.SetLabel(n.text(archiveLabel(p.Archived)))
 	n.nbArchive.SetLabel(n.text(archiveLabel(p.NotebookArchived)))
+	if n.filter != nil {
+		n.filter.SetChecked(p.Filter)
+	}
 }
 
 // archiveLabel is the label of an item that puts in the archive, or takes out
@@ -123,6 +132,9 @@ func (n *noteMenu) reset() {
 	n.trash.SetLabel(n.text("Move to Trash"))
 	n.archive.SetLabel(n.text(archiveLabel(false)))
 	n.nbArchive.SetLabel(n.text(archiveLabel(false)))
+	if n.filter != nil {
+		n.filter.SetChecked(false)
+	}
 }
 
 // call runs a function of window.ebira in the Web UI. A page without it, from a
@@ -319,6 +331,10 @@ func (s *shell) appMenu() *application.Menu {
 
 	view := menu.AddSubmenu("View")
 	n.add(view.Add("Preview Style…").OnClick(on(func() { s.call("previewStyle") })), notEditing)
+	view.AddSeparator()
+	// The page tells whether it filters, which checks the item.
+	n.filter = view.AddCheckbox("Filter the List", false).OnClick(on(func() { s.call("filter") }))
+	n.add(n.filter, always)
 	view.AddSeparator()
 	// The size of the text of notes, as the minus and plus of the settings
 	// menu, rather than a zoom of the whole page.

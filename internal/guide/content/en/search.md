@@ -18,6 +18,28 @@ Combine them: `tag:guide search -mark:red`
 
 Searches leave out the trash and the archive. Choose the Trash or the archive in the side column and search to search there ([Notes and notebooks](notes.md)).
 
+## Filter
+
+The funnel at the right of the search box (struck out while it searches) turns it into a filter, which takes the same query and narrows the list shown, kept in its order (the box then says "Filter"). How it differs from a search:
+
+| | Search | Filter |
+|---|---|---|
+| Order | Best match first | The order of the list (by hand, or its sort) |
+| With a notebook chosen | Notes of its sub notebooks mixed in | Sub notebooks stay as cells, filtered too |
+| Separators | Not shown | Kept |
+| Matches marked | Titles and snippets of the body | Titles alone (and the preview) |
+| Notes listed | The top 200 | All, 500 at a time |
+| Reordering | No | Yes |
+| Note shown | The first one found | The one shown, while the list has it |
+
+To find something, search; to see part of a list in the order you gave it, such as by priority, filter.
+
+- The order given by hand, the separators and the cells of sub notebooks stay; only the notes not matching are hidden. An open cell shows how many of its notes are shown, out of all.
+- For instance, `-tag:renovate` leaves out the notes with the tag, and the rest stay in their order.
+- The filtered list can still be reordered by dragging or with `J` / `K`, among the notes shown.
+- It works in any list, and this browser remembers it. Click the funnel again to search.
+- In the desktop app, "Filter the List" in the View menu switches it too; in the TUI, Tab in the search box ([TUI](tui.md)).
+
 ## Matches
 
 The preview of a note found marks the matches. `n` / `N` go to the next or previous one.

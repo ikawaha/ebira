@@ -126,7 +126,7 @@ mark.current { background: var(--mark-current); }
 .search { flex: 1; max-width: 560px; position: relative; }
 .search input {
   width: 100%;
-  padding: 4px 84px 4px 12px; /* room for the clear, filter and help buttons */
+  padding: 4px 112px 4px 12px; /* room for the clear, filter and help buttons */
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--bg);

@@ -40,6 +40,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		var (
 			notebook        *string
 			tag             *string
+			q               *string
 			limit           int
 			offset          int
 			trashedNotebook *string
@@ -60,6 +61,15 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		tagRaw := qp.Get("tag")
 		if tagRaw != "" {
 			tag = &tagRaw
+		}
+		qRaw := qp.Get("q")
+		if qRaw != "" {
+			q = &qRaw
+		}
+		if q != nil {
+			if utf8.RuneCountInString(*q) > 1000 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q", *q, utf8.RuneCountInString(*q), 1000, false))
+			}
 		}
 		{
 			limitRaw := qp.Get("limit")
@@ -128,7 +138,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		if err != nil {
 			return payload, err
 		}
-		payload = NewListPayload(notebook, tag, limit, offset, trashedNotebook, sort, archived, session)
+		payload = NewListPayload(notebook, tag, q, limit, offset, trashedNotebook, sort, archived, session)
 
 		return payload, nil
 	}
@@ -5568,6 +5578,7 @@ func marshalNotesMachineSettingsToMachineSettingsResponseBody(v *notes.MachineSe
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -5620,6 +5631,7 @@ func unmarshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSetting
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res

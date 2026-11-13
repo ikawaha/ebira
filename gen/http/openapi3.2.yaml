@@ -2102,6 +2102,16 @@ paths:
                     description: Only notes with this tag
                     example: Nulla molestiae voluptatum et.
                   example: Nulla molestiae voluptatum et.
+                - name: q
+                  in: query
+                  description: 'Only notes matching this query, as search takes it, kept in the order of the list with its separators: unlike search, which ranks the notes found by relevance and takes in the sub notebooks of a notebook, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                  allowEmptyValue: true
+                  schema:
+                    type: string
+                    description: 'Only notes matching this query, as search takes it, kept in the order of the list with its separators: unlike search, which ranks the notes found by relevance and takes in the sub notebooks of a notebook, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                    example: dew
+                    maxLength: 1000
+                  example: dew
                 - name: limit
                   in: query
                   description: Maximum number of notes
@@ -4492,6 +4502,7 @@ paths:
                                     provider: anthropic
                                     theme: auto
                                     tui_preview: rendered
+                                    tui_search: search
                                     watch: true
                                 machine_path: /Users/you/.config/ebira/config.yaml
                                 notes:
@@ -4503,6 +4514,7 @@ paths:
                                         provider: anthropic
                                         theme: auto
                                         tui_preview: rendered
+                                        tui_search: search
                                         watch: true
                                     search: bigram
                                     stop_tags:
@@ -4577,6 +4589,7 @@ paths:
                                 provider: anthropic
                                 theme: auto
                                 tui_preview: rendered
+                                tui_search: search
                                 watch: true
                             notes:
                                 defaults:
@@ -4587,6 +4600,7 @@ paths:
                                     provider: anthropic
                                     theme: auto
                                     tui_preview: rendered
+                                    tui_search: search
                                     watch: true
                                 search: bigram
                                 stop_tags:
@@ -4625,6 +4639,7 @@ paths:
                                     provider: anthropic
                                     theme: auto
                                     tui_preview: rendered
+                                    tui_search: search
                                     watch: true
                                 machine_path: /Users/you/.config/ebira/config.yaml
                                 notes:
@@ -4636,6 +4651,7 @@ paths:
                                         provider: anthropic
                                         theme: auto
                                         tui_preview: rendered
+                                        tui_search: search
                                         watch: true
                                     search: bigram
                                     stop_tags:
@@ -6025,6 +6041,13 @@ components:
                     enum:
                         - rendered
                         - source
+                tui_search:
+                    type: string
+                    description: 'What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search'
+                    example: search
+                    enum:
+                        - search
+                        - filter
                 watch:
                     type: boolean
                     description: Whether the server watches the notes directory; left out for true
@@ -6038,6 +6061,7 @@ components:
                 provider: anthropic
                 theme: auto
                 tui_preview: rendered
+                tui_search: search
                 watch: true
         MarkInfo:
             type: object
@@ -7092,6 +7116,7 @@ components:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 search: bigram
                 stop_tags:
@@ -7262,6 +7287,7 @@ components:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 notes:
                     defaults:
@@ -7272,6 +7298,7 @@ components:
                         provider: anthropic
                         theme: auto
                         tui_preview: rendered
+                        tui_search: search
                         watch: true
                     search: bigram
                     stop_tags:
@@ -7670,6 +7697,7 @@ components:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 machine_path: /Users/you/.config/ebira/config.yaml
                 notes:
@@ -7681,6 +7709,7 @@ components:
                         provider: anthropic
                         theme: auto
                         tui_preview: rendered
+                        tui_search: search
                         watch: true
                     search: bigram
                     stop_tags:

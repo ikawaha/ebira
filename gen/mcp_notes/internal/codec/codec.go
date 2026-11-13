@@ -1181,6 +1181,11 @@ type ListInputTransport struct {
 	// alone. The archive holds both the notes put there on their own and the
 	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
+	// Only notes matching this query, as search takes it, kept in the order of the
+	// list with its separators: unlike search, which ranks the notes found by
+	// relevance and takes in the sub notebooks of a notebook, a notebook does not
+	// take in its sub notebooks, and the title highlights alone are given
+	Q *string `json:"q,omitempty"`
 }
 
 // ValidateListInputTransport checks decoded JSON before it becomes a service value.
@@ -1215,6 +1220,11 @@ func ValidateListInputTransport(value *ListInputTransport) (err error) {
 	if value.Archived != nil {
 		if !(*value.Archived == "exclude" || *value.Archived == "include" || *value.Archived == "only") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *value.Archived, []any{"exclude", "include", "only"}))
+		}
+	}
+	if value.Q != nil {
+		if utf8.RuneCountInString(*value.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1000, false))
 		}
 	}
 	return err
@@ -1264,6 +1274,11 @@ type ListPayloadTransport struct {
 	// alone. The archive holds both the notes put there on their own and the
 	// notebooks there with all their notes
 	Archived *string `json:"archived,omitempty"`
+	// Only notes matching this query, as search takes it, kept in the order of the
+	// list with its separators: unlike search, which ranks the notes found by
+	// relevance and takes in the sub notebooks of a notebook, a notebook does not
+	// take in its sub notebooks, and the title highlights alone are given
+	Q *string `json:"q,omitempty"`
 }
 
 // ValidateListPayloadTransport checks decoded JSON before it becomes a service value.
@@ -1298,6 +1313,11 @@ func ValidateListPayloadTransport(value *ListPayloadTransport) (err error) {
 	if value.Archived != nil {
 		if !(*value.Archived == "exclude" || *value.Archived == "include" || *value.Archived == "only") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *value.Archived, []any{"exclude", "include", "only"}))
+		}
+	}
+	if value.Q != nil {
+		if utf8.RuneCountInString(*value.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *value.Q, utf8.RuneCountInString(*value.Q), 1000, false))
 		}
 	}
 	return err
@@ -3396,6 +3416,7 @@ func ValidateListInputValue(in *notes.ListPayload) error {
 			TrashedNotebook: in.TrashedNotebook,
 			Sort:            in.Sort,
 			Archived:        &in.Archived,
+			Q:               in.Q,
 		}
 	}
 	if err := ValidateListInputTransport(body); err != nil {
@@ -3427,6 +3448,7 @@ func DecodeListPayload(data []byte) (out *notes.ListPayload, err error) {
 			Tag:             body.Tag,
 			TrashedNotebook: body.TrashedNotebook,
 			Sort:            body.Sort,
+			Q:               body.Q,
 		}
 		if body.Limit != nil {
 			out.Limit = int(*body.Limit)

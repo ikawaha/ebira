@@ -140,6 +140,11 @@ type Model struct {
 	// src; saveSource keeps the mode when it is switched (see source.go).
 	source     bool
 	saveSource func(source bool) error
+	// filter is whether the search box filters the list instead of
+	// searching; saveFilter keeps the mode when it is switched (see
+	// filter.go).
+	filter     bool
+	saveFilter func(filter bool) error
 	src        *editor
 	peek       bool // the pane renders the body of src for a while
 	// findIn is the find field of the note (see find.go), findQ its text and
@@ -494,8 +499,14 @@ func (m *Model) notebookOp(status, show string, op func(ctx context.Context) err
 func (m *Model) loadList() tea.Cmd {
 	m.listSeq++
 	seq, q, ctx, api, allSort := m.listSeq, m.query, m.ctx, m.api, m.allSort
+	// A filter is a list of the notes matching q, in its order.
+	var filter *string
+	if m.filtered() {
+		f := q
+		filter, q = &f, ""
+	}
 	if tid, ok := trashedID(m.notebook); ok {
-		return func() tea.Msg { return loadTrashedNotebook(ctx, api, tid, q, seq) }
+		return func() tea.Msg { return loadTrashedNotebook(ctx, api, tid, q, filter, seq) }
 	}
 	var nb, tag *string
 	archive := m.archiveParam(m.notebook)
@@ -514,7 +525,7 @@ func (m *Model) loadList() tea.Cmd {
 			if across && allSort != "" {
 				sort = &allSort
 			}
-			items, seps, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort, Archived: archive})
+			items, seps, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: nb, Tag: tag, Sort: sort, Archived: archive, Q: filter})
 			return listMsg{seq: seq, items: items, seps: seps, total: total, err: err}
 		}
 		res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: nb, Tag: tag, Limit: 200, Archived: archive})
@@ -529,13 +540,13 @@ func (m *Model) loadList() tea.Cmd {
 	}
 }
 
-// loadTrashedNotebook lists the notes of notebook tid in the trash, or those
-// matching q. The search takes no notebook in the trash, so it searches the
-// trash and keeps the notes of tid.
-func loadTrashedNotebook(ctx context.Context, api *gennotes.Client, tid, q string, seq int) tea.Msg {
+// loadTrashedNotebook lists the notes of notebook tid in the trash, those
+// matching filter, or those found by the search q. The search takes no
+// notebook in the trash, so it searches the trash and keeps the notes of tid.
+func loadTrashedNotebook(ctx context.Context, api *gennotes.Client, tid, q string, filter *string, seq int) tea.Msg {
 	trash := trashNotebook
 	if q == "" {
-		items, _, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: &trash, TrashedNotebook: &tid})
+		items, _, total, err := listAll(ctx, api, &gennotes.ListPayload{Notebook: &trash, TrashedNotebook: &tid, Q: filter})
 		return listMsg{seq: seq, items: items, total: total, err: err}
 	}
 	res, err := api.Search(ctx, &gennotes.SearchPayload{Q: q, Notebook: &trash, Limit: 200})
@@ -774,9 +785,10 @@ func (m *Model) currentSort() string {
 }
 
 // canReorder reports whether the notes shown can be moved by hand: those of a
-// notebook in the manual order, without a search.
+// notebook in the manual order, without a search. A filter keeps the order,
+// and the notes move among those shown.
 func (m *Model) canReorder() bool {
-	if _, ok := trashedID(m.notebook); ok || m.query != "" || m.acrossNotebooks() || m.notebook == trashNotebook {
+	if _, ok := trashedID(m.notebook); ok || m.searching() || m.acrossNotebooks() || m.notebook == trashNotebook {
 		return false
 	}
 	return m.currentSort() == "order"
@@ -1600,6 +1612,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	if m.focus == focusSearch {
 		switch key {
+		case "tab":
+			return m, m.toggleFilter()
 		case "esc":
 			m.input.SetValue("")
 			m.input.Blur()

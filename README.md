@@ -388,7 +388,7 @@ addr: localhost:13579
 lang: en
 ```
 
-The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) `git_sync`, `auth` (`none` or `passkey`) and `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes). API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; the web UI's settings menu can choose another, and `light` makes the TUI use its light colors) `git_sync`, `auth` (`none` or `passkey`) `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes) and `tui_search` (`search` or `filter`, which Tab in the search box of the TUI switches and writes). API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
 ### Styling the preview
 

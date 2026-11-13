@@ -381,6 +381,9 @@ var MachineSettings = Type("MachineSettings", func() {
 	Attribute("tui_preview", String, "How the preview of the TUI shows a note; empty for rendered", func() {
 		Enum("rendered", "source")
 	})
+	Attribute("tui_search", String, "What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search", func() {
+		Enum("search", "filter")
+	})
 })
 
 var StopList = Type("StopList", func() {
@@ -533,6 +536,7 @@ var _ = Service("notes", func() {
 				Enum(sortKeys...)
 			})
 			archiveFilter()
+			Attribute("q", String, "Only notes matching this query, as search takes it, kept in the order of the list with its separators: unlike search, which ranks the notes found by relevance and takes in the sub notebooks of a notebook, a notebook does not take in its sub notebooks, and the title highlights alone are given", searchQueryDSL)
 		})
 		Result(NoteList)
 		Error("bad_request", ErrorResult, "trashed_notebook is given without notebook=trash")
@@ -540,6 +544,7 @@ var _ = Service("notes", func() {
 			GET("/notes")
 			Param("notebook")
 			Param("tag")
+			Param("q")
 			Param("limit")
 			Param("offset")
 			Param("trashed_notebook")
@@ -547,7 +552,7 @@ var _ = Service("notes", func() {
 			Param("archived")
 			Response("bad_request", StatusBadRequest)
 		})
-		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook", func() {
+		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook. q filters the list with a query as search_notes takes it but keeps the list as it is: its order (the order the user gave a notebook by hand, which often tells priority), its pages and its separators, and a notebook without its sub notebooks (list each one by its ID). Use it to narrow a list, as in -tag:name to leave out the notes with a tag and see the rest in the order the user gave them; use search_notes to find notes by relevance anywhere", func() {
 			ReadOnlyHint(true)
 		})
 	})
@@ -711,7 +716,7 @@ var _ = Service("notes", func() {
 			Param("archived")
 			Param("limit")
 		})
-		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them; archived_total in the result tells how many of them match too, which are worth reading when the rest does not answer", func() {
+		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them; archived_total in the result tells how many of them match too, which are worth reading when the rest does not answer. Found notes come best match first, from the notebook and its sub notebooks; to narrow a list and keep the order the user gave it, with its separators, use list_notes with q instead", func() {
 			ReadOnlyHint(true)
 		})
 	})

@@ -76,6 +76,10 @@ type Config struct {
 	// default) or source, the Markdown itself, which can be edited at once.
 	// The TUI writes it with Set when it is switched.
 	TUIPreview string `yaml:"tui_preview"`
+	// TUISearch is what the search box of the TUI does: search (the default),
+	// listing the notes found by relevance, or filter, narrowing the list in
+	// its order. The TUI writes it with Set when it is switched.
+	TUISearch string `yaml:"tui_search"`
 
 	// LegacyDataDir is data_dir of earlier builds, the directory above the
 	// notes directory; Load fails with it, telling what to write instead.
@@ -385,7 +389,7 @@ func Set(key, value string) (string, error) {
 // UpdatedKeys are the keys of the settings file that Update writes, those
 // the web UI shows to change: not notes_dir and addr, which a restart of the
 // server keeps.
-var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview"}
+var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search"}
 
 // Update writes the values of c for UpdatedKeys to the settings file, and
 // keeps the rest of it, with its comments. A zero value is left out, for the
@@ -429,7 +433,7 @@ func Update(c Config) (string, error) {
 // old values; a zero value removes its key, for the default. keys are of
 // those of the settings file other than notes_dir.
 func SetKeys(m *yaml.Node, c Config, keys []string) {
-	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview}
+	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview, "tui_search": c.TUISearch}
 	for _, k := range keys {
 		var v *yaml.Node
 		switch {

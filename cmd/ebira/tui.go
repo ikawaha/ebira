@@ -54,6 +54,9 @@ func runTUI(args []string) error {
 	if p := settings.TUIPreview; p != "" && p != "rendered" && p != "source" {
 		return fmt.Errorf("unknown tui_preview %q in the settings file or its defaults (rendered, source)", p)
 	}
+	if s := settings.TUISearch; s != "" && s != "search" && s != "filter" {
+		return fmt.Errorf("unknown tui_search %q in the settings file or its defaults (search, filter)", s)
+	}
 	if *lang != "" && !tui.ValidLang(*lang) {
 		return fmt.Errorf("unknown language %q of -lang, lang in the settings file or its defaults (%s)", *lang, strings.Join(tui.Langs, ", "))
 	}
@@ -78,6 +81,13 @@ func runTUI(args []string) error {
 			v = "source"
 		}
 		_, err := config.Set("tui_preview", v)
+		return err
+	}).FilterMode(settings.TUISearch == "filter", func(filter bool) error {
+		v := "search"
+		if filter {
+			v = "filter"
+		}
+		_, err := config.Set("tui_search", v)
 		return err
 	})
 	p := tea.NewProgram(m)

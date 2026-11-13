@@ -60,6 +60,9 @@ func EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if p.Tag != nil {
 			values.Add("tag", *p.Tag)
 		}
+		if p.Q != nil {
+			values.Add("q", *p.Q)
+		}
 		values.Add("limit", strconv.Itoa(p.Limit))
 		values.Add("offset", strconv.Itoa(p.Offset))
 		if p.TrashedNotebook != nil {
@@ -7114,6 +7117,7 @@ func unmarshalMachineSettingsResponseBodyToNotesMachineSettings(v *MachineSettin
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -7162,6 +7166,7 @@ func marshalNotesMachineSettingsToMachineSettingsRequestBody(v *notes.MachineSet
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -7214,6 +7219,7 @@ func marshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsR
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
