@@ -15,7 +15,7 @@ A notebook is a folder of notes. Make one with "+" under the side column. With i
 - **Inbox**: notes made without a notebook go here.
 - **Trash**: the trash, which also holds notebooks deleted as a whole.
 
-A notebook can hold sub notebooks, one level deep ("New sub notebook…" in its menu). A sub notebook shows as a cell at the top of the list, which opens and closes when clicked. "Terminal" of this guide is one. "+ New" makes a note in the sub notebook of the note chosen when that note is in a cell, else in the parent. The sort above the list is the parent's: to sort the notes of a sub notebook, use "Sort" in the menu of its cell, which also has "New note here".
+A notebook can hold sub notebooks, one level deep ("New sub notebook…" in its menu). A sub notebook shows as a cell at the top of the list, which opens and closes when clicked. "Terminal" of this guide is one. "+ New" makes a note in the sub notebook whose cell was clicked last, or of the note chosen when that note is in a cell, and opens its cell; else in the parent. The sort above the list is the parent's: to sort the notes of a sub notebook, use "Sort" in the menu of its cell, which also has "New note here".
 
 ## Moving
 

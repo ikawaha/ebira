@@ -18,6 +18,7 @@ const state = {
   total: 0,
   separators: [], // the separators of the notebook shown, in its manual order
   selected: null, // ID of the note in the preview
+  cell: null, // the sub notebook whose cell was clicked last, where new notes go
   chosen: new Set(), // IDs of the notes chosen together with Cmd/Ctrl or Shift; two or more replace the preview
   anchor: null, // the note a Shift-click chooses from
   note: null, // the note in the preview
@@ -225,6 +226,7 @@ const archiveCount = () => state.notebooks.reduce((a, n) => a + archivedIn(n), 0
 function selectArchive() {
   if (state.archive && !state.query) return;
   state.archive = true;
+  state.cell = null;
   state.tag = null;
   state.notebook = null;
   renderNotebooks();
@@ -270,11 +272,14 @@ function listedNotes() {
 const findListed = (id) => listedNotes().find((n) => n.id === id);
 
 // newNoteNotebook returns the notebook a new note goes to: the sub notebook
-// of the note chosen when it is in an open cell, as that is where one works,
-// else the notebook shown, else the inbox.
+// whose cell was clicked last, or that of the note chosen when it is in an
+// open cell, as that is where one works; else the notebook shown, else the
+// inbox.
 function newNoteNotebook() {
   if (!state.notebook || state.notebook === "trash") return "inbox";
-  const n = !state.query && !state.tag && state.selected && findListed(state.selected);
+  if (state.query || state.tag) return state.notebook;
+  if (state.cell && parentOf(state.cell) === state.notebook) return state.cell;
+  const n = state.selected && findListed(state.selected);
   return n && parentOf(n.notebook) === state.notebook ? n.notebook : state.notebook;
 }
 
@@ -338,8 +343,10 @@ async function readSubNotes(x) {
   return { notes, total, want, separators };
 }
 
-// toggleSub opens or folds the sub notebook key in the note list.
-function toggleSub(key) {
+// toggleSub opens or folds the sub notebook key in the note list. cell is
+// the sub notebook of a cell of a note list, which becomes the one clicked.
+function toggleSub(key, cell = null) {
+  state.cell = cell;
   if (state.expanded.has(key)) {
     state.expanded.delete(key);
     saveExpanded();
@@ -1405,6 +1412,7 @@ async function moveNotebook(id, before) {
 // list (see showNotebook and showTrashed).
 function selectNotebook(id) {
   if (!state.tag && !state.archive && id === state.notebook) return;
+  state.cell = null;
   state.tag = null;
   state.archive = false;
   state.notebook = id;
@@ -1796,6 +1804,7 @@ function selectTag(tag) {
   if (state.side !== "tags") setSide("tags"); // show the tag chosen in the preview
   if (tag === state.tag) return;
   state.tag = tag;
+  state.cell = null;
   state.archive = false;
   state.notebook = null;
   renderNotebooks();
@@ -2124,7 +2133,8 @@ function subNotebookRows() {
     const key = subKey(sub.id, trashed, archive);
     const open = state.expanded.has(key);
     const count = archive ? (depth ? archivedIn(sub) : archiveCountOf(sub)) : withSubs(trashed ? state.trashed : state.notebooks, sub);
-    const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", archive && !depth ? notebookName(sub.id) : sub.name, count, () => toggleSub(key));
+    const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", archive && !depth ? notebookName(sub.id) : sub.name, count, () => toggleSub(key, trashed || archive ? null : sub.id));
+    if (!trashed && !archive && state.cell === sub.id) li.classList.add("active");
     li.prepend(el("span", "twisty", kindSVG("chevron")));
     if (archive && sub.archived_at) {
       // A notebook put in the archive as a whole, with all its notes.
@@ -2203,7 +2213,7 @@ function renderNotes() {
 // noteRow returns the row of note n in the list, shown in sort; with reorder,
 // it can be dragged within list, the rows it is shown with.
 function noteRow(n, sort, reorder, list, cls) {
-  const li = el("li", [cls, n.id === state.selected ? "active" : "", state.chosen.has(n.id) ? "chosen" : ""].filter(Boolean).join(" "));
+  const li = el("li", [cls, n.id === state.selected && !state.cell ? "active" : "", state.chosen.has(n.id) ? "chosen" : ""].filter(Boolean).join(" "));
   li.dataset.id = n.id;
   enableDrag(li, reorder && n.notebook !== "trash", list); // a note in the trash can be moved to a notebook
   const head = el("div", "title-row", ...noteMarks(n), el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
@@ -2454,12 +2464,20 @@ $("notes").addEventListener("contextmenu", (e) => {
   b.focus();
 });
 
+// markSelected marks the row clicked last: the note shown, or the cell of a
+// sub notebook.
 function markSelected() {
-  for (const li of $("notes").children) li.classList.toggle("active", li.dataset.id === state.selected);
+  for (const li of $("notes").children) {
+    li.classList.toggle("active", state.cell ? li.classList.contains("sub-notebook") && li.dataset.notebook === state.cell : li.dataset.id === state.selected);
+  }
   $("notes").querySelector("li.active")?.scrollIntoView({ block: "nearest" });
 }
 
 function selectNote(id) {
+  if (state.cell) {
+    state.cell = null;
+    markSelected();
+  }
   if (state.chosen.size) {
     state.chosen.clear();
     markChosen();
@@ -4088,6 +4106,12 @@ async function saveNote(overwrite = false) {
   ed.note = null; // the history is kept as of the save
   endEdit();
   state.selected = saved.id;
+  state.cell = null;
+  if (!state.query && !state.tag && parentOf(saved.notebook) === state.notebook) {
+    // Saved in a sub notebook of the list: its cell opens to show it.
+    state.expanded.add(subKey(saved.notebook, false));
+    saveExpanded();
+  }
   refreshAfterWrite();
 }
 
