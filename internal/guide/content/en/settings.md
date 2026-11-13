@@ -6,6 +6,7 @@ tags: [guide, settings]
 
 - Settings…: open the settings dialog below
 - Import Markdown (or drop files onto the page)
+- Candidates for the archive…: list the notes not updated for a while, to choose and put in the archive ([Notes and notebooks](notes.md))
 - Check files, Sync with git, Server status (its Restart starts the server again, with the same flags and environment)
 - Connect AI (MCP)…: show the URL of ebira and the command for Claude Code; a button registers it with Claude Code ([Using AI](ai.md))
 - Add the guide

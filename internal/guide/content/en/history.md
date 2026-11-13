@@ -15,4 +15,4 @@ Each time the title, tags or body of a note change, the earlier version is kept.
 
 ## The trash
 
-Deleted notes stay in the Trash. "Empty trash…" in the menu of the Trash deletes them all for good.
+Deleted notes stay in the Trash. "Empty trash…" in the menu of the Trash deletes them all for good ([Notes and notebooks](notes.md)). The history of a note deleted for good goes with it.

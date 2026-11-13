@@ -16,6 +16,8 @@ tags: [guide, search]
 
 Combine them: `tag:guide search -mark:red`
 
+Searches leave out the trash and the archive. Choose the Trash or the archive in the side column and search to search there ([Notes and notebooks](notes.md)).
+
 ## Matches
 
 The preview of a note found marks the matches. `n` / `N` go to the next or previous one.

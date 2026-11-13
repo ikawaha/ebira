@@ -6,7 +6,7 @@ The web UI has three columns, from the left.
 
 | Column | What it shows |
 |---|---|
-| Side | Notebooks or tags; switch them at the top, or with `T` |
+| Side | Notebooks or tags; switch them at the top, or with `T`. The Inbox above them, the archive and the Trash under them ([Notes and notebooks](notes.md)) |
 | List | The notes of the notebook or tag, or the search results |
 | Preview | The note chosen; you edit it here too |
 
