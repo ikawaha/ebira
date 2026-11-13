@@ -34,7 +34,9 @@ func TestArchiveRows(t *testing.T) {
 	for _, r := range m.notebookRows() {
 		ids = append(ids, r.id)
 	}
-	if want := []string{"", inboxNotebook, "work", "@", "@past", "@past/old", trashNotebook}; !slices.Equal(ids, want) {
+	// Under the archive, the notebooks with notes there: work with the note
+	// put there on its own, and past with all its notes.
+	if want := []string{"", inboxNotebook, "work", "@", "@work", "@past", "@past/old", trashNotebook}; !slices.Equal(ids, want) {
 		t.Fatalf("rows = %q, want %q", ids, want)
 	}
 	// The archive counts the note of work put there on its own and all those
@@ -44,6 +46,12 @@ func TestArchiveRows(t *testing.T) {
 	}
 	if r := m.notebookRows()[0]; r.count != 2 {
 		t.Errorf("all count = %d, want 2", r.count)
+	}
+	if r := m.notebookRows()[4]; r.count != 1 {
+		t.Errorf("count of work in the archive = %d, want 1", r.count)
+	}
+	if r := m.notebookRows()[5]; r.count != 4 {
+		t.Errorf("count of past in the archive = %d, want 4 with its sub notebook", r.count)
 	}
 
 	v := m.renderNotebooks(40, 12)
@@ -58,14 +66,16 @@ func TestArchiveRows(t *testing.T) {
 	}
 
 	// The archive lists the notes put there on their own; a notebook there
-	// all its notes, and a new note goes into it.
+	// all its notes, and a new note goes into it; another notebook its notes
+	// put there.
 	for _, c := range []struct{ filter, param, nb string }{
 		{"@", "only", inboxNotebook},
 		{"@past", "include", "past"},
+		{"@work", "only", "work"},
 		{"work", "exclude", "work"},
 	} {
 		m.notebook = c.filter
-		if p := archiveParam(c.filter); p != c.param {
+		if p := m.archiveParam(c.filter); p != c.param {
 			t.Errorf("archived of %q = %q, want %q", c.filter, p, c.param)
 		}
 		if nb := m.defaultNotebook(); nb != c.nb {

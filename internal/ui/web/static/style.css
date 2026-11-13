@@ -389,6 +389,9 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook.up .icon svg { width: 16px; height: 16px; }
 .list li.sub-notebook .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .list li.sub-notebook.up .name { font-weight: normal; }
+/* A notebook in the archive as a whole, in the cells of the archive. */
+.list li.sub-notebook .archived-mark { flex: none; display: inline-flex; color: var(--fg-muted); }
+.list li.sub-notebook .archived-mark svg { width: 14px; height: 14px; }
 .list li.sub-notebook .count { color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .list li.sub-notebook .nb-more { flex: none; visibility: hidden; border: none; background: none; color: var(--fg-muted); padding: 0 4px; line-height: 1.2; font-size: var(--fs-md); }
 .list li.sub-notebook:hover .nb-more, .list li.sub-notebook.menu-open .nb-more, .list li.sub-notebook .nb-more:focus-visible { visibility: visible; }

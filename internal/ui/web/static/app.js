@@ -142,7 +142,7 @@ function openSubs() {
   if (state.archive && !state.query && !state.tag) {
     // The archive itself: its notebooks, each after its sub notebooks.
     const opened = (sub) => state.expanded.has(subKey(sub.id, false, true));
-    return archiveRoots().filter(opened).flatMap((sub) => [...childNotebooks(sub.id, false).filter(opened), sub])
+    return archiveRoots().filter(opened).flatMap((sub) => [...archiveSubs(sub.id).filter(opened), sub])
       .map((sub) => ({ key: subKey(sub.id, false, true), sub, trashed: false }));
   }
   if (state.query || state.tag || !state.notebook) return [];
@@ -203,12 +203,28 @@ function renderShowArchived() {
   b.setAttribute("aria-label", label);
 }
 
-// archiveRoots returns the notebooks shown as cells in the archive: those
-// there, but the sub notebooks of notebooks there.
-const archiveRoots = () => state.notebooks.filter((n) => n.archived && !isArchived(n.parent));
+// The archive is a mark, so its notes stay in their notebooks: the archive
+// lists them in cells of their notebooks, as the note lists hold sub
+// notebooks. A cell holds all the notes of a notebook there, or the notes put
+// there on their own of another.
+
+// archivedIn returns the number of notes of notebook n alone in the archive.
+const archivedIn = (n) => (n.archived ? n.count + n.archived_count : n.archived_count);
+
+// archiveSubs returns the sub notebooks of notebook id with notes in the
+// archive, or all of them for a notebook there.
+const archiveSubs = (id) => state.notebooks.filter((n) => n.parent === id && (isArchived(id) || n.archived || n.archived_count > 0));
+
+// archiveCountOf returns the number of notes in the archive of notebook n and
+// its sub notebooks.
+const archiveCountOf = (n) => archiveSubs(n.id).reduce((a, s) => a + archivedIn(s), archivedIn(n));
+
+// archiveRoots returns the notebooks shown as cells in the archive: the top
+// notebooks there, or with notes or sub notebooks there.
+const archiveRoots = () => state.notebooks.filter((n) => !n.parent && !n.reserved && (n.archived || archiveCountOf(n) > 0 || archiveSubs(n.id).length > 0));
 
 // archiveCount returns the number of notes in the archive.
-const archiveCount = () => state.notebooks.reduce((a, n) => a + (n.archived ? n.count + n.archived_count : n.archived_count), 0);
+const archiveCount = () => state.notebooks.reduce((a, n) => a + archivedIn(n), 0);
 
 // inArchive reports whether the list shown is in the archive: the archive
 // itself, or a notebook there.
@@ -270,7 +286,7 @@ function listOf(id) {
   for (const x of openSubs()) {
     const s = state.subNotes.get(x.key) ?? { notes: [], total: 0 };
     const items = listItems(s.notes, s.separators, s.total);
-    if (items.some((it) => it.id === id)) return { notes: s.notes, items, nb: x.sub.id, reorder: !x.trashed && (x.sub.sort || "order") === "order" };
+    if (items.some((it) => it.id === id)) return { notes: s.notes, items, nb: x.sub.id, reorder: !x.trashed && !partialCell(x.key, x.sub.id) && (x.sub.sort || "order") === "order" };
   }
   return { notes: state.notes, items: listItems(state.notes, state.separators, state.total), nb: state.notebook, reorder: canReorder() };
 }
@@ -295,6 +311,12 @@ function listItems(notes, separators, total) {
   return items;
 }
 
+// partialCell reports whether the cell key of notebook id holds only some of
+// its notes: a cell of the archive of a notebook not there, with the notes
+// put there on their own. Its notes cannot be reordered, nor separators put
+// among them, as the rest of the notebook is not shown.
+const partialCell = (key, id) => key.startsWith("archive:") && !isArchived(id);
+
 // readSubNotes reads the notes of the opened sub notebook x, in its own sort,
 // as many pages as shown before, with its separators.
 async function readSubNotes(x) {
@@ -303,7 +325,10 @@ async function readSubNotes(x) {
   let total = 0;
   let separators = [];
   do {
-    const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id, archived: isArchived(x.sub.id) || showsArchived() ? "include" : null };
+    // In the archive, a cell of a notebook not there holds the notes put
+    // there on their own.
+    const inCell = partialCell(x.key, x.sub.id) ? "only" : null;
+    const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id, archived: isArchived(x.sub.id) || showsArchived() ? "include" : inCell };
     const r = await api("/notes", { params: { ...params, limit: LIST_PAGE, offset: notes.length } });
     notes.push(...r.notes);
     total = r.total;
@@ -937,7 +962,8 @@ const KIND_SVG = {
   minus: ["M5 12h14"],
   close: ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"],
   unmark: ["circle:12,12,7.5", "M6.7 17.3 17.3 6.7"],
-  // The lists leaving out the archive: the box of the archive, struck out.
+  // The box of the archive, struck out: the lists leaving the archive out,
+  // and taking out of the archive.
   archiveOff: ["rect:3.5,4.5,17,4,1", "M5 8.5v10A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-10", "M10 12.5h4", "M3 3l18 18"],
   help: ["M9 9.5a3 3 0 0 1 5.8-1c.5 1.6-.7 2.5-1.7 3.1-.7.4-1.1 1-1.1 1.8v.6", "M12 17.5v.01"],
   more: ["M5.5 12v.01", "M12 12v.01", "M18.5 12v.01"],
@@ -1404,7 +1430,7 @@ function showNotebook(id) {
   if (isArchived(id)) {
     // A notebook in the archive, such as one put back from the trash,
     // opens in the list of the archive, as its cell would.
-    for (const nb of isArchived(parent) ? [parent, id] : [id]) state.expanded.add(subKey(nb, false, true));
+    for (const nb of parent ? [parent, id] : [id]) state.expanded.add(subKey(nb, false, true));
     saveExpanded();
     if (state.archive && !state.query) loadNotes();
     else selectArchive();
@@ -1779,7 +1805,11 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     let notes, total;
     let separators = [];
     let archived = 0; // matches in the archive, which the search left out
-    if (state.query) {
+    if (state.archive && !state.query) {
+      // The archive itself holds cells of notebooks alone.
+      notes = [];
+      total = 0;
+    } else if (state.query) {
       const r = await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, archived: archivedParam(state.notebook), limit: 200 } });
       notes = r.notes;
       total = r.total;
@@ -1829,6 +1859,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       : state.notebook ? notebookName(state.notebook) : t("all");
     info.textContent = state.query
       ? t(total > notes.length ? "searchInfoTop" : "searchInfo", { where, query: state.query, total, shown: notes.length })
+      : state.archive ? t("listInfo", { where, total: archiveCount() })
       : t(total > notes.length ? "listInfoPart" : "listInfo", { where, total, shown: notes.length });
     info.classList.remove("error");
     if (state.query && !inArchive() && archived) {
@@ -2091,10 +2122,15 @@ function subNotebookRows() {
   function cellRows(sub, depth) {
     const key = subKey(sub.id, trashed, archive);
     const open = state.expanded.has(key);
-    const count = archive ? state.notebooks.reduce((a, n) => (n.id === sub.id || n.parent === sub.id ? a + n.count + n.archived_count : a), 0)
-      : withSubs(trashed ? state.trashed : state.notebooks, sub);
+    const count = archive ? (depth ? archivedIn(sub) : archiveCountOf(sub)) : withSubs(trashed ? state.trashed : state.notebooks, sub);
     const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", archive && !depth ? notebookName(sub.id) : sub.name, count, () => toggleSub(key));
     li.prepend(el("span", "twisty", kindSVG("chevron")));
+    if (archive && sub.archived_at) {
+      // A notebook put in the archive as a whole, with all its notes.
+      const box = el("span", "archived-mark", kindSVG("archive"));
+      box.title = t("archivedWithNotebook");
+      li.querySelector(".name").after(box);
+    }
     // The folder holds the mark of the kind in effect.
     if (KIND_SVG[sub.kind]) {
       const icon = li.querySelector(".icon");
@@ -2129,10 +2165,10 @@ function subNotebookRows() {
       li.addEventListener("dragend", endNotebookDrag);
     }
     if (!open) return [li];
-    const nested = (trashed || archive) && !cur && depth === 0 ? childNotebooks(sub.id, trashed).flatMap((c) => cellRows(c, 1)) : [];
+    const nested = (trashed || archive) && !cur && depth === 0 ? (archive ? archiveSubs(sub.id) : childNotebooks(sub.id, trashed)).flatMap((c) => cellRows(c, 1)) : [];
     // Its notes, under it.
     const s = state.subNotes.get(key) ?? { notes: [], total: 0 };
-    const reorder = !trashed && (sub.sort || "order") === "order";
+    const reorder = !trashed && !partialCell(key, sub.id) && (sub.sort || "order") === "order";
     const cls = depth ? "in-sub deep" : "in-sub";
     const items = listItems(s.notes, s.separators, s.total);
     const rows = items.map((it) => it.sep ? separatorRow(it.sep, reorder, items, cls) : noteRow(it.note, sub.sort || "order", reorder, items, cls));
@@ -2190,7 +2226,8 @@ function noteRow(n, sort, reorder, list, cls) {
   const time = created ? t("createdAt", { time: formatTime(n.created_at) }) : formatTime(n.updated_at);
   const meta = el("div", "meta", el("span", "", time));
   // Searches in a notebook find the notes of its sub notebooks too.
-  if (!state.notebook || n.notebook !== state.notebook) meta.append(el("span", "where", notebookName(n.notebook)));
+  // In the cells of the archive, the cell tells it.
+  if ((!state.notebook || n.notebook !== state.notebook) && !(state.archive && !state.query)) meta.append(el("span", "where", notebookName(n.notebook)));
   meta.append(...tagList(n.tags));
   li.append(meta);
   if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
@@ -2620,7 +2657,7 @@ async function loadNote() {
     actions.append(
       iconButton("edit", t("editTitle"), () => startEdit(n)),
       iconButton("history", t("historyTitle"), openHistory));
-    if (n.notebook !== "inbox") actions.append(iconButton("archive", t(n.archived_at ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived_at)));
+    if (n.notebook !== "inbox") actions.append(iconButton(n.archived_at ? "archiveOff" : "archive", t(n.archived_at ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived_at)));
     actions.append(iconButton("trash", t("toTrashTitle"), deleteNote));
   }
   const body = el("div", "body");
@@ -2750,10 +2787,10 @@ function openMarkMenu(n, at, e) {
     if (notes.length > 1) {
       // As the buttons over the notes chosen together.
       const out = notes.every((x) => x.archived);
-      if (out || !notes.some((x) => x.notebook === "inbox")) row.append(act("archive", t(out ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes(ids, !out)));
+      if (out || !notes.some((x) => x.notebook === "inbox")) row.append(act(out ? "archiveOff" : "archive", t(out ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes(ids, !out)));
       row.append(act("trash", t("toTrashTitle"), () => moveNotesTo(ids, "trash")));
     } else {
-      if (!isArchived(n.notebook) && n.notebook !== "inbox") row.append(act("archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
+      if (!isArchived(n.notebook) && n.notebook !== "inbox") row.append(act(n.archived ? "archiveOff" : "archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
       row.append(act("trash", t("toTrashTitle"), () => moveNoteTo(n.id, "trash")));
     }
     sep();

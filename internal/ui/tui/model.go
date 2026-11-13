@@ -97,6 +97,7 @@ type Model struct {
 	notebooks []*gennotes.Notebook
 	trashed   []*gennotes.TrashedNotebook // notebooks in the trash
 	archived  []*gennotes.Notebook        // notebooks in the archive, left out of notebooks
+	order     []string                    // IDs of all the notebooks, in their order
 	// archivedHits is the number of notes in the archive that the search
 	// shown left out but matches too.
 	archivedHits int
@@ -248,6 +249,7 @@ type (
 		notebooks []*gennotes.Notebook
 		trashed   []*gennotes.TrashedNotebook
 		archived  []*gennotes.Notebook
+		order     []string // IDs of all the notebooks, in their order
 		tags      []*gennotes.TagCount
 		marks     []*gennotes.MarkInfo
 		err       error
@@ -289,8 +291,12 @@ func (m *Model) loadNotebooks() tea.Cmd {
 			return notebooksMsg{err: err}
 		}
 		tags, err := api.Tags(ctx, &gennotes.TagsPayload{})
+		order := make([]string, len(res))
+		for i, nb := range res {
+			order[i] = nb.ID
+		}
 		res, archive := splitArchived(res)
-		return notebooksMsg{notebooks: res, trashed: trashed, archived: archive, tags: tags, marks: loadMarks(ctx, api), err: err}
+		return notebooksMsg{notebooks: res, trashed: trashed, archived: archive, order: order, tags: tags, marks: loadMarks(ctx, api), err: err}
 	}
 }
 
@@ -492,7 +498,7 @@ func (m *Model) loadList() tea.Cmd {
 		return func() tea.Msg { return loadTrashedNotebook(ctx, api, tid, q, seq) }
 	}
 	var nb, tag *string
-	archive := archiveParam(m.notebook)
+	archive := m.archiveParam(m.notebook)
 	if t, ok := tagOf(m.notebook); ok {
 		tag = &t
 	} else if id, ok := archivedID(m.notebook); ok {
@@ -1189,7 +1195,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setStatus(statusError, "status.loadFailed", "err", msg.err)
 			return m, nil
 		}
-		m.notebooks, m.trashed, m.archived, m.tags, m.marks = msg.notebooks, msg.trashed, msg.archived, msg.tags, msg.marks
+		m.notebooks, m.trashed, m.archived, m.order, m.tags, m.marks = msg.notebooks, msg.trashed, msg.archived, msg.order, msg.tags, msg.marks
 		gone := !slices.ContainsFunc(m.notebookListRows(), func(r notebookRow) bool { return r.id == m.notebook })
 		if _, ok := trashedID(m.notebook); ok && gone {
 			m.notebook = trashNotebook // the notebook left the trash
