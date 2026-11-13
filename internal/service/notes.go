@@ -1513,6 +1513,12 @@ func (s *Notes) load(id string, ifMatch *string) (*store.Note, error) {
 // write saves n if edited, moves it to the notebook to, updates the index and
 // notifies subscribers.
 func (s *Notes) write(ctx context.Context, n *store.Note, edited bool, to string) error {
+	// A note coming into the inbox leaves the archive, and so does one going
+	// out of it with archived_at that the inbox did not take (see
+	// store.Note.InArchive).
+	if n.ArchivedAt != nil && (to == store.Inbox || n.Notebook == store.Inbox) {
+		n.ArchivedAt, edited = nil, true
+	}
 	if edited {
 		if err := s.store.Save(n); err != nil {
 			return mapErr(err)
@@ -1572,7 +1578,7 @@ func toNote(n *store.Note) *gennotes.Note {
 	}
 	res.CreatedBy = createdBy(n.CreatedBy)
 	res.Marks = store.CleanMarks(n.Marks)
-	if n.ArchivedAt != nil {
+	if n.InArchive() {
 		res.ArchivedAt = ptr(store.FormatTime(*n.ArchivedAt))
 		res.Archived = ptr(true)
 	}

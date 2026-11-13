@@ -2407,7 +2407,7 @@ var updateAiNotePayloadFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
 		JSONType:    "boolean",
-		Description: "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content",
+		Description: "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content. Not for notes in the inbox",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("brief")},
@@ -8682,7 +8682,7 @@ func validateUpdateAiNotePayloadJSONValue(path string, value any, description st
 		case "archived":
 			if err := validateBooleanJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content",
+				typed[key], "Put the note in the archive, or take it out. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. Like marks, it changes nothing of the content. Not for notes in the inbox",
 			); err != nil {
 				return err
 			}

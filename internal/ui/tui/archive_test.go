@@ -110,9 +110,10 @@ func TestArchiveKeys(t *testing.T) {
 	})
 	m = tm.(Model)
 
-	// Notes in the trash and in a notebook in the archive stay.
+	// Notes in the trash, in the inbox and in a notebook in the archive stay.
 	for _, c := range []struct{ notebook, status string }{
 		{trashNotebook, "status.archiveTrash"},
+		{inboxNotebook, "status.archiveInbox"},
 		{"past/old", "status.archivedWithNotebook"},
 	} {
 		m.note = &gennotes.Note{ID: "n1", Notebook: c.notebook}

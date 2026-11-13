@@ -88,8 +88,8 @@ func (s *Notes) ArchiveNotes(ctx context.Context, p *gennotes.ArchiveNotesPayloa
 		if err != nil {
 			return err
 		}
-		if n.Notebook == store.Trash {
-			return gennotes.MakeBadRequest(fmt.Errorf("note %s is in the trash", id))
+		if err := archivable(n, p.Archived); err != nil {
+			return err
 		}
 		notes = append(notes, n)
 	}
@@ -110,8 +110,8 @@ func (s *Notes) archiveNote(ctx context.Context, id string, archived bool) (*gen
 	if err != nil {
 		return nil, err
 	}
-	if n.Notebook == store.Trash {
-		return nil, gennotes.MakeBadRequest(fmt.Errorf("note %s is in the trash", id))
+	if err := archivable(n, archived); err != nil {
+		return nil, err
 	}
 	if err := s.setArchived(ctx, n, archived, s.now()); err != nil {
 		return nil, err
@@ -119,10 +119,22 @@ func (s *Notes) archiveNote(ctx context.Context, id string, archived bool) (*gen
 	return s.note(n), nil
 }
 
+// archivable checks that note n can be put in the archive, or taken out: not
+// a note in the trash, nor one in the inbox to put there.
+func archivable(n *store.Note, archived bool) error {
+	switch {
+	case n.Notebook == store.Trash:
+		return gennotes.MakeBadRequest(fmt.Errorf("note %s is in the trash", n.ID))
+	case n.Notebook == store.Inbox && archived:
+		return gennotes.MakeBadRequest(fmt.Errorf("note %s is in the inbox, whose notes go to notebooks rather than to the archive", n.ID))
+	}
+	return nil
+}
+
 // setArchived puts note n in the archive at now, or takes it out, if it is
 // not so already. The caller holds s.mu.
 func (s *Notes) setArchived(ctx context.Context, n *store.Note, archived bool, now time.Time) error {
-	if (n.ArchivedAt != nil) == archived {
+	if n.InArchive() == archived && (archived || n.ArchivedAt == nil) {
 		return nil
 	}
 	n.ArchivedAt = nil
@@ -133,7 +145,8 @@ func (s *Notes) setArchived(ctx context.Context, n *store.Note, archived bool, n
 }
 
 // ArchiveCandidates lists the notes not updated for days, oldest first, but
-// those in the archive and the trash.
+// those in the archive and the trash, and those in the inbox, which go to
+// notebooks instead.
 func (s *Notes) ArchiveCandidates(ctx context.Context, p *gennotes.ArchiveCandidatesPayload) (*gennotes.NoteList, error) {
 	hidden, err := s.hiddenNotebooks(ctx)
 	if err != nil {
@@ -144,7 +157,7 @@ func (s *Notes) ArchiveCandidates(ctx context.Context, p *gennotes.ArchiveCandid
 		return nil, err
 	}
 	before := s.now().AddDate(0, 0, -p.Days)
-	res, total, err := s.index.Stale(ctx, before, a, p.Limit, p.Offset, hidden...)
+	res, total, err := s.index.Stale(ctx, before, a, p.Limit, p.Offset, append(hidden, store.Inbox)...)
 	if err != nil {
 		return nil, err
 	}

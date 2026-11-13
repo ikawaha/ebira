@@ -2500,7 +2500,8 @@ function showChosen() {
   const actions = el("div", "actions", moveSelect((nb) => moveNotesTo(ids, nb)));
   if (!notes.some((n) => n.notebook === "trash")) {
     const out = notes.every((n) => n.archived);
-    actions.append(button(t(out ? "unarchive" : "toArchive"), () => archiveNotes(ids, !out)));
+    // The inbox holds no notes in the archive: its notes go to notebooks.
+    if (out || !notes.some((n) => n.notebook === "inbox")) actions.append(button(t(out ? "unarchive" : "toArchive"), () => archiveNotes(ids, !out)));
     actions.append(button(t("toTrash"), () => moveNotesTo(ids, "trash")));
   }
   actions.append(button(t("selectionClear"), clearChosen, { title: t("selectionClearTitle") }));
@@ -2618,9 +2619,9 @@ async function loadNote() {
   } else {
     actions.append(
       iconButton("edit", t("editTitle"), () => startEdit(n)),
-      iconButton("history", t("historyTitle"), openHistory),
-      iconButton("archive", t(n.archived_at ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived_at)),
-      iconButton("trash", t("toTrashTitle"), deleteNote));
+      iconButton("history", t("historyTitle"), openHistory));
+    if (n.notebook !== "inbox") actions.append(iconButton("archive", t(n.archived_at ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived_at)));
+    actions.append(iconButton("trash", t("toTrashTitle"), deleteNote));
   }
   const body = el("div", "body");
   renderBody(body, n.body || "", n.body_highlights);
@@ -2749,10 +2750,10 @@ function openMarkMenu(n, at, e) {
     if (notes.length > 1) {
       // As the buttons over the notes chosen together.
       const out = notes.every((x) => x.archived);
-      row.append(act("archive", t(out ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes(ids, !out)));
+      if (out || !notes.some((x) => x.notebook === "inbox")) row.append(act("archive", t(out ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes(ids, !out)));
       row.append(act("trash", t("toTrashTitle"), () => moveNotesTo(ids, "trash")));
     } else {
-      if (!isArchived(n.notebook)) row.append(act("archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
+      if (!isArchived(n.notebook) && n.notebook !== "inbox") row.append(act("archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
       row.append(act("trash", t("toTrashTitle"), () => moveNoteTo(n.id, "trash")));
     }
     sep();
@@ -4622,7 +4623,7 @@ function acceptNote(li, id) {
 function acceptArchive(li) {
   const notes = () => (draggedNotes() ?? (dragID ? [dragID] : [])).filter((x) => {
     const n = findListed(x);
-    return !!n && n.notebook !== "trash" && !n.archived;
+    return !!n && n.notebook !== "trash" && n.notebook !== "inbox" && !n.archived;
   });
   const notebook = () => {
     const nb = state.notebooks.find((n) => n.id === nbDragID);
@@ -5010,11 +5011,11 @@ function canRenameNotebook() {
 }
 
 // canArchiveNote reports whether the note shown can be put in the archive or
-// taken out: not in the trash, nor in a notebook in the archive, with which it
-// goes in and out.
+// taken out: not in the trash, nor in the inbox, whose notes go to notebooks,
+// nor in a notebook in the archive, with which it goes in and out.
 function canArchiveNote() {
   const n = state.note;
-  return !!n && !state.editing && n.notebook !== "trash" && !isArchived(n.notebook);
+  return !!n && !state.editing && n.notebook !== "trash" && n.notebook !== "inbox" && !isArchived(n.notebook);
 }
 
 // archivableNotebook returns the notebook shown, if it can be put in the

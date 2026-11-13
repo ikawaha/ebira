@@ -105,7 +105,8 @@ type archivedMsg struct {
 }
 
 // toggleNoteArchive puts the note in the preview in the archive, or takes it
-// out. A note in a notebook in the archive goes in and out with it.
+// out. A note in a notebook in the archive goes in and out with it, and one
+// in the inbox goes to a notebook instead.
 func (m *Model) toggleNoteArchive() tea.Cmd {
 	n := m.note
 	switch {
@@ -113,6 +114,10 @@ func (m *Model) toggleNoteArchive() tea.Cmd {
 		return nil
 	case n.Notebook == trashNotebook:
 		m.setStatus(statusWarn, "status.archiveTrash")
+		return nil
+	case n.Notebook == inboxNotebook:
+		// The inbox holds no notes in the archive: its notes go to notebooks.
+		m.setStatus(statusWarn, "status.archiveInbox")
 		return nil
 	case m.archivedNotebook(n.Notebook) != nil:
 		m.setStatus(statusWarn, "status.archivedWithNotebook")

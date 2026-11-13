@@ -1031,8 +1031,8 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
 	fmt.Fprintln(os.Stderr, `    marks: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.`)
 	fmt.Fprintln(os.Stderr, `    set-marks: Set the marks of a note, one at most for now; an empty list takes them away. Like the manual order, marks are no change of the content: the update time stays and no earlier version is kept.`)
-	fmt.Fprintln(os.Stderr, `    archive-notes: Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.`)
-	fmt.Fprintln(os.Stderr, `    archive-candidates: List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.`)
+	fmt.Fprintln(os.Stderr, `    archive-notes: Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist, is in the trash, or is put in the archive from the inbox, none is changed. The inbox holds no notes in the archive, as its notes wait to go to notebooks. A note in a notebook in the archive stays there with its notebook.`)
+	fmt.Fprintln(os.Stderr, `    archive-candidates: List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already and those in the inbox, which go to notebooks rather than to the archive, a page at a time.`)
 	fmt.Fprintln(os.Stderr, `    save-mark-names: Name the marks, which says what they mean: the names are written to the settings of the notes (_ebira.yaml), replacing those given before; an empty name takes the name away.`)
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
 	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind, note sort or archive of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
@@ -1471,7 +1471,7 @@ func notesArchiveNotesUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.`)
+	fmt.Fprintln(os.Stderr, `Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist, is in the trash, or is put in the archive from the inbox, none is changed. The inbox holds no notes in the archive, as its notes wait to go to notebooks. A note in a notebook in the archive stays there with its notebook.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
@@ -1493,7 +1493,7 @@ func notesArchiveCandidatesUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.`)
+	fmt.Fprintln(os.Stderr, `List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already and those in the inbox, which go to notebooks rather than to the archive, a page at a time.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -days INT: `)

@@ -11,7 +11,7 @@ paths:
             tags:
                 - notes
             summary: archive_candidates notes
-            description: 'List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.'
+            description: 'List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already and those in the inbox, which go to notebooks rather than to the archive, a page at a time.'
             operationId: notes#archive_candidates
             parameters:
                 - name: days
@@ -226,7 +226,7 @@ paths:
             tags:
                 - notes
             summary: archive_notes notes
-            description: 'Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.'
+            description: 'Put notes in the archive, or take them out, at once, such as several chosen in a list. The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them. The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist, is in the trash, or is put in the archive from the inbox, none is changed. The inbox holds no notes in the archive, as its notes wait to go to notebooks. A note in a notebook in the archive stays there with its notebook.'
             operationId: notes#archive_notes
             requestBody:
                 description: Request body for archive_notes.
@@ -243,7 +243,7 @@ paths:
                 "204":
                     description: No Content response.
                 "400":
-                    description: 'bad_request: A note is in the trash, or its ID is used in more than one notebook'
+                    description: 'bad_request: A note is in the trash, or in the inbox to be put in the archive, or its ID is used in more than one notebook'
                     content:
                         application/vnd.goa.error:
                             schema:

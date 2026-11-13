@@ -203,7 +203,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 10 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived
+const schemaVersion = 11 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived; 11: no archive in the inbox
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -346,7 +346,7 @@ ON CONFLICT (id) DO UPDATE SET
 	created_at = excluded.created_at, updated_at = excluded.updated_at, sort_key = excluded.sort_key, title_key = excluded.title_key,
 	created_by = excluded.created_by, archived = excluded.archived, import_hash = excluded.import_hash, file_mtime = excluded.file_mtime, file_size = excluded.file_size
 RETURNING seq`,
-		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.ArchivedAt != nil, n.ImportHash, f.ModTime.UnixNano(), f.Size,
+		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.InArchive(), n.ImportHash, f.ModTime.UnixNano(), f.Size,
 	).Scan(&seq); err != nil {
 		return err
 	}

@@ -896,7 +896,7 @@ var _ = Service("notes", func() {
 	// content, as with marks. People do it with archive_notes, and AI clients
 	// on notes of the collab kind with update_ai_note.
 	Method("archive_notes", func() {
-		Description("Put notes in the archive, or take them out, at once, such as several chosen in a list. " + archiveDescription + ". The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist or is in the trash, none is changed. A note in a notebook in the archive stays there with its notebook.")
+		Description("Put notes in the archive, or take them out, at once, such as several chosen in a list. " + archiveDescription + ". The notes keep their notebooks, and the update time stays. The notes are checked first: when one does not exist, is in the trash, or is put in the archive from the inbox, none is changed. The inbox holds no notes in the archive, as its notes wait to go to notebooks. A note in a notebook in the archive stays there with its notebook.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("ids", ArrayOf(String, noteIDDSL), "IDs of the notes", func() {
@@ -906,7 +906,7 @@ var _ = Service("notes", func() {
 			RequiredAttribute("archived", Boolean, "true to put the notes in the archive, false to take them out")
 		})
 		Error("not_found", ErrorResult, "A note does not exist")
-		Error("bad_request", ErrorResult, "A note is in the trash, or its ID is used in more than one notebook")
+		Error("bad_request", ErrorResult, "A note is in the trash, or in the inbox to be put in the archive, or its ID is used in more than one notebook")
 		HTTP(func() {
 			POST("/archive/notes")
 			Response(StatusNoContent)
@@ -916,7 +916,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("archive_candidates", func() {
-		Description("List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already, a page at a time.")
+		Description("List the notes that may be put in the archive: those not updated for days, oldest first, but those in the archive or the trash already and those in the inbox, which go to notebooks rather than to the archive, a page at a time.")
 		Payload(func() {
 			sessionDSL()
 			Attribute("days", Int, "Days the notes have not been updated for", func() {
@@ -1255,7 +1255,7 @@ var _ = Service("notes", func() {
 				MaxLength(100)
 			})
 			Attribute("marks", ArrayOf(String), "Marks of the note, one at most for now; an empty list takes them away. See list_marks for what each means", marksDSL)
-			Attribute("archived", Boolean, "Put the note in the archive, or take it out. "+archiveDescription+". Like marks, it changes nothing of the content")
+			Attribute("archived", Boolean, "Put the note in the archive, or take it out. "+archiveDescription+". Like marks, it changes nothing of the content. Not for notes in the inbox")
 			Attribute("brief", Boolean, "Leave the body out of the result (it comes back empty), as for a long note: the new version, the update time and the other attributes still come back")
 		})
 		Result(Note)

@@ -413,7 +413,7 @@ func (c *Client) SetMarks(ctx context.Context, p *SetMarksPayload) (res *Note, e
 // ArchiveNotes calls the "archive_notes" endpoint of the "notes" service.
 // ArchiveNotes may return the following errors:
 //   - "not_found" (type *goa.ServiceError): A note does not exist
-//   - "bad_request" (type *goa.ServiceError): A note is in the trash, or its ID is used in more than one notebook
+//   - "bad_request" (type *goa.ServiceError): A note is in the trash, or in the inbox to be put in the archive, or its ID is used in more than one notebook
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
