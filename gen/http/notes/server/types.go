@@ -4249,6 +4249,9 @@ type MachineSettingsResponseBody struct {
 	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
 	// How the preview of the TUI shows a note; empty for rendered
 	TuiPreview *string `form:"tui_preview,omitempty" json:"tui_preview,omitempty" xml:"tui_preview,omitempty"`
+	// What the search box of the TUI does: search lists the notes found by
+	// relevance, filter narrows the list in its order; empty for search
+	TuiSearch *string `form:"tui_search,omitempty" json:"tui_search,omitempty" xml:"tui_search,omitempty"`
 }
 
 // NotesSettingsResponseBody is used to define fields on response body types.
@@ -4295,6 +4298,9 @@ type MachineSettingsRequestBody struct {
 	Model *string `form:"model,omitempty" json:"model,omitempty" xml:"model,omitempty"`
 	// How the preview of the TUI shows a note; empty for rendered
 	TuiPreview *string `form:"tui_preview,omitempty" json:"tui_preview,omitempty" xml:"tui_preview,omitempty"`
+	// What the search box of the TUI does: search lists the notes found by
+	// relevance, filter narrows the list in its order; empty for search
+	TuiSearch *string `form:"tui_search,omitempty" json:"tui_search,omitempty" xml:"tui_search,omitempty"`
 }
 
 // NotesSettingsRequestBody is used to define fields on request body types.
@@ -8339,6 +8345,11 @@ func ValidateMachineSettingsRequestBody(body *MachineSettingsRequestBody) (err e
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
 		}
 	}
+	if body.TuiSearch != nil {
+		if !(*body.TuiSearch == "search" || *body.TuiSearch == "filter") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_search", *body.TuiSearch, []any{"search", "filter"}))
+		}
+	}
 	return
 }
 
@@ -8363,6 +8374,11 @@ func validateMachineSettingsRequestBody(body *MachineSettingsRequestBody, path s
 	if body.TuiPreview != nil {
 		if !(*body.TuiPreview == "rendered" || *body.TuiPreview == "source") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".tui_preview", *body.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	if body.TuiSearch != nil {
+		if !(*body.TuiSearch == "search" || *body.TuiSearch == "filter") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".tui_search", *body.TuiSearch, []any{"search", "filter"}))
 		}
 	}
 	return

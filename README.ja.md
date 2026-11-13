@@ -388,7 +388,7 @@ addr: localhost:13579
 lang: ja
 ```
 
-キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
+キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）、`tui_search`（`search` か `filter`。TUI の検索欄の Tab で切り替えると書き換えます）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
 ### プレビューの見た目を変える
 

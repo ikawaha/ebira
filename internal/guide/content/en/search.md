@@ -38,6 +38,7 @@ To find something, search; to see part of a list in the order you gave it, such 
 - For instance, `-tag:renovate` leaves out the notes with the tag, and the rest stay in their order.
 - The filtered list can still be reordered by dragging or with `J` / `K`, among the notes shown.
 - It works in any list, and this browser remembers it. Click the funnel again to search.
+- In the desktop app, "Filter the List" in the View menu switches it too; in the TUI, Tab in the search box ([TUI](tui.md)).
 
 ## Matches
 

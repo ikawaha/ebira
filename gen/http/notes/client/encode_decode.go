@@ -7117,6 +7117,7 @@ func unmarshalMachineSettingsResponseBodyToNotesMachineSettings(v *MachineSettin
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -7165,6 +7166,7 @@ func marshalNotesMachineSettingsToMachineSettingsRequestBody(v *notes.MachineSet
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -7217,6 +7219,7 @@ func marshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsR
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res

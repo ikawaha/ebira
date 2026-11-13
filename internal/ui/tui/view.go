@@ -459,12 +459,16 @@ func (m Model) renderHeader() string {
 		search = m.th.style(m.th.accent).Render(" / ") + m.input.View()
 	case m.query != "":
 		search = m.th.style(m.th.dim).Render(" / ") + m.th.style(m.th.fg).Render(m.query) + m.th.style(m.th.dim).Render("  "+m.tr.t("header.clear"))
+	case m.filter:
+		search = m.th.style(m.th.dim).Render(" / " + m.tr.t("header.filter"))
 	default:
 		search = m.th.style(m.th.dim).Render(" / " + m.tr.t("header.search"))
 	}
 
 	var right []string
-	if m.query != "" {
+	if m.filtered() {
+		right = append(right, m.th.style(m.th.dim).Render(m.tr.t("header.filtered", "n", m.total)))
+	} else if m.query != "" {
 		right = append(right, m.th.style(m.th.dim).Render(m.tr.t("header.hits", "n", m.total, "mode", m.mode)))
 	} else {
 		right = append(right, m.th.style(m.th.dim).Render(m.tr.t("header.notes", "n", m.total)))
@@ -549,7 +553,9 @@ func (m Model) renderList(w, h int) string {
 		)
 	}
 	title := m.tr.t("pane.notes", "sort", m.tr.t("sort."+m.currentSort()))
-	if m.query != "" {
+	if m.filtered() {
+		title = m.tr.t("pane.filter", "sort", m.tr.t("sort."+m.currentSort()))
+	} else if m.query != "" {
 		title = m.tr.t("pane.search")
 		// The search leaves the archive out; it tells how many match there,
 		// which the archive row of the notebook column finds.
@@ -861,7 +867,10 @@ func (m Model) renderFooter() string {
 	}
 	switch m.focus {
 	case focusSearch:
-		hints = [][2]string{{"enter", "key.done"}, {"esc", "key.clear"}, {"↑↓", "key.move"}}
+		hints = [][2]string{{"enter", "key.done"}, {"esc", "key.clear"}, {"↑↓", "key.move"}, {"tab", "key.filterMode"}}
+		if m.filter {
+			hints[len(hints)-1][1] = "key.searchMode"
+		}
 	case focusEdit:
 		hints = [][2]string{{"ctrl+s", "key.save"}, {"esc", "key.cancel"}, {"tab/shift+tab", "key.field"}, {"ctrl+z/y", "key.undo"}}
 		hints = m.zoomHint(hints, "ctrl+l")

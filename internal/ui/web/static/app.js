@@ -2015,6 +2015,7 @@ function renderFilter() {
   const mode = document.documentElement.dataset.searchMode;
   const key = state.filter ? "filterPlaceholder" : "searchPlaceholder";
   $("q").placeholder = mode ? t(key + "Mode", { mode }) : t(key);
+  tellState();
 }
 
 $("filter-mode").addEventListener("click", () => {
@@ -3000,6 +3001,7 @@ async function openSettings() {
     watch: [["", t("settingsWatchDefault")], ["true", t("settingsWatchOn")], ["false", t("settingsWatchOff")]],
     provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]],
     tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreviewRendered")], ["source", t("settingsTUISource")]],
+    tui_search: [["", t("settingsTUISearchDefault")], ["search", t("settingsTUISearchSearch")], ["filter", t("settingsTUISearchFilter")]],
   };
   const watchValue = (w) => (w === undefined || w === null ? "" : String(w));
   // The controls of the settings of a machine, for the settings file of this
@@ -3014,6 +3016,7 @@ async function openSettings() {
     provider: select(v.provider, options.provider),
     model: text(v.model),
     tui_preview: select(v.tui_preview, options.tui_preview),
+    tui_search: select(v.tui_search, options.tui_search),
   });
   const c = {
     ...machineControls(m),
@@ -3095,7 +3098,7 @@ async function openSettings() {
     return {
       lang: v("lang"), theme: v("theme"), git_sync: v("git_sync"),
       watch: cs.watch.value === "" ? undefined : cs.watch.value === "true",
-      provider: v("provider"), model: v("model"), tui_preview: v("tui_preview"),
+      provider: v("provider"), model: v("model"), tui_preview: v("tui_preview"), tui_search: v("tui_search"),
     };
   };
   const machineValue = () => ({ ...valuesOf(c), auth: c.auth.value.trim() || undefined });
@@ -3226,6 +3229,7 @@ async function openSettings() {
         row("provider", t("settingsProvider"), c.provider),
         row("model", t("settingsModel"), c.model),
         row("tui_preview", t("settingsTUIPreview"), c.tui_preview, t("settingsTUIPreviewHint")),
+        row("tui_search", t("settingsTUISearch"), c.tui_search, t("settingsTUIPreviewHint")),
         el("div", "settings-row", el("span", "settings-label", t("previewStyleHead")),
           el("div", "settings-control", previewStyle, el("p", "hint", t("settingsPreviewStyleHint")))),
         fixed(t("settingsNotesDir"), cur.notes_dir, t("settingsKept")),
@@ -3249,6 +3253,7 @@ async function openSettings() {
           row("", t("settingsProvider"), dc.provider),
           row("", t("settingsModel"), dc.model),
           row("", t("settingsTUIPreview"), dc.tui_preview),
+          row("", t("settingsTUISearch"), dc.tui_search),
         ] : [])))]);
   const bar = el("div", "settings-tabs");
   bar.setAttribute("role", "tablist");
@@ -5103,6 +5108,9 @@ window.ebira = {
   connectAI: () => openMCP(),
   openGuide: () => openGuide(),
   searchHelp: () => toggleSearchHelp(true),
+  // filter switches the search box between searching and filtering, as its
+  // funnel.
+  filter: () => $("filter-mode").click(),
   newNotebook: () => openNewNotebook(),
   renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
   // archive puts the note shown in the archive, or takes it out, as the box
@@ -5266,6 +5274,7 @@ function tellState() {
     notebook: canRenameNotebook(), trashFull: trashFull(), git: !$("git-sync-open").hidden,
     archivable: canArchiveNote(), archived: !!state.note?.archived_at,
     notebookArchivable: !!nb && !state.editing, notebookArchived: !!nb?.archived_at,
+    filter: state.filter,
   });
   if (s === toldState) return;
   toldState = s;

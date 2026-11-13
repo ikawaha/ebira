@@ -31,6 +31,9 @@ func checkSettings(c config.Config) error {
 	if p := c.TUIPreview; p != "" && p != "rendered" && p != "source" {
 		return fmt.Errorf("unknown tui_preview %q (rendered, source)", p)
 	}
+	if s := c.TUISearch; s != "" && s != "search" && s != "filter" {
+		return fmt.Errorf("unknown tui_search %q (search, filter)", s)
+	}
 	if _, err := gitSyncInterval(c.GitSync); err != nil {
 		return err
 	}

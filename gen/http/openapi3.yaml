@@ -4486,6 +4486,7 @@ paths:
                                     provider: anthropic
                                     theme: auto
                                     tui_preview: rendered
+                                    tui_search: search
                                     watch: true
                                 machine_path: /Users/you/.config/ebira/config.yaml
                                 notes:
@@ -4497,6 +4498,7 @@ paths:
                                         provider: anthropic
                                         theme: auto
                                         tui_preview: rendered
+                                        tui_search: search
                                         watch: true
                                     search: bigram
                                     stop_tags:
@@ -4571,6 +4573,7 @@ paths:
                                 provider: anthropic
                                 theme: auto
                                 tui_preview: rendered
+                                tui_search: search
                                 watch: true
                             notes:
                                 defaults:
@@ -4581,6 +4584,7 @@ paths:
                                     provider: anthropic
                                     theme: auto
                                     tui_preview: rendered
+                                    tui_search: search
                                     watch: true
                                 search: bigram
                                 stop_tags:
@@ -4619,6 +4623,7 @@ paths:
                                     provider: anthropic
                                     theme: auto
                                     tui_preview: rendered
+                                    tui_search: search
                                     watch: true
                                 machine_path: /Users/you/.config/ebira/config.yaml
                                 notes:
@@ -4630,6 +4635,7 @@ paths:
                                         provider: anthropic
                                         theme: auto
                                         tui_preview: rendered
+                                        tui_search: search
                                         watch: true
                                     search: bigram
                                     stop_tags:
@@ -6019,6 +6025,13 @@ components:
                     enum:
                         - rendered
                         - source
+                tui_search:
+                    type: string
+                    description: 'What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search'
+                    example: search
+                    enum:
+                        - search
+                        - filter
                 watch:
                     type: boolean
                     description: Whether the server watches the notes directory; left out for true
@@ -6032,6 +6045,7 @@ components:
                 provider: anthropic
                 theme: auto
                 tui_preview: rendered
+                tui_search: search
                 watch: true
         MarkInfo:
             type: object
@@ -7086,6 +7100,7 @@ components:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 search: bigram
                 stop_tags:
@@ -7256,6 +7271,7 @@ components:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 notes:
                     defaults:
@@ -7266,6 +7282,7 @@ components:
                         provider: anthropic
                         theme: auto
                         tui_preview: rendered
+                        tui_search: search
                         watch: true
                     search: bigram
                     stop_tags:
@@ -7664,6 +7681,7 @@ components:
                     provider: anthropic
                     theme: auto
                     tui_preview: rendered
+                    tui_search: search
                     watch: true
                 machine_path: /Users/you/.config/ebira/config.yaml
                 notes:
@@ -7675,6 +7693,7 @@ components:
                         provider: anthropic
                         theme: auto
                         tui_preview: rendered
+                        tui_search: search
                         watch: true
                     search: bigram
                     stop_tags:

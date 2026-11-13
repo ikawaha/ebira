@@ -876,6 +876,9 @@ type MachineSettings struct {
 	Model *string
 	// How the preview of the TUI shows a note; empty for rendered
 	TuiPreview *string
+	// What the search box of the TUI does: search lists the notes found by
+	// relevance, filter narrows the list in its order; empty for search
+	TuiSearch *string
 }
 
 // MakeNotebookPrivatePayload is the payload type of the notes service
@@ -2053,6 +2056,9 @@ type jsonMachineSettingsTransport struct {
 	Model *string `json:"model,omitempty"`
 	// How the preview of the TUI shows a note; empty for rendered
 	TuiPreview *string `json:"tui_preview,omitempty"`
+	// What the search box of the TUI does: search lists the notes found by
+	// relevance, filter narrows the list in its order; empty for search
+	TuiSearch *string `json:"tui_search,omitempty"`
 }
 
 // validatejsonMachineSettingsTransport checks decoded JSON before it becomes a service value.
@@ -2078,6 +2084,11 @@ func validatejsonMachineSettingsTransport(value *jsonMachineSettingsTransport) (
 	if value.TuiPreview != nil {
 		if !(*value.TuiPreview == "rendered" || *value.TuiPreview == "source") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_preview", *value.TuiPreview, []any{"rendered", "source"}))
+		}
+	}
+	if value.TuiSearch != nil {
+		if !(*value.TuiSearch == "search" || *value.TuiSearch == "filter") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.tui_search", *value.TuiSearch, []any{"search", "filter"}))
 		}
 	}
 	return err
@@ -3427,6 +3438,11 @@ func validateMachineSettingsOriginal(value *MachineSettings) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.tui_preview", *value.TuiPreview, []any{"rendered", "source"}))
 		}
 	}
+	if value.TuiSearch != nil {
+		if !(*value.TuiSearch == "search" || *value.TuiSearch == "filter") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.tui_search", *value.TuiSearch, []any{"search", "filter"}))
+		}
+	}
 	return err
 }
 
@@ -4511,6 +4527,7 @@ func EncodeMachineSettings(in *MachineSettings) ([]byte, error) {
 			Provider:   in.Provider,
 			Model:      in.Model,
 			TuiPreview: in.TuiPreview,
+			TuiSearch:  in.TuiSearch,
 		}
 	}
 	if err := validatejsonMachineSettingsTransport(body); err != nil {
@@ -4549,6 +4566,7 @@ func ValidateMachineSettingsValue(in *MachineSettings) error {
 			Provider:   in.Provider,
 			Model:      in.Model,
 			TuiPreview: in.TuiPreview,
+			TuiSearch:  in.TuiSearch,
 		}
 	}
 	if err := validatejsonMachineSettingsTransport(body); err != nil {
@@ -4591,6 +4609,7 @@ func DecodeMachineSettings(data []byte) (out *MachineSettings, err error) {
 			Provider:   body.Provider,
 			Model:      body.Model,
 			TuiPreview: body.TuiPreview,
+			TuiSearch:  body.TuiSearch,
 		}
 	}
 	return out, nil
@@ -6956,6 +6975,7 @@ func decodeMachineSettingsTransportToMachineSettings(v *jsonMachineSettingsTrans
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -7150,6 +7170,7 @@ func encodeMachineSettingsToMachineSettingsTransport(v *MachineSettings) *jsonMa
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -7165,6 +7186,7 @@ func encodeMachineSettingsToMachineSettingsTransport2(v *MachineSettings) *jsonM
 		Provider:   v.Provider,
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
+		TuiSearch:  v.TuiSearch,
 	}
 
 	return res
@@ -8449,6 +8471,13 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 			); err != nil {
 				return err
 			}
+		case "tui_search":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search",
+			); err != nil {
+				return err
+			}
 		case "watch":
 			if err := validateFileCheckJSONValue5(
 				generatedJSONChildPath(path, key, false),
@@ -8465,6 +8494,7 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 				"provider",
 				"theme",
 				"tui_preview",
+				"tui_search",
 				"watch",
 			})
 		}
@@ -10660,6 +10690,11 @@ func checkMachineSettingsMachineSettingsValue(in *MachineSettings, field string,
 		if in.TuiPreview != nil {
 			if !utf8.ValidString(string(*in.TuiPreview)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "tui_preview", false))
+			}
+		}
+		if in.TuiSearch != nil {
+			if !utf8.ValidString(string(*in.TuiSearch)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "tui_search", false))
 			}
 		}
 	}

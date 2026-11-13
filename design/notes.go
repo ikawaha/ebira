@@ -381,6 +381,9 @@ var MachineSettings = Type("MachineSettings", func() {
 	Attribute("tui_preview", String, "How the preview of the TUI shows a note; empty for rendered", func() {
 		Enum("rendered", "source")
 	})
+	Attribute("tui_search", String, "What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search", func() {
+		Enum("search", "filter")
+	})
 })
 
 var StopList = Type("StopList", func() {

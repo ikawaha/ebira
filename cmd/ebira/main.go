@@ -77,9 +77,10 @@ Run a command with -h for its flags.
 
 The settings file, ~/.config/ebira/config.yaml ($XDG_CONFIG_HOME/ebira, or the
 file of $EBIRA_CONFIG), gives the defaults of the flags: notes_dir, addr,
-watch, provider, model, lang, theme, git_sync and auth, and tui_preview, how the
-TUI shows notes (rendered or source; v switches it). The same keys under
-defaults: in _ebira.yaml of the notes directory are the defaults of every
+watch, provider, model, lang, theme, git_sync and auth, tui_preview, how the
+TUI shows notes (rendered or source; v switches it), and tui_search, what the
+search box of the TUI does (search or filter; tab in the box switches it).
+The same keys under defaults: in _ebira.yaml of the notes directory are the defaults of every
 machine that syncs the notes, which the settings file wins over; notes_dir,
 auth and an addr other than the loopback are each machine's own. Without -notes, notes_dir and notes/
 in the current directory, the commands that open the notes in a terminal ask
