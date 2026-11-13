@@ -383,6 +383,16 @@ function toggleSub(key, cell = null) {
 
 const $ = (id) => document.getElementById(id);
 
+// On a Mac, a click with Control is the secondary click, which opens the
+// context menu, and WebKit sends a click after it too. That click would close
+// the menu just opened and choose the note clicked, as a click with Control
+// does elsewhere; it is stopped before it reaches the page.
+const IS_MAC = /mac|iphone|ipad/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+const contextClick = (e) => e.button !== 0 || (IS_MAC && e.ctrlKey);
+document.addEventListener("click", (e) => {
+  if (contextClick(e)) e.stopPropagation();
+}, true);
+
 // Column widths: the resizers between the columns set the widths, kept per
 // browser. Double-click or Enter puts a column back to its default width.
 const COLUMNS = { side: { prop: "--w-side", min: 170 }, list: { prop: "--w-list", min: 200 }, ask: { prop: "--w-ask", min: 260 } };
