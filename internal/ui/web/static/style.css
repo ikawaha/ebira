@@ -126,7 +126,7 @@ mark.current { background: var(--mark-current); }
 .search { flex: 1; max-width: 560px; position: relative; }
 .search input {
   width: 100%;
-  padding: 4px 56px 4px 12px; /* room for the clear and help buttons */
+  padding: 4px 84px 4px 12px; /* room for the clear, filter and help buttons */
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--bg);
@@ -135,13 +135,22 @@ mark.current { background: var(--mark-current); }
 }
 .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; } /* the clear button stands in for it */
-.search-clear { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: var(--fs-lg); line-height: 1; cursor: pointer; }
+/* The buttons at the right end of the box: clear, the filters of what the
+   lists take in, and the help of the syntax. */
+.search-tools { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; }
+.search-filters { display: flex; align-items: center; gap: 2px; }
+.search-filter { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; padding: 0; border: none; border-radius: var(--r-sm); background: transparent; color: var(--fg-muted); cursor: pointer; }
+.search-filter svg { width: 16px; height: 16px; }
+.search-filter:hover, .search-filter:focus-visible { background: var(--bg-side); color: var(--fg); }
+.search-filter[aria-pressed="true"] { color: var(--accent); background: var(--bg-active); }
+.search-filter:disabled { opacity: .35; cursor: default; background: transparent; }
+.search-clear { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: var(--fs-lg); line-height: 1; cursor: pointer; }
 .search-clear svg { width: 14px; height: 14px; }
 .search-clear:hover, .search-clear:focus-visible { background: var(--bg-side); color: var(--fg); }
 .search-clear[hidden] { display: none; }
 /* The help of the search syntax: a "?" at the right end of the box, which
    opens a panel below it. */
-.search-help-button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: 600; line-height: 1; cursor: pointer; }
+.search-help-button { display: inline-flex; align-items: center; justify-content: center; margin-left: 2px; width: 20px; height: 20px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: 600; line-height: 1; cursor: pointer; }
 .search-help-button svg { width: 14px; height: 14px; }
 .search-help-button:hover, .search-help-button:focus-visible, .search-help-button[aria-expanded="true"] { color: var(--fg); border-color: var(--accent); }
 .search-help { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg); color: var(--fg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); font-size: var(--fs-sm); }
@@ -329,8 +338,6 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .archived-mark { flex: none; display: inline-flex; color: var(--fg-muted); }
 .archived-mark svg { width: 14px; height: 14px; }
 .list li.archived .title, .list li.archived .meta { opacity: .6; }
-#show-archived { width: 24px; height: 24px; }
-#show-archived.on { color: var(--accent); background: var(--bg-active); }
 .list .meta { color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; display: flex; gap: 8px; overflow: hidden; white-space: nowrap; }
 /* The meta of a row takes one line, so that the rows are of one height: a
    long notebook name is cut short, and the tags that do not fit fade out at

@@ -186,17 +186,19 @@ function archivedParam(nb) {
 }
 
 // showsArchived reports whether the list shown takes in the archive with the
-// other notes, as the button of the list head asks.
+// other notes, as the box of the search box asks.
 const showsArchived = () => state.showArchived && !inArchive() && state.notebook !== "trash";
 
-// renderShowArchived draws the button of the list head that takes the archive
-// in the lists or leaves it out. The archive and the trash have no use of it.
+// renderShowArchived draws the box of the search box, which takes the archive
+// in the lists and searches or leaves it out: struck out while it is left out.
+// The archive and the trash have no use of it.
 function renderShowArchived() {
   const b = $("show-archived");
-  b.hidden = inArchive() || state.notebook === "trash";
-  b.classList.toggle("on", state.showArchived);
+  const idle = inArchive() || state.notebook === "trash";
+  b.disabled = idle;
+  b.replaceChildren(kindSVG(state.showArchived ? "archive" : "archiveOff"));
   b.setAttribute("aria-pressed", String(state.showArchived));
-  const label = t(state.showArchived ? "hideArchivedTitle" : "showArchivedTitle");
+  const label = t(idle ? "archivedFilterIdle" : state.showArchived ? "hideArchivedTitle" : "showArchivedTitle");
   b.title = label;
   b.setAttribute("aria-label", label);
 }
@@ -935,6 +937,8 @@ const KIND_SVG = {
   minus: ["M5 12h14"],
   close: ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"],
   unmark: ["circle:12,12,7.5", "M6.7 17.3 17.3 6.7"],
+  // The lists leaving out the archive: the box of the archive, struck out.
+  archiveOff: ["rect:3.5,4.5,17,4,1", "M5 8.5v10A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-10", "M10 12.5h4", "M3 3l18 18"],
   help: ["M9 9.5a3 3 0 0 1 5.8-1c.5 1.6-.7 2.5-1.7 3.1-.7.4-1.1 1-1.1 1.8v.6", "M12 17.5v.01"],
   more: ["M5.5 12v.01", "M12 12v.01", "M18.5 12v.01"],
 };
