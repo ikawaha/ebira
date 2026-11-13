@@ -48,6 +48,7 @@
   "status.noteMoved": "moved the note",
   "status.previewSource": "the document pane shows the Markdown, which you can edit as is",
   "status.previewRendered": "the document pane shows the preview of the Markdown",
+  "status.subNotebookWhere": "A sub notebook goes in a top notebook: choose one other than the Inbox and the Trash",
   "status.previewNotKept": "could not keep the mode of the document pane in the settings file: {err}",
   "status.copied": "copied the note as Markdown",
   "status.copiedTerminal": "copied the note as Markdown through the terminal (OSC 52); a terminal without it, such as Terminal.app, copies nothing",
@@ -117,6 +118,7 @@
   "prompt.conflict": "The note was changed outside since you opened it.",
   "prompt.name": "Name:",
   "prompt.newNotebook": "New notebook name:",
+  "prompt.newSubNotebook": "New sub notebook in {parent}:",
   "prompt.newAINotebook": "New AI notebook name:",
   "prompt.find": "Find in the note:",
   "prompt.copyLink": "Copy a link to the note:",
@@ -139,6 +141,7 @@
   "kind.inherit": "same as the parent",
 
   "key.add": "add",
+  "key.addSub": "sub notebook",
   "key.addAI": "add AI",
   "key.ask": "ask",
   "key.askAgain": "ask again",

@@ -812,6 +812,9 @@ func (m Model) renderFooter() string {
 			if m.addKind == "collab" {
 				label = "prompt.newAINotebook"
 			}
+			if m.addParent != "" {
+				return m.th.style(m.th.accent).Render(" "+m.tr.t("prompt.newSubNotebook", "parent", m.notebookName(m.addParent))+" ") + m.promptIn.View() + m.keys([][2]string{{"enter", "key.ok"}, {"esc", "key.cancel"}})
+			}
 		case promptAsk:
 			label = "prompt.ask"
 		}
@@ -900,7 +903,7 @@ func (m Model) renderFooter() string {
 		}
 		hints = append(hints, [2]string{"q", "key.quit"})
 	case focusNotebooks:
-		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"m", "key.moveNotebook"}, {"a", "key.add"}, {"A", "key.addAI"}, {"t", "key.kind"}, {"x", "key.archive"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
+		hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.notes"}, {"e", "key.rename"}, {"J/K", "key.reorder"}, {"m", "key.moveNotebook"}, {"a", "key.add"}, {"A", "key.addAI"}, {"s", "key.addSub"}, {"t", "key.kind"}, {"x", "key.archive"}, {"d", "key.delete"}, {"T", "key.tags"}, {"n", "key.newNote"}, {"q", "key.quit"}}
 		if m.toMove != nil || m.nbToMove != nil {
 			hints = [][2]string{{"j/k", "key.notebook"}, {"enter", "key.moveHere"}, {"esc", "key.cancel"}}
 			break

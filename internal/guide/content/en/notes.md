@@ -21,7 +21,7 @@ Besides the notebooks, the side column has these rows:
 
 The count of a notebook in the side column takes in the notes of its sub notebooks. The counts of All and of the notebooks leave out the archive and the trash.
 
-A notebook can hold sub notebooks, one level deep ("New sub notebook…" in its menu). A sub notebook shows as a cell at the top of the list, which opens and closes when clicked. "Terminal" of this guide is one. "+ New" makes a note in the sub notebook whose cell was clicked last, or of the note chosen when that note is in a cell, and opens its cell; else in the parent. The sort above the list is the parent's: to sort the notes of a sub notebook, use "Sort" in the menu of its cell, which also has "New note here".
+A notebook can hold sub notebooks, one level deep ("New sub notebook…" in its menu). A sub notebook shows as a cell at the top of the list, which opens and closes when clicked. "Terminal" of this guide is one. "+ New" makes a note in the sub notebook whose cell was clicked last, or of the note chosen when that note is in a cell, and opens its cell; else in the parent. The sort above the list is the parent's: to sort the notes of a sub notebook, use "Sort" in the menu of its cell, which also has "New note here". Drag a cell onto the upper or lower half of another to put it before or after.
 
 ## Moving
 
