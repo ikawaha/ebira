@@ -9,7 +9,7 @@ A mark makes a note stand out in the list. This note has the red mark.
 
 ## Setting and clearing
 
-Open the menu with the flag button of the preview, a right click in the list, or `M`, and choose. Choosing the current mark again clears it. Marks do not change the update time of the note.
+Open the menu with the flag button of the preview, a right click in the list, or `M`, and choose. Choosing the current mark again clears it. A right click on one of the notes chosen together marks them all. Marks do not change the update time of the note.
 
 ## Names of the marks
 

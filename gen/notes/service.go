@@ -91,12 +91,14 @@ type Service interface {
 	// in a list. The archive holds notes and notebooks kept but no longer in use,
 	// which lists and searches leave out unless they ask for them. The notes keep
 	// their notebooks, and the update time stays. The notes are checked first:
-	// when one does not exist or is in the trash, none is changed. A note in a
-	// notebook in the archive stays there with its notebook.
+	// when one does not exist, is in the trash, or is put in the archive from the
+	// inbox, none is changed. The inbox holds no notes in the archive, as its
+	// notes wait to go to notebooks. A note in a notebook in the archive stays
+	// there with its notebook.
 	ArchiveNotes(context.Context, *ArchiveNotesPayload) (err error)
 	// List the notes that may be put in the archive: those not updated for days,
-	// oldest first, but those in the archive or the trash already, a page at a
-	// time.
+	// oldest first, but those in the archive or the trash already and those in the
+	// inbox, which go to notebooks rather than to the archive, a page at a time.
 	ArchiveCandidates(context.Context, *ArchiveCandidatesPayload) (res *NoteList, err error)
 	// Name the marks, which says what they mean: the names are written to the
 	// settings of the notes (_ebira.yaml), replacing those given before; an empty
@@ -1563,7 +1565,8 @@ type UpdateAiNotePayload struct {
 	Marks []string
 	// Put the note in the archive, or take it out. The archive holds notes and
 	// notebooks kept but no longer in use, which lists and searches leave out
-	// unless they ask for them. Like marks, it changes nothing of the content
+	// unless they ask for them. Like marks, it changes nothing of the content. Not
+	// for notes in the inbox
 	Archived *bool
 	// Leave the body out of the result (it comes back empty), as for a long note:
 	// the new version, the update time and the other attributes still come back

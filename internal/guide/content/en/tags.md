@@ -15,3 +15,5 @@ A new note made while a tag is chosen starts with that tag.
 Type `tag:guide` in the search field to search only the notes with the tag ([How to search](search.md)). Typing `tag:` suggests tags.
 
 Case and full or half width do not matter.
+
+The counts of the tag list leave out the notes in the trash and the archive.

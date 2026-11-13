@@ -101,6 +101,11 @@ const TimeLayout = "2006-01-02T15:04:05.000Z07:00"
 // FormatTime writes t in TimeLayout, in UTC.
 func FormatTime(t time.Time) string { return t.UTC().Format(TimeLayout) }
 
+// InArchive reports whether the note is put in the archive on its own. The
+// inbox holds no notes in the archive: its notes wait to go to notebooks, so
+// archived_at there, as an external edit may leave, is not taken.
+func (n *Note) InArchive() bool { return n.ArchivedAt != nil && n.Notebook != Inbox }
+
 // SortKey returns the key of the note in the manual order: Order if set, else
 // the creation time in milliseconds. Higher comes first.
 func (n *Note) SortKey() int64 {

@@ -21,4 +21,11 @@ The bottom line shows the keys that work. The main ones:
 | `?` | Ask the assistant |
 | `q` | Quit |
 
+## Special rows of the notebook column
+
+- The Inbox is at the top and the Trash at the bottom. "📦 Archive" between them shows when there is something in the archive, with the notebooks with notes there under it, marked `↳`.
+- The notebooks deleted are listed under the Trash, marked `↳`. `d` on the Trash row empties the trash, after asking.
+- Notes in the trash cannot be edited: `u` restores one, `m` moves it to another notebook, and `d` deletes it for good. `u` and `d` work on the rows of deleted notebooks too.
+- When a search finds notes in the archive as well, the title of the list says "N more in the archive". Choose the archive row and search again to search there.
+
 In the source mode (`v`), the document column is the editor itself, and the note is saved when you leave it.

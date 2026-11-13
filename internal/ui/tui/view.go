@@ -608,8 +608,8 @@ func (m Model) renderNotebooks(w, h int) string {
 		nest := ""
 		if id, ok := archivedID(r.id); ok {
 			nest, name = "↳ ", strings.TrimPrefix(name, "↳ ")
-			if nb := m.archivedNotebook(id); nb != nil && nb.Parent != nil && m.archivedNotebook(*nb.Parent) != nil {
-				// A sub notebook in the archive with its parent, under it.
+			if nb := m.anyNotebook(id); nb != nil && nb.Parent != nil {
+				// A sub notebook, under its parent.
 				nest, name = "  ↳ ", nb.Name
 			}
 		} else if tid, ok := trashedID(r.id); ok {
@@ -695,8 +695,8 @@ func (m Model) notebookName(id string) string {
 		return m.tr.t("notebook.archive")
 	}
 	if aid, ok := archivedID(id); ok {
-		if nb := m.archivedNotebook(aid); nb != nil {
-			if nb.Parent != nil && m.archivedNotebook(*nb.Parent) != nil {
+		if nb := m.anyNotebook(aid); nb != nil {
+			if nb.Parent != nil {
 				return m.notebookName(archivePrefix+*nb.Parent) + " / " + nb.Name
 			}
 			return "↳ " + strings.TrimPrefix(m.notebookName(aid), "↳ ")

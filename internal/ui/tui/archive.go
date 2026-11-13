@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -9,9 +10,11 @@ import (
 )
 
 // The archive keeps notes and notebooks no longer in use out of the lists and
-// searches. The notebook pane has a row of it above the trash, followed by
-// the notebooks there, as the trash is by the notebooks in it: the archive
-// lists the notes put there on their own, and a notebook there all its notes.
+// searches. It is a mark, so its notes stay in their notebooks. The notebook
+// pane has a row of it above the trash, followed by the notebooks with notes
+// there, sub notebooks under their parents: the archive lists the notes put
+// there on their own, a notebook there all its notes, and another notebook
+// its notes put there on their own.
 
 // archivePrefix marks the archive in the notebook filter and the rows of the
 // notebook pane: alone, the archive; followed by an ID, a notebook in it.
@@ -55,42 +58,101 @@ func (m Model) archivedNotebook(id string) *gennotes.Notebook {
 	return nil
 }
 
+// anyNotebook returns notebook id, in the archive or not, or nil.
+func (m Model) anyNotebook(id string) *gennotes.Notebook {
+	if nb := m.notebookOf(id); nb != nil {
+		return nb
+	}
+	return m.archivedNotebook(id)
+}
+
+// allNotebooks returns the notebooks, in the archive or not, in their order.
+func (m *Model) allNotebooks() []*gennotes.Notebook {
+	if m.order == nil {
+		return append(slices.Clone(m.notebooks), m.archived...)
+	}
+	var res []*gennotes.Notebook
+	for _, id := range m.order {
+		if nb := m.anyNotebook(id); nb != nil {
+			res = append(res, nb)
+		}
+	}
+	return res
+}
+
+// archivedIn is the number of notes of notebook nb alone in the archive.
+func archivedIn(nb *gennotes.Notebook) int {
+	if archived(nb) {
+		return nb.Count + nb.ArchivedCount
+	}
+	return nb.ArchivedCount
+}
+
+// archiveSubs returns the sub notebooks of notebook id with notes in the
+// archive, or all of them for a notebook there.
+func (m *Model) archiveSubs(id string) []*gennotes.Notebook {
+	parent := m.archivedNotebook(id) != nil
+	var res []*gennotes.Notebook
+	for _, nb := range m.allNotebooks() {
+		if nb.Parent != nil && *nb.Parent == id && (parent || archived(nb) || nb.ArchivedCount > 0) {
+			res = append(res, nb)
+		}
+	}
+	return res
+}
+
 // archiveCount is the number of notes in the archive: those put there on
 // their own and those of the notebooks there.
 func (m *Model) archiveCount() int {
 	n := 0
-	for _, nb := range m.notebooks {
-		n += nb.ArchivedCount
-	}
-	for _, nb := range m.archived {
-		n += nb.Count + nb.ArchivedCount
+	for _, nb := range m.allNotebooks() {
+		n += archivedIn(nb)
 	}
 	return n
 }
 
-// archiveRows returns the rows of the archive and of the notebooks there, or
-// none when the archive is empty.
+// archiveRows returns the rows of the archive and of the notebooks with notes
+// there, sub notebooks under their parents, or none when the archive is
+// empty.
 func (m *Model) archiveRows() []notebookRow {
+	var rows []notebookRow
+	for _, nb := range m.allNotebooks() {
+		if nb.Parent != nil || nb.Reserved {
+			continue
+		}
+		subs := m.archiveSubs(nb.ID)
+		count := archivedIn(nb)
+		for _, s := range subs {
+			count += archivedIn(s)
+		}
+		if !archived(nb) && count == 0 && len(subs) == 0 {
+			continue
+		}
+		rows = append(rows, notebookRow{id: archivePrefix + nb.ID, count: count, kind: nb.Kind})
+		for _, s := range subs {
+			rows = append(rows, notebookRow{id: archivePrefix + s.ID, count: archivedIn(s), kind: s.Kind})
+		}
+	}
 	count := m.archiveCount()
-	if count == 0 && len(m.archived) == 0 {
+	if count == 0 && len(rows) == 0 {
 		return nil
 	}
-	rows := []notebookRow{{id: archivePrefix, count: count}}
-	for _, nb := range m.archived {
-		rows = append(rows, notebookRow{id: archivePrefix + nb.ID, count: nb.Count + nb.ArchivedCount, kind: nb.Kind})
-	}
-	return rows
+	return append([]notebookRow{{id: archivePrefix, count: count}}, rows...)
 }
 
 // archiveParam returns the archived parameter of a list or a search of the
 // notebook filter: only the archive in the archive, all the notes of a
-// notebook there, and the default, which leaves the archive out, otherwise.
-func archiveParam(filter string) string {
-	switch {
-	case filter == archivePrefix:
+// notebook there, only the notes put in the archive of another notebook under
+// the archive, and the default, which leaves the archive out, otherwise.
+func (m *Model) archiveParam(filter string) string {
+	if filter == archivePrefix {
 		return "only"
-	case inArchive(filter):
-		return "include"
+	}
+	if id, ok := archivedID(filter); ok {
+		if m.archivedNotebook(id) != nil {
+			return "include"
+		}
+		return "only"
 	}
 	return "exclude"
 }
@@ -105,7 +167,8 @@ type archivedMsg struct {
 }
 
 // toggleNoteArchive puts the note in the preview in the archive, or takes it
-// out. A note in a notebook in the archive goes in and out with it.
+// out. A note in a notebook in the archive goes in and out with it, and one
+// in the inbox goes to a notebook instead.
 func (m *Model) toggleNoteArchive() tea.Cmd {
 	n := m.note
 	switch {
@@ -113,6 +176,10 @@ func (m *Model) toggleNoteArchive() tea.Cmd {
 		return nil
 	case n.Notebook == trashNotebook:
 		m.setStatus(statusWarn, "status.archiveTrash")
+		return nil
+	case n.Notebook == inboxNotebook:
+		// The inbox holds no notes in the archive: its notes go to notebooks.
+		m.setStatus(statusWarn, "status.archiveInbox")
 		return nil
 	case m.archivedNotebook(n.Notebook) != nil:
 		m.setStatus(statusWarn, "status.archivedWithNotebook")
@@ -135,7 +202,10 @@ func (m *Model) toggleNotebookArchive() tea.Cmd {
 	on := true
 	if id, ok := archivedID(row.id); ok {
 		nb, on = m.archivedNotebook(id), false
-		if nb != nil && nb.ArchivedAt == nil {
+		if nb == nil {
+			return nil // a notebook with notes in the archive, not there itself
+		}
+		if nb.ArchivedAt == nil {
 			m.setStatus(statusWarn, "status.archivedWithParent")
 			return nil
 		}

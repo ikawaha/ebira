@@ -239,6 +239,7 @@
   "status.notebookArchived": "ノートブックをアーカイブへ移しました",
   "status.notebookUnarchived": "ノートブックをアーカイブから戻しました",
   "status.archiveFailed": "アーカイブを変えられませんでした: {err}",
+  "status.archiveInbox": "Inbox のノートはアーカイブへ移せません。ノートブックへ移してください",
   "status.archiveTrash": "ゴミ箱のノートはアーカイブへ移せません",
   "status.archivedWithNotebook": "このノートはノートブックごとアーカイブにあります。ノートブックを戻してください",
   "status.archivedWithParent": "このノートブックは親ごとアーカイブにあります。親を戻してください",

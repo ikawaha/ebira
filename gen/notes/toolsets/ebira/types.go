@@ -538,7 +538,8 @@ type (
 		Marks []string
 		// Put the note in the archive, or take it out. The archive holds notes and
 		// notebooks kept but no longer in use, which lists and searches leave out
-		// unless they ask for them. Like marks, it changes nothing of the content
+		// unless they ask for them. Like marks, it changes nothing of the content. Not
+		// for notes in the inbox
 		Archived *bool
 		// Leave the body out of the result (it comes back empty), as for a long note:
 		// the new version, the update time and the other attributes still come back

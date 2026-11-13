@@ -126,7 +126,7 @@ mark.current { background: var(--mark-current); }
 .search { flex: 1; max-width: 560px; position: relative; }
 .search input {
   width: 100%;
-  padding: 4px 56px 4px 12px; /* room for the clear and help buttons */
+  padding: 4px 84px 4px 12px; /* room for the clear, filter and help buttons */
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--bg);
@@ -135,13 +135,22 @@ mark.current { background: var(--mark-current); }
 }
 .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; } /* the clear button stands in for it */
-.search-clear { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: var(--fs-lg); line-height: 1; cursor: pointer; }
+/* The buttons at the right end of the box: clear, the filters of what the
+   lists take in, and the help of the syntax. */
+.search-tools { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; }
+.search-filters { display: flex; align-items: center; gap: 2px; }
+.search-filter { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; padding: 0; border: none; border-radius: var(--r-sm); background: transparent; color: var(--fg-muted); cursor: pointer; }
+.search-filter svg { width: 16px; height: 16px; }
+.search-filter:hover, .search-filter:focus-visible { background: var(--bg-side); color: var(--fg); }
+.search-filter[aria-pressed="true"] { color: var(--accent); background: var(--bg-active); }
+.search-filter:disabled { opacity: .35; cursor: default; background: transparent; }
+.search-clear { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--fg-muted); font-size: var(--fs-lg); line-height: 1; cursor: pointer; }
 .search-clear svg { width: 14px; height: 14px; }
 .search-clear:hover, .search-clear:focus-visible { background: var(--bg-side); color: var(--fg); }
 .search-clear[hidden] { display: none; }
 /* The help of the search syntax: a "?" at the right end of the box, which
    opens a panel below it. */
-.search-help-button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: 600; line-height: 1; cursor: pointer; }
+.search-help-button { display: inline-flex; align-items: center; justify-content: center; margin-left: 2px; width: 20px; height: 20px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: 600; line-height: 1; cursor: pointer; }
 .search-help-button svg { width: 14px; height: 14px; }
 .search-help-button:hover, .search-help-button:focus-visible, .search-help-button[aria-expanded="true"] { color: var(--fg); border-color: var(--accent); }
 .search-help { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg); color: var(--fg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); font-size: var(--fs-sm); }
@@ -228,7 +237,6 @@ body.resizing { cursor: col-resize; user-select: none; }
 .notebooks .icon svg { display: block; width: 15px; height: 15px; margin: 0 auto; color: var(--fg-muted); }
 .notebooks li.active .icon svg { color: var(--fg); }
 .kind-icon svg { display: inline-block; width: 14px; height: 14px; margin-left: 4px; vertical-align: -2px; color: var(--fg-muted); }
-.notebooks .nest { flex: none; width: 1.4em; text-align: center; }
 .notebooks .count { margin-left: auto; padding-left: 8px; color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .side-tabs, .settings-tabs { display: flex; gap: 4px; margin: 0 8px 8px; padding: 2px; border-radius: var(--r-md); background: var(--bg-hover); }
 .side-tabs button, .settings-tabs button { flex: 1; border: none; border-radius: var(--r-sm); padding: 4px 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
@@ -324,6 +332,11 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list .title { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-mark { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; }
 .ai-mark svg { width: 16px; height: 16px; }
+/* A note in the archive shown with the others: a box after the title, and
+   the row paler. */
+.archived-mark { flex: none; display: inline-flex; color: var(--fg-muted); }
+.archived-mark svg { width: 14px; height: 14px; }
+.list li.archived .title, .list li.archived .meta { opacity: .6; }
 .list .meta { color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; display: flex; gap: 8px; overflow: hidden; white-space: nowrap; }
 /* The meta of a row takes one line, so that the rows are of one height: a
    long notebook name is cut short, and the tags that do not fit fade out at
@@ -352,7 +365,6 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
    their own; from a sub notebook, a row goes back up. */
 .list li.sub-notebook { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--sub-bg); white-space: nowrap; }
 .list li.sub-notebook:hover { background-color: var(--bg-hover); }
-.list li.sub-notebook.up { color: var(--fg-muted); }
 .list li.sub-notebook .icon { flex: none; width: 26px; }
 /* An opened sub notebook shows its notes under its row, indented on a tint
    of its color. */
@@ -372,13 +384,16 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.in-sub.deep { padding-left: 56px; }
 .list li.sub-notebook .icon svg { display: block; width: 26px; height: 26px; margin: 0 auto; color: var(--fg-muted); }
 /* The folder is larger than the arrow back up, to hold the mark of its kind. */
-.list li.sub-notebook.up .icon svg { width: 16px; height: 16px; }
 .list li.sub-notebook .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-.list li.sub-notebook.up .name { font-weight: normal; }
+/* A notebook in the archive as a whole, in the cells of the archive. */
+.list li.sub-notebook .archived-mark { flex: none; display: inline-flex; color: var(--fg-muted); }
+.list li.sub-notebook .archived-mark svg { width: 14px; height: 14px; }
 .list li.sub-notebook .count { color: var(--fg-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .list li.sub-notebook .nb-more { flex: none; visibility: hidden; border: none; background: none; color: var(--fg-muted); padding: 0 4px; line-height: 1.2; font-size: var(--fs-md); }
 .list li.sub-notebook:hover .nb-more, .list li.sub-notebook.menu-open .nb-more, .list li.sub-notebook .nb-more:focus-visible { visibility: visible; }
 .list li.sub-notebook.menu-open { background-color: var(--bg-hover); }
+.list li.sub-notebook.active { background-color: var(--bg-active); } /* the cell clicked last, where new notes go */
+.list li.sub-notebook.active .nb-more { visibility: visible; }
 .list li.sub-notebook.drop-into { box-shadow: inset 0 0 0 2px var(--accent); }
 .list li.sub-notebook .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--bg); color: var(--fg); }
 .notebook-new .inherited { color: var(--fg-muted); font-size: var(--fs-sm); }

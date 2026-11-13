@@ -239,6 +239,7 @@
   "status.notebookArchived": "Put the notebook in the archive",
   "status.notebookUnarchived": "Took the notebook out of the archive",
   "status.archiveFailed": "Could not change the archive: {err}",
+  "status.archiveInbox": "Notes in the Inbox cannot go to the archive; move them to a notebook",
   "status.archiveTrash": "Notes in the trash cannot be put in the archive",
   "status.archivedWithNotebook": "This note is in the archive with its notebook; take the notebook out instead",
   "status.archivedWithParent": "This notebook is in the archive with its parent; take the parent out instead",

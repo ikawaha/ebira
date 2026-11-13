@@ -163,7 +163,7 @@ func TestArchive(t *testing.T) {
 func TestArchiveNotesChecks(t *testing.T) {
 	person := AsPerson(context.Background())
 	svc, _ := newTestService(t)
-	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("a"), Title: "a"}); err != nil {
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("a"), Notebook: ptr("work"), Title: "a"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("gone"), Title: "gone"}); err != nil {
@@ -260,9 +260,14 @@ func TestArchiveCandidates(t *testing.T) {
 	svc.now = func() time.Time { return now }
 	for i, id := range []string{"oldest", "older", "put", "gone", "fresh"} {
 		now = start.AddDate(0, i, 0)
-		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Title: id}); err != nil {
+		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("work"), Title: id}); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// The inbox waits for notes to go to notebooks, not to the archive.
+	now = start
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("waiting"), Title: "waiting"}); err != nil {
+		t.Fatal(err)
 	}
 	if err := svc.ArchiveNotes(person, &gennotes.ArchiveNotesPayload{Ids: []string{"put"}, Archived: true}); err != nil {
 		t.Fatal(err)
@@ -281,6 +286,74 @@ func TestArchiveCandidates(t *testing.T) {
 	}
 	if !slices.Equal(ids, []string{"oldest", "older"}) || res.Total != 2 {
 		t.Errorf("ArchiveCandidates = %v (%d)", ids, res.Total)
+	}
+}
+
+// The inbox holds no notes in the archive: they cannot be put there from it,
+// a note in the archive moved there leaves the archive, and archived_at left
+// there by an external edit is not taken, and goes when the note leaves.
+func TestArchiveInbox(t *testing.T) {
+	ctx := context.Background()
+	person := AsPerson(ctx)
+	svc, _ := newTestService(t)
+	for _, id := range []string{"waiting", "old"} {
+		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(id), Notebook: ptr("work"), Title: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := svc.Update(person, &gennotes.UpdatePayload{ID: "waiting", Notebook: ptr(store.Inbox)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ArchiveNotes(person, &gennotes.ArchiveNotesPayload{Ids: []string{"old", "waiting"}, Archived: true}); errorName(err) != "bad_request" {
+		t.Errorf("put in the archive from the inbox: %v", err)
+	}
+	if n, _ := svc.Get(person, &gennotes.GetPayload{ID: "old"}); n.Archived != nil {
+		t.Error("a note was put in the archive though another failed")
+	}
+
+	if err := svc.ArchiveNotes(person, &gennotes.ArchiveNotesPayload{Ids: []string{"old"}, Archived: true}); err != nil {
+		t.Fatal(err)
+	}
+	moved, err := svc.Update(person, &gennotes.UpdatePayload{ID: "old", Notebook: ptr(store.Inbox)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if moved.Archived != nil || moved.ArchivedAt != nil {
+		t.Errorf("moved to the inbox, still in the archive: %+v", moved)
+	}
+	if n, err := svc.store.Load("old"); err != nil || n.ArchivedAt != nil {
+		t.Errorf("archived_at in the file of the inbox: %v, %v", n.ArchivedAt, err)
+	}
+
+	// archived_at written in the inbox outside ebira.
+	n, err := svc.store.Load("waiting")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	n.ArchivedAt = &at
+	if err := svc.store.Save(n); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Sync(ctx, nil); err != nil {
+		t.Fatal(err)
+	}
+	list, err := svc.List(person, &gennotes.ListPayload{Notebook: ptr(store.Inbox), Archived: "exclude", Limit: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := noteIDs(list.Notes); !slices.Contains(got, "waiting") {
+		t.Errorf("inbox = %v, want waiting there", got)
+	}
+	if got, _ := svc.Get(person, &gennotes.GetPayload{ID: "waiting"}); got.Archived != nil || got.ArchivedAt != nil {
+		t.Errorf("waiting in the archive: %+v", got)
+	}
+	out, err := svc.Update(person, &gennotes.UpdatePayload{ID: "waiting", Notebook: ptr("work")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Archived != nil {
+		t.Error("archived_at left in the inbox put the note in the archive when it went out")
 	}
 }
 
