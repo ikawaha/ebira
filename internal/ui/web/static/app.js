@@ -1340,6 +1340,37 @@ function enableNotebookDrag(li, id) {
   });
 }
 
+// acceptSubReorder lets another sub notebook of the same parent, dragged in
+// the note list, be dropped on li, the cell of sub: before it on the upper
+// half, after it on the lower one.
+function acceptSubReorder(li, sub) {
+  const place = (e) => {
+    const dragged = state.notebooks.find((n) => n.id === nbDragID);
+    if (!dragged || dragged.id === sub.id || dragged.parent !== sub.parent) return null;
+    const r = li.getBoundingClientRect();
+    const below = e.clientY - r.top > r.height / 2;
+    const others = state.notebooks.filter((n) => !n.reserved && n.parent === sub.parent && n.id !== dragged.id);
+    const i = others.findIndex((n) => n.id === sub.id);
+    return { below, before: below ? (others[i + 1]?.id ?? null) : sub.id };
+  };
+  li.addEventListener("dragover", (e) => {
+    const p = place(e);
+    if (!p) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    li.classList.toggle("drop-below", p.below);
+    li.classList.toggle("drop-above", !p.below);
+  });
+  li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below"));
+  li.addEventListener("drop", (e) => {
+    const p = place(e);
+    if (!p) return;
+    e.preventDefault();
+    li.classList.remove("drop-above", "drop-below");
+    moveNotebook(nbDragID, p.before);
+  });
+}
+
 // endNotebookDrag clears what a notebook being dragged left on the rows.
 function endNotebookDrag() {
   nbDragID = null;
@@ -1401,9 +1432,16 @@ function acceptNotebookTrash(li) {
   });
 }
 
-async function moveNotebook(id, before) {
+// moveNotebook puts notebook id before the notebook before (null for last)
+// among its own: the top notebooks, or the sub notebooks of its parent, which
+// offers to undo it.
+async function moveNotebook(id, before, undoing) {
   const moved = state.notebooks.find((n) => n.id === id);
-  const others = state.notebooks.filter((n) => !n.reserved && !n.parent && n.id !== id);
+  if (!moved) return;
+  const parent = moved.parent ?? null;
+  const siblings = state.notebooks.filter((n) => !n.reserved && (n.parent ?? null) === parent);
+  const back = siblings[siblings.indexOf(moved) + 1]?.id ?? null; // where it was
+  const others = siblings.filter((n) => n.id !== id);
   others.splice(before ? others.findIndex((n) => n.id === before) : others.length, 0, moved);
   const changed = [];
   others.forEach((nb, k) => {
@@ -1415,12 +1453,16 @@ async function moveNotebook(id, before) {
   });
   // Show the new order at once; inbox stays first and trash last, and the
   // sub notebooks follow their parents.
+  const tops = parent ? state.notebooks.filter((n) => !n.reserved && !n.parent) : others;
+  const subsOf = (id) => (id === parent ? others : state.notebooks.filter((n) => n.parent === id));
   state.notebooks = [
     ...state.notebooks.filter((n) => n.reserved && n.id !== "trash"),
-    ...others.flatMap((nb) => [nb, ...state.notebooks.filter((n) => n.parent === nb.id)]),
+    ...tops.flatMap((nb) => [nb, ...subsOf(nb.id)]),
     ...state.notebooks.filter((n) => n.id === "trash"),
   ];
   renderNotebooks();
+  if (parent) renderNotes(); // the cells of the list
+  if (parent && !undoing && back !== before) offerUndo(t("toastReordered", { title: moved.name }), () => moveNotebook(id, back, true));
   notebookSaves = notebookSaves.then(async () => {
     try {
       for (const c of changed) {
@@ -2231,6 +2273,7 @@ function subNotebookRows() {
         li.classList.add("dragging");
       });
       li.addEventListener("dragend", endNotebookDrag);
+      acceptSubReorder(li, sub);
     }
     if (!open) return [li];
     const nested = (trashed || archive) && depth === 0 ? (archive ? archiveSubs(sub.id) : childNotebooks(sub.id, trashed)).flatMap((c) => cellRows(c, 1)) : [];

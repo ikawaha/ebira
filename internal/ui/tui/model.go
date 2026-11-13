@@ -110,6 +110,7 @@ type Model struct {
 	nbSel        int                  // cursor in the notebook pane; 0 is "All"
 	promptIn     textinput.Model
 	addKind      string // kind of the notebook promptAddNotebook creates
+	addParent    string // notebook promptAddNotebook creates a sub notebook in; "" for the top
 	newKind      string // kind chosen at promptNotebookKind, waiting for promptUnprivate
 	// toMove is a note in the trash being moved to a notebook chosen in the
 	// notebook pane (m), and moveTo the notebook waiting for promptMovePrivate.
@@ -713,12 +714,17 @@ func (m *Model) saveNotebook(p *gennotes.SaveNotebookPayload) tea.Cmd {
 	}
 }
 
-// createNotebook creates a notebook named name of kind ("default" or "collab");
-// the server derives its ID.
-func (m *Model) createNotebook(name, kind string) tea.Cmd {
+// createNotebook creates a notebook named name of kind ("default" or "collab"),
+// or a sub notebook of parent, which takes the kind of its parent; the server
+// derives its ID.
+func (m *Model) createNotebook(name, kind, parent string) tea.Cmd {
 	ctx, api := m.ctx, m.api
+	p := &gennotes.CreateNotebookPayload{Name: name, Kind: kind}
+	if parent != "" {
+		p.Parent = &parent
+	}
 	return func() tea.Msg {
-		nb, err := api.CreateNotebook(ctx, &gennotes.CreateNotebookPayload{Name: name, Kind: kind})
+		nb, err := api.CreateNotebook(ctx, p)
 		return notebookSavedMsg{notebook: nb, created: true, err: err}
 	}
 }
@@ -1492,7 +1498,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if v == "" {
 				return m, nil
 			}
-			return m, m.createNotebook(v, m.addKind)
+			return m, m.createNotebook(v, m.addKind, m.addParent)
 		}
 		var cmd tea.Cmd
 		m.promptIn, cmd = m.promptIn.Update(msg)
@@ -1693,11 +1699,22 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "a", "A":
-			m.prompt, m.addKind = promptAddNotebook, "default"
+			m.prompt, m.addKind, m.addParent = promptAddNotebook, "default", ""
 			if key == "A" {
 				m.addKind = "collab"
 			}
 			m.promptIn.CharLimit = 100 // as the API allows
+			m.promptIn.SetValue("")
+			return m, m.promptIn.Focus()
+		case "s":
+			// A sub notebook, one level deep, in the top notebook selected.
+			nb := m.selectedNotebook()
+			if nb == nil || nb.Reserved || nb.Parent != nil {
+				m.setStatus(statusWarn, "status.subNotebookWhere")
+				return m, nil
+			}
+			m.prompt, m.addKind, m.addParent = promptAddNotebook, "default", nb.ID
+			m.promptIn.CharLimit = 100
 			m.promptIn.SetValue("")
 			return m, m.promptIn.Focus()
 		case "t":

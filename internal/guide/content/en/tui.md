@@ -17,6 +17,7 @@ The bottom line shows the keys that work. The main ones:
 | `z` | Zoom the document column |
 | `f` | Find in the note |
 | `T` | Switch between notebooks and tags |
+| `s` | In the notebook column, make a sub notebook in the notebook chosen |
 | `x` | Put in the archive or take out of it (the note in the list, or the notebook in the notebook column) |
 | `?` | Ask the assistant |
 | `q` | Quit |

@@ -48,6 +48,7 @@
   "status.noteMoved": "ノートを移しました",
   "status.previewSource": "ドキュメントの欄に Markdown をそのまま出します（そのまま編集できます）",
   "status.previewRendered": "ドキュメントの欄に Markdown のプレビューを出します",
+  "status.subNotebookWhere": "サブノートブックはトップのノートブックの中に作ります。Inbox と Trash 以外を選んでください",
   "status.previewNotKept": "ドキュメントの欄の形を設定ファイルに書けませんでした: {err}",
   "status.copied": "ノートを Markdown でコピーしました",
   "status.copiedTerminal": "ノートを Markdown でコピーしました（端末の OSC 52 で。Terminal.app など対応していない端末では、クリップボードに入りません）",
@@ -117,6 +118,7 @@
   "prompt.conflict": "開いてから、ノートが外で変更されました。",
   "prompt.name": "名前:",
   "prompt.newNotebook": "新しいノートブックの名前:",
+  "prompt.newSubNotebook": "{parent} の中に作るサブノートブックの名前:",
   "prompt.newAINotebook": "AI と共同作業するノートブックの名前:",
   "prompt.find": "このノートの中を探す:",
   "prompt.copyLink": "ノートへのリンクをコピー:",
@@ -139,6 +141,7 @@
   "kind.inherit": "親に従う",
 
   "key.add": "追加",
+  "key.addSub": "サブを作る",
   "key.addAI": "AI 用を追加",
   "key.ask": "質問",
   "key.askAgain": "もう一度質問",
