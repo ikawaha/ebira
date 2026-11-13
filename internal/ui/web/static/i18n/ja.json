@@ -241,6 +241,8 @@
   "subNotebookUp": "{name} に戻る",
   "subNotebookExpand": "{name} のノートをここに開く",
   "subNotebookCollapse": "{name} のノートをしまう",
+  "notebookOpenOutside": "元のノートブックを開く",
+  "archivedWithParentNote": "「{name}」と一緒にアーカイブにあります。戻すときは {name} を戻します",
   "subNotebookOpenAlone": "このノートブックだけを開く",
   "notebookNew": "新しいノートブック",
   "notebookCreate": "作る",

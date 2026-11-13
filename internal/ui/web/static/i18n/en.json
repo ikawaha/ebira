@@ -241,6 +241,8 @@
   "subNotebookUp": "Back to {name}",
   "subNotebookExpand": "Show the notes of {name} here",
   "subNotebookCollapse": "Fold the notes of {name}",
+  "notebookOpenOutside": "Open the notebook",
+  "archivedWithParentNote": "In the archive with “{name}”; take {name} out to take it out",
   "subNotebookOpenAlone": "Open this notebook alone",
   "notebookNew": "New notebook",
   "notebookCreate": "Create",

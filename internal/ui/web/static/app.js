@@ -1469,11 +1469,32 @@ function openNotebookMenu(li, id, trashed, e) {
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
   // A sub notebook, opened under its parent, can be listed alone too.
   const sub = trashed ? state.trashed.find((x) => x.id === trashed) : state.notebooks.find((x) => x.id === id);
-  if ((sub?.parent || trashed || sub?.archived) && (trashed ? state.trashedNotebook !== trashed : state.notebook !== id)) {
+  // The cells of the archive have a menu of their own.
+  const archiveCell = !trashed && !!sub && li.classList.contains("sub-notebook") && (state.archive || isArchived(state.notebook));
+  if (!archiveCell && (sub?.parent || trashed || sub?.archived) && (trashed ? state.trashedNotebook !== trashed : state.notebook !== id)) {
     item(t("subNotebookOpenAlone"), () => selectNotebook(id, trashed));
     sep();
   }
-  if (trashed) {
+  if (archiveCell) {
+    if (!sub.archived) {
+      // A notebook not in the archive, with notes there: its cell holds
+      // those, and the notebook itself is out of the archive.
+      item(t("notebookOpenOutside"), () => selectNotebook(id));
+    } else {
+      if (state.notebook !== id) item(t("subNotebookOpenAlone"), () => selectNotebook(id));
+      if (sub.archived_at) {
+        // Put there itself: it can be taken out or deleted, and changed
+        // once out.
+        sep();
+        item(t("notebookUnarchive"), () => archiveNotebook(id, false));
+        sep();
+        item(t("notebookToTrash"), () => trashNotebook(sub), "danger");
+      } else {
+        // There with its parent, it goes out with it.
+        m.append(el("div", "menu-label", t("archivedWithParentNote", { name: notebookName(sub.parent) })));
+      }
+    }
+  } else if (trashed) {
     item(t("notebookRestore"), () => restoreNotebook(trashed));
     item(t("notebookDeletePermanently"), () => purgeNotebook(trashed), "danger");
   } else {
@@ -2151,11 +2172,12 @@ function subNotebookRows() {
     more.setAttribute("aria-haspopup", "menu");
     more.setAttribute("aria-label", t("notebookActions"));
     li.append(more);
-    if (!trashed) {
+    if (!trashed && !archive) {
       acceptImport(li, sub.id);
       acceptNote(li, sub.id);
       // Dragged onto a notebook of the left column, it goes into it; onto
-      // the trash, to the trash.
+      // the trash, to the trash. The cells of the archive stay: their menus
+      // take them out or delete them.
       li.draggable = true;
       li.addEventListener("dragstart", (e) => {
         nbDragID = sub.id;
