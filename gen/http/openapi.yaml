@@ -1512,6 +1512,12 @@ paths:
                   description: Only notes with this tag
                   required: false
                   type: string
+                - name: q
+                  in: query
+                  description: 'Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                  required: false
+                  type: string
+                  maxLength: 1000
                 - name: limit
                   in: query
                   description: Maximum number of notes

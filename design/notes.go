@@ -533,6 +533,7 @@ var _ = Service("notes", func() {
 				Enum(sortKeys...)
 			})
 			archiveFilter()
+			Attribute("q", String, "Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given", searchQueryDSL)
 		})
 		Result(NoteList)
 		Error("bad_request", ErrorResult, "trashed_notebook is given without notebook=trash")
@@ -540,6 +541,7 @@ var _ = Service("notes", func() {
 			GET("/notes")
 			Param("notebook")
 			Param("tag")
+			Param("q")
 			Param("limit")
 			Param("offset")
 			Param("trashed_notebook")
@@ -547,7 +549,7 @@ var _ = Service("notes", func() {
 			Param("archived")
 			Response("bad_request", StatusBadRequest)
 		})
-		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook", func() {
+		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook. q filters the list with a query as search_notes takes it but keeps its order, as in -tag:name to leave out the notes with a tag and see the rest in the order the user gave them", func() {
 			ReadOnlyHint(true)
 		})
 	})

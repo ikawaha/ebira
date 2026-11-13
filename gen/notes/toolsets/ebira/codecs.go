@@ -1724,6 +1724,11 @@ var listNotesPayloadFields = []tools.FieldMetadata{
 		JSONType:    "string",
 		Description: "The archive holds notes and notebooks kept but no longer in use, which lists and searches leave out unless they ask for them: exclude leaves the notes in the archive out, include takes them in with the others, and only takes them alone. The archive holds both the notes put there on their own and the notebooks there with all their notes",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("q")},
+		JSONType:    "string",
+		Description: "Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given",
+	},
 }
 var listNotesResultFields = []tools.FieldMetadata{
 	{
@@ -5495,6 +5500,7 @@ func MarshalListNotesPayload(v *ListNotesPayload) ([]byte, error) {
 		TrashedNotebook: in.TrashedNotebook,
 		Sort:            in.Sort,
 		Archived:        &in.Archived,
+		Q:               in.Q,
 	}
 	return json.Marshal(out)
 }
@@ -5524,6 +5530,7 @@ func UnmarshalListNotesPayload(data []byte) (*ListNotesPayload, error) {
 		Tag:             in.Tag,
 		TrashedNotebook: in.TrashedNotebook,
 		Sort:            in.Sort,
+		Q:               in.Q,
 	}
 	if in.Limit != nil {
 		out.Limit = *in.Limit
@@ -7007,6 +7014,13 @@ func validateListNotesPayloadJSONValue(path string, value any, description strin
 			); err != nil {
 				return err
 			}
+		case "q":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given",
+			); err != nil {
+				return err
+			}
 		case "sort":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -7034,6 +7048,7 @@ func validateListNotesPayloadJSONValue(path string, value any, description strin
 				"limit",
 				"notebook",
 				"offset",
+				"q",
 				"sort",
 				"tag",
 				"trashed_notebook",

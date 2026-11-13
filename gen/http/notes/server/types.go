@@ -7487,10 +7487,11 @@ func NewSyncVerificationRequiredResponseBody(res *goa.ServiceError) *SyncVerific
 }
 
 // NewListPayload builds a notes service list endpoint payload.
-func NewListPayload(notebook *string, tag *string, limit int, offset int, trashedNotebook *string, sort *string, archived string, session *string) *notes.ListPayload {
+func NewListPayload(notebook *string, tag *string, q *string, limit int, offset int, trashedNotebook *string, sort *string, archived string, session *string) *notes.ListPayload {
 	v := &notes.ListPayload{}
 	v.Notebook = notebook
 	v.Tag = tag
+	v.Q = q
 	v.Limit = limit
 	v.Offset = offset
 	v.TrashedNotebook = trashedNotebook

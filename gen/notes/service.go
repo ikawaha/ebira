@@ -849,6 +849,10 @@ type ListPayload struct {
 	// alone. The archive holds both the notes put there on their own and the
 	// notebooks there with all their notes
 	Archived string
+	// Only notes matching this query, as search takes it, kept in the order of the
+	// list: unlike search, a notebook does not take in its sub notebooks, and the
+	// title highlights alone are given
+	Q *string
 }
 
 // Settings of the server's machine and user, in its settings file, that the

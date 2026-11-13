@@ -25,6 +25,7 @@ const state = {
   editing: null, // the editor's state while editing; see startEdit
   allSort: loadAllSort(), // sort of all notes; a notebook keeps its own on the server
   showArchived: loadShowArchived(), // lists and searches take in the archive too
+  filter: loadFilter(), // the search box filters the list, kept in its order, instead of searching
   want: 0, // number of notes of the list to show, a page more on "load more"
   expanded: loadExpanded(), // keys of the sub notebooks opened in the note list of their parent (see subKey)
   subNotes: new Map(), // key of an opened sub notebook: its notes {notes, total, want, separators}
@@ -99,6 +100,27 @@ function loadShowArchived() {
   }
 }
 
+// Whether the search box filters the list instead of searching is a
+// per-browser convenience.
+function loadFilter() {
+  try {
+    return localStorage.getItem("ebira.filter") === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+// The search box searches, showing the notes found by relevance, or, in the
+// filter mode, filters the list shown: its notes matching the query, in its
+// order, with its sub notebooks and separators. searching reports whether a
+// search is shown, and filtered whether a filter is.
+const searching = () => !!state.query && !state.filter;
+const filtered = () => !!state.query && state.filter;
+
+// filterParam returns the q parameter of the lists read: the query in the
+// filter mode.
+const filterParam = () => (filtered() ? state.query : null);
+
 // The left column lists the notebooks or the tags, as in Quiver; the choice is
 // a per-browser convenience.
 function loadSide() {
@@ -123,9 +145,10 @@ function currentSort() {
 }
 
 // canReorder reports whether the notes shown can be moved by hand: those of a
-// notebook in the manual order, without a search.
+// notebook in the manual order, without a search. A filter keeps the order,
+// and the notes move among those shown.
 function canReorder() {
-  return !state.query && !!state.notebook && state.notebook !== "trash" && currentSort() === "order";
+  return !searching() && !!state.notebook && state.notebook !== "trash" && currentSort() === "order";
 }
 
 // Sub notebooks open in the note list of their parent, as an accordion: a
@@ -137,13 +160,13 @@ const subKey = (id, trashed, archived) => (trashed ? "trash:" : archived ? "arch
 // openSubs returns the sub notebooks opened in the list shown, in the order
 // of their rows: {key, sub, trashed}. None with a search or a tag.
 function openSubs() {
-  if (state.archive && !state.query && !state.tag) {
+  if (state.archive && !searching() && !state.tag) {
     // The archive itself: its notebooks, each after its sub notebooks.
     const opened = (sub) => state.expanded.has(subKey(sub.id, false, true));
     return archiveRoots().filter(opened).flatMap((sub) => [...archiveSubs(sub.id).filter(opened), sub])
       .map((sub) => ({ key: subKey(sub.id, false, true), sub, trashed: false }));
   }
-  if (state.query || state.tag || !state.notebook) return [];
+  if (searching() || state.tag || !state.notebook) return [];
   const trashed = state.notebook === "trash";
   const cur = trashed ? null : state.notebook;
   const opened = (sub) => state.expanded.has(subKey(sub.id, trashed));
@@ -224,7 +247,7 @@ const archiveCount = () => state.notebooks.reduce((a, n) => a + archivedIn(n), 0
 
 
 function selectArchive() {
-  if (state.archive && !state.query) return;
+  if (state.archive && !searching()) return;
   state.archive = true;
   state.cell = null;
   state.tag = null;
@@ -277,7 +300,7 @@ const findListed = (id) => listedNotes().find((n) => n.id === id);
 // inbox.
 function newNoteNotebook() {
   if (!state.notebook || state.notebook === "trash") return "inbox";
-  if (state.query || state.tag) return state.notebook;
+  if (searching() || state.tag) return state.notebook;
   if (state.cell && parentOf(state.cell) === state.notebook) return state.cell;
   const n = state.selected && findListed(state.selected);
   return n && parentOf(n.notebook) === state.notebook ? n.notebook : state.notebook;
@@ -334,7 +357,7 @@ async function readSubNotes(x) {
     // there on their own.
     const inCell = partialCell(x.key, x.sub.id) ? "only" : null;
     const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id, archived: isArchived(x.sub.id) || showsArchived() ? "include" : inCell };
-    const r = await api("/notes", { params: { ...params, limit: LIST_PAGE, offset: notes.length } });
+    const r = await api("/notes", { params: { ...params, q: filterParam(), limit: LIST_PAGE, offset: notes.length } });
     notes.push(...r.notes);
     total = r.total;
     separators = r.separators ?? [];
@@ -974,6 +997,8 @@ const KIND_SVG = {
   archiveOff: ["rect:3.5,4.5,17,4,1", "M5 8.5v10A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-10", "M10 12.5h4", "M3 3l18 18"],
   help: ["M9 9.5a3 3 0 0 1 5.8-1c.5 1.6-.7 2.5-1.7 3.1-.7.4-1.1 1-1.1 1.8v.6", "M12 17.5v.01"],
   more: ["M5.5 12v.01", "M12 12v.01", "M18.5 12v.01"],
+  // A funnel: the filter mode of the search box.
+  funnel: ["M4 5h16l-6 7.5v5.5l-4 2v-7.5z"],
 };
 
 // iconButton returns a button that shows the drawing of KIND_SVG named icon,
@@ -1429,7 +1454,7 @@ function showNotebook(id) {
     // opens in the list of the archive, as its cell would.
     for (const nb of parent ? [parent, id] : [id]) state.expanded.add(subKey(nb, false, true));
     saveExpanded();
-    if (state.archive && !state.query) loadNotes();
+    if (state.archive && !searching()) loadNotes();
     else selectArchive();
     return;
   }
@@ -1839,11 +1864,11 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     let notes, total;
     let separators = [];
     let archived = 0; // matches in the archive, which the search left out
-    if (state.archive && !state.query) {
+    if (state.archive && !searching()) {
       // The archive itself holds cells of notebooks alone.
       notes = [];
       total = 0;
-    } else if (state.query) {
+    } else if (searching()) {
       const r = await api("/search", { params: { q: state.query, notebook: state.notebook, tag: state.tag, archived: archivedParam(state.notebook), limit: 200 } });
       notes = r.notes;
       total = r.total;
@@ -1854,7 +1879,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       // the pages read with "load more".
       notes = [];
       do {
-        const r = await api("/notes", { params: { notebook: state.notebook, tag: state.tag, archived: archivedParam(state.notebook), sort: state.notebook ? null : state.allSort, limit: LIST_PAGE, offset: notes.length } });
+        const r = await api("/notes", { params: { notebook: state.notebook, tag: state.tag, archived: archivedParam(state.notebook), sort: state.notebook ? null : state.allSort, q: filterParam(), limit: LIST_PAGE, offset: notes.length } });
         notes.push(...r.notes);
         total = r.total;
         separators = r.separators ?? [];
@@ -1884,16 +1909,18 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     const where = state.tag ? "#" + state.tag
       : state.archive ? t("archive")
       : state.notebook ? notebookName(state.notebook) : t("all");
-    info.textContent = state.query
+    info.textContent = searching()
       ? t(total > notes.length ? "searchInfoTop" : "searchInfo", { where, query: state.query, total, shown: notes.length })
+      : filtered() ? t(total > notes.length ? "filterInfoPart" : "filterInfo", { where, query: state.query, total, shown: notes.length })
       : state.archive ? t("listInfo", { where, total: archiveCount() })
       : t(total > notes.length ? "listInfoPart" : "listInfo", { where, total, shown: notes.length });
     info.classList.remove("error");
-    if (state.query && !state.archive && archived) {
+    if (searching() && !state.archive && archived) {
       info.append(" ", button(t("archiveResults", { n: archived }), selectArchive, { cls: "link" }));
     }
     renderSort();
     renderShowArchived();
+    renderFilter();
     renderNotes();
     applySelectionCheck();
     saveView();
@@ -1933,7 +1960,7 @@ function applySelectionCheck() {
 
 function renderSort() {
   const sel = $("sort");
-  sel.hidden = !!state.query; // search results come by relevance
+  sel.hidden = searching(); // search results come by relevance
   sel.value = currentSort();
   sel.title = t(canReorder() ? "sortTitleReorder" : "sortTitle");
 }
@@ -1974,6 +2001,29 @@ $("show-archived").addEventListener("click", () => {
   loadNotes();
 });
 
+// renderFilter draws the funnel of the search box, which turns the filter
+// mode on and off, and the placeholder of the box, which tells the mode.
+function renderFilter() {
+  const b = $("filter-mode");
+  b.setAttribute("aria-pressed", String(state.filter));
+  const label = t(state.filter ? "filterModeOn" : "filterModeOff");
+  b.title = label;
+  b.setAttribute("aria-label", label);
+  const mode = document.documentElement.dataset.searchMode;
+  const key = state.filter ? "filterPlaceholder" : "searchPlaceholder";
+  $("q").placeholder = mode ? t(key + "Mode", { mode }) : t(key);
+}
+
+$("filter-mode").addEventListener("click", () => {
+  state.filter = !state.filter;
+  try { localStorage.setItem("ebira.filter", state.filter ? "1" : "0"); } catch (_) { /* this page only */ }
+  renderFilter();
+  if (!state.query) return;
+  // A search shows the first note found; a filter keeps the note shown when
+  // the list still has it.
+  loadNotes({ chosen: true, first: !state.filter }).then(() => loadNote());
+});
+
 // SORTS are the sorts of the note lists with their labels.
 const SORTS = [["order", "sortOrder"], ["created", "sortCreated"], ["updated", "sortUpdated"], ["title", "title"]];
 
@@ -2008,7 +2058,7 @@ async function moveNote(id, after, undoing) {
 // moveSelected moves the selected note up (-1) or down (+1).
 // A separator counts as a row: the note goes past it one step at a time.
 function moveSelected(delta) {
-  if (state.query || !state.selected) return;
+  if (searching() || !state.selected) return;
   const { items, reorder } = listOf(state.selected);
   if (!reorder) return;
   const i = items.findIndex((it) => it.id === state.selected);
@@ -2099,7 +2149,7 @@ function noReorder(li, reorder) {
   if (state.notebook === "trash") return t("reorderTrash");
   // The open sub notebooks of a notebook, and the notebook itself, follow
   // their sort; the other lists mix notebooks.
-  if (li.classList.contains("in-sub") || (state.notebook && !state.query)) return t("reorderSorted", { sort: t("sortOrder") });
+  if (li.classList.contains("in-sub") || (state.notebook && !searching())) return t("reorderSorted", { sort: t("sortOrder") });
   return t("reorderNotebook");
 }
 
@@ -2120,8 +2170,8 @@ function subNotebookRows() {
     return li;
   };
   // The archive itself lists its notebooks as the trash does.
-  const archive = state.archive && !state.query && !state.tag;
-  if (!archive && (state.query || state.tag || !state.notebook)) return [];
+  const archive = state.archive && !searching() && !state.tag;
+  if (!archive && (searching() || state.tag || !state.notebook)) return [];
   const trashed = state.notebook === "trash";
   if (archive) return archiveRoots().flatMap((sub) => cellRows(sub, 0));
   return childNotebooks(trashed ? null : state.notebook, trashed).flatMap((sub) => cellRows(sub, 0));
@@ -2132,7 +2182,9 @@ function subNotebookRows() {
   function cellRows(sub, depth) {
     const key = subKey(sub.id, trashed, archive);
     const open = state.expanded.has(key);
-    const count = archive ? (depth ? archivedIn(sub) : archiveCountOf(sub)) : withSubs(trashed ? state.trashed : state.notebooks, sub);
+    let count = archive ? (depth ? archivedIn(sub) : archiveCountOf(sub)) : withSubs(trashed ? state.trashed : state.notebooks, sub);
+    // An open cell of a filtered list tells how many of its notes are shown.
+    if (open && filtered() && state.subNotes.has(key)) count = t("filterCount", { shown: state.subNotes.get(key).total, total: count });
     const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", archive && !depth ? notebookName(sub.id) : sub.name, count, () => toggleSub(key, trashed || archive ? null : sub.id));
     if (!trashed && !archive && state.cell === sub.id) li.classList.add("active");
     li.prepend(el("span", "twisty", kindSVG("chevron")));
@@ -2201,7 +2253,7 @@ function renderNotes() {
   ul.replaceChildren(...subNotebookRows());
   const items = listItems(state.notes, state.separators, state.total);
   for (const it of items) ul.append(it.sep ? separatorRow(it.sep, canReorder(), items, "") : noteRow(it.note, currentSort(), canReorder(), items, ""));
-  if (!state.query && state.notes.length < state.total) {
+  if (!searching() && state.notes.length < state.total) {
     const more = button(t("loadMore", { rest: state.total - state.notes.length }), () => {
       state.want = state.notes.length + LIST_PAGE;
       loadNotes();
@@ -2234,12 +2286,12 @@ function noteRow(n, sort, reorder, list, cls) {
   });
   // The time shown follows the sort: creation for the creation order (and
   // the manual order, which starts as it), update otherwise.
-  const created = !state.query && (sort === "created" || sort === "order");
+  const created = !searching() && (sort === "created" || sort === "order");
   const time = created ? t("createdAt", { time: formatTime(n.created_at) }) : formatTime(n.updated_at);
   const meta = el("div", "meta", el("span", "", time));
   // Searches in a notebook find the notes of its sub notebooks too.
   // In the cells of the archive, the cell tells it.
-  if ((!state.notebook || n.notebook !== state.notebook) && !(state.archive && !state.query)) meta.append(el("span", "where", notebookName(n.notebook)));
+  if ((!state.notebook || n.notebook !== state.notebook) && !(state.archive && !searching())) meta.append(el("span", "where", notebookName(n.notebook)));
   meta.append(...tagList(n.tags));
   li.append(meta);
   if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
@@ -4107,7 +4159,7 @@ async function saveNote(overwrite = false) {
   endEdit();
   state.selected = saved.id;
   state.cell = null;
-  if (!state.query && !state.tag && parentOf(saved.notebook) === state.notebook) {
+  if (!searching() && !state.tag && parentOf(saved.notebook) === state.notebook) {
     // Saved in a sub notebook of the list: its cell opens to show it.
     state.expanded.add(subKey(saved.notebook, false));
     saveExpanded();
@@ -5710,8 +5762,9 @@ $("q").addEventListener("input", () => {
     if (q === state.query) return;
     state.query = q;
     // The search box finds notes: the first one found is shown. To find
-    // within the note shown, there is the find bar of the preview.
-    loadNotes({ chosen: true, first: true }).then(() => loadNote()); // refresh the highlights
+    // within the note shown, there is the find bar of the preview. A filter
+    // keeps the note shown when the list still has it.
+    loadNotes({ chosen: true, first: !state.filter }).then(() => loadNote()); // refresh the highlights
   }, 250);
 });
 
@@ -5906,7 +5959,7 @@ document.addEventListener("keydown", (e) => {
     case "M": if (state.note && state.note.notebook !== "trash" && !state.editing && $("mark-open")) { e.preventDefault(); openMarkMenu(state.note, $("mark-open")); } break;
     case "J": e.preventDefault(); moveSelected(1); break;
     case "K": e.preventDefault(); moveSelected(-1); break;
-    case "s": e.preventDefault(); if (!state.query) cycleSort(); break;
+    case "s": e.preventDefault(); if (!searching()) cycleSort(); break;
     case "e": if (state.note) { e.preventDefault(); startEdit(state.note); } break;
     case "c": e.preventDefault(); startEdit(null); break;
     case "u": restoreNote(); break;

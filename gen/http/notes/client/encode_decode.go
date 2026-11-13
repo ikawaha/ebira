@@ -60,6 +60,9 @@ func EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.R
 		if p.Tag != nil {
 			values.Add("tag", *p.Tag)
 		}
+		if p.Q != nil {
+			values.Add("q", *p.Q)
+		}
 		values.Add("limit", strconv.Itoa(p.Limit))
 		values.Add("offset", strconv.Itoa(p.Offset))
 		if p.TrashedNotebook != nil {

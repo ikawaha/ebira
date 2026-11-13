@@ -2086,6 +2086,16 @@ paths:
                     description: Only notes with this tag
                     example: Nulla molestiae voluptatum et.
                   example: Nulla molestiae voluptatum et.
+                - name: q
+                  in: query
+                  description: 'Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                  allowEmptyValue: true
+                  schema:
+                    type: string
+                    description: 'Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                    example: dew
+                    maxLength: 1000
+                  example: dew
                 - name: limit
                   in: query
                   description: Maximum number of notes

@@ -582,6 +582,11 @@ func ValidateListNotesPayloadTransport(body *ListNotesPayloadTransport) (err err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.archived", *body.Archived, []any{"exclude", "include", "only"}))
 		}
 	}
+	if body.Q != nil {
+		if utf8.RuneCountInString(*body.Q) > 1000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.q", *body.Q, utf8.RuneCountInString(*body.Q), 1000, false))
+		}
+	}
 	return
 }
 

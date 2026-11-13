@@ -94,7 +94,7 @@ func (s *Notes) List(ctx context.Context, p *gennotes.ListPayload) (*gennotes.No
 			m, _ := s.store.TrashedNotebookMeta(*p.TrashedNotebook) // a broken settings file gives the default
 			sort = m.Sort
 		}
-		res, total, err := s.index.ListTrashedNotebook(ctx, *p.TrashedNotebook, deref(p.Tag), sort, p.Limit, p.Offset)
+		res, total, err := s.index.FilterTrashedNotebook(ctx, deref(p.Q), *p.TrashedNotebook, deref(p.Tag), sort, p.Limit, p.Offset)
 		if err != nil {
 			return nil, err
 		}
@@ -115,14 +115,14 @@ func (s *Notes) List(ctx context.Context, p *gennotes.ListPayload) (*gennotes.No
 		// there are listed by their notebooks.
 		exclude = append(slices.Clone(hidden), a.Notebooks...)
 	}
-	res, total, err := s.index.List(ctx, deref(p.Notebook), deref(p.Tag), sort, a, p.Limit, p.Offset, exclude...)
+	res, total, err := s.index.Filter(ctx, deref(p.Q), deref(p.Notebook), deref(p.Tag), sort, a, p.Limit, p.Offset, exclude...)
 	if err != nil {
 		return nil, err
 	}
 	list := &gennotes.NoteList{Total: total, Notes: s.summaries(res, false, a.Notebooks)}
 	// Separators have a place only in the manual order of a notebook.
 	if nb := deref(p.Notebook); nb != "" && nb != store.Trash && deref(p.Tag) == "" && (sort == "" || sort == store.SortOrder) {
-		if list.Separators, err = s.separatorsOf(ctx, nb, a); err != nil {
+		if list.Separators, err = s.separatorsOf(ctx, nb, a, deref(p.Q)); err != nil {
 			return nil, err
 		}
 	}
@@ -1614,8 +1614,10 @@ func summaries(ss []*index.Summary, withSnippet bool) []*gennotes.NoteSummary {
 		}
 		if withSnippet {
 			r.Snippet = &s.Snippet
-			r.TitleHighlights = textRanges(s.TitleHighlights)
 			r.SnippetHighlights = textRanges(s.SnippetHighlights)
+		}
+		if withSnippet || len(s.TitleHighlights) > 0 { // a filtered list has them
+			r.TitleHighlights = textRanges(s.TitleHighlights)
 		}
 		res = append(res, r)
 	}

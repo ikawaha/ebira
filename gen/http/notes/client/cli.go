@@ -19,7 +19,7 @@ import (
 
 // BuildListPayload builds the payload for the notes list endpoint from CLI
 // flags.
-func BuildListPayload(notesListNotebook *string, notesListTag *string, notesListLimit string, notesListOffset string, notesListTrashedNotebook *string, notesListSort *string, notesListArchived string, notesListSession *string) (*notes.ListPayload, error) {
+func BuildListPayload(notesListNotebook *string, notesListTag *string, notesListQ *string, notesListLimit string, notesListOffset string, notesListTrashedNotebook *string, notesListSort *string, notesListArchived string, notesListSession *string) (*notes.ListPayload, error) {
 	var err error
 	var notebook *string
 	{
@@ -35,6 +35,18 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	{
 		if notesListTag != nil {
 			tag = notesListTag
+		}
+	}
+	var q *string
+	{
+		if notesListQ != nil {
+			q = notesListQ
+			if utf8.RuneCountInString(*notesListQ) > 1000 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q", *notesListQ, utf8.RuneCountInString(*notesListQ), 1000, false))
+			}
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	var limit int
@@ -111,6 +123,7 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	v := &notes.ListPayload{}
 	v.Notebook = notebook
 	v.Tag = tag
+	v.Q = q
 	v.Limit = limit
 	v.Offset = offset
 	v.TrashedNotebook = trashedNotebook

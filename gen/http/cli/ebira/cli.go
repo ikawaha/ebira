@@ -33,7 +33,7 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --archived \"include\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
+	return os.Args[0] + " " + "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --q \"dew\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --archived \"include\" --session \"Sed earum consequatur minima veritatis.\"" + "\n" +
 		os.Args[0] + " " + "assistant status --session \"Voluptate exercitationem.\"" + "\n" +
 		os.Args[0] + " " + "auth status --session \"Qui voluptas perspiciatis sunt consequuntur suscipit fugit.\"" + "\n" +
 		""
@@ -73,6 +73,7 @@ func ParseEndpoint(
 		notesListFlags               = flag.NewFlagSet("list", flag.ExitOnError)
 		notesListNotebookFlag        = new(cliStringFlag)
 		notesListTagFlag             = new(cliStringFlag)
+		notesListQFlag               = new(cliStringFlag)
 		notesListLimitFlag           = notesListFlags.String("limit", "50", "")
 		notesListOffsetFlag          = notesListFlags.String("offset", "0", "")
 		notesListTrashedNotebookFlag = new(cliStringFlag)
@@ -335,6 +336,7 @@ func ParseEndpoint(
 	)
 	notesListFlags.Var(notesListNotebookFlag, "notebook", "")
 	notesListFlags.Var(notesListTagFlag, "tag", "")
+	notesListFlags.Var(notesListQFlag, "q", "")
 	notesListFlags.Var(notesListTrashedNotebookFlag, "trashed-notebook", "")
 	notesListFlags.Var(notesListSortFlag, "sort", "")
 	notesListFlags.Var(notesListSessionFlag, "session", "")
@@ -787,7 +789,7 @@ func ParseEndpoint(
 			switch epn {
 			case "list":
 				endpoint = c.List()
-				data, err = notesc.BuildListPayload(notesListNotebookFlag.value, notesListTagFlag.value, *notesListLimitFlag, *notesListOffsetFlag, notesListTrashedNotebookFlag.value, notesListSortFlag.value, *notesListArchivedFlag, notesListSessionFlag.value)
+				data, err = notesc.BuildListPayload(notesListNotebookFlag.value, notesListTagFlag.value, notesListQFlag.value, *notesListLimitFlag, *notesListOffsetFlag, notesListTrashedNotebookFlag.value, notesListSortFlag.value, *notesListArchivedFlag, notesListSessionFlag.value)
 			case "get":
 				endpoint = c.Get()
 				data, err = notesc.BuildGetPayload(notesGetIDFlag.value, notesGetQFlag.value, notesGetSessionFlag.value)
@@ -1069,6 +1071,7 @@ func notesListUsage() {
 	fmt.Fprintf(os.Stderr, "%s [flags] notes list", os.Args[0])
 	fmt.Fprint(os.Stderr, " -notebook STRING")
 	fmt.Fprint(os.Stderr, " -tag STRING")
+	fmt.Fprint(os.Stderr, " -q STRING")
 	fmt.Fprint(os.Stderr, " -limit INT")
 	fmt.Fprint(os.Stderr, " -offset INT")
 	fmt.Fprint(os.Stderr, " -trashed-notebook STRING")
@@ -1084,6 +1087,7 @@ func notesListUsage() {
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -notebook STRING: `)
 	fmt.Fprintln(os.Stderr, `    -tag STRING: `)
+	fmt.Fprintln(os.Stderr, `    -q STRING: `)
 	fmt.Fprintln(os.Stderr, `    -limit INT: `)
 	fmt.Fprintln(os.Stderr, `    -offset INT: `)
 	fmt.Fprintln(os.Stderr, `    -trashed-notebook STRING: `)
@@ -1093,7 +1097,7 @@ func notesListUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --archived \"include\" --session \"Sed earum consequatur minima veritatis.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes list --notebook \"inbox\" --tag \"Nulla molestiae voluptatum et.\" --q \"dew\" --limit 256 --offset 1000684163214453032 --trashed-notebook \"dev~design\" --sort \"order\" --archived \"include\" --session \"Sed earum consequatur minima veritatis.\"")
 }
 
 func notesGetUsage() {
