@@ -97,16 +97,19 @@ type Model struct {
 	notebooks []*gennotes.Notebook
 	trashed   []*gennotes.TrashedNotebook // notebooks in the trash
 	archived  []*gennotes.Notebook        // notebooks in the archive, left out of notebooks
-	tags      []*gennotes.TagCount        // tags with their note counts
-	sideTags  bool                        // the notebook pane lists the tags instead of the notebooks (T)
-	notebook  string                      // notebook filter; empty for all notebooks except the trash
-	allSort   string                      // sort of all notes, kept only while running (a notebook keeps its own)
-	sortSeq   int                         // sequence number of the latest sort change
-	moving    string                      // ID of the note being moved, whose update event is ours
-	nbSel     int                         // cursor in the notebook pane; 0 is "All"
-	promptIn  textinput.Model
-	addKind   string // kind of the notebook promptAddNotebook creates
-	newKind   string // kind chosen at promptNotebookKind, waiting for promptUnprivate
+	// archivedHits is the number of notes in the archive that the search
+	// shown left out but matches too.
+	archivedHits int
+	tags         []*gennotes.TagCount // tags with their note counts
+	sideTags     bool                 // the notebook pane lists the tags instead of the notebooks (T)
+	notebook     string               // notebook filter; empty for all notebooks except the trash
+	allSort      string               // sort of all notes, kept only while running (a notebook keeps its own)
+	sortSeq      int                  // sequence number of the latest sort change
+	moving       string               // ID of the note being moved, whose update event is ours
+	nbSel        int                  // cursor in the notebook pane; 0 is "All"
+	promptIn     textinput.Model
+	addKind      string // kind of the notebook promptAddNotebook creates
+	newKind      string // kind chosen at promptNotebookKind, waiting for promptUnprivate
 	// toMove is a note in the trash being moved to a notebook chosen in the
 	// notebook pane (m), and moveTo the notebook waiting for promptMovePrivate.
 	toMove *gennotes.Note
@@ -207,7 +210,10 @@ type (
 		seps  []*gennotes.Separator
 		total int
 		mode  string
-		err   error
+		// archived is the number of notes in the archive that a search left
+		// out but matches too.
+		archived int
+		err      error
 	}
 	answerMsg struct {
 		seq  int
@@ -509,7 +515,11 @@ func (m *Model) loadList() tea.Cmd {
 		if err != nil {
 			return listMsg{seq: seq, err: err}
 		}
-		return listMsg{seq: seq, items: res.Notes, total: res.Total, mode: res.Mode}
+		archived := 0
+		if res.ArchivedTotal != nil {
+			archived = *res.ArchivedTotal
+		}
+		return listMsg{seq: seq, items: res.Notes, total: res.Total, mode: res.Mode, archived: archived}
 	}
 }
 
@@ -1284,7 +1294,7 @@ func (m *Model) applyList(msg listMsg) tea.Cmd {
 	if m.pending != "" {
 		prev, m.pending = m.pending, ""
 	}
-	m.items, m.seps, m.total, m.mode = msg.items, msg.seps, msg.total, msg.mode
+	m.items, m.seps, m.total, m.mode, m.archivedHits = msg.items, msg.seps, msg.total, msg.mode, msg.archived
 	if len(m.items) == 0 {
 		m.sel, m.top, m.note = 0, 0, nil
 		m.renderPreview(false)

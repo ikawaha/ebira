@@ -242,5 +242,7 @@
   "status.archiveTrash": "ゴミ箱のノートはアーカイブへ移せません",
   "status.archivedWithNotebook": "このノートはノートブックごとアーカイブにあります。ノートブックを戻してください",
   "status.archivedWithParent": "このノートブックは親ごとアーカイブにあります。親を戻してください",
-  "status.archiveReserved": "inbox と trash はアーカイブへ移せません"
+  "status.archiveReserved": "inbox と trash はアーカイブへ移せません",
+  "list.archiveHits": "アーカイブにも {n} 件",
+  "list.noMatchesArchive": "見つかりませんでした。アーカイブには {n} 件あります。左の列のアーカイブで、同じ検索で探せます。"
 }

@@ -242,5 +242,7 @@
   "status.archiveTrash": "Notes in the trash cannot be put in the archive",
   "status.archivedWithNotebook": "This note is in the archive with its notebook; take the notebook out instead",
   "status.archivedWithParent": "This notebook is in the archive with its parent; take the parent out instead",
-  "status.archiveReserved": "inbox and trash cannot be put in the archive"
+  "status.archiveReserved": "inbox and trash cannot be put in the archive",
+  "list.archiveHits": "{n} more in the archive",
+  "list.noMatchesArchive": "No matches. The archive has {n}; the archive row of the left column searches it the same way."
 }
