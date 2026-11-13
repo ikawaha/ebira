@@ -269,6 +269,15 @@ function listedNotes() {
 
 const findListed = (id) => listedNotes().find((n) => n.id === id);
 
+// newNoteNotebook returns the notebook a new note goes to: the sub notebook
+// of the note chosen when it is in an open cell, as that is where one works,
+// else the notebook shown, else the inbox.
+function newNoteNotebook() {
+  if (!state.notebook || state.notebook === "trash") return "inbox";
+  const n = !state.query && !state.tag && state.selected && findListed(state.selected);
+  return n && parentOf(n.notebook) === state.notebook ? n.notebook : state.notebook;
+}
+
 // listOf returns the list note or separator id is in, with whether its notes
 // can be moved by hand: those of an opened sub notebook, or the notebook's
 // own. items are its rows in order (see listItems), and nb the notebook it
@@ -3854,7 +3863,7 @@ function startEdit(note, nb = null) {
     });
     return;
   }
-  const defaultNotebook = nb || (state.notebook && state.notebook !== "trash" ? state.notebook : "inbox");
+  const defaultNotebook = nb || newNoteNotebook();
   const ed = {
     note, // null for a new note
     version: note ? note.version : null,
