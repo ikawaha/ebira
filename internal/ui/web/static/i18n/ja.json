@@ -493,6 +493,8 @@
   "reorderTrash": "ゴミ箱の中は並べ替えられません。",
   "reorderChosen": "選んだ複数のノートは並べ替えられません。ノートブックへドラッグすると移せます。",
   "archive": "アーカイブ",
+  "showArchivedTitle": "アーカイブのノートも表示する",
+  "hideArchivedTitle": "アーカイブのノートを隠す",
   "archiveResults": "アーカイブにも {n} 件",
   "archiveFailed": "アーカイブを変えられませんでした: {error}",
   "notesArchived": "{n} 件のノートをアーカイブへ移しました",

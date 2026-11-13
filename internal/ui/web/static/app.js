@@ -24,6 +24,7 @@ const state = {
   note: null, // the note in the preview
   editing: null, // the editor's state while editing; see startEdit
   allSort: loadAllSort(), // sort of all notes; a notebook keeps its own on the server
+  showArchived: loadShowArchived(), // lists and searches take in the archive too
   want: 0, // number of notes of the list to show, a page more on "load more"
   expanded: loadExpanded(), // keys of the sub notebooks opened in the note list of their parent (see subKey)
   subNotes: new Map(), // key of an opened sub notebook: its notes {notes, total, want, separators}
@@ -86,6 +87,16 @@ function loadAllSort() {
     return localStorage.getItem("ebira.allSort") || "order";
   } catch (_) {
     return "order";
+  }
+}
+
+// Whether the lists take in the notes in the archive is a per-browser
+// convenience.
+function loadShowArchived() {
+  try {
+    return localStorage.getItem("ebira.showArchived") === "1";
+  } catch (_) {
+    return false;
   }
 }
 
@@ -167,9 +178,27 @@ const isArchived = (id) => !!id && !!state.notebooks.find((n) => n.id === id)?.a
 
 // archivedParam returns the archived parameter of a list or a search of
 // notebook nb: only the archive in the archive, all the notes of a notebook
-// there, and the default, which leaves the archive out, otherwise.
+// there or of any list when the archive is shown with the others, and the
+// default, which leaves the archive out, otherwise.
 function archivedParam(nb) {
-  return state.archive ? "only" : isArchived(nb) ? "include" : null;
+  if (state.archive) return "only";
+  return isArchived(nb) || (state.showArchived && nb !== "trash") ? "include" : null;
+}
+
+// showsArchived reports whether the list shown takes in the archive with the
+// other notes, as the button of the list head asks.
+const showsArchived = () => state.showArchived && !inArchive() && state.notebook !== "trash";
+
+// renderShowArchived draws the button of the list head that takes the archive
+// in the lists or leaves it out. The archive and the trash have no use of it.
+function renderShowArchived() {
+  const b = $("show-archived");
+  b.hidden = inArchive() || state.notebook === "trash";
+  b.classList.toggle("on", state.showArchived);
+  b.setAttribute("aria-pressed", String(state.showArchived));
+  const label = t(state.showArchived ? "hideArchivedTitle" : "showArchivedTitle");
+  b.title = label;
+  b.setAttribute("aria-label", label);
 }
 
 // archiveRoots returns the notebooks shown as cells in the archive: those
@@ -272,7 +301,7 @@ async function readSubNotes(x) {
   let total = 0;
   let separators = [];
   do {
-    const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id, archived: isArchived(x.sub.id) ? "include" : null };
+    const params = x.trashed ? { notebook: "trash", trashed_notebook: x.sub.id } : { notebook: x.sub.id, archived: isArchived(x.sub.id) || showsArchived() ? "include" : null };
     const r = await api("/notes", { params: { ...params, limit: LIST_PAGE, offset: notes.length } });
     notes.push(...r.notes);
     total = r.total;
@@ -1802,6 +1831,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       info.append(" ", button(t("archiveResults", { n: archived }), selectArchive, { cls: "link" }));
     }
     renderSort();
+    renderShowArchived();
     renderNotes();
     applySelectionCheck();
     saveView();
@@ -1874,6 +1904,12 @@ async function setSort(sort) {
 }
 
 $("sort").addEventListener("change", (e) => setSort(e.target.value));
+
+$("show-archived").addEventListener("click", () => {
+  state.showArchived = !state.showArchived;
+  try { localStorage.setItem("ebira.showArchived", state.showArchived ? "1" : "0"); } catch (_) { /* this page only */ }
+  loadNotes();
+});
 
 function cycleSort() {
   const sorts = ["order", "created", "updated", "title"];
@@ -2131,6 +2167,13 @@ function noteRow(n, sort, reorder, list, cls) {
   const head = el("div", "title-row", ...noteMarks(n), el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
   const mark = aiMark(n);
   if (mark) head.append(mark);
+  if (n.archived && showsArchived()) {
+    // Among the other notes, a note in the archive is marked and pale.
+    const box = el("span", "archived-mark", kindSVG("archive"));
+    box.title = t("archive");
+    head.append(box);
+    li.classList.add("archived");
+  }
   li.append(head);
   li.addEventListener("contextmenu", (e) => {
     if (n.notebook === "trash") return;
@@ -2644,13 +2687,19 @@ function noteMarks(n) {
 }
 
 // openMarkMenu opens the menu of the marks for note n, beside the element at,
-// or at the pointer for a right click.
+// or at the pointer for a right click. From the list, on one of the notes
+// chosen together, it is for all of them.
 function openMarkMenu(n, at, e) {
   const m = $("mark-menu");
-  const cur = (n.marks || [])[0] ?? null;
+  const inList = at.closest?.("#notes");
+  // On one of the notes chosen together, the menu is for all of them.
+  const ids = inList && state.chosen.size > 1 && state.chosen.has(n.id) ? [...state.chosen] : [n.id];
+  const notes = ids.map((id) => (id === n.id ? n : findListed(id))).filter(Boolean);
+  const markOf = (x) => (x.marks || [])[0] ?? null;
+  const cur = notes.every((x) => markOf(x) === markOf(n)) ? markOf(n) : null;
   const pick = (id) => {
     closeMarkMenu();
-    setMarks(n, id ? [id] : []);
+    setMarks(notes, id ? [id] : []);
   };
   const grid = (kind) => el("div", "mark-grid", ...state.marks.filter((mk) => mk.kind === kind).map((mk) => {
     const b = button(markBadge(mk.id), () => pick(mk.id === cur ? null : mk.id), { title: markLabel(mk.id), cls: mk.id === cur ? "active" : "" });
@@ -2663,11 +2712,10 @@ function openMarkMenu(n, at, e) {
   const symbols = grid("symbol");
   const none = iconButton("unmark", t("markNone"), () => pick(null));
   none.className = "mark-unmark";
-  none.disabled = !cur;
+  none.disabled = notes.every((x) => !markOf(x));
   none.setAttribute("role", "menuitem");
   symbols.append(none);
   m.replaceChildren(el("div", "menu-label", t("markMenu")), grid("color"), symbols);
-  const inList = at.closest?.("#notes");
   const item = (label, fn) => {
     const b = button(label, () => {
       closeMarkMenu();
@@ -2678,7 +2726,7 @@ function openMarkMenu(n, at, e) {
   };
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
   // From the list in the manual order, a separator can go above the note.
-  if (inList && findListed(n.id) && listOf(n.id).reorder) {
+  if (inList && notes.length === 1 && findListed(n.id) && listOf(n.id).reorder) {
     sep();
     item(t("separatorInsertAbove"), () => insertSeparatorAbove(n));
   }
@@ -2694,8 +2742,15 @@ function openMarkMenu(n, at, e) {
       return b;
     };
     const row = el("div", "mark-actions");
-    if (!isArchived(n.notebook)) row.append(act("archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
-    row.append(act("trash", t("toTrashTitle"), () => moveNoteTo(n.id, "trash")));
+    if (notes.length > 1) {
+      // As the buttons over the notes chosen together.
+      const out = notes.every((x) => x.archived);
+      row.append(act("archive", t(out ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes(ids, !out)));
+      row.append(act("trash", t("toTrashTitle"), () => moveNotesTo(ids, "trash")));
+    } else {
+      if (!isArchived(n.notebook)) row.append(act("archive", t(n.archived ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived)));
+      row.append(act("trash", t("toTrashTitle"), () => moveNoteTo(n.id, "trash")));
+    }
     sep();
     m.append(row);
   }
@@ -2724,16 +2779,17 @@ $("mark-menu").addEventListener("keydown", (e) => {
   }
 });
 
-// setMarks sets the marks of note n, keeping its update time.
-async function setMarks(n, marks) {
+// setMarks sets the marks of the notes, keeping their update times.
+async function setMarks(notes, marks) {
   try {
-    await api(`${noteURL(n.id)}/marks`, { method: "PUT", body: { marks } });
+    for (const n of notes) await api(`${noteURL(n.id)}/marks`, { method: "PUT", body: { marks } });
   } catch (e) {
     alert(t("markFailed", { error: e.message }));
+    await loadNotes();
     return;
   }
   await loadNotes();
-  if (state.selected === n.id && !state.editing) loadNote();
+  if (notes.some((n) => n.id === state.selected) && !state.editing) loadNote();
 }
 
 // openMarkNames opens the dialog to name the marks, which says what they mean;

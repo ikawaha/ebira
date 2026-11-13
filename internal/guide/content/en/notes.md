@@ -20,7 +20,7 @@ A notebook can hold sub notebooks, one level deep ("New sub notebook…" in its 
 ## Moving
 
 - Drag a note onto a notebook in the side column to move it there, or onto the Trash to delete it.
-- Click with ⌘ (Ctrl) to choose more notes, or with Shift for a range, to move them together.
+- Click with ⌘ (Ctrl) to choose more notes, or with Shift for a range, to move them together. A right click on one of them opens a menu whose marks, archive and trash are for all of them.
 
 ## Archive
 
@@ -29,6 +29,7 @@ Notes and notebooks no longer in use but worth keeping can go to the archive. Wh
 - Notes: the box button of the preview, the right-click menu of the list, "Put in the archive" for notes chosen together, or drag them onto the archive in the side column.
 - Notebooks: "Put in the archive" in the menu of a row. Its notes and sub notebooks go with it.
 - Viewing: "Archive" in the side column. Notebooks show as cells, which open and close under them when clicked, as sub notebooks do. Notes in the archive can be edited, and stay there.
+- Viewing with the other notes: the box button above the note list shows the notes in the archive in the lists and searches too, marked with a box and paler. Click it again to hide them. This browser remembers it.
 - Taking out: "Take out of the archive" on the same button or menu.
 - TUI: `x` puts in and takes out. The notebooks in the archive are listed under "Archive" in the notebook column ([TUI](tui.md)).
 - Candidates: "Candidates for the archive…" in the gear menu lists the notes not updated for a while, oldest first, to choose and put there at once.

@@ -493,6 +493,8 @@
   "reorderTrash": "Notes in the trash are not reordered.",
   "reorderChosen": "Chosen notes are not reordered; drag them to a notebook to move them.",
   "archive": "Archive",
+  "showArchivedTitle": "Show the notes in the archive too",
+  "hideArchivedTitle": "Hide the notes in the archive",
   "archiveResults": "{n} more in the archive",
   "archiveFailed": "Could not change the archive: {error}",
   "notesArchived": "Put {n} note(s) in the archive",
