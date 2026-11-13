@@ -1514,7 +1514,7 @@ paths:
                   type: string
                 - name: q
                   in: query
-                  description: 'Only notes matching this query, as search takes it, kept in the order of the list: unlike search, a notebook does not take in its sub notebooks, and the title highlights alone are given'
+                  description: 'Only notes matching this query, as search takes it, kept in the order of the list with its separators: unlike search, which ranks the notes found by relevance and takes in the sub notebooks of a notebook, a notebook does not take in its sub notebooks, and the title highlights alone are given'
                   required: false
                   type: string
                   maxLength: 1000

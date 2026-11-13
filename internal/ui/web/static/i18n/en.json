@@ -180,6 +180,7 @@
   "styleLinedDesc": "Lines under headings; crisp tables and code",
   "tagSuggest": "Tags",
   "searchHelpTitle": "How to search",
+  "searchHelpFilter": "The funnel at the right switches to the filter: the same query narrows the list shown and keeps its order, separators and sub notebooks, where a search lists the notes found by relevance.",
   "searchHelpKeys": "Press / to go to the search box, and Esc to clear the search.",
   "searchHelpWords": "Notes with all the words, anywhere",
   "searchHelpPhrase": "A phrase: the words in that order",

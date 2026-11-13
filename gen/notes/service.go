@@ -850,8 +850,9 @@ type ListPayload struct {
 	// notebooks there with all their notes
 	Archived string
 	// Only notes matching this query, as search takes it, kept in the order of the
-	// list: unlike search, a notebook does not take in its sub notebooks, and the
-	// title highlights alone are given
+	// list with its separators: unlike search, which ranks the notes found by
+	// relevance and takes in the sub notebooks of a notebook, a notebook does not
+	// take in its sub notebooks, and the title highlights alone are given
 	Q *string
 }
 

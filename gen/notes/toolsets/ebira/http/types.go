@@ -407,8 +407,9 @@ type (
 		// notebooks there with all their notes
 		Archived *string `json:"archived,omitempty"`
 		// Only notes matching this query, as search takes it, kept in the order of the
-		// list: unlike search, a notebook does not take in its sub notebooks, and the
-		// title highlights alone are given
+		// list with its separators: unlike search, which ranks the notes found by
+		// relevance and takes in the sub notebooks of a notebook, a notebook does not
+		// take in its sub notebooks, and the title highlights alone are given
 		Q *string `json:"q,omitempty"`
 	}
 	// ListNotesResultTransport is the internal JSON transport type for ListNotesResult.
