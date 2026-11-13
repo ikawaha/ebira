@@ -29,6 +29,12 @@ The bottom line shows the keys that work. The main ones:
 - Notes in the trash cannot be edited: `u` restores one, `m` moves it to another notebook, and `d` deletes it for good. `u` and `d` work on the rows of deleted notebooks too.
 - When a search finds notes in the archive as well, the title of the list says "N more in the archive". Choose the archive row and search again to search there.
 
-Tab in the search box (`/`) switches between searching and filtering ([How to search](search.md)). A filter narrows the list in its order, keeping its separators, and the list can still be reordered. The header and the title of the list say "Filter", and the settings file keeps the mode (`tui_search`).
+## Searching and filtering
+
+Tab in the search box (`/`) switches between searching and filtering ([How to search](search.md)). A filter narrows the list in its order, keeping its separators, and in the manual order the list can still be reordered. The header says "N filtered" and the title of the list "Filter", and the settings file keeps the mode (`tui_search`).
+
+Sub notebooks in the TUI are the `↳` rows of the notebook column. A search in a notebook finds the notes of its sub notebooks too, but a filter narrows the list of that notebook alone (choose the row of a sub notebook to filter it).
+
+## The source mode
 
 In the source mode (`v`), the document column is the editor itself, and the note is saved when you leave it.
