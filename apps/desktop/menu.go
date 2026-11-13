@@ -19,6 +19,13 @@ type pageState struct {
 	Notebook  bool `json:"notebook"`  // the notebook shown can be renamed
 	TrashFull bool `json:"trashFull"` // the trash has notes
 	Git       bool `json:"git"`       // the notes are in a git repository
+	// Archivable tells that the note shown can be put in the archive or taken
+	// out, Archived that it is there; NotebookArchivable and
+	// NotebookArchived the same of the notebook shown.
+	Archivable         bool `json:"archivable"`
+	Archived           bool `json:"archived"`
+	NotebookArchivable bool `json:"notebookArchivable"`
+	NotebookArchived   bool `json:"notebookArchived"`
 }
 
 // editMenu fills the edit menu of Windows with the items of the roles of Wails,
@@ -53,7 +60,10 @@ type noteMenu struct {
 	mu    sync.Mutex
 	items []stateItem
 	trash *application.MenuItem
-	text  func(string) string
+	// archive and nbArchive put the note and the notebook shown in the
+	// archive, or take them out.
+	archive, nbArchive *application.MenuItem
+	text               func(string) string
 }
 
 type stateItem struct {
@@ -70,6 +80,8 @@ func always(pageState) bool         { return true }
 func renamable(p pageState) bool    { return p.Notebook && !p.Editing }
 func trashFull(p pageState) bool    { return p.TrashFull && !p.Editing }
 func inGit(p pageState) bool        { return p.Git }
+func archivable(p pageState) bool   { return p.Archivable && !p.Editing }
+func nbArchivable(p pageState) bool { return p.NotebookArchivable && !p.Editing }
 
 func (n *noteMenu) add(item *application.MenuItem, enabled func(pageState) bool) {
 	n.items = append(n.items, stateItem{item, enabled})
@@ -87,6 +99,17 @@ func (n *noteMenu) update(p pageState) {
 	} else {
 		n.trash.SetLabel(n.text("Move to Trash"))
 	}
+	n.archive.SetLabel(n.text(archiveLabel(p.Archived)))
+	n.nbArchive.SetLabel(n.text(archiveLabel(p.NotebookArchived)))
+}
+
+// archiveLabel is the label of an item that puts in the archive, or takes out
+// of it what is there.
+func archiveLabel(in bool) string {
+	if in {
+		return "Take Out of Archive"
+	}
+	return "Put in Archive"
 }
 
 // reset enables every item, as for a page that tells nothing: one of a server
@@ -98,6 +121,8 @@ func (n *noteMenu) reset() {
 		i.item.SetEnabled(true)
 	}
 	n.trash.SetLabel(n.text("Move to Trash"))
+	n.archive.SetLabel(n.text(archiveLabel(false)))
+	n.nbArchive.SetLabel(n.text(archiveLabel(false)))
 }
 
 // call runs a function of window.ebira in the Web UI. A page without it, from a
@@ -245,6 +270,7 @@ func (s *shell) appMenu() *application.Menu {
 	file.AddSeparator()
 	n.add(file.Add("Import Markdown…").OnClick(on(func() { s.call("importFiles") })), notEditing)
 	n.add(file.Add("Check Files…").OnClick(on(func() { s.call("checkFiles") })), always)
+	n.add(file.Add("Candidates for the Archive…").OnClick(on(func() { s.call("archiveCandidates") })), notEditing)
 	n.add(file.Add("Sync with Git").OnClick(on(func() { s.call("syncGit") })), inGit)
 	file.AddSeparator()
 	if mac {
@@ -276,6 +302,8 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(note.Add("Copy Link").OnClick(on(func() { s.call("copyLink", false) })), shown)
 	n.add(note.Add("Copy Markdown Link").OnClick(on(func() { s.call("copyLink", true) })), shown)
 	note.AddSeparator()
+	n.archive = note.Add(archiveLabel(false)).OnClick(on(func() { s.call("archive") }))
+	n.add(n.archive, archivable)
 	// No shortcut: the menu would take ⌘⌫ (Ctrl+Backspace) from the text
 	// fields of the page, which delete with it, and trash the note shown.
 	n.trash = note.Add("Move to Trash").OnClick(on(func() { s.call("trash") }))
@@ -284,6 +312,8 @@ func (s *shell) appMenu() *application.Menu {
 
 	notebook := menu.AddSubmenu("Notebook")
 	n.add(notebook.Add("Rename Notebook").OnClick(on(func() { s.call("renameNotebook") })), renamable)
+	n.nbArchive = notebook.Add(archiveLabel(false)).OnClick(on(func() { s.call("archiveNotebook") }))
+	n.add(n.nbArchive, nbArchivable)
 	notebook.AddSeparator()
 	n.add(key(notebook.Add("Empty Trash…"), "cmd+shift+backspace", "").OnClick(on(func() { s.call("emptyTrash") })), trashFull)
 

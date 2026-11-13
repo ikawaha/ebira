@@ -4912,6 +4912,14 @@ window.ebira = {
   searchHelp: () => toggleSearchHelp(true),
   newNotebook: () => openNewNotebook(),
   renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
+  // archive puts the note shown in the archive, or takes it out, as the box
+  // button of the preview; archiveNotebook the notebook shown, as its menu.
+  archive: () => { if (canArchiveNote()) archiveNotes([state.note.id], !state.note.archived_at); },
+  archiveNotebook: () => {
+    const nb = archivableNotebook();
+    if (nb) archiveNotebook(nb.id, !nb.archived_at);
+  },
+  archiveCandidates: () => openArchiveCandidates(),
   emptyTrash: () => { if (trashFull()) emptyTrash(); },
   // downloaded tells how saving a file of a note went (downloadFile): the name
   // the file took, or the error.
@@ -4925,6 +4933,23 @@ window.ebira = {
 // row, as with F2.
 function canRenameNotebook() {
   return state.side === "notebooks" && !!state.notebook && state.notebook !== "trash" && !state.trashedNotebook;
+}
+
+// canArchiveNote reports whether the note shown can be put in the archive or
+// taken out: not in the trash, nor in a notebook in the archive, with which it
+// goes in and out.
+function canArchiveNote() {
+  const n = state.note;
+  return !!n && !state.editing && n.notebook !== "trash" && !isArchived(n.notebook);
+}
+
+// archivableNotebook returns the notebook shown, if it can be put in the
+// archive or taken out: one that is not reserved, and not in the archive with
+// its parent (as the notebook menu).
+function archivableNotebook() {
+  if (state.archive || state.trashedNotebook || state.tag) return null;
+  const nb = state.notebooks.find((n) => n.id === state.notebook);
+  return nb && !nb.reserved && (nb.archived_at || !nb.archived) ? nb : null;
 }
 
 // trashFull reports whether the trash has anything to empty: notes, or
@@ -5038,12 +5063,16 @@ let toldState = "";
 
 // tellState tells the app what its menus can do now: whether a note is shown,
 // whether it is in the trash, whether it is being edited, whether the notebook
-// shown can be renamed, whether the trash has notes, and whether the notes are
-// in git.
+// shown can be renamed, whether the trash has notes, whether the notes are in
+// git, and whether the note and the notebook shown can be put in the archive
+// or taken out, and which.
 function tellState() {
+  const nb = archivableNotebook();
   const s = JSON.stringify({
     note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing,
     notebook: canRenameNotebook(), trashFull: trashFull(), git: !$("git-sync-open").hidden,
+    archivable: canArchiveNote(), archived: !!state.note?.archived_at,
+    notebookArchivable: !!nb && !state.editing, notebookArchived: !!nb?.archived_at,
   });
   if (s === toldState) return;
   toldState = s;
