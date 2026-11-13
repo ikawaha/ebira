@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 )
@@ -134,5 +135,30 @@ func TestArchiveKeys(t *testing.T) {
 	m.nbSel = slices.IndexFunc(m.notebookRows(), func(r notebookRow) bool { return r.id == "@past" })
 	if cmd := m.toggleNotebookArchive(); cmd == nil {
 		t.Error("x on a notebook in the archive does nothing")
+	}
+}
+
+// A search tells how many notes in the archive match too: in the title of the
+// list, or in place of the list when nothing else matches.
+func TestArchiveHits(t *testing.T) {
+	m := New(context.Background(), &Clients{}, false, "en")
+	tm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	m = tm.(Model)
+	m.query = "apple"
+	m.listSeq = 1
+	tm, _ = m.Update(listMsg{seq: 1, archived: 2})
+	m = tm.(Model)
+	if v := ansi.Strip(m.renderList(60, 10)); !strings.Contains(v, "The archive has 2") {
+		t.Errorf("no note found, and the archive not told:\n%s", v)
+	}
+	tm, _ = m.Update(listMsg{seq: 1, items: []*gennotes.NoteSummary{{ID: "a", Notebook: "work", Title: "apple pie"}}, total: 1, archived: 2})
+	m = tm.(Model)
+	if v := ansi.Strip(m.renderList(60, 10)); !strings.Contains(v, "2 more in the archive") {
+		t.Errorf("the title does not tell the archive:\n%s", v)
+	}
+	tm, _ = m.Update(listMsg{seq: 1, items: []*gennotes.NoteSummary{{ID: "a", Notebook: "work", Title: "apple pie"}}, total: 1})
+	m = tm.(Model)
+	if v := ansi.Strip(m.renderList(60, 10)); strings.Contains(v, "archive") {
+		t.Errorf("the archive is told with nothing there:\n%s", v)
 	}
 }

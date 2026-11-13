@@ -4186,7 +4186,9 @@ function contextOf(diff, n) {
 const ARCHIVE_DAYS = [90, 180, 365, 730];
 let archiveDays = 180;
 
-async function openArchiveCandidates() {
+// openArchiveCandidates opens the dialog of the candidates; done are the
+// notes just put in the archive from it, which it offers to take out again.
+async function openArchiveCandidates(done) {
   const d = $("archive-candidates");
   const head = el("div", "files-head", el("h2", "", t("archiveCandidates")), closeButton(() => d.close()));
   const days = el("select");
@@ -4196,17 +4198,29 @@ async function openArchiveCandidates() {
     openArchiveCandidates();
   });
   const since = el("label", "archive-days", t("archiveSince"), days);
-  d.replaceChildren(head, since, el("p", "", t("archiveLoading")));
+  // The notes just put in the archive, with their undo here: the bar of
+  // offerUndo is out of reach while the dialog is modal.
+  const top = [head, since];
+  if (done?.length) {
+    const undo = button(t("undo"), async () => {
+      undo.disabled = true;
+      hideToast();
+      await archiveNotes(done, false, true);
+      openArchiveCandidates();
+    }, { cls: "link", title: t("undoTitle") });
+    top.push(el("p", "archive-done", t("notesArchived", { n: done.length }), " ", undo));
+  }
+  d.replaceChildren(...top, el("p", "", t("archiveLoading")));
   if (!d.open) d.showModal();
   let res;
   try {
     res = await api("/archive/candidates", { params: { days: archiveDays, limit: 500 } });
   } catch (e) {
-    d.replaceChildren(head, since, el("p", "error", t("archiveFailed", { error: e.message })));
+    d.replaceChildren(...top, el("p", "error", t("archiveFailed", { error: e.message })));
     return;
   }
   if (!res.notes.length) {
-    d.replaceChildren(head, since, el("p", "empty", t("archiveNoCandidates")));
+    d.replaceChildren(...top, el("p", "empty", t("archiveNoCandidates")));
     return;
   }
   const boxes = [];
@@ -4222,7 +4236,7 @@ async function openArchiveCandidates() {
     const ids = boxes.filter((b) => b.cb.checked).map((b) => b.n.id);
     if (!ids.length) return;
     await archiveNotes(ids, true);
-    openArchiveCandidates();
+    openArchiveCandidates(ids);
   }, { cls: "primary" });
   const all = button(t("archiveChooseAll"), () => {
     const on = !boxes.every((b) => b.cb.checked);
@@ -4237,7 +4251,7 @@ async function openArchiveCandidates() {
   for (const b of boxes) b.cb.addEventListener("change", count);
   count();
   const more = res.total > res.notes.length ? [el("p", "msg", t("archiveMore", { n: res.total - res.notes.length }))] : [];
-  d.replaceChildren(head, since, el("p", "", t("archiveCandidatesHint", { n: res.total })), ul, ...more, el("div", "files-actions", all, put));
+  d.replaceChildren(...top, el("p", "", t("archiveCandidatesHint", { n: res.total })), ul, ...more, el("div", "files-actions", all, put));
 }
 
 async function openFilesCheck(message) {

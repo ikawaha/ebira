@@ -490,6 +490,9 @@ func (m Model) renderList(w, h int) string {
 		msg := m.tr.t("list.empty")
 		if m.query != "" {
 			msg = m.tr.t("list.noMatches")
+			if m.archivedHits > 0 {
+				msg = m.tr.t("list.noMatchesArchive", "n", m.archivedHits)
+			}
 		}
 		if _, ok := trashedID(m.notebook); ok {
 			msg = m.tr.t("list.trashedNotebook")
@@ -548,6 +551,11 @@ func (m Model) renderList(w, h int) string {
 	title := m.tr.t("pane.notes", "sort", m.tr.t("sort."+m.currentSort()))
 	if m.query != "" {
 		title = m.tr.t("pane.search")
+		// The search leaves the archive out; it tells how many match there,
+		// which the archive row of the notebook column finds.
+		if m.archivedHits > 0 && len(m.items) > 0 {
+			title += " · " + m.tr.t("list.archiveHits", "n", m.archivedHits)
+		}
 	}
 	if !m.computeLayout().showNotebooks {
 		title += " · " + m.notebookLabel(m.notebook)

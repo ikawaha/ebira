@@ -766,3 +766,4 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .note-head .meta .archived { display: inline-flex; align-items: center; gap: 4px; }
 .note-head .meta .archived svg { width: 14px; height: 14px; }
 .archive-days { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.archive-done { margin: 0 0 8px; color: var(--fg-muted); }
