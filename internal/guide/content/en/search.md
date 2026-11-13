@@ -20,7 +20,7 @@ Searches leave out the trash and the archive. Choose the Trash or the archive in
 
 ## Filter
 
-A search lists the notes found by relevance. The funnel at the right of the search box turns it into a filter, which takes the same query and narrows the list shown, kept in its order (the box then says "Filter").
+A search lists the notes found by relevance. The funnel at the right of the search box (struck out while it searches) turns it into a filter, which takes the same query and narrows the list shown, kept in its order (the box then says "Filter").
 
 - The order given by hand, the separators and the cells of sub notebooks stay; only the notes not matching are hidden. An open cell shows how many of its notes are shown, out of all.
 - For instance, `-tag:renovate` leaves out the notes with the tag, and the rest stay in their order.

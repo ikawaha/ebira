@@ -997,8 +997,10 @@ const KIND_SVG = {
   archiveOff: ["rect:3.5,4.5,17,4,1", "M5 8.5v10A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-10", "M10 12.5h4", "M3 3l18 18"],
   help: ["M9 9.5a3 3 0 0 1 5.8-1c.5 1.6-.7 2.5-1.7 3.1-.7.4-1.1 1-1.1 1.8v.6", "M12 17.5v.01"],
   more: ["M5.5 12v.01", "M12 12v.01", "M18.5 12v.01"],
-  // A funnel: the filter mode of the search box.
+  // A funnel: the filter mode of the search box; struck out while the box
+  // searches instead.
   funnel: ["M4 5h16l-6 7.5v5.5l-4 2v-7.5z"],
+  funnelOff: ["M4 5h16l-6 7.5v5.5l-4 2v-7.5z", "M3 3l18 18"],
 };
 
 // iconButton returns a button that shows the drawing of KIND_SVG named icon,
@@ -2005,6 +2007,7 @@ $("show-archived").addEventListener("click", () => {
 // mode on and off, and the placeholder of the box, which tells the mode.
 function renderFilter() {
   const b = $("filter-mode");
+  b.replaceChildren(kindSVG(state.filter ? "funnel" : "funnelOff"));
   b.setAttribute("aria-pressed", String(state.filter));
   const label = t(state.filter ? "filterModeOn" : "filterModeOff");
   b.title = label;
