@@ -26,7 +26,20 @@ This installs the app in `%LOCALAPPDATA%\Programs\ebira`, adds "ebira" to the St
 
 The scripts build the latest release. To build another version, give its tag or a branch: `sh -s -- v0.8.1` on macOS, and on Windows the tag after the closing parenthesis.
 
-In a clone of the repository (or, on Windows, the source from "Code" → "Download ZIP" on the GitHub page, which needs no git), the scripts build that source: `apps/desktop/install.sh`, or `powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1`.
+### From a clone
+
+If you would rather read the script before running it than run it from the web, clone the repository and run the script in it. It builds the source as checked out:
+
+```sh
+git clone https://github.com/ikawaha/ebira.git
+cd ebira
+git checkout "$(git describe --tags --abbrev=0)"   # the latest release; leave it out to build main
+apps/desktop/install.sh
+```
+
+On Windows, run `powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1` in the folder instead; the source from "Code" → "Download ZIP" on the GitHub page works too, without git. To update, check out the new release (or `git pull` on main) and run the script again.
+
+### Building only
 
 To build without installing, run `apps/desktop/build.sh`, which makes `apps/desktop/build/ebira.app`, or `powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1`, which makes `apps\desktop\build\windows-amd64\ebira\` (for Windows on ARM, set `$env:GOARCH = "arm64"` first); the folder works when copied elsewhere or to another PC too. On macOS or Linux, `apps/desktop/build-windows.sh` makes the folder for Windows as well.
 

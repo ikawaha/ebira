@@ -26,7 +26,20 @@ curl -fsSL https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/ins
 
 作るのは最新のリリースです。ほかの版を作るには、タグかブランチを渡します（macOS は `sh -s -- v0.8.1`、Windows は最後の閉じ括弧の後ろにタグ）。
 
-リポジトリを clone してあれば（Windows では、GitHub のページの「Code」→「Download ZIP」で落として展開したものでもよく、git は要りません）、その中のスクリプトがそのソースを作って入れます: `apps/desktop/install.sh`、または `powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1`。
+### clone してから入れる
+
+Web から取ったスクリプトをそのまま実行したくなければ、リポジトリを clone して、中のスクリプトを読んでから実行します。checkout したままのソースを作って入れます:
+
+```sh
+git clone https://github.com/ikawaha/ebira.git
+cd ebira
+git checkout "$(git describe --tags --abbrev=0)"   # 最新のリリース。省けば main を作る
+apps/desktop/install.sh
+```
+
+Windows では、そのフォルダで `powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1` を実行します（GitHub のページの「Code」→「Download ZIP」で落として展開したものでもよく、git は要りません）。新しくするときは、新しいリリースを checkout して（main なら `git pull` して）、もう一度スクリプトを実行します。
+
+### 作るだけ
 
 入れずに作るだけなら、`apps/desktop/build.sh`（`apps/desktop/build/ebira.app` ができる）か、`powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1`（`apps\desktop\build\windows-amd64\ebira\` ができる。ARM の Windows なら、先に `$env:GOARCH = "arm64"`）を使います。このフォルダは、別の場所や別の PC に写しても使えます。macOS や Linux の上でも、`apps/desktop/build-windows.sh` で Windows 用のフォルダを作れます。
 
