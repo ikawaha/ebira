@@ -126,9 +126,53 @@ Clients that keep MCP servers in a JSON settings file (such as `.mcp.json` of a 
 }
 ```
 
+Claude Desktop (`claude_desktop_config.json`), which starts servers as commands, goes through [mcp-remote](https://www.npmjs.com/package/mcp-remote):
+
+```json
+{
+  "mcpServers": {
+    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:13579/mcp"] }
+  }
+}
+```
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `list_notebooks` | List the notebooks, with their kinds and note counts |
+| `list_notes` | List the notes of a notebook or a tag, in pages |
+| `list_tags` | List the tags, with their note counts |
+| `list_marks` | List the marks, with the names you gave them |
+| `search_notes` | Search the notes, in Japanese or English; the results come with snippets |
+| `get_note` | Get a note, with its body and its version |
+| `create_ai_note` | Write a new note in a collab notebook, or drop one in a drop notebook |
+| `import_ai_note` | Import a Markdown file, with its front matter and the images it refers to, as a new note, the same way |
+| `add_ai_file` / `start_ai_upload` | Add an image or another file to a note in a collab notebook, as base64 or by a URL for one upload |
+| `update_ai_note` | Change a note in a collab notebook, or set its mark or put it in the archive; needs the version from `get_note`. A long body can be changed in part: `append` adds text at its end, and `edits` replace exact pieces of it |
+| `delete_ai_note` | Move a note in a collab notebook to the trash; needs the version from `get_note` |
+| `move_ai_note` | Reorder a note in a collab notebook |
+| `create_ai_separator` and the like | Make, change, move and delete separators in a collab notebook ([Separators and order](separators.md)) |
+| `create_ai_notebook` | Make a new collab notebook, or a sub notebook in one, for the AI to write in |
+| `archive_ai_notebook` | Put a collab notebook in the archive, or take it out |
+| `make_notebook_private` | Hide a notebook from AI; only you can undo it |
+
+The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten.
+
+Once connected, ask in your own words, for example:
+
+- "Search my ebira notes for what I wrote about SQLite indexes, and summarize it."
+- "Read my notes tagged travel and make a packing list."
+- "Write what we found today as a note in my *Shared with AI* notebook."
+- "Drop a reminder to renew my passport in my inbox."
+
 ## The assistant
 
-The column `a` opens answers questions, searching and reading your notes. It works when the server starts with the environment variable `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` (Gemini). Answers link to the notes they used.
+The column `a` opens answers questions, searching and reading your notes. It works when the server starts with the environment variable `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` or `GOOGLE_API_KEY` (Gemini). Answers link to the notes they used. Pass the key when you start the server, for example from a password manager:
+
+```sh
+op run --env-file=.env -- ebira server restart
+```
 
 ## Pointing an AI to a note
 

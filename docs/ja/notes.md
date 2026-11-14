@@ -52,3 +52,38 @@ tags: [guide, basics]
 ## 元に戻す
 
 移す・捨てる・並べ替えのあとは、下に「元に戻す」のバーが出ます。押すか、⌘Z（Ctrl+Z）で戻せます。
+
+## ファイル
+
+ノートは、ノートのディレクトリのファイルです:
+
+```
+~/notes/
+├── _ebira.yaml              # ノートと一緒に同期する設定（検索方式など）
+├── inbox/
+│   └── 3f9a1c0e7b2d4a.yaml
+├── development/
+│   ├── _notebook.yaml       # ノートブックの表示名・並び順・種別・ノートの並べ方
+│   ├── 8c21d0f4a9e3b7.yaml
+│   ├── 8c21d0f4a9e3b7.assets/
+│   │   └── diagram.png
+│   └── design/              # サブノートブック
+└── trash/
+```
+
+- ノートブックはフォルダで、サブノートブックはその中のフォルダです。
+- ノートは YAML のファイルで、`title`・`tags`・`created_at`・`updated_at` と Markdown の `body` を持ちます。手で並べ替えると `order` が、マークを付けると `marks` が、アーカイブへ移すと `archived_at` が、AI が書いたノートには `created_by: ai` が付きます。ebira が保存しても、コメントや ebira の知らないキーはそのまま残ります。
+- 画像とファイルは、ノートの隣の `<ID>.assets/` に置きます（[画像とファイル](images.md)）。
+
+ファイルは、どのエディタで書いても直しても、`git pull` で変わってもかまいません。ebira が気づいて追いかけます。ノートのディレクトリに置くのはノートだけです。検索の索引、サーバーの状態、ノートの前の版（[履歴](history.md)）は、各端末の `~/.cache/ebira` と `~/.local/state/ebira` に置きます。索引はファイルから作るものなので、消しても作り直されます。
+
+```yaml
+# ~/notes/inbox/weekend.yaml
+title: 週末にやること
+tags: [todo]
+created_at: 2026-10-18T10:00:00.000Z
+updated_at: 2026-10-18T10:00:00.000Z
+body: |
+  - 自転車を直す
+  - 新しいラーメン屋に行く
+```

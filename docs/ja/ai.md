@@ -126,9 +126,53 @@ MCP のサーバーを JSON の設定ファイルに書くクライアント（C
 }
 ```
 
+Claude Desktop（`claude_desktop_config.json`）のように、サーバーをコマンドとして起動するクライアントでは、[mcp-remote](https://www.npmjs.com/package/mcp-remote) を間にはさみます:
+
+```json
+{
+  "mcpServers": {
+    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:13579/mcp"] }
+  }
+}
+```
+
+## ツール
+
+| ツール | すること |
+|---|---|
+| `list_notebooks` | ノートブックを、種別とノートの数と一緒に一覧する |
+| `list_notes` | ノートブックやタグのノートを、ページに分けて一覧する |
+| `list_tags` | タグを、ノートの数と一緒に一覧する |
+| `list_marks` | マークを、付けた名前と一緒に一覧する |
+| `search_notes` | ノートを日本語でも英語でも検索する。結果には該当箇所の抜粋が付く |
+| `get_note` | ノートを、本文と版（version）と一緒に取得する |
+| `create_ai_note` | collab のノートブックに新しいノートを書く。drop のノートブックには置くだけ |
+| `import_ai_note` | Markdown のファイルを、front matter と参照する画像ごと、新しいノートとして同じように取り込む |
+| `add_ai_file` / `start_ai_upload` | collab のノートブックのノートに画像やファイルを足す（base64 か、1 回だけのアップロードの URL で） |
+| `update_ai_note` | collab のノートブックのノートを書き換える。マークを付ける、アーカイブへ移すこともできる。`get_note` の版が要る。長い本文は一部だけ変えられる（`append` で末尾に書き足す、`edits` で本文の一部を置き換える） |
+| `delete_ai_note` | collab のノートブックのノートをゴミ箱へ移す。`get_note` の版が要る |
+| `move_ai_note` | collab のノートブックのノートを並べ替える |
+| `create_ai_separator` など | collab のノートブックの区切り線を作る・変える・動かす・消す（[区切り線と並び順](separators.md)） |
+| `create_ai_notebook` | AI が書くための、新しい collab のノートブック（か、その中のサブノートブック）を作る |
+| `archive_ai_notebook` | collab のノートブックをアーカイブへ移す・戻す |
+| `make_notebook_private` | ノートブックを AI から見えなくする。戻せるのはあなただけ |
+
+版があるので、AI の変更は安全です。AI が読んだあとでノートが変わっていれば、その変更は拒まれ、あなたが書いた内容は上書きされません。
+
+つないだら、ふつうの言葉で頼めます:
+
+- 「ebira のノートから、SQLite の索引について書いたものを探して要約して」
+- 「旅行タグのノートを読んで、持ち物リストを作って」
+- 「今日わかったことを『AI と共有』のノートブックにノートとして書いて」
+- 「パスポートの更新を忘れないよう、inbox にメモを置いて」
+
 ## アシスタント
 
-`a` で開く右の欄では、ノートを探して読み、質問に答えます。サーバーを起動するときに、環境変数 `ANTHROPIC_API_KEY`（Claude）か `GEMINI_API_KEY`（Gemini）があると使えます。答えには、使ったノートへのリンクが付きます。
+`a` で開く右の欄では、ノートを探して読み、質問に答えます。サーバーを起動するときに、環境変数 `ANTHROPIC_API_KEY`（Claude）か `GEMINI_API_KEY` か `GOOGLE_API_KEY`（Gemini）があると使えます。答えには、使ったノートへのリンクが付きます。キーはサーバーを起動するときに渡します。たとえばパスワードマネージャーから:
+
+```sh
+op run --env-file=.env -- ebira server restart
+```
 
 ## AI にノートを示す
 

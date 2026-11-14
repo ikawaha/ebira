@@ -63,17 +63,7 @@ flowchart LR
 
 ## Web UI・デスクトップアプリ・TUI
 
-同じノートを、ブラウザからも、専用のウインドウからも、ターミナルからも扱えます。どれも手元の同じサーバーにつながっていて、どこでの変更もほかにすぐ反映されます。
-
-**Web UI** — `ebira web`。左にノートブックとタグ、中央にノートの一覧、右にノートを表示します。ノートブックはメニューから作成・名前の変更・種別の変更・ゴミ箱への移動ができ（Trash へのドラッグでもゴミ箱へ移せます）、ゴミ箱はメニューから空にできます。ノートはノートブックへドラッグして移せます。リストの続きやコードの色付けができるエディタで Markdown を書き、画像やファイルを貼り付け、数式や図をその場で表示できます。
-
-<p align="center">
-  <img src="assets/screenshots/web-editor-ja.png" width="800" alt="Web UI でノートを編集しているところ: 上にタイトル・ノートブック・タグ、下に Go のコードが色付けされた Markdown の本文">
-</p>
-
-**デスクトップアプリ** — Web UI を自分のウインドウとメニューで使うアプリで、macOS と Windows で動きます（作り方は [デスクトップアプリ](#デスクトップアプリ) を参照）。メニューからは Web UI のキーと同じことができ、リンクはブラウザで開き、ノートのファイルはダウンロードのフォルダに保存します。サーバーを中に持っていて、同じノートのサーバーが動いていればそれを使い、無ければ起動します。アプリを終えてもサーバーは動き続け、TUI・コマンド・MCP と共有されます。
-
-**TUI** — `ebira`。同じ 3 つの欄をターミナルで、キーボードで操作します。`/` で検索、`j`/`k` で移動、`z` でノートを全幅に広げ、`e` で TUI の中か `$EDITOR` で編集します。`v` を押すと、ドキュメントの欄に Markdown をそのまま出します。欄に移ればその場で編集でき、欄を離れると（または `ctrl+s` で）保存します。少しの間だけ整形して見るには、一覧で `p`、欄の中で `ctrl+r` を押します。編集している間は、`z` の代わりに `ctrl+l` で欄を全幅に広げます。`f`（編集している間は `ctrl+f`）で、Web UI と同じくノートの中を探します。
+同じノートを、ブラウザからも（`ebira web`）、macOS と Windows の専用のウインドウからも、ターミナルからも（`ebira`）扱えます。どれも手元の同じサーバーにつながっていて、どこでの変更もほかにすぐ反映されます。
 
 <p align="center">
   <img src="assets/screenshots/tui-ja.png" width="800" alt="ebira の TUI: ノートブック、検索で見つかったノートと強調された一致、コードが色付けされたノート">
@@ -82,37 +72,26 @@ flowchart LR
 ## 機能
 
 - **フォルダに置く YAML のノート** — ノートのディレクトリの `<ノートブック>/<id>.yaml`。更新してもコメントや知らないキーは残ります。画像と添付ファイルはノートの隣に置きます。
-- **5 つの検索方式** — `bigram`（既定）、`trigram`、`ja`（[kagome](https://github.com/ikawaha/kagome) による日本語の形態素解析と bigram）、`en`（英語の語と語幹、と trigram）、`like`。一致した箇所を一覧とノートで強調します。
-- **Dropbox や iCloud Drive などで同期** — ノートを同期フォルダに置けます。サービスが残す「衝突したコピー」はノートになるので、どの変更も埋もれません。
-- **お望みなら git で同期** — `ebira sync`、メニュー、または数分ごとに、コミット・マージ・push をまとめて行います。2 台で同じノートを直しても衝突のしるしは残らず、もう一方の版は新しいノートになります。
-- **いつも最新** — 索引はファイルの変更に追従する（fsnotify）ので、`git pull` やほかのエディタでの変更もすぐ反映されます。索引はキャッシュなので、消しても作り直されます。
-- **Web UI** — ノートブックとタグ、入力しながらの検索、数式（KaTeX）と図（Mermaid）を含む Markdown、リストの続き・コードの色付け・`:smile` のような絵文字の補完ができるエディタ（CodeMirror 6）、ドラッグでの並べ替えと取り込み、貼り付けやドロップでの画像とファイルの追加、変更の自動反映。英語と日本語、ライトとダークのテーマに対応しています。
-- **デスクトップアプリ** — Web UI を自分のウインドウとメニューで。macOS と Windows 向けで、サーバーを中に持っています。
-- **TUI** — 同じノートをターミナルで。
-- **ノートとして入っているガイド** — 新しいノートのディレクトリには、ebira の使い方を説明するノートのノートブック「ebira ガイド」が入っています。それぞれのノートが、説明している機能の見本になっています。書き換えても消してもかまいません。歯車のメニューの「ガイドを追加」で、いつでも新しいノートブックとして足せます。
-- **MCP サーバー** — Claude Code などの AI クライアントが、ノートの一覧・検索・読み込みと、許した場所への書き込みをできます（[MCP サーバー](#mcp-サーバー) を参照）。
-- **AI 向けのノートブックの種別** — `default`（AI は読むだけ）、`collab`（AI も読み書きできる）、`drop`（AI は新しいノートを置くだけ。既定の inbox）、`private`（AI からは見えない）。
-- **アシスタント** — Web UI からノートについて質問できます。ノートを検索して読み、リンク付きで答えます。Claude か Gemini を使います。
-- **取り込み** — Markdown ファイルを、front matter と画像ごと取り込めます。
-- **安全な編集** — 衝突は ETag で検出し、削除したノートはまずゴミ箱へ入ります。
-- **取り消しと履歴** — 保存したあとも編集の取り消しができます。ノートの移動・並べ替え・ノートブックの変更は、下に出るバーか ⌘Z / Ctrl+Z で元に戻せます。ノートの前の版は各端末に残り（ノートごとに 50 版まで。同期はしません）、履歴から戻せます。
+- **5 つの検索方式** — `bigram`（既定）、`trigram`、`ja`（[kagome](https://github.com/ikawaha/kagome) による日本語の形態素解析と bigram）、`en`（英語の語と語幹、と trigram）、`like`。関連度の順に探すことも、一覧を並びのまま絞り込むこともできます。
+- **Dropbox・iCloud Drive・git で同期** — 同期サービスの「衝突したコピー」も、2 台で直したノートも、ノートになるので、どの変更も埋もれません。
+- **いつも最新** — 索引はファイルの変更に追従するので、`git pull` やほかのエディタでの変更もすぐ反映されます。索引はキャッシュなので、消しても作り直されます。
+- **Web UI とデスクトップアプリ** — 数式（KaTeX）と図（Mermaid）を含む Markdown、リストの続き・コードの色付け・絵文字の補完ができるエディタ（CodeMirror 6）、マーク・タグ・サブノートブック・区切り線・アーカイブ、ドラッグ、変更の自動反映。英語と日本語、ライトとダークのテーマに対応しています。
+- **TUI** — 同じノートをターミナルで、キーボードで。
+- **MCP サーバーと AI 向けのノートブックの種別** — Claude Code などの AI クライアントが、ノートを検索して読み、許した場所に書けます。`default`（AI は読むだけ）、`collab`（AI も読み書きできる）、`drop`（AI はノートを置くだけ）、`private`（AI からは見えない）。
+- **アシスタント** — Web UI からノートについて質問できます（Claude か Gemini）。使ったノートへのリンク付きで答えます。
+- **安全な編集** — 衝突は ETag で検出し、削除したノートはまずゴミ箱へ入り、移動は元に戻せ、ノートの前の版は各端末に残ります。
+- **ノートとして入っているガイド** — 新しいノートのディレクトリには ebira のガイドが入っています。これは[ドキュメント](docs/README.md)そのものです。
 - **バイナリ 1 つ、cgo なし**
 
 ## インストール
 
-Go 1.27 以降が必要です。
+`ebira` コマンド（サーバー・Web UI・TUI）は macOS と Linux で動き、Go 1.27 以降が要ります:
 
 ```bash
 go install github.com/ikawaha/ebira/cmd/ebira@latest
 ```
 
-`ebira` コマンド（サーバー・Web UI・TUI）は macOS と Linux で動きます。macOS と Windows には、サーバーを中に持つデスクトップアプリもあり、Windows ではこれを使います。
-
-### デスクトップアプリ
-
-Web UI を自分のウインドウとメニューで使うアプリで、macOS（13 以降）と Windows で動きます。まだ配布していないので、インストールのスクリプトがソースから作って入れます。macOS は `/Applications/ebira.app`（`-user` なら `~/Applications`）、Windows は `%LOCALAPPDATA%\Programs\ebira` に入れ、スタートメニューにショートカットを作ります。Go 1.27 以降と git が要り、macOS では Xcode の Command Line Tools も要ります（アプリはその Mac だけのために署名されます）。新しくするときも、同じものを実行します。
-
-1 行で入れるなら（最新のリリースを作ります。ほかの版はタグかブランチを渡します: `sh -s -- v0.8.1`。Windows は最後の閉じ括弧の後ろに）:
+デスクトップアプリ（macOS 13 以降と Windows）は、サーバーを中に持っています。Windows ではこれを使います。まだ配布していないので、インストールのスクリプトがソースから作って入れます。もう一度実行すれば新しくなります。Go と git が要り、macOS では Xcode の Command Line Tools も要ります。
 
 ```bash
 # macOS
@@ -124,299 +103,34 @@ curl -fsSL https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/ins
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install-windows.ps1)))
 ```
 
-または clone してから。スクリプトを読んでから実行でき、checkout したままのソースを作ります:
-
-```bash
-git clone https://github.com/ikawaha/ebira.git
-cd ebira
-git checkout "$(git describe --tags --abbrev=0)"   # 最新のリリース。省けば main を作る
-apps/desktop/install.sh                                                  # macOS
-powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1  # Windows
-```
-
-新しくするときは、新しいリリースを checkout して（main なら `git pull` して）、もう一度スクリプトを実行します。Windows では、GitHub の「Code」→「Download ZIP」で落としたソースでもよく、git は要りません。動いているアプリには先に終了を頼み、入れてあったアプリが起動したサーバーは、新しいビルドで起動し直します。macOS では `-user` で `~/Applications` に入れます。Windows 10 では WebView2 ランタイムが要ることがあります。入れずに作るだけなら、`apps/desktop/build.sh`（`apps/desktop/build/ebira.app` ができる）か `apps\desktop\build-windows.ps1`（`apps\desktop\build\windows-amd64\ebira\`）を使います。macOS や Linux の上でも、`apps/desktop/build-windows.sh` で同じフォルダを作れます。アプリは ebira のサーバーを中に持ち、同じノートのサーバーが動いていればそれを使い、無ければ起動するので、TUI・コマンド・MCP とノートを共有します。ebira の設定ファイルに従い（[はじめかた](#はじめかた) を参照）、アプリのノートのフォルダとアドレスは「設定…」（⌘,。Windows はファイルのメニュー）で決めます。ログの場所など、くわしくはノートに入っているガイドの「デスクトップアプリ」のページにあります。
+リポジトリを clone して、スクリプトを読んでから実行することもできます。やり方などくわしくは [デスクトップアプリ](docs/ja/desktop.md) にあります。
 
 ## はじめかた
 
-1. **ebira を起動します。** 初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、Web UI と TUI の言語を聞かれ、答えは、サーバーのアドレス（`localhost:13579`）と一緒に `~/.config/ebira/config.yaml` に保存されます（MCP のクライアントに登録する URL が変わらないように）。複数の端末でノートを共有するなら、`~/Dropbox/notes` のような同期フォルダの中を答えるか、どの端末でも同じ git のリポジトリを指定します（[git で同期する](#git-で同期する)、[Dropbox や iCloud Drive で同期する](#dropbox-や-icloud-drive-で同期する) を参照）。
-
-   ```console
-   $ ebira web
-   No notes found: no -notes, no notes_dir in ~/.config/ebira/config.yaml, and no notes/ in ~/work.
-   Let's set up ebira.
-
-   Directory to keep the notes in [~/notes]:
-   ...
-   ```
-
-   `ebira web` はサーバーを裏で起動し、<http://localhost:13579/> の Web UI をブラウザで開きます。`ebira` なら TUI が開きます。どちらを閉じても、サーバーは動き続けます。
-
-   デスクトップアプリは同じ設定を使うので、こうしてセットアップしてから開きます。`ebira` コマンドの無い Windows などでは、アプリの「設定…」（⌘,。Windows はファイルのメニュー）でノートのフォルダを選びます。
-
-   新しいノートのディレクトリには、使い方を説明するノートブック「ebira ガイド」（選んだ言語のもの）が入っています。上から読んで、そのノートで試し、要らなくなったらゴミ箱へ移してください。勝手に戻ってくることはありません。また読みたくなったら、歯車のメニューの「ガイドを追加」で足せます。
-
-2. **ノートを書きます。** Web UI で（`c` で新しいノート）、またはファイルとして:
-
-   ```yaml
-   # ~/notes/inbox/weekend.yaml
-   title: 週末にやること
-   tags: [todo]
-   created_at: 2026-10-18T10:00:00+09:00
-   updated_at: 2026-10-18T10:00:00+09:00
-   body: |
-     - 自転車を直す
-     - 新しいラーメン屋に行く
-   ```
-
-3. **Markdown を取り込みます。**
-
-   ```bash
-   ebira import -notebook reading ~/Documents/notes
-   ```
-
-   Quiver から移るときは、`scripts/quiver2ebira.py` が Quiver のライブラリを（読むだけで）Markdown に変え、`--import` を付ければ、動いているサーバーに Quiver のノートブックごとに取り込みます。ライブラリは置いた場所にあります（Finder で名前の Quiver.qvlibrary を探せます）:
-
-   ```bash
-   scripts/quiver2ebira.py path/to/Quiver.qvlibrary /tmp/quiver-md --skip "Quiver Tutorial" --import http://localhost:13579
-   ```
-
-4. **git で同期します。** 飛ばしてもかまいません。git を使わなければ、ノートはただのファイルで、Dropbox などの同期フォルダで共有できます。リポジトリを設定すれば、ebira は 10 分ごと、または `ebira sync` を実行したときに同期します。すでにあるノートの同期を始めるには:
-
-   ```bash
-   ebira sync -remote git@github.com:you/notes.git   # 1 回だけ。空のリポジトリか、ノートのあるリポジトリ
-   echo "git_sync: 10m" >> ~/.config/ebira/config.yaml
-   ```
-
-5. **AI につなぎます。** 許したい範囲で（ほかのクライアントは [MCP サーバー](#mcp-サーバー) を参照）。Claude Code なら:
-
-   ```bash
-   claude mcp add --transport http ebira http://localhost:13579/mcp
-   ```
-
-## コマンド
-
-| コマンド | 説明 |
-| --- | --- |
-| `ebira [-lang en\|ja]` | TUI を開く。サーバーが無ければ裏で起動する |
-| `ebira web [-no-open]` | ブラウザで Web UI を開く。サーバーが無ければ裏で起動する |
-| `ebira serve` | サーバーを前面で動かす |
-| `ebira server start\|stop\|restart\|status` | 裏のサーバーを操作する。`restart` は動いていたときのフラグを引き継ぐ |
-| `ebira import [-notebook ID] [-force] [-dry-run] パス...` | Markdown ファイルと、それが参照する画像をノートとして取り込む |
-| `ebira files check [-delete]` | 使われていない画像やファイルと、切れた参照を一覧する |
-| `ebira sync [-remote URL]` | ノートを git のリポジトリと同期する（コミット、上流のブランチのマージ、push）。`-remote` で先にリポジトリにつなぐ |
-| `ebira auth passkey [-no-open]` | Web UI のパスキーを、使い捨ての URL で登録する（試作。[守れること](#守れること守れないこと)） |
-| `ebira auth reset [-yes]` | パスキーをすべて消し、すべてのセッションを終える（パスキーを無くしたときなど） |
-| `ebira version` | `ebira` の版を出す（作ったコミットと、`ebira server status` がサーバーについて出すビルド） |
-
-`serve` のフラグ（`server start` と `server restart` でも使えます）:
-
-| フラグ | 既定値 | 説明 |
-| --- | --- | --- |
-| `-notes` | 設定ファイルの `notes_dir`、無ければ `./notes` | ノートのディレクトリ |
-| `-addr` | 設定ファイルの `addr`、無ければ `localhost:13579` | 待ち受けるアドレス |
-| `-search` | ノートのディレクトリの `_ebira.yaml` の `search`、無ければ `bigram` | `like`、`bigram`、`trigram`、`en`、`ja` |
-| `-watch` | `true` | ノートを監視して索引を更新する |
-| `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja`（TUI の言語は `ebira -lang` か設定ファイルの `lang`、無ければ `$LANG`） |
-| `-provider`、`-model` | API キーが設定されているプロバイダー | アシスタントのモデル: `anthropic` か `gemini` |
-| `-git-sync` | 設定ファイルの `git_sync`、無ければ同期しない | 起動時と、この間隔（`10m` など）で git と同期する |
-| `-auth` | 設定ファイルの `auth`、無ければ `none` | `none` か、パスキーでログインした Web UI だけをあなたとして扱う `passkey`（試作） |
-
-どのコマンドも `-h` でフラグの一覧が出ます。
-
-## ノートの置き方
-
-```
-~/notes/
-├── _ebira.yaml              # ノートと一緒に同期する設定（検索方式など）
-├── inbox/
-│   └── 3f9a1c0e7b2d4a.yaml
-├── development/
-│   ├── _notebook.yaml       # ノートブックの表示名・並び順・種別・ノートの並べ方
-│   ├── 8c21d0f4a9e3b7.yaml
-│   └── 8c21d0f4a9e3b7.assets/
-│       └── diagram.png
-└── trash/
+```bash
+ebira web
 ```
 
-ノートのディレクトリに置くのはノートだけです。索引とサーバーの状態、ノートの前の版は、各端末の `~/.cache/ebira` と `~/.local/state/ebira` に置きます。前の版はそこの `history/` にあり、古いものは自動で消えます（上を参照）。フォルダごと消せば前の版をすべて消せ、ノートには影響しません。
+初回は、ノートを置く場所、同期する git のリポジトリ（使う場合）、検索方式、画面の言語を聞かれ、そのあとサーバーを裏で起動して、<http://localhost:13579/> の Web UI を開きます。`ebira` なら TUI が開きます。ノートには ebira のガイドが入っているので、上から読んでください。
 
-- **ノートブック** はフォルダです。`inbox` と `trash` は必ずあり、ノートを削除するとまずゴミ箱へ移ります。
-- **サブノートブック** は、ノートブックの中のフォルダです（1 段だけ。`development/design/` など）。種別は親のノートブックに従います。Web UI では、親のノートブックのノートの一覧の先頭に出ます。親のノートブックのメニューから作るほか、ノートブックのメニューか、ほかのノートブックの行の真ん中へのドラッグで、ノートブックをその中へ移せます。
-- **ノート** は `title`、`tags`、`created_at`、`updated_at` と Markdown の `body` を持ちます。手で並べ替えると `order` が、AI が書いたノートには `created_by: ai` が付きます。
-- **画像とファイル** はノートの隣の `<id>.assets/` に置き、本文からは、画像は `![説明](<id>.assets/name.png)`、ほかのファイルは `[名前](<id>.assets/report.pdf)` で参照します。ファイルの種類は問わず、1 つ 50MB までです。Web UI は画像を表示し、PDF は新しいタブで開き、ほかのファイルはダウンロードします。
-
-### マーク
-
-ノートにマークを付けると、一覧で目印になります。色（赤・橙・黄・緑・青・紫・灰）か記号（⭐ ❗ ❓ ✅ 📌 🔥 💡）から選びます。Web UI ではプレビューの旗、一覧の右クリック、`M` で、TUI では `M` を押して矢印で選びます。マークを付けてもノートの更新日時は変わりません。歯車のメニューの **マークの名前…** で、赤は「重要」のように意味を付けられます。名前はノートと一緒に `_ebira.yaml` に保存されるので、どの端末でも同じになり、`mark:重要` でそのマークのノートを探せます。今は 1 つのノートに 1 つのマークです。
-
-## git で同期する
-
-git を使うかは自由です。使わなくても ebira は同じように動き、ノートはただのファイルなので、好きな方法でバックアップや同期ができます。Web UI の **git と同期** は、ノートがリポジトリに入っているときだけ表示されます。
-
-`ebira sync`、Web UI の設定メニューの **git と同期**、`-git-sync` は、どれもサーバーの中で同じことをします:
-
-1. ノートのディレクトリの変更をコミットします（`.DS_Store` は除き、変えたファイルの一覧をメッセージに入れます）。
-2. ブランチに上流のブランチがあれば、fetch してマージします。
-3. push します。
-
-リポジトリは、ebira が作る場合はノートのディレクトリそのもの（`~/notes`）です。ノートのディレクトリを含む上のリポジトリでもかまいません。同期先のリモートとブランチは git の設定のままで、ebira は今のブランチの上流のブランチと同期します。変えるときは `git remote set-url` や `git branch --set-upstream-to` を使ってください。ebira はあなたの `git` を呼ぶので、認証・SSH の鍵・Git LFS の設定がそのまま使われます。パスワードは聞かないので、裏で同期させるには credential helper か SSH agent を用意してください。
-
-マージは衝突で止まりません。2 台で直したノートは、この端末の版を残し、もう一方の版を *Plan (conflict 2026-10-18 20:00)* のようなタイトルの新しいノートとして隣に置きます。見比べて、要らない方を消してください。ノート以外のファイルが両方で変わったときはこちらの版を、片方で消えて片方で変わったときは変わった版を残します。もう一方の版はマージのコミットに残っています。git がファイルを変えている間、ノートの書き込みは待たされ、索引はそのあと追従します。手でマージして衝突のしるしが残ったノートは、ebira が知らせ、直前の正しい内容を表示し続けます。
-
-## Dropbox や iCloud Drive で同期する
-
-ノートのディレクトリを、Dropbox、iCloud Drive、OneDrive、Google Drive、Syncthing などが同期するフォルダに置きます。ebira 側の設定は要りません。そこに置かれるのはノートだけで、索引とサーバーの状態は各端末に残ります。
-
-1. **1 台目** では、初期設定で同期フォルダの中のディレクトリ（`~/Dropbox/notes` など）を答えます。同期フォルダであることが表示され、git は聞かれません。
-2. **2 台目以降** では、サービスがフォルダを同期し終えるのを待ってから、同じディレクトリを答えます。ebira はノートを見つけ、検索方式などの設定をそのまま使い、その端末で索引を作ります。端末ごとにパスが違ってもかまいません。それぞれの `notes_dir` が保存されます。
-
-同期が終わる前に 2 台目で始めると、空のノートが新しく作られ、その設定が 1 台目の設定とぶつかります。
-
-2 台で同じノートを直すと、サービスは一方の版を残し、もう一方を `3f9a… (MacBook's conflicted copy 2026-10-18).yaml` や `3f9a… 2.yaml` のようなコピーとして残します。ebira はそうしたコピーを *Plan (conflict copy)* のようなタイトルの新しいノートにし、元のノートと同じ内容なら消します。1 台でノートを移し、別の 1 台で同じノートを直した場合は、最後に変えた方がその ID を残し、もう一方は同じようにコピーになります。新しいノートはファイルの中身だけから決まるので、2 台が同時に処理しても同じノートになります。
-
-- 検索や索引の作成がダウンロードを待たないよう、フォルダを手元に置いたままにしてください。Dropbox は *オフラインで利用可能にする*、iCloud Drive は *ダウンロードしたままにする*、OneDrive は *このデバイス上で常に保持する* です。選択型同期を使う場合は、どの端末でもこのフォルダを含めてください。
-- 同期フォルダの中では git を使わないでください。サービスがリポジトリを壊すことがあり、別の端末から同期された変更をもう一度コミットしてしまいます。初期設定でも、同期フォルダの中では git は聞かれません。どちらか一方を使ってください。
-
-## 検索
-
-| 方式 | しくみ | 向いているもの |
-| --- | --- | --- |
-| `bigram` | 文字列を 2 文字ずつ重ねて区切る | どの言語でも。2 文字以上のどんな部分文字列も見つかる |
-| `trigram` | 文字列を 3 文字ずつ重ねて区切る | どの言語でも。長い語では当たる候補が絞られる。1〜2 文字の語（日本語に多い）は全部のノートをなめて探すので遅い |
-| `ja` | kagome で日本語を単語に分け、動詞と形容詞を基本形にそろえる。bigram でも探す | 日本語のノート。動詞で探すと、その活用形も見つかる |
-| `en` | 英語を語に分けて語幹にそろえ（Snowball の英語の stemmer）、*the* や *of* などの stop words を除く。日本語は bigram。語の一部を拾うため trigram でも探す | 英語のノート。*plan* で *plans* や *planning* も見つかり、入力の途中の語も見つかる |
-| `like` | SQL の `LIKE` | ノートが少ないとき |
-
-語は AND で探します。`"new york"` のように二重引用符で囲むとフレーズになり、語をその並びのまま探します。`tag:todo`（空白を含むなら `tag:"二つの 語"`）を足すと、そのタグのノートに絞ります。`mark:red`（マークに付けた名前でも）を足すと、そのマークのノートに絞ります。タグだけで探すと、そのタグのノートを出します。AI クライアントの `search_notes` でも同じ書き方が使えます。開いているノートの中から探すときは、プレビューの虫めがねか `f` を押します。一致に印が付き、Enter で順に移れます。一覧は変わりません。
-
-文字列は NFKC で正規化して小文字にそろえるので、全角と半角、大文字と小文字の違いは区別しません。どの端末でも同じ方式にするには、ノートのディレクトリの `_ebira.yaml` に書きます:
-
-```yaml
-search: ja
-```
-
-## MCP サーバー
-
-ebira は、Claude Code・Cursor・Claude Desktop などの AI クライアントに、[Model Context Protocol](https://modelcontextprotocol.io)（MCP）でノートを提供します。AI は、あなたが見せてよいとしたノートを検索して読み、書いてよいとした場所にノートを書けます。ノートの中から調べものをさせたり、AI が調べた結果をノートに残させたりできます。
-
-### つなぎ方
-
-MCP サーバーは ebira のサーバーの一部で、`http://localhost:13579/mcp` にあります（Streamable HTTP。アドレスは `-addr` に従います）。サーバーを動かしておいてください。`ebira web` と `ebira` は裏でサーバーを起動し、`ebira server start` でも起動できます。
-
-Claude Code:
+Claude Code につなぐには（ノートブックごとに許した範囲で）:
 
 ```bash
-claude mcp add --transport http ebira http://localhost:13579/mcp
+ebira mcp add
 ```
 
-Cursor（`~/.cursor/mcp.json`）など、URL を指定できるクライアント:
+くわしくは [入れる・はじめる](docs/ja/install.md) にあります。
 
-```json
-{
-  "mcpServers": {
-    "ebira": { "url": "http://localhost:13579/mcp" }
-  }
-}
-```
+## ドキュメント
 
-Claude Desktop（`claude_desktop_config.json`）のように、サーバーをコマンドとして起動するクライアントでは、[mcp-remote](https://www.npmjs.com/package/mcp-remote) を間にはさみます:
+[ドキュメント](docs/README.md)は英語と日本語で、ノートに入っているガイドと同じものです。たとえば:
 
-```json
-{
-  "mcpServers": {
-    "ebira": { "command": "npx", "args": ["mcp-remote", "http://localhost:13579/mcp"] }
-  }
-}
-```
-
-### ツール
-
-| ツール | すること |
-| --- | --- |
-| `list_notebooks` | ノートブックを、種別とノートの数と一緒に一覧する |
-| `list_notes` | ノートブックやタグのノートを、ページに分けて一覧する |
-| `list_tags` | タグを、ノートの数と一緒に一覧する |
-| `list_marks` | マークを、付けた名前と一緒に一覧する |
-| `search_notes` | ノートを日本語でも英語でも検索する。結果には該当箇所の抜粋が付く |
-| `get_note` | ノートを、本文と版（version）と一緒に取得する |
-| `create_ai_note` | `collab` のノートブックに新しいノートを書く。`drop` のノートブックには置くだけ |
-| `import_ai_note` | Markdown のファイルを、front matter と参照する画像ごと、新しいノートとして同じように取り込む |
-| `add_ai_file` | `collab` のノートブックのノートに画像やファイルを足す（本文から参照する） |
-| `update_ai_note` | `collab` のノートブックのノートを書き換える、またはマークを付ける。`get_note` の版が要る。長い本文は一部だけ変えられる（`append` で末尾に書き足す、`edits` で本文の一部を置き換える。`brief` で結果から本文を外す） |
-| `delete_ai_note` | `collab` のノートブックのノートをゴミ箱へ移す。`get_note` の版が要る |
-| `move_ai_note` | `collab` のノートブックのノートを並べ替える（別のノートの後ろか、先頭へ） |
-| `create_ai_notebook` | AI が書くための、新しい `collab` のノートブックを作る |
-| `make_notebook_private` | ノートブックを AI から見えなくする。戻せるのはあなただけ |
-
-AI からのファイルは 1 つ 5MB まで、新しいノートと一緒に送る画像は 10 枚・合わせて 20MB までです。
-
-版があるので、AI の変更は安全です。AI が読んだあとでノートが変わっていれば、その変更は拒まれ、あなたが書いた内容は上書きされません。
-
-### AI に許すこと
-
-ノートブックにはそれぞれ種別があり、Web UI か TUI で設定します:
-
-| 種別 | AI が読める | AI が書ける |
-| --- | --- | --- |
-| `default` | ✅ | — |
-| `collab` | ✅ | ✅ 作成・更新・ゴミ箱へ移す |
-| `drop` | —（名前だけ） | 新しいノートを置くだけ（ID は ebira が決める） |
-| `private` | —（名前も見えない） | — |
-
-inbox は、変えなければ `drop` です。ゴミ箱は AI からは見えません。AI が書いたノートには `created_by: ai` が付き、Web UI では ✨、TUI では ✦ が表示されます。
-
-### 頼み方の例
-
-つないだら、ふつうの言葉で頼めます:
-
-- 「ebira のノートから、SQLite の索引について書いたものを探して要約して」
-- 「旅行タグのノートを読んで、持ち物リストを作って」
-- 「今日わかったことを『AI と共有』のノートブックにノートとして書いて」
-- 「パスポートの更新を忘れないよう、inbox にメモを置いて」
-
-### 守れること、守れないこと
-
-- 既定ではログインはありません。サーバーは localhost（と `-addr` のホスト）宛てのリクエストだけに答え、ほかのサイトの Web ページからノートを変えるリクエストは拒みます。サーバーは手元のマシンで動かしてください。
-- REST API へのリクエストはすべてあなたからのものとして扱うので、手元で `curl` を実行できる AI エージェントは、あなたとして振る舞えます。防ぐには、パスキーを求めます（試作）: `ebira auth passkey` を実行して使い捨ての URL でパスキーを登録し、設定ファイルに `auth: passkey` と書いてサーバーを起動し直します。Web UI はパスキーでのログインを求め、ログインしていない REST のリクエストは断ります。MCP は変わりません。TUI は Web UI を通してログインします。TUI に出る URL を、パスキーでログインした Web UI で開き、同じコードが出ているのを確かめて承認します（`o` で URL を開けます）。サーバーを呼ぶコマンド（`ebira sync` など）も同じようにログインします。private のノートブックを AI に見せる、ノートの履歴を見る、ゴミ箱を空にする、などの大事な操作は、ログインから 5 分を過ぎていれば、もう一度パスキーを求めます。パスキーの管理と、ほかのセッションの終了は、歯車のメニューの **パスキーの管理…** で行います。パスキーを無くしたら、`ebira auth reset` ですべて消せます。
-- デスクトップアプリは、自分のサーバーのページからのメッセージだけを受け付け、ノートのリンクはウインドウの中ではなくブラウザで開きます。別のコンピューターのサーバーのアドレスを選ぶと、そのサーバーのページにクリップボードへの書き込みと、ブラウザでリンクを開くことを任せることになります。信頼できるサーバーだけを選んでください。
-- 種別による制限は、MCP もアシスタントも含め、ebira の API を通るすべての AI に効きます。ただ、ノートのファイルを直接読めるプログラム（ファイルを読める AI エージェントなど）は防げません。`private` は「AI に見せない」という目印で、暗号化ではありません。
-
-## アシスタント
-
-アシスタントは、ebira の中でノートについての質問に答えます。Web UI の「アシスタント」ボタン（TUI では `?`、API では `POST /ask`）から使います。MCP と同じ決まりでノートを検索して読み、使ったノートへのリンク付きで答えます。サーバーに `ANTHROPIC_API_KEY`（Claude）か、`GEMINI_API_KEY` または `GOOGLE_API_KEY`（Gemini）が設定されていると使えます。キーはサーバーを起動するときに渡します。たとえばパスワードマネージャーから:
-
-```bash
-op run --env-file=.env -- ebira server restart
-```
-
-## 設定
-
-`~/.config/ebira/config.yaml` には、この端末の設定を書きます。各キーはフラグの既定値になります:
-
-```yaml
-notes_dir: ~/notes
-addr: localhost:13579
-lang: ja
-```
-
-キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。Web UI の歯車のメニューで別のものを選べます。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）、`tui_search`（`search` か `filter`。TUI の検索欄の Tab で切り替えると書き換えます）です。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
-
-### プレビューの見た目を変える
-
-歯車のメニューの **スタイル…** で、組み込みのスタイル（帯・文書・コンパクト・下線）を選べます。選ぶと開いているノートで試せて、**使う** で `~/.config/ebira/preview.css` に書きます。このファイルは手直しできます。手直ししたファイルや自分で書いたファイルは、置き換える前に `preview.css.bak` に写します。
-
-自分で `~/.config/ebira/preview.css`（設定ファイルの隣）に CSS を書くと、Web UI のプレビューのノートの本文の見た目を変えられます（Quiver のプレビューのスタイルと同じ使い方です）。ページを開くたびに読み、本文の中だけに効きます。`h1 { … }` と書いても、ページのほかの部分は変わりません。Web UI の色（`var(--accent)`、`var(--fg)`、`var(--fg-muted)` など）を使えば、ライトとダークのテーマに合わせて変わります:
-
-```css
-h1 { border-bottom: 2px solid var(--accent); color: var(--accent); }
-h2 { background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 8px; }
-hr { border: none; border-top: 2px dotted var(--fg-muted); }
-strong { color: #c0392b; }
-:root[data-theme="dark"] & strong { color: #f7dc6f; }  /* メニューでダークを選んだとき */
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) & strong { color: #f7dc6f; } }  /* システムがダークのとき */
-```
-
-CSS でノートの中身を外へ送れないように、ブラウザに何かを読みに行かせる書き方は取り除きます: `@import` と、`data:` の URL 以外の `url()` などです。端末に入っているフォントは使えますが、Web フォントは使えません。
+- [ノートとノートブック](docs/ja/notes.md)（ノートのファイルも）
+- [検索の書き方](docs/ja/search.md)
+- [同期](docs/ja/sync.md)（Dropbox・iCloud Drive・git）
+- [AI と使う](docs/ja/ai.md)（MCP とそのツール、AI からノートを遠ざける方法）
+- [パスキー](docs/ja/passkey.md)（ebira が守れること）
+- [設定](docs/ja/settings.md)と[コマンド](docs/ja/cli.md)
 
 ## ライセンス
 
