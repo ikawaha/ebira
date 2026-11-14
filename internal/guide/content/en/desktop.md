@@ -4,34 +4,31 @@ tags: [guide]
 ---
 An app to use the web UI in a window of its own, with menus, instead of a browser tab. It runs on macOS and Windows. Inside it is the web UI, and it shares the notes directory and the server with the TUI, the commands and MCP.
 
-## Building
+## Installing
 
-It is not distributed yet, so you build it from the ebira repository. It needs Go 1.27 or later.
+It is not distributed yet, so an install script builds it from the source of ebira and installs it. It needs Go 1.27 or later and git. To update the app, run the same again: a running app is asked to quit first (it asks about a note being edited), and the server the installed app started is started again with the new build.
 
-**macOS** (macOS 26 or later, with the Xcode Command Line Tools):
+**macOS** (macOS 13 or later, with the Xcode Command Line Tools), in the Terminal:
 
 ```sh
-git clone https://github.com/ikawaha/ebira.git
-cd ebira
-apps/desktop/build.sh
-open apps/desktop/build/ebira.app
+curl -fsSL https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install.sh | sh
 ```
 
-This makes `apps/desktop/build/ebira.app`, with the server (`ebira`) inside, signed for this Mac only. Move it to the Applications folder if you like.
+This installs `/Applications/ebira.app` (with `sh -s -- -user`, `~/Applications/ebira.app`), with the server (`ebira`) inside, signed for this Mac only, and opens it.
 
-**Windows** (built with PowerShell):
-
-1. Install Go from https://go.dev/dl/
-2. Get the source of ebira (`git clone https://github.com/ikawaha/ebira.git`; without git, "Code" → "Download ZIP" on the GitHub page, and extract it)
-3. In PowerShell, go to that folder and run
+**Windows**, in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install-windows.ps1)))
 ```
 
-This makes `apps\desktop\build\windows-amd64\ebira\` (for Windows on ARM, set `$env:GOARCH = "arm64"` first). Open `ebira-desktop.exe` in it. The folder works when copied elsewhere or to another PC too. Windows 10 may need the WebView2 runtime installed.
+This installs the app in `%LOCALAPPDATA%\Programs\ebira`, adds "ebira" to the Start menu, and opens it. Go is at https://go.dev/dl/, and git at https://git-scm.com/. Windows 10 may need the WebView2 runtime installed.
 
-On macOS or Linux, `apps/desktop/build-windows.sh` makes the folder for Windows as well.
+The scripts build the latest release. To build another version, give its tag or a branch: `sh -s -- v0.8.1` on macOS, and on Windows the tag after the closing parenthesis.
+
+In a clone of the repository (or, on Windows, the source from "Code" → "Download ZIP" on the GitHub page, which needs no git), the scripts build that source: `apps/desktop/install.sh`, or `powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1`.
+
+To build without installing, run `apps/desktop/build.sh`, which makes `apps/desktop/build/ebira.app`, or `powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1`, which makes `apps\desktop\build\windows-amd64\ebira\` (for Windows on ARM, set `$env:GOARCH = "arm64"` first); the folder works when copied elsewhere or to another PC too. On macOS or Linux, `apps/desktop/build-windows.sh` makes the folder for Windows as well.
 
 ## On start
 
