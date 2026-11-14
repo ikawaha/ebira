@@ -3,16 +3,15 @@
 // such as marks, separators and a sub notebook. The server adds it to a new
 // notes directory, and people can add it from the web UI at any time.
 //
-// The notes are Markdown files embedded for each language (content/<lang>),
-// converted as imports are (see internal/importer), and guide.yaml there
-// tells their order, the separators between them, their marks and the sub
-// notebooks. Notes link to each other by their file names, such as
+// The notes are the documentation of ebira (see docs), a folder of Markdown
+// files for each language, converted as imports are (see internal/importer),
+// and guide.yaml there tells their order, the separators between them, their
+// marks and the sub notebooks. Notes link to each other by their file names, such as
 // [search](search.md), which become links to the new notes.
 package guide
 
 import (
 	"cmp"
-	"embed"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -26,6 +25,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 	"gopkg.in/yaml.v3"
 
+	"github.com/ikawaha/ebira/docs"
 	"github.com/ikawaha/ebira/internal/importer"
 	"github.com/ikawaha/ebira/internal/store"
 )
@@ -39,8 +39,8 @@ const Version = "2026-11-14"
 // DefaultLang is the language of the guide for a language without one.
 const DefaultLang = "en"
 
-//go:embed content
-var content embed.FS
+// content is the documentation by language.
+var content = docs.Guide
 
 // manifest is guide.yaml of a language.
 type manifest struct {
@@ -61,7 +61,7 @@ type item struct {
 
 // Langs returns the languages of the guide.
 func Langs() []string {
-	entries, _ := content.ReadDir("content")
+	entries, _ := content.ReadDir(".")
 	var langs []string
 	for _, e := range entries {
 		langs = append(langs, e.Name())
@@ -74,7 +74,7 @@ func Langs() []string {
 func Names() []string {
 	var names []string
 	for _, lang := range Langs() {
-		b, err := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+		b, err := content.ReadFile(path.Join(lang, "guide.yaml"))
 		if err != nil {
 			continue
 		}
@@ -124,7 +124,7 @@ func Install(st *store.Store, lang string, now time.Time) (Result, error) {
 	if !slices.Contains(Langs(), lang) {
 		lang = DefaultLang
 	}
-	dir := path.Join("content", lang)
+	dir := path.Join(lang)
 	b, err := content.ReadFile(path.Join(dir, "guide.yaml"))
 	if err != nil {
 		return Result{}, err

@@ -3,4 +3,8 @@ CLAUDE.md
 .ebira/
 /ebira
 /notes/
-/docs
+# The development notes before they moved to the notebook ebira dev, kept
+# on this machine only.
+/docs/background.md
+/docs/features.md
+/docs/progress.md

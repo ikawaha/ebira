@@ -51,7 +51,7 @@ func TestInstall(t *testing.T) {
 				t.Fatal(err)
 			}
 			var m manifest
-			b, _ := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+			b, _ := content.ReadFile(path.Join(lang, "guide.yaml"))
 			if err := yaml.Unmarshal(b, &m); err != nil {
 				t.Fatal(err)
 			}
@@ -140,7 +140,7 @@ func TestInstall(t *testing.T) {
 func TestFiles(t *testing.T) {
 	var first []string
 	for _, lang := range Langs() {
-		entries, err := content.ReadDir(path.Join("content", lang))
+		entries, err := content.ReadDir(lang)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -154,7 +154,7 @@ func TestFiles(t *testing.T) {
 			t.Errorf("%s has %v, unlike %v", lang, names, first)
 		}
 		var m manifest
-		b, _ := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+		b, _ := content.ReadFile(path.Join(lang, "guide.yaml"))
 		if err := yaml.Unmarshal(b, &m); err != nil {
 			t.Fatal(err)
 		}
