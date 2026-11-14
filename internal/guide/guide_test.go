@@ -51,7 +51,7 @@ func TestInstall(t *testing.T) {
 				t.Fatal(err)
 			}
 			var m manifest
-			b, _ := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+			b, _ := content.ReadFile(path.Join(lang, "guide.yaml"))
 			if err := yaml.Unmarshal(b, &m); err != nil {
 				t.Fatal(err)
 			}
@@ -140,7 +140,7 @@ func TestInstall(t *testing.T) {
 func TestFiles(t *testing.T) {
 	var first []string
 	for _, lang := range Langs() {
-		entries, err := content.ReadDir(path.Join("content", lang))
+		entries, err := content.ReadDir(lang)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -154,11 +154,11 @@ func TestFiles(t *testing.T) {
 			t.Errorf("%s has %v, unlike %v", lang, names, first)
 		}
 		var m manifest
-		b, _ := content.ReadFile(path.Join("content", lang, "guide.yaml"))
+		b, _ := content.ReadFile(path.Join(lang, "guide.yaml"))
 		if err := yaml.Unmarshal(b, &m); err != nil {
 			t.Fatal(err)
 		}
-		used := []string{"guide.yaml"}
+		used := []string{"guide.yaml", "README.md"} // README.md lists the notes on GitHub
 		var walk func([]item)
 		walk = func(items []item) {
 			for _, it := range items {
@@ -183,6 +183,40 @@ func TestFiles(t *testing.T) {
 	}
 	if !slices.Contains(Langs(), DefaultLang) {
 		t.Errorf("no guide in %s", DefaultLang)
+	}
+}
+
+// TestIndex checks that the list of the documentation on GitHub, README.md
+// of each language, links to the notes of its guide in their order.
+func TestIndex(t *testing.T) {
+	for _, lang := range Langs() {
+		index, err := content.ReadFile(path.Join(lang, "README.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m manifest
+		b, _ := content.ReadFile(path.Join(lang, "guide.yaml"))
+		if err := yaml.Unmarshal(b, &m); err != nil {
+			t.Fatal(err)
+		}
+		var notes []string
+		var walk func([]item)
+		walk = func(items []item) {
+			for _, it := range items {
+				if it.Note != "" {
+					notes = append(notes, it.Note)
+				}
+				walk(it.Items)
+			}
+		}
+		walk(m.Items)
+		var links []string
+		for _, l := range regexp.MustCompile(`\]\(([^)/]+\.md)\)`).FindAllSubmatch(index, -1) {
+			links = append(links, string(l[1]))
+		}
+		if !slices.Equal(links, notes) {
+			t.Errorf("%s/README.md links to %v, not the guide's %v", lang, links, notes)
+		}
 	}
 }
 

@@ -8,7 +8,8 @@ ebira は、Markdown でノートを書き、すばやく探すためのノー�
 
 上から順に読むと、ひととおりの使い方が分かります。気になるところだけ拾い読みしても構いません。
 
-- [画面の見方](screen.md)
+- [入れる・はじめる](install.md)
+- [画面の見方](screen.md)・[デスクトップアプリ](desktop.md)
 - [ノートとノートブック](notes.md)
 - [Markdown の書き方](markdown.md)・[数式と図](math.md)・[画像とファイル](images.md)・[編集欄の便利な操作](editor.md)
 - [タグ](tags.md)・[マーク](marks.md)・[区切り線と並び順](separators.md)

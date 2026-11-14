@@ -1,45 +1,47 @@
-# ガイドのノートの並び（上から）。note はこのフォルダのファイル、separator は
-# 区切り線の見出し、sub はガイドの中のサブのノートブック。
-name: ebira ガイド
+# The notes of the guide in order, from the top. note is a file in this
+# folder, separator the heading of a separator, and sub a sub notebook of the
+# guide.
+name: ebira Guide
 items:
-  - separator: はじめに
+  - separator: Getting started
     color: blue
   - note: welcome.md
     mark: star
+  - note: install.md
   - note: screen.md
   - note: desktop.md
   - note: notes.md
-  - separator: 書く
+  - separator: Writing
     color: green
   - note: markdown.md
   - note: math.md
   - note: images.md
   - note: editor.md
-  - separator: 整理する
+  - separator: Organizing
     color: orange
   - note: tags.md
   - note: marks.md
     mark: red
   - note: separators.md
-  - separator: 探す
+  - separator: Finding
     color: purple
   - note: search.md
     mark: pin
   - note: find.md
-  - separator: 守る・戻す
+  - separator: Keeping safe
     color: yellow
   - note: history.md
   - note: kinds.md
-  - separator: つなぐ
+  - separator: Connecting
     color: gray
   - note: ai.md
   - note: sync.md
   - note: passkey.md
-  - separator: 見た目と設定
+  - separator: Look and settings
   - note: settings.md
   - note: licenses.md
   - sub: terminal
-    name: ターミナル
+    name: Terminal
     items:
       - note: tui.md
       - note: cli.md

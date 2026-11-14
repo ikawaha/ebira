@@ -40,6 +40,8 @@ git_sync: 10m        # how often to sync with git
 auth: none           # passkey asks for a passkey
 ```
 
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; `light` makes the TUI use its light colors too), `git_sync`, `auth` (`none` or `passkey`), `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes) and `tui_search` (`search` or `filter`, which Tab in the search box of the TUI switches and writes). Each is the default of a flag of the commands ([Commands](cli.md)), and a key ebira does not know is an error. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+
 You can also change its settings one by one in the settings dialog, which keeps the comments of the file. The server reads the settings when it starts, so choose Save and restart to apply them. `notes_dir` and `addr`, though, apply only when you stop the server and start it again.
 
 The settings synced with the notes are in `_ebira.yaml` of the notes directory, such as the search mode `search`.
@@ -67,3 +69,16 @@ defaults:
 ## CSS of the preview
 
 Put `preview.css` next to the settings file to style the preview with your own CSS.
+
+The CSS applies to the body of notes only: write `h1 { … }` and the rest of the page is left alone. It is read on each page load. The colors of the web UI, such as `var(--accent)`, `var(--fg)` and `var(--fg-muted)`, follow the light and dark themes:
+
+```css
+h1 { border-bottom: 2px solid var(--accent); color: var(--accent); }
+h2 { background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 8px; }
+hr { border: none; border-top: 2px dotted var(--fg-muted); }
+strong { color: #c0392b; }
+:root[data-theme="dark"] & strong { color: #f7dc6f; }  /* the dark theme chosen in the menu */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) & strong { color: #f7dc6f; } }  /* the system's */
+```
+
+So that the CSS cannot send the content of notes anywhere, what would make the browser fetch something is dropped: `@import`, and `url()` and the like except with a `data:` URL. Fonts installed on the machine work; web fonts do not.

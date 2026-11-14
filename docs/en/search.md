@@ -48,6 +48,16 @@ The preview of a note found marks the matches. `n` / `N` go to the next or previ
 
 The search mode is `search` in `_ebira.yaml` of the notes directory, shown in the placeholder of the search field.
 
-- `en`: English words and their stems, so that plan finds planning.
-- `ja`: Japanese analyzed into words, finding other forms of a word.
-- `bigram` / `trigram`: runs of two or three characters, finding parts of words too.
+| Mode | How | Good for |
+|---|---|---|
+| `bigram` (the default) | Splits text into overlapping pairs of characters | Any language; finds any substring of two or more characters |
+| `trigram` | Splits text into overlapping runs of three characters | Any language, with fewer matches for long terms; a term of one or two characters, such as many Japanese words, is searched through every note, more slowly |
+| `ja` | Splits Japanese into words with kagome, with the verbs and adjectives in their base form, and also searches bigrams | Notes in Japanese: a search for a verb finds its other forms |
+| `en` | Takes English words with their stems, without stop words such as *the* and *of*, and Japanese as bigrams; also searches trigrams, for parts of words | Notes in English: *plan* finds *plans* and *planning*, and a word being typed is still found |
+| `like` | SQL `LIKE` | Small collections |
+
+Text is normalized with NFKC and lowercased, so full-width and half-width characters, and upper and lower case, match each other. Set the mode for all your machines in `_ebira.yaml`:
+
+```yaml
+search: ja
+```

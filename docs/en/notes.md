@@ -52,3 +52,38 @@ Notes and notebooks no longer in use but worth keeping can go to the archive. Wh
 ## Undo
 
 After a move, a delete or a reorder, a bar with "Undo" shows at the bottom. Click it, or press ⌘Z (Ctrl+Z).
+
+## The files
+
+Notes are files in the notes directory:
+
+```
+~/notes/
+├── _ebira.yaml              # settings shared with the notes, such as the search mode
+├── inbox/
+│   └── 3f9a1c0e7b2d4a.yaml
+├── development/
+│   ├── _notebook.yaml       # display name, order, kind and sort of the notebook
+│   ├── 8c21d0f4a9e3b7.yaml
+│   ├── 8c21d0f4a9e3b7.assets/
+│   │   └── diagram.png
+│   └── design/              # a sub notebook
+└── trash/
+```
+
+- A notebook is a folder, and a sub notebook a folder in it.
+- A note is a YAML file with `title`, `tags`, `created_at`, `updated_at` and a Markdown `body`. ebira adds `order` when you reorder notes by hand, `marks` for a mark, `archived_at` in the archive and `created_by: ai` when an AI wrote the note. Comments and keys ebira does not know stay as they are when it saves the note.
+- Images and files go in `<ID>.assets/` next to the note ([Images and files](images.md)).
+
+You may write or change the files with any editor, or with `git pull`: ebira notices and follows. Only the notes are in the notes directory: the search index, the state of the server and the earlier versions of the notes ([History](history.md)) stay on each machine, in `~/.cache/ebira` and `~/.local/state/ebira`. The index is made from the files, so it can be deleted, and is made again.
+
+```yaml
+# ~/notes/inbox/weekend.yaml
+title: Ideas for the weekend
+tags: [todo]
+created_at: 2026-10-18T10:00:00.000Z
+updated_at: 2026-10-18T10:00:00.000Z
+body: |
+  - Fix the bike
+  - Try the new ramen place
+```

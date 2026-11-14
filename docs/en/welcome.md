@@ -8,7 +8,8 @@ ebira is an app to write notes in Markdown and find them fast. This notebook is 
 
 Read from the top to learn the whole of it, or pick what you need.
 
-- [The screen](screen.md)
+- [Installing and setting up](install.md)
+- [The screen](screen.md) · [Desktop App](desktop.md)
 - [Notes and notebooks](notes.md)
 - [Writing Markdown](markdown.md) · [Math and diagrams](math.md) · [Images and files](images.md) · [Handy keys of the editor](editor.md)
 - [Tags](tags.md) · [Marks](marks.md) · [Separators and order](separators.md)
