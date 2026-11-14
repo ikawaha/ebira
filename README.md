@@ -80,7 +80,7 @@ The same notes, from the browser (`ebira web`), from a window of their own on ma
 - **MCP server and notebook kinds for AI** — AI clients such as Claude Code can search and read your notes, and write where you allow it: `default` (AI reads), `collab` (AI reads and writes), `drop` (AI only drops notes in) and `private` (invisible to AI).
 - **Assistant** — ask about your notes in the web UI, with Claude or Gemini; it answers with links to the notes it used.
 - **Safe edits** — conflicts are detected with ETags, deleted notes go to the trash first, moves can be undone, and earlier versions of a note are kept on each machine.
-- **A guide in your notes** — a new notes directory starts with the guide of ebira, which is also [the documentation](docs/README.md).
+- **A guide in your notes** — a new notes directory starts with the guide of ebira, which is also [the documentation](docs/en/README.md).
 - **One binary, no cgo**
 
 ## Installation
@@ -123,7 +123,7 @@ More in [Installing and setting up](docs/en/install.md).
 
 ## Documentation
 
-[The documentation](docs/README.md) is in English and Japanese, and is also the guide in your notes. A few places to start:
+[The documentation](docs/en/README.md) is in English and Japanese, and is also the guide in your notes. A few places to start:
 
 - [Notes and notebooks](docs/en/notes.md), and the files they are
 - [How to search](docs/en/search.md)

@@ -158,7 +158,7 @@ func TestFiles(t *testing.T) {
 		if err := yaml.Unmarshal(b, &m); err != nil {
 			t.Fatal(err)
 		}
-		used := []string{"guide.yaml"}
+		used := []string{"guide.yaml", "README.md"} // README.md lists the notes on GitHub
 		var walk func([]item)
 		walk = func(items []item) {
 			for _, it := range items {
@@ -187,14 +187,13 @@ func TestFiles(t *testing.T) {
 }
 
 // TestIndex checks that the list of the documentation on GitHub, README.md
-// of docs, links to the notes of each guide in their order.
+// of each language, links to the notes of its guide in their order.
 func TestIndex(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("..", "..", "docs", "README.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	index := string(b)
 	for _, lang := range Langs() {
+		index, err := content.ReadFile(path.Join(lang, "README.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
 		var m manifest
 		b, _ := content.ReadFile(path.Join(lang, "guide.yaml"))
 		if err := yaml.Unmarshal(b, &m); err != nil {
@@ -212,11 +211,11 @@ func TestIndex(t *testing.T) {
 		}
 		walk(m.Items)
 		var links []string
-		for _, l := range regexp.MustCompile(`\]\(` + lang + `/([^)]+)\)`).FindAllStringSubmatch(index, -1) {
-			links = append(links, l[1])
+		for _, l := range regexp.MustCompile(`\]\(([^)/]+\.md)\)`).FindAllSubmatch(index, -1) {
+			links = append(links, string(l[1]))
 		}
 		if !slices.Equal(links, notes) {
-			t.Errorf("docs/README.md links to %v in %s, not the guide's %v", links, lang, notes)
+			t.Errorf("%s/README.md links to %v, not the guide's %v", lang, links, notes)
 		}
 	}
 }
