@@ -4,34 +4,44 @@ tags: [guide]
 ---
 Web UI をブラウザのタブではなく、自分のウインドウとメニューで使うアプリです。macOS と Windows で動きます。中身は Web UI と同じで、ノートのディレクトリとサーバーも、TUI・CLI・MCP と共有します。
 
-## 作る
+## 入れる
 
-今はまだ配布していないので、ebira のリポジトリから作ります。Go 1.27 以降が要ります。
+今はまだ配布していないので、インストールのスクリプトが ebira のソースから作って入れます。Go 1.27 以降と git が要ります。アプリを新しくするときも、同じものを実行します。動いているアプリには先に終了を頼み（編集中のノートがあれば、アプリが確かめます）、入れてあったアプリが起動したサーバーは、新しいビルドで起動し直します。
 
-**macOS**（macOS 26 以降。Xcode の Command Line Tools が要ります）:
+**macOS**（macOS 13 以降。Xcode の Command Line Tools が要ります）。ターミナルで:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install.sh | sh
+```
+
+`/Applications/ebira.app`（`sh -s -- -user` なら `~/Applications/ebira.app`）に入れて開きます。中にサーバー（`ebira`）が入っていて、この Mac のためだけに署名してあります。
+
+**Windows**。PowerShell で:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install-windows.ps1)))
+```
+
+`%LOCALAPPDATA%\Programs\ebira` に入れ、スタートメニューに「ebira」を足して開きます。Go は https://go.dev/dl/ 、git は https://git-scm.com/ から入れます。Windows 10 では WebView2 ランタイムを入れる必要があることがあります。
+
+作るのは最新のリリースです。ほかの版を作るには、タグかブランチを渡します（macOS は `sh -s -- v0.8.1`、Windows は最後の閉じ括弧の後ろにタグ）。
+
+### clone してから入れる
+
+Web から取ったスクリプトをそのまま実行したくなければ、リポジトリを clone して、中のスクリプトを読んでから実行します。checkout したままのソースを作って入れます:
 
 ```sh
 git clone https://github.com/ikawaha/ebira.git
 cd ebira
-apps/desktop/build.sh
-open apps/desktop/build/ebira.app
+git checkout "$(git describe --tags --abbrev=0)"   # 最新のリリース。省けば main を作る
+apps/desktop/install.sh
 ```
 
-`apps/desktop/build/ebira.app` ができます。中にサーバー（`ebira`）が入っていて、この Mac のためだけに署名してあります。アプリケーションのフォルダに移して使えます。
+Windows では、そのフォルダで `powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1` を実行します（GitHub のページの「Code」→「Download ZIP」で落として展開したものでもよく、git は要りません）。新しくするときは、新しいリリースを checkout して（main なら `git pull` して）、もう一度スクリプトを実行します。
 
-**Windows**（PowerShell で作ります）:
+### 作るだけ
 
-1. Go を https://go.dev/dl/ から入れる
-2. ebira のソースを手に入れる（`git clone https://github.com/ikawaha/ebira.git`。git が無ければ、GitHub のページの「Code」→「Download ZIP」で落として展開する）
-3. PowerShell でそのフォルダに移り、次を実行する
-
-```powershell
-powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
-```
-
-`apps\desktop\build\windows-amd64\ebira\` ができます（ARM の Windows なら、先に `$env:GOARCH = "arm64"`）。中の `ebira-desktop.exe` を開きます。フォルダごと別の場所や別の PC に写しても使えます。Windows 10 では WebView2 ランタイムを入れる必要があることがあります。
-
-macOS や Linux の上でも、`apps/desktop/build-windows.sh` で Windows 用のフォルダを作れます。
+入れずに作るだけなら、`apps/desktop/build.sh`（`apps/desktop/build/ebira.app` ができる）か、`powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1`（`apps\desktop\build\windows-amd64\ebira\` ができる。ARM の Windows なら、先に `$env:GOARCH = "arm64"`）を使います。このフォルダは、別の場所や別の PC に写しても使えます。macOS や Linux の上でも、`apps/desktop/build-windows.sh` で Windows 用のフォルダを作れます。
 
 ## 起動したとき
 

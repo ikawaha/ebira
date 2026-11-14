@@ -110,20 +110,31 @@ The `ebira` command, with the server, the web UI and the TUI, runs on macOS and 
 
 ### Desktop app
 
-The desktop app shows the web UI in a window of its own, with menus, on macOS (26 or later) and Windows. It is not distributed yet; build it from a clone of this repository:
+The desktop app shows the web UI in a window of its own, with menus, on macOS (13 or later) and Windows. It is not distributed yet; an install script builds it from the source and installs it, in `/Applications/ebira.app` on macOS (`-user` for `~/Applications`), and in `%LOCALAPPDATA%\Programs\ebira` with a shortcut in the Start menu on Windows. It needs Go 1.27 or later and git, and on macOS the Xcode Command Line Tools; the app is signed for that Mac only. Run the same again to update it.
+
+In one line, which builds the latest release (give a tag or a branch to build another: `sh -s -- v0.8.1`; on Windows, after the closing parenthesis):
 
 ```bash
-# macOS: makes apps/desktop/build/ebira.app
-apps/desktop/build.sh
-open apps/desktop/build/ebira.app
+# macOS
+curl -fsSL https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install.sh | sh
 ```
 
 ```powershell
-# Windows, in PowerShell: makes apps\desktop\build\windows-amd64\ebira\
-powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
+# Windows, in PowerShell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install-windows.ps1)))
 ```
 
-The macOS build needs the Xcode Command Line Tools, and the app is signed for that Mac only. On Windows, open `ebira-desktop.exe` in the folder; Windows 10 may need the WebView2 runtime. Without git, get the source with "Code" → "Download ZIP" on GitHub. `apps/desktop/build-windows.sh` makes the same folder on macOS or Linux. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. It follows the settings file of ebira (see [Quick Start](#quick-start)); Settings… (Cmd+,; the File menu on Windows) sets the notes folder and the address of the app. The page "Desktop App" of the guide in your notes tells more, such as where its log is.
+Or from a clone, where you can read the script before running it; it builds the clone as checked out:
+
+```bash
+git clone https://github.com/ikawaha/ebira.git
+cd ebira
+git checkout "$(git describe --tags --abbrev=0)"   # the latest release; leave it out to build main
+apps/desktop/install.sh                                                  # macOS
+powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1  # Windows
+```
+
+To update, check out the new release (or `git pull` on main) and run the script again. On Windows, the source from "Code" → "Download ZIP" on GitHub works too, without git. A running app is asked to quit first, and the server the installed app started is started again with the new build. `-user` installs in `~/Applications` on macOS. Windows 10 may need the WebView2 runtime. To build without installing, run `apps/desktop/build.sh` (which makes `apps/desktop/build/ebira.app`) or `apps\desktop\build-windows.ps1` (`apps\desktop\build\windows-amd64\ebira\`); `apps/desktop/build-windows.sh` makes the same folder on macOS or Linux. The app carries the ebira server, uses the one already running for the same notes, or starts it, so it shares the notes with the TUI, the commands and MCP. It follows the settings file of ebira (see [Quick Start](#quick-start)); Settings… (Cmd+,; the File menu on Windows) sets the notes folder and the address of the app. The page "Desktop App" of the guide in your notes tells more, such as where its log is.
 
 ## Quick Start
 

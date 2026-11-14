@@ -110,20 +110,31 @@ go install github.com/ikawaha/ebira/cmd/ebira@latest
 
 ### デスクトップアプリ
 
-Web UI を自分のウインドウとメニューで使うアプリで、macOS（26 以降）と Windows で動きます。まだ配布していないので、このリポジトリから作ります:
+Web UI を自分のウインドウとメニューで使うアプリで、macOS（13 以降）と Windows で動きます。まだ配布していないので、インストールのスクリプトがソースから作って入れます。macOS は `/Applications/ebira.app`（`-user` なら `~/Applications`）、Windows は `%LOCALAPPDATA%\Programs\ebira` に入れ、スタートメニューにショートカットを作ります。Go 1.27 以降と git が要り、macOS では Xcode の Command Line Tools も要ります（アプリはその Mac だけのために署名されます）。新しくするときも、同じものを実行します。
+
+1 行で入れるなら（最新のリリースを作ります。ほかの版はタグかブランチを渡します: `sh -s -- v0.8.1`。Windows は最後の閉じ括弧の後ろに）:
 
 ```bash
-# macOS: apps/desktop/build/ebira.app ができる
-apps/desktop/build.sh
-open apps/desktop/build/ebira.app
+# macOS
+curl -fsSL https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install.sh | sh
 ```
 
 ```powershell
-# Windows（PowerShell）: apps\desktop\build\windows-amd64\ebira\ ができる
-powershell -ExecutionPolicy Bypass -File apps\desktop\build-windows.ps1
+# Windows（PowerShell）
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/ikawaha/ebira/main/apps/desktop/install-windows.ps1)))
 ```
 
-macOS では Xcode の Command Line Tools が要り、アプリはその Mac だけのために署名されます。Windows ではできたフォルダの `ebira-desktop.exe` を開きます（Windows 10 では WebView2 ランタイムが要ることがあります）。git が無ければ、GitHub の「Code」→「Download ZIP」でソースを手に入れます。macOS や Linux の上でも、`apps/desktop/build-windows.sh` で同じフォルダを作れます。アプリは ebira のサーバーを中に持ち、同じノートのサーバーが動いていればそれを使い、無ければ起動するので、TUI・コマンド・MCP とノートを共有します。ebira の設定ファイルに従い（[はじめかた](#はじめかた) を参照）、アプリのノートのフォルダとアドレスは「設定…」（⌘,。Windows はファイルのメニュー）で決めます。ログの場所など、くわしくはノートに入っているガイドの「デスクトップアプリ」のページにあります。
+または clone してから。スクリプトを読んでから実行でき、checkout したままのソースを作ります:
+
+```bash
+git clone https://github.com/ikawaha/ebira.git
+cd ebira
+git checkout "$(git describe --tags --abbrev=0)"   # 最新のリリース。省けば main を作る
+apps/desktop/install.sh                                                  # macOS
+powershell -ExecutionPolicy Bypass -File apps\desktop\install-windows.ps1  # Windows
+```
+
+新しくするときは、新しいリリースを checkout して（main なら `git pull` して）、もう一度スクリプトを実行します。Windows では、GitHub の「Code」→「Download ZIP」で落としたソースでもよく、git は要りません。動いているアプリには先に終了を頼み、入れてあったアプリが起動したサーバーは、新しいビルドで起動し直します。macOS では `-user` で `~/Applications` に入れます。Windows 10 では WebView2 ランタイムが要ることがあります。入れずに作るだけなら、`apps/desktop/build.sh`（`apps/desktop/build/ebira.app` ができる）か `apps\desktop\build-windows.ps1`（`apps\desktop\build\windows-amd64\ebira\`）を使います。macOS や Linux の上でも、`apps/desktop/build-windows.sh` で同じフォルダを作れます。アプリは ebira のサーバーを中に持ち、同じノートのサーバーが動いていればそれを使い、無ければ起動するので、TUI・コマンド・MCP とノートを共有します。ebira の設定ファイルに従い（[はじめかた](#はじめかた) を参照）、アプリのノートのフォルダとアドレスは「設定…」（⌘,。Windows はファイルのメニュー）で決めます。ログの場所など、くわしくはノートに入っているガイドの「デスクトップアプリ」のページにあります。
 
 ## はじめかた
 
