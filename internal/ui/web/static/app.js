@@ -1560,6 +1560,23 @@ function openNotebookMenu(li, id, trashed, e) {
     m.append(b);
   };
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
+  // Where the notebook goes, as icons in a row at the bottom, as in the menu
+  // of a note: the archive, in or out, and the trash.
+  const places = (nb, archive) => {
+    const act = (icon, label, fn) => {
+      const b = iconButton(icon, label, () => {
+        closeNotebookMenu();
+        fn();
+      });
+      b.setAttribute("role", "menuitem");
+      return b;
+    };
+    const row = el("div", "mark-actions");
+    if (archive) row.append(act(nb.archived_at ? "archiveOff" : "archive", t(nb.archived_at ? "notebookUnarchive" : "notebookArchive"), () => archiveNotebook(nb.id, !nb.archived_at)));
+    row.append(act("trash", t("notebookToTrash"), () => trashNotebook(nb)));
+    if (m.children.length) sep();
+    m.append(row);
+  };
   const sub = trashed ? state.trashed.find((x) => x.id === trashed) : state.notebooks.find((x) => x.id === id);
   // The cells of the archive have a menu of their own.
   const archiveCell = !trashed && !!sub && li.classList.contains("sub-notebook") && state.archive;
@@ -1572,9 +1589,7 @@ function openNotebookMenu(li, id, trashed, e) {
       if (sub.archived_at) {
         // Put there itself: it can be taken out or deleted, and changed
         // once out.
-        item(t("notebookUnarchive"), () => archiveNotebook(id, false));
-        sep();
-        item(t("notebookToTrash"), () => trashNotebook(sub), "danger");
+        places(sub, true);
       } else {
         // There with its parent, it goes out with it.
         m.append(el("div", "menu-label", t("archivedWithParentNote", { name: notebookName(sub.parent) })));
@@ -1635,19 +1650,12 @@ function openNotebookMenu(li, id, trashed, e) {
       }
       if (parentKind === "private") m.append(el("div", "menu-label", t("kindInPrivate", { name: notebookName(nb.parent) })));
     }
-    if (!nb.reserved && (nb.archived_at || !nb.archived)) {
-      // A sub notebook of a notebook in the archive goes out with it.
-      sep();
-      item(t(nb.archived_at ? "notebookUnarchive" : "notebookArchive"), () => archiveNotebook(id, !nb.archived_at));
-    }
-    if (!nb.reserved) {
-      sep();
-      item(t("notebookToTrash"), () => trashNotebook(nb), "danger");
-    }
     if (id === "trash" && (nb.count || state.trashed.length)) {
       sep();
       item(t("emptyTrash"), emptyTrash, "danger");
     }
+    // A sub notebook of a notebook in the archive goes out with it.
+    if (!nb.reserved) places(nb, nb.archived_at || !nb.archived);
   }
   closeNotebookMenu();
   menuRow = li;
