@@ -278,6 +278,9 @@ async function archiveNotes(ids, on, undoing) {
 // archiveNotebook puts notebook id in the archive, or takes it out, and
 // offers to undo it.
 async function archiveNotebook(id, on, undoing) {
+  // Taken out, the notes it held come out with it, but for those put in the
+  // archive on their own.
+  const freed = on ? 0 : state.notebooks.filter((n) => n.id === id || n.parent === id).reduce((a, n) => a + n.count, 0);
   try {
     await api(`/notebooks/${nbPath(id)}`, { method: "PUT", body: { archived: on } });
   } catch (e) {
@@ -287,7 +290,7 @@ async function archiveNotebook(id, on, undoing) {
   await loadNotebooks().catch(() => {});
   await loadNotes();
   if (state.selected) loadNote();
-  if (!undoing) offerUndo(t(on ? "notebookArchived" : "notebookUnarchived", { name: notebookName(id) }), () => archiveNotebook(id, !on, true));
+  if (!undoing) offerUndo(t(on ? "notebookArchived" : freed ? "notebookUnarchivedNotes" : "notebookUnarchived", { name: notebookName(id), n: freed }), () => archiveNotebook(id, !on, true));
 }
 
 // listedNotes returns the notes of the list in the order shown: those of the

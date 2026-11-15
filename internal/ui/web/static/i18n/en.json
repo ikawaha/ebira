@@ -521,6 +521,7 @@
   "notesUnarchived": "Took {n} note(s) out of the archive",
   "notebookArchived": "Put {name} in the archive",
   "notebookUnarchived": "Took {name} out of the archive",
+  "notebookUnarchivedNotes": "Took {name} out of the archive, and its {n} notes with it",
   "notebookArchive": "Put in the archive",
   "notebookUnarchive": "Take out of the archive",
   "toArchive": "Put in the archive",

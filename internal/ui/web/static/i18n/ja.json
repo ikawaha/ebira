@@ -521,6 +521,7 @@
   "notesUnarchived": "{n} 件のノートをアーカイブから戻しました",
   "notebookArchived": "{name} をアーカイブへ移しました",
   "notebookUnarchived": "{name} をアーカイブから戻しました",
+  "notebookUnarchivedNotes": "{name} をアーカイブから戻しました。中の {n} 件のノートもアーカイブから出ました",
   "notebookArchive": "アーカイブへ移す",
   "notebookUnarchive": "アーカイブから戻す",
   "toArchive": "アーカイブへ移す",
