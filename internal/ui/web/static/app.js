@@ -182,8 +182,12 @@ function openSubs() {
 // notebook cur: its sub notebooks, or, for the trash itself (cur null in the
 // trash), the notebooks deleted as a whole.
 function childNotebooks(cur, trashed) {
-  // A sub notebook in the archive is in the archive, not under its parent.
-  return (trashed ? state.trashed : state.notebooks).filter((n) => (cur ? n.parent === cur : !n.parent) && (trashed || !n.archived));
+  const list = (trashed ? state.trashed : state.notebooks).filter((n) => cur ? n.parent === cur : !n.parent);
+  if (trashed) return list;
+  // A sub notebook in the archive stays under its parent too, after the
+  // others, as a folder whose notes are in the archive; a top notebook there
+  // is in the archive alone.
+  return cur ? [...list.filter((n) => !n.archived), ...list.filter((n) => n.archived)] : list.filter((n) => !n.archived);
 }
 
 // The archive holds the notes and the notebooks kept but no longer in use,
@@ -958,6 +962,9 @@ function renderBody(el, body, ranges) {
 // hold text only; the other places draw it with kindSVG.
 const kindIcon = (kind) => ({ collab: "👥", drop: "📥", private: "🔒" })[kind] || "";
 
+// ARCHIVE_ICON marks a notebook in the archive where only text fits.
+const ARCHIVE_ICON = "📦";
+
 // KIND_SVG holds the line drawings of the notebook kinds for the notebook
 // column, its menu and the dialog of a new notebook, in a 24 by 24 box: two
 // people for collab, a tray with an arrow into it for drop and a lock for
@@ -1354,6 +1361,9 @@ function acceptSubReorder(li, sub) {
   const place = (e) => {
     const dragged = state.notebooks.find((n) => n.id === nbDragID);
     if (!dragged || dragged.id === sub.id || dragged.parent !== sub.parent) return null;
+    // The sub notebooks in the archive come after the others: each goes among
+    // its own.
+    if (!!dragged.archived !== !!sub.archived) return null;
     const r = li.getBoundingClientRect();
     const below = e.clientY - r.top > r.height / 2;
     const others = state.notebooks.filter((n) => !n.reserved && n.parent === sub.parent && n.id !== dragged.id);
@@ -2235,7 +2245,7 @@ function subNotebookRows() {
   function cellRows(sub, depth) {
     const key = subKey(sub.id, trashed, archive);
     const open = state.expanded.has(key);
-    let count = archive ? (depth ? archivedIn(sub) : archiveCountOf(sub)) : withSubs(trashed ? state.trashed : state.notebooks, sub);
+    let count = archive ? (depth ? archivedIn(sub) : archiveCountOf(sub)) : sub.archived && !trashed ? archivedIn(sub) : withSubs(trashed ? state.trashed : state.notebooks, sub);
     // An open cell of a filtered list tells how many of its notes are shown.
     if (open && filtered() && state.subNotes.has(key)) count = t("filterCount", { shown: state.subNotes.get(key).total, total: count });
     const li = row((open ? "open" : "") + (depth ? " nested" : ""), "folder", archive && !depth ? notebookName(sub.id) : sub.name, count, () => toggleSub(key, trashed || archive ? null : sub.id));
@@ -2246,6 +2256,13 @@ function subNotebookRows() {
       const box = el("span", "archived-mark", kindSVG("archive"));
       box.title = t("archivedWithNotebook");
       li.querySelector(".name").after(box);
+    } else if (!archive && !trashed && sub.archived) {
+      // A sub notebook in the archive, under its parent: what goes into it
+      // goes to the archive.
+      const box = el("span", "archived-mark", kindSVG("archive"));
+      box.title = t("archivedSubNotebook");
+      li.querySelector(".name").after(box);
+      li.classList.add("archived");
     }
     // The folder holds the mark of the kind in effect.
     if (KIND_SVG[sub.kind]) {
@@ -2709,7 +2726,7 @@ async function moveNotesTo(ids, nb) {
       if (n.notebook !== "trash" && n.notebook !== nb) (back[n.notebook] ||= []).push(n.id);
     }
     if (Object.keys(back).length) {
-      offerUndo(t("toastMovedMany", { n: ids.length, notebook: notebookName(nb) }), async () => {
+      offerUndo(t(isArchived(nb) ? "toastMovedManyArchived" : "toastMovedMany", { n: ids.length, notebook: notebookName(nb) }), async () => {
         for (const [from, list] of Object.entries(back)) await api("/notes", { method: "PATCH", body: { ids: list, notebook: from } });
         refreshAfterWrite();
       });
@@ -4097,7 +4114,7 @@ function startEdit(note, nb = null) {
   f.notebook = el("select");
   for (const nb of state.notebooks) {
     if (nb.id === "trash") continue;
-    const o = el("option", "", notebookName(nb.id) + (kindIcon(nb.kind) ? " " + kindIcon(nb.kind) : ""));
+    const o = el("option", "", notebookName(nb.id) + (kindIcon(nb.kind) ? " " + kindIcon(nb.kind) : "") + (nb.archived ? " " + ARCHIVE_ICON : ""));
     o.value = nb.id;
     f.notebook.append(o);
   }
@@ -4291,6 +4308,7 @@ async function saveNote(overwrite = false) {
   }
   saving = true;
   editorMessage(t("saving"));
+  const moved = !ed.note || v.notebook !== ed.note.notebook;
   let saved;
   try {
     if (!ed.note) {
@@ -4317,6 +4335,8 @@ async function saveNote(overwrite = false) {
     state.expanded.add(subKey(saved.notebook, false));
     saveExpanded();
   }
+  // A note new to a notebook in the archive is left out of the searches.
+  if (moved && isArchived(saved.notebook)) showToast(t("savedInArchive", { title: saved.title, notebook: notebookName(saved.notebook) }));
   refreshAfterWrite();
 }
 
@@ -4926,7 +4946,7 @@ async function moveNoteTo(id, nb) {
       // notebook in the trash, so there is no undo; it can be deleted again.
       state.selected = null;
     } else if (n) {
-      offerUndo(t("toastMoved", { title, notebook: notebookName(nb) }), async () => {
+      offerUndo(t(isArchived(nb) ? "toastMovedArchived" : "toastMoved", { title, notebook: notebookName(nb) }), async () => {
         await api(noteURL(id), { method: "PATCH", body: { notebook: n.notebook } });
         refreshAfterWrite();
       });
@@ -4955,8 +4975,10 @@ function moveSelect(pick) {
   first.value = "";
   sel.append(first);
   for (const nb of state.notebooks) {
-    if (nb.id === "trash" || nb.archived) continue; // a note goes to the archive on its own
-    const o = el("option", "", notebookName(nb.id) + (kindIcon(nb.kind) ? " " + kindIcon(nb.kind) : ""));
+    // A note goes to the archive on its own, or into a sub notebook there,
+    // which its parent shows.
+    if (nb.id === "trash" || nb.archived && (!nb.parent || isArchived(nb.parent))) continue;
+    const o = el("option", "", notebookName(nb.id) + (kindIcon(nb.kind) ? " " + kindIcon(nb.kind) : "") + (nb.archived ? " " + ARCHIVE_ICON : ""));
     o.value = nb.id;
     sel.append(o);
   }
