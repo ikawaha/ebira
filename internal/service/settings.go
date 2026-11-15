@@ -40,6 +40,10 @@ type Settings struct {
 	// Restartable tells why Restart cannot start the server now, as one of
 	// the Restart reasons, or "" when it can; nil when it always can.
 	Restartable func() string
+	// Saved is called when the settings are saved, for the server to take
+	// at once those that need no restart, such as the language and the theme
+	// of the web UI; nil for none.
+	Saved func()
 }
 
 // Reasons why the server cannot restart itself (restart_unavailable), which
@@ -128,6 +132,9 @@ func (s *Notes) SaveSettings(ctx context.Context, p *gennotes.SaveSettingsPayloa
 		if err := s.store.SaveDefaults(func(m *yaml.Node) { config.SetKeys(m, *defaults, config.DefaultKeys) }); err != nil {
 			return nil, err
 		}
+	}
+	if s.settings.Saved != nil {
+		s.settings.Saved()
 	}
 	return s.readSettings()
 }
