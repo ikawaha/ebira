@@ -69,9 +69,12 @@ type Options struct {
 	Lang string
 	// Theme, one of Themes or empty, is the color theme set for this server,
 	// given to the page as the data-theme attribute of its html element when
-	// it is light or dark; auto and empty follow the system. A language or
-	// theme chosen in the page's settings menu wins over both.
+	// it is light or dark; auto and empty follow the system.
 	Theme string
+	// Look, when not nil, gives the language and the theme at each request,
+	// in place of Lang and Theme, as the server changes them when its
+	// settings are saved.
+	Look func() (lang, theme string)
 	// Search is the search mode of the server, such as ja, given as the
 	// data-search-mode attribute, which the page tells in the placeholder of
 	// the search box; empty tells none.
@@ -98,7 +101,11 @@ const stylesDir = "styles/"
 // AssetsPrefix, with the CSS for the preview at AssetsPrefix+PreviewCSSFile
 // and the built-in styles at AssetsPrefix+"styles/<name>.css".
 func Handler(o Options) http.Handler {
-	lang, theme, search := o.Lang, o.Theme, o.Search
+	look := o.Look
+	if look == nil {
+		look = func() (string, string) { return o.Lang, o.Theme }
+	}
+	search := o.Search
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
 		panic(err) // the embedded directory always exists
@@ -108,12 +115,6 @@ func Handler(o Options) http.Handler {
 		panic(err)
 	}
 	attrs := ""
-	if lang != "" {
-		attrs += ` lang="` + lang + `"`
-	}
-	if theme == "light" || theme == "dark" {
-		attrs += ` data-theme="` + theme + `"`
-	}
 	if searchMode.MatchString(search) {
 		attrs += ` data-search-mode="` + search + `"`
 	}
@@ -123,7 +124,18 @@ func Handler(o Options) http.Handler {
 	if len(o.GuideNames) > 0 {
 		attrs += ` data-guide-names="` + html.EscapeString(strings.Join(o.GuideNames, "\n")) + `"`
 	}
-	page = bytes.Replace(page, []byte("<html>"), []byte("<html"+attrs+">"), 1)
+	// The page of the language and the theme, which may change.
+	pageOf := func() []byte {
+		lang, theme := look()
+		a := ""
+		if ValidLang(lang) {
+			a += ` lang="` + lang + `"`
+		}
+		if theme == "light" || theme == "dark" {
+			a += ` data-theme="` + theme + `"`
+		}
+		return bytes.Replace(page, []byte("<html>"), []byte("<html"+a+attrs+">"), 1)
+	}
 	files := http.StripPrefix(AssetsPrefix, http.FileServerFS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -134,7 +146,7 @@ func Handler(o Options) http.Handler {
 		h.Set("Cache-Control", "no-cache")
 		switch {
 		case r.URL.Path == Prefix:
-			http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(page))
+			http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(pageOf()))
 		case r.URL.Path == AssetsPrefix+PreviewCSSFile:
 			servePreviewCSS(w, o.PreviewCSS)
 		case strings.HasPrefix(r.URL.Path, AssetsPrefix+stylesDir):

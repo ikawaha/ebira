@@ -7,7 +7,7 @@ tags: [guide, settings]
 - Settings…: open the settings dialog below
 - Import Markdown (or drop files onto the page)
 - Candidates for the archive…: list the notes not updated for a while, to choose and put in the archive ([Notes and notebooks](notes.md))
-- Check files, Sync with git, Server status (its Restart starts the server again, with the same flags and environment)
+- Check files, Sync with git, Server status
 - Connect AI (MCP)…: show the URL of ebira and the command for Claude Code; a button registers it with Claude Code ([Using AI](ai.md))
 - Add the guide
 - Report an issue: open the page to post a request or a bug on GitHub
@@ -18,14 +18,29 @@ In the desktop app, the gear menu leaves out what the menus of the app have ([De
 
 ## The settings dialog
 
-Settings… in the gear menu (⌘, in the desktop app) opens it. It has tabs:
+Settings… in the gear menu (⌘, in the desktop app) opens it. The column on the left chooses the settings by what they are about:
 
-- App (in the desktop app only): the notes folder and the address of the server that the app connects to. Change… opens the settings window of the app ([Desktop App](desktop.md)).
-- Display: the language, the theme (auto, light or dark) and the text size of notes (− and +). They are kept in this browser and apply at once; the language and the theme take precedence over the settings of the server.
-- This machine: those of the settings file below (the language, the theme, authentication, syncing with git and more), and the style of the preview (Band, Document, Compact or Lined). A setting left at its first choice, or empty, follows the defaults shared with the notes ("As shared: …").
-- Synced with notes: the search mode, the names of the marks and the defaults of each machine (`_ebira.yaml`).
+- Display: the language, the theme (auto, light or dark), the text size of notes (− and +), the style of the preview (Band, Document, Compact or Lined) and the names of the marks.
+- Search: the search mode, and the stop words and stop tags of ja.
+- Sync: how often to sync with git, and watching the files.
+- Assistant: the provider and the model.
+- TUI: the preview and the search box of the TUI.
+- Server: the notes directory and the address, authentication, and where the settings files are. In the desktop app it shows the notes folder and the address of the server that the app connects to, and Change… opens the settings window of the app ([Desktop App](desktop.md)).
 
-Save writes This machine and Synced with notes together.
+Each setting has one value. The language, the theme and the settings of sync, the assistant and the TUI have a check box, "Share with other machines":
+
+- Unchecked, the value is written to the settings file of this machine (see The settings file below), for this machine alone.
+- Checked, it is written to `defaults` in `_ebira.yaml` of the notes directory, as the default of every machine that syncs these notes (see Sharing settings among machines below), and taken out of the settings file of this machine.
+- When this machine has a value of its own and the other machines share another, the dialog shows this machine's, with the shared one below it. Emptied, this machine's value follows the shared one ("As shared: …").
+- The search settings and the names of the marks are always shared. The text size of notes alone is kept in this browser, and applies at once. The style of the preview is written to `preview.css`, next to the settings file.
+
+Save writes the settings file of this machine and `_ebira.yaml` together. The language and the theme apply as soon as they are saved (a new language reloads the page). The server reads the other settings when it starts; after saving, restart the server to apply them (see Restarting the server below).
+
+## Restarting the server
+
+The ↻ beside the connection status at the top right ("live") restarts the server with the same flags and environment, and it reads the settings file again. For the few seconds of the restart, no client can use the server. The page reloads after it.
+
+The mark is faint. While settings read at the start are saved but the server has not restarted yet, it is colored. A server that cannot restart itself, such as one started by `go run`, has no mark (Server status tells why). When the desktop app shows its own ↻ for a server older than the app, only that one shows ([Desktop App](desktop.md)).
 
 ## The settings file
 
@@ -42,7 +57,7 @@ auth: none           # passkey asks for a passkey
 
 The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; `light` makes the TUI use its light colors too), `git_sync`, `auth` (`none` or `passkey`), `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes) and `tui_search` (`search` or `filter`, which Tab in the search box of the TUI switches and writes). Each is the default of a flag of the commands ([Commands](cli.md)), and a key ebira does not know is an error. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
-You can also change its settings one by one in the settings dialog, which keeps the comments of the file. The server reads the settings when it starts, so choose Save and restart to apply them. `notes_dir` and `addr`, though, apply only when you stop the server and start it again.
+You can also change its settings one by one in the settings dialog, which keeps the comments of the file. But for the language and the theme, the server reads the settings when it starts, so save them, then restart the server to apply them. `notes_dir` and `addr`, though, apply only when you stop the server and start it again.
 
 The settings synced with the notes are in `_ebira.yaml` of the notes directory, such as the search mode `search`.
 

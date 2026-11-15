@@ -525,14 +525,11 @@ let lang = "en";
 // Each language named in itself, for the choice of the language.
 let langNames = {};
 
-// chooseLang returns the language of the UI: the one chosen in the settings
-// menu, else the one of the server (the lang attribute of the page, from the
-// settings file or -lang), else the first of the browser's languages that the
-// UI has, else English.
+// chooseLang returns the language of the UI: the one of the server (the lang
+// attribute of the page, from -lang, the settings file or its defaults), else
+// the first of the browser's languages that the UI has, else English.
 function chooseLang() {
-  let chosen = null;
-  try { chosen = localStorage.getItem("ebira.lang"); } catch (_) { /* none */ }
-  const wanted = [chosen, document.documentElement.getAttribute("lang"), ...(navigator.languages || [navigator.language])];
+  const wanted = [document.documentElement.dataset.serverLang, ...(navigator.languages || [navigator.language])];
   for (const w of wanted) {
     const l = (w || "").toLowerCase().split("-")[0];
     if (LANGS.includes(l)) return l;
@@ -3057,44 +3054,68 @@ async function openSettings() {
     tui_search: [["", t("settingsTUISearchDefault")], ["search", t("settingsTUISearchSearch")], ["filter", t("settingsTUISearchFilter")]],
   };
   const watchValue = (w) => (w === undefined || w === null ? "" : String(w));
-  // The controls of the settings of a machine, for the settings file of this
-  // machine (c) and for the defaults shared with the notes (dc). A value
-  // written, even the built-in one such as theme: auto, stays a choice of its
-  // own: the empty one follows the defaults shared with the notes.
-  const machineControls = (v) => ({
-    lang: select(v.lang, options.lang),
-    theme: select(v.theme, options.theme),
-    git_sync: text(v.git_sync, t("settingsGitSyncPlaceholder")),
-    watch: select(watchValue(v.watch), options.watch),
-    provider: select(v.provider, options.provider),
-    model: text(v.model),
-    tui_preview: select(v.tui_preview, options.tui_preview),
-    tui_search: select(v.tui_search, options.tui_search),
-  });
+  // The defaults shared with the notes, as read; an earlier server has none.
+  const sd = cur.notes.defaults || null;
+  const keys = ["lang", "theme", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search"]; // config.DefaultKeys
+  const has = (v, k) => !!v && v[k] !== undefined && v[k] !== null && v[k] !== "";
+  // Each setting of a machine has one control, of the value of this machine,
+  // else of the one shared with the notes. Its check box tells that the value
+  // is shared: saved in the defaults, in place of the settings file of this
+  // machine, it is the default of every machine that syncs the notes.
+  const start = {};
+  const share = {};
+  for (const k of keys) {
+    const shared = has(sd, k) && !has(m, k);
+    start[k] = shared ? sd[k] : m[k];
+    if (!sd) continue;
+    const box = el("input");
+    box.type = "checkbox";
+    box.checked = shared;
+    share[k] = box;
+  }
   const c = {
-    ...machineControls(m),
+    lang: select(start.lang, options.lang),
+    theme: select(start.theme, options.theme),
+    git_sync: text(start.git_sync, t("settingsGitSyncPlaceholder")),
+    watch: select(watchValue(start.watch), options.watch),
+    provider: select(start.provider, options.provider),
+    model: text(start.model),
+    tui_preview: select(start.tui_preview, options.tui_preview),
+    tui_search: select(start.tui_search, options.tui_search),
     auth: select(m.auth === "none" ? "" : m.auth, [["", t("settingsAuthNone")], ["passkey", t("settingsAuthPasskey")]]),
     search: select(cur.notes.search === "bigram" ? "" : cur.notes.search, [["", "bigram"], ["like", "like"], ["trigram", "trigram"], ["en", "en"], ["ja", "ja"]]),
   };
-  // An earlier server has no defaults shared with the notes.
-  const dc = cur.notes.defaults ? machineControls(cur.notes.defaults) : null;
+  // The value shared with the notes, as its choice tells it; "" for none.
+  const sharedLabel = (k) => {
+    if (!has(sd, k)) return "";
+    const v = k === "watch" ? String(sd[k]) : sd[k];
+    return options[k] ? (options[k].find(([o]) => o === v) || [v, v])[1] : v;
+  };
+  // The value shared, under a setting of this machine alone.
+  const sharedNote = {};
+  for (const k of keys) {
+    sharedNote[k] = el("p", "hint");
+    sharedNote[k].hidden = true;
+  }
+  const own = (k) => share[k] && !share[k].checked; // set on this machine alone
   // The placeholder of the model is the default of the provider chosen.
   const modelDefault = (provider) => (provider ? cur.default_models[provider] || "" : Object.values(cur.default_models).join(" / "));
-  // A value of this machine left empty follows the default shared with the
-  // notes, which the empty choice and the placeholders tell.
+  // A value of this machine left empty follows the one shared with the
+  // notes, which the empty choice and the placeholders tell; one set tells
+  // the shared one below.
   const follow = () => {
-    for (const k of Object.keys(options)) {
-      const shared = dc && dc[k].value;
-      const label = shared ? (options[k].find(([v]) => v === shared) || [shared, shared])[1] : "";
-      c[k].options[0].textContent = shared ? t("settingsFollowShared", { value: label }) : options[k][0][1];
+    for (const k of keys) {
+      const shared = own(k) ? sharedLabel(k) : "";
+      if (options[k]) c[k].options[0].textContent = shared ? t("settingsFollowShared", { value: shared }) : options[k][0][1];
+      sharedNote[k].textContent = shared ? t("settingsSharedValue", { value: shared }) : "";
+      sharedNote[k].hidden = !shared || !c[k].value.trim();
     }
-    for (const [k, def] of [["git_sync", t("settingsGitSyncPlaceholder")], ["model", modelDefault(c.provider.value || (dc && dc.provider.value))]]) {
-      const shared = dc && dc[k].value.trim();
-      c[k].placeholder = shared ? t("settingsFollowShared", { value: shared }) : def;
-    }
-    if (dc) dc.model.placeholder = modelDefault(dc.provider.value);
+    c.git_sync.placeholder = own("git_sync") && has(sd, "git_sync") ? t("settingsFollowShared", { value: sd.git_sync }) : t("settingsGitSyncPlaceholder");
+    c.model.placeholder = own("model") && has(sd, "model")
+      ? t("settingsFollowShared", { value: sd.model })
+      : modelDefault(c.provider.value || (own("provider") && has(sd, "provider") ? sd.provider : ""));
   };
-  for (const e of [c.provider, ...(dc ? Object.values(dc) : [])]) {
+  for (const e of [...keys.map((k) => c[k]), ...Object.values(share)]) {
     e.addEventListener("change", follow);
     e.addEventListener("input", follow);
   }
@@ -3127,37 +3148,50 @@ async function openSettings() {
   const stopWords = stopList(cur.notes.stop_words, "stop-words");
   const stopTags = stopList(cur.notes.stop_tags, "stop-tags");
 
-  const row = (key, label, control, hint) => {
-    const l = el("label", "settings-label", label);
-    const box = el("div", "settings-control", control);
+  // A row of a setting, with what it is under its controls.
+  const row = (label, controls, hint) => {
+    const box = el("div", "settings-control", ...controls);
     if (hint) box.append(el("p", "hint", hint));
-    if (overridden.has(key)) {
-      for (const e of box.querySelectorAll("input, select, textarea")) e.disabled = true;
-      box.append(el("p", "hint", t("settingsOverridden")));
+    return el("div", "settings-row", el("span", "settings-label", label), box);
+  };
+  // A row of a setting of a machine: its control and the check box that
+  // shares it with the other machines. A flag of the server fixes it.
+  const machineRow = (k, label, hint) => {
+    const line = el("div", "settings-share-line", c[k]);
+    if (share[k]) {
+      const l = el("label", "settings-share", share[k], " ", t("settingsShare"));
+      l.title = t("settingsShareTitle");
+      line.append(l);
     }
-    return el("div", "settings-row", l, box);
+    const r = row(label, [line, sharedNote[k]], hint);
+    if (overridden.has(k)) {
+      for (const e of r.querySelectorAll("input, select")) e.disabled = true;
+      r.querySelector(".settings-control").append(el("p", "hint", t("settingsOverridden")));
+    }
+    return r;
   };
   const fixed = (label, value, hint) => el("div", "settings-row", el("span", "settings-label", label),
     el("div", "settings-control", el("code", "", value), ...(hint ? [el("p", "hint", hint)] : [])));
-  const section = (path, ...rows) => el("section", "settings-section",
-    el("p", "path", el("span", "path-label", t("settingsPath")), " ", el("code", "", path)), ...rows);
-  const jaRows = [row("stop_words", t("settingsStopWords"), stopWords.node), row("stop_tags", t("settingsStopTags"), stopTags.node)];
+  const jaRows = [row(t("settingsStopWords"), [stopWords.node]), row(t("settingsStopTags"), [stopTags.node])];
   const showJa = () => { for (const r of jaRows) r.hidden = c.search.value !== "ja"; };
   c.search.addEventListener("change", showJa);
   showJa();
 
-  const valuesOf = (cs) => {
-    const v = (k) => cs[k].value.trim() || undefined;
-    return {
-      lang: v("lang"), theme: v("theme"), git_sync: v("git_sync"),
-      watch: cs.watch.value === "" ? undefined : cs.watch.value === "true",
-      provider: v("provider"), model: v("model"), tui_preview: v("tui_preview"), tui_search: v("tui_search"),
-    };
+  const valueOf = (k) => (k === "watch" ? (c.watch.value === "" ? undefined : c.watch.value === "true") : c[k].value.trim() || undefined);
+  const machineValue = () => {
+    const v = { auth: c.auth.value.trim() || undefined };
+    for (const k of keys) v[k] = own(k) || !sd ? valueOf(k) : undefined;
+    return v;
   };
-  const machineValue = () => ({ ...valuesOf(c), auth: c.auth.value.trim() || undefined });
+  // The defaults keep those shared as read, but for the ones shared here.
+  const defaultsValue = () => {
+    const v = {};
+    for (const k of keys) v[k] = share[k].checked ? valueOf(k) : (has(sd, k) ? sd[k] : undefined);
+    return v;
+  };
   const notesValue = () => ({
     search: c.search.value || undefined, stop_words: stopWords.value(), stop_tags: stopTags.value(),
-    defaults: dc ? valuesOf(dc) : undefined,
+    defaults: sd ? defaultsValue() : undefined,
   });
   // The names of the marks are in the settings synced with the notes too:
   // once saved, the settings have another version.
@@ -3168,6 +3202,19 @@ async function openSettings() {
   };
   const initial = JSON.stringify([machineValue(), notesValue()]);
   const dirty = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
+  // The settings the server reads when it starts: all but the language and
+  // the theme, which apply once saved.
+  const startup = () => {
+    const m = { ...machineValue() };
+    const n = notesValue();
+    for (const k of LOOK_KEYS) delete m[k];
+    if (n.defaults) {
+      n.defaults = { ...n.defaults };
+      for (const k of LOOK_KEYS) delete n.defaults[k];
+    }
+    return JSON.stringify([m, n]);
+  };
+  const initialStartup = startup();
 
   const msg = el("p", "error");
   msg.hidden = true;
@@ -3195,38 +3242,17 @@ async function openSettings() {
     return true;
   };
   const saveButton = button(t("save"), async () => {
+    const pending = startup() !== initialStartup;
     if (await save()) {
       d.close();
-      showToast(t("settingsSaved"));
-    }
-  }, { cls: cur.restart ? "" : "primary" });
-  const restartButton = button(t("settingsSaveRestart"), async () => {
-    if (!(await save())) return;
-    for (const e of d.querySelectorAll("button, input, select, textarea")) e.disabled = true;
-    try {
-      await restartServer();
-    } catch (e) {
-      for (const b of d.querySelectorAll("button")) b.disabled = false;
-      fail(t("settingsRestartFailed", { error: e.message }));
+      if (pending) await markRestartPending();
+      showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart"));
+      applyLook(cur);
     }
   }, { cls: "primary" });
-  restartButton.hidden = !cur.restart;
-  const noRestart = el("p", "hint", t(cur.restart_unavailable === "executable_gone" ? "settingsExecutableGone" : "settingsNoRestart"));
-  noRestart.hidden = cur.restart;
 
-  // This browser: each control applies at once, and none is saved with the
-  // rest. The language reloads the page, after the question about changes.
-  const pageLang = select(lang, LANGS.map((l) => [l, langName(l)]));
-  pageLang.addEventListener("change", () => {
-    if (dirty() && !confirm(t("settingsDiscard"))) {
-      pageLang.value = lang;
-      return;
-    }
-    try { localStorage.setItem("ebira.lang", pageLang.value); } catch (_) { /* this page only */ }
-    location.reload();
-  });
-  const pageTheme = select(currentTheme(), [["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]]);
-  pageTheme.addEventListener("change", () => setTheme(pageTheme.value));
+  // The size of the text of notes is kept in this browser, and applies at
+  // once.
   const sizeDown = iconButton("minus", t("bodySizeSmaller"), () => stepSize(-1));
   const sizeReset = button("", () => stepSize(0), { title: t("bodySizeReset") });
   const sizeUp = iconButton("plus", t("bodySizeLarger"), () => stepSize(1));
@@ -3241,75 +3267,66 @@ async function openSettings() {
     showSize();
   };
   showSize();
-  const browserRow = (label, control) => el("div", "settings-row", el("label", "settings-label", label), el("div", "settings-control", control));
   const previewStyle = button(t("previewStyle"), () => {
     if (dirty() && !confirm(t("settingsDiscard"))) return;
     d.close();
     openPreviewStyle();
   }, { title: t("previewStyleTitle") });
 
-  // The tabs: in the desktop app, its own settings first, which its window
-  // changes; then the display in this browser, and the two files of the
-  // server, whose controls are saved together.
-  const tabs = [];
+  // The tabs, by what the settings are about. Each row tells where its
+  // values are kept: the browser applies at once; the settings file of this
+  // machine and the one synced with the notes are saved together.
+  const tab = (id, ...rows) => [id, t("settingsTab_" + id), el("section", "settings-section", ...rows)];
+  const server = [];
   if (inApp()) {
+    // The app's own settings, which its window changes.
     const change = button(t("settingsAppChange"), () => {
       if (dirty() && !confirm(t("settingsDiscard"))) return;
       d.close();
       tellApp("appSettings");
     });
-    tabs.push(["app", t("settingsTabApp"), el("section", "settings-section",
-      el("p", "hint", t("settingsAppHint")),
+    server.push(el("p", "hint", t("settingsAppHint")),
       fixed(t("settingsNotesDir"), cur.notes_dir, ""),
       fixed(t("settingsAddr"), location.host, ""),
-      el("div", "settings-row", el("span", "settings-label"), el("div", "settings-control", change)))]);
+      el("div", "settings-row", el("span", "settings-label"), el("div", "settings-control", change)));
+  } else {
+    server.push(fixed(t("settingsNotesDir"), cur.notes_dir, t("settingsKept")),
+      fixed(t("settingsAddr"), cur.addr, t("settingsKept")));
   }
-  tabs.push(
-    ["display", t("settingsTabDisplay"), el("section", "settings-section",
-      el("p", "hint", t("settingsBrowserHint")),
-      browserRow(t("language"), pageLang),
-      browserRow(t("theme"), pageTheme),
-      browserRow(t("bodySize"), el("div", "body-size", sizeDown, sizeReset, sizeUp)))],
-    ["machine", t("settingsTabMachine"), el("div", "",
-      el("p", "hint", t("settingsApply")),
-      section(cur.machine_path,
-        ...(dc ? [el("p", "hint", t("settingsMachineHint"))] : []),
-        row("lang", t("settingsLang"), c.lang),
-        row("theme", t("settingsTheme"), c.theme),
-        row("auth", t("settingsAuth"), c.auth, cur.passkeys ? "" : t("settingsAuthNoPasskey")),
-        row("git_sync", t("settingsGitSync"), c.git_sync),
-        row("watch", t("settingsWatch"), c.watch, t("settingsWatchLabel")),
-        row("provider", t("settingsProvider"), c.provider),
-        row("model", t("settingsModel"), c.model),
-        row("tui_preview", t("settingsTUIPreview"), c.tui_preview, t("settingsTUIPreviewHint")),
-        row("tui_search", t("settingsTUISearch"), c.tui_search, t("settingsTUIPreviewHint")),
-        el("div", "settings-row", el("span", "settings-label", t("previewStyleHead")),
-          el("div", "settings-control", previewStyle, el("p", "hint", t("settingsPreviewStyleHint")))),
-        fixed(t("settingsNotesDir"), cur.notes_dir, t("settingsKept")),
-        fixed(t("settingsAddr"), cur.addr, t("settingsKept"))))],
-    ["notes", t("settingsTabNotes"), el("div", "",
-      el("p", "hint", t("settingsApply")),
-      section(cur.notes_path,
-        el("p", "hint", t("settingsNotesHint")),
-        row("search", t("settingsSearch"), c.search, t("settingsSearchHint")),
-        ...jaRows,
-        el("div", "settings-row", el("span", "settings-label", t("markNames")),
-          el("div", "settings-control", button(t("markNamesMenu"), () => openMarkNames(markNamesSaved)))),
-        // The defaults of each machine; its own settings file wins.
-        ...(dc ? [
-          el("h3", "settings-subhead", t("settingsDefaults")),
-          el("p", "hint", t("settingsDefaultsHint")),
-          row("", t("settingsLang"), dc.lang),
-          row("", t("settingsTheme"), dc.theme),
-          row("", t("settingsGitSync"), dc.git_sync),
-          row("", t("settingsWatch"), dc.watch, t("settingsWatchLabel")),
-          row("", t("settingsProvider"), dc.provider),
-          row("", t("settingsModel"), dc.model),
-          row("", t("settingsTUIPreview"), dc.tui_preview),
-          row("", t("settingsTUISearch"), dc.tui_search),
-        ] : [])))]);
+  const authRow = row(t("settingsAuth"), [c.auth], cur.passkeys ? "" : t("settingsAuthNoPasskey"));
+  if (overridden.has("auth")) {
+    c.auth.disabled = true;
+    authRow.querySelector(".settings-control").append(el("p", "hint", t("settingsOverridden")));
+  }
+  const tabs = [
+    tab("display",
+      machineRow("lang", t("settingsLang")),
+      machineRow("theme", t("settingsTheme")),
+      row(t("bodySize"), [el("div", "body-size", sizeDown, sizeReset, sizeUp)], t("settingsBodySizeHint")),
+      row(t("previewStyleHead"), [previewStyle], t("settingsPreviewStyleHint")),
+      row(t("markNames"), [button(t("markNamesMenu"), () => openMarkNames(markNamesSaved))], t("settingsSharedHint"))),
+    tab("search",
+      el("p", "hint", t("settingsSharedHint")),
+      row(t("settingsSearch"), [c.search], t("settingsSearchHint")),
+      ...jaRows),
+    tab("sync",
+      machineRow("git_sync", t("settingsGitSync")),
+      machineRow("watch", t("settingsWatch"), t("settingsWatchLabel"))),
+    tab("assistant",
+      machineRow("provider", t("settingsProvider")),
+      machineRow("model", t("settingsModel"))),
+    tab("tui",
+      machineRow("tui_preview", t("settingsTUIPreview"), t("settingsTUIPreviewHint")),
+      machineRow("tui_search", t("settingsTUISearch"), t("settingsTUIPreviewHint"))),
+    tab("server",
+      ...server,
+      authRow,
+      fixed(t("settingsMachineFile"), cur.machine_path, ""),
+      fixed(t("settingsNotesFile"), cur.notes_path, t("settingsNotesFileHint"))),
+  ];
   const bar = el("div", "settings-tabs");
   bar.setAttribute("role", "tablist");
+  bar.setAttribute("aria-orientation", "vertical");
   const panels = [];
   const choose = (i) => {
     bar.querySelectorAll("button").forEach((b, j) => {
@@ -3330,10 +3347,11 @@ async function openSettings() {
     p.setAttribute("aria-labelledby", b.id);
     panels.push(p);
   });
-  // The arrow keys move between the tabs, as in a tablist.
+  // The arrow keys move between the tabs, as in a tablist. The tabs stand in
+  // a column on the left, and in a row on narrow screens, so both pairs work.
   bar.addEventListener("keydown", (e) => {
     const i = panels.findIndex((p) => !p.hidden);
-    const j = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: tabs.length - 1 }[e.key];
+    const j = { ArrowUp: i - 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: tabs.length - 1 }[e.key];
     if (j === undefined) return;
     e.preventDefault();
     const k = (j + tabs.length) % tabs.length;
@@ -3344,11 +3362,10 @@ async function openSettings() {
 
   d.replaceChildren(
     el("div", "files-head", el("h2", "", t("settings")), closeButton(close)),
-    bar,
-    el("div", "settings-body", ...panels),
-    noRestart,
+    el("div", "settings-main", bar, el("div", "settings-body", ...panels)),
+    el("p", "hint", t("settingsApply")),
     msg,
-    el("div", "files-actions", button(t("cancel"), close), saveButton, restartButton));
+    el("div", "files-actions", button(t("cancel"), close), saveButton));
   d.oncancel = (e) => { // Esc
     e.preventDefault();
     close();
@@ -3376,6 +3393,74 @@ async function restartServer() {
     } catch (_) { /* stopped meanwhile */ }
   }
   throw new Error(t("serverRestartTimeout"));
+}
+
+// The mark beside the connection status (#status) restarts the server, when
+// it can start itself again. It is faint, and colored while settings saved
+// wait for a restart to apply: this browser keeps the instance of the server
+// they were saved on (localStorage ebira.restartPending), as the instance
+// changes with each start. The desktop app puts a mark of its own there for
+// an outdated server (#ebira-app-restart), which restarts it with the ebira of
+// the app; the CSS then hides this one.
+
+const PENDING_KEY = "ebira.restartPending";
+
+async function showRestartMark() {
+  let cur;
+  try {
+    cur = await api("/settings");
+  } catch (_) {
+    return; // an older server, or not a person
+  }
+  if (!cur.restart) return;
+  const b = el("button", "restart-mark", "↻");
+  b.id = "restart-mark";
+  b.type = "button";
+  b.addEventListener("click", async () => {
+    if (!confirm(t("statsRestartConfirm")) || !leaveEditor()) return;
+    b.disabled = true;
+    try {
+      await restartServer();
+    } catch (e) {
+      b.disabled = false;
+      alert(t("statsRestartFailed", { error: e.message }));
+    }
+  });
+  $("status").after(b);
+  let pending = null;
+  try {
+    pending = localStorage.getItem(PENDING_KEY);
+  } catch (_) { /* no storage */ }
+  if (pending && pending !== (await serverInstance())) pending = null;
+  setRestartPending(Boolean(pending));
+}
+
+// serverInstance returns the instance of the server from /health, or "".
+async function serverInstance() {
+  try {
+    const h = await (await fetch("/health")).json();
+    return h.instance || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+// markRestartPending tells, by the mark, that the settings saved wait for a
+// restart.
+async function markRestartPending() {
+  const instance = await serverInstance();
+  try {
+    if (instance) localStorage.setItem(PENDING_KEY, instance);
+  } catch (_) { /* the mark still tells until a reload */ }
+  setRestartPending(true);
+}
+
+function setRestartPending(on) {
+  const b = $("restart-mark");
+  if (!b) return;
+  b.classList.toggle("pending", on);
+  b.title = t(on ? "restartPending" : "statsRestartTitle");
+  b.setAttribute("aria-label", b.title);
 }
 
 // Find in the note: a bar in the head of the preview, opened with f or its
@@ -4582,9 +4667,9 @@ async function deleteUnusedFiles(boxes) {
 }
 
 // Server status (GET /debug/stats): the memory of the server and the state of
-// its search index, read again every few seconds while the dialog is open,
-// with a button that starts the server again (restartServer), as the
-// settings can.
+// its search index, read again every few seconds while the dialog is open.
+// The server restarts from the mark beside the connection status
+// (showRestartMark); when it cannot, the dialog tells why.
 
 const STATS_EVERY = 5; // seconds
 let statsTimer = 0;
@@ -4607,25 +4692,11 @@ async function openServerStats() {
   await loadServerStats(d);
 }
 
-// statsFoot returns the button that starts the server again, or why it
-// cannot; nothing when that is unknown.
+// statsFoot tells why the server cannot start itself again; nothing when it
+// can or that is unknown.
 function statsFoot() {
-  if (!statsRestart) return el("div");
-  if (!statsRestart.restart) {
-    return el("p", "hint", t(statsRestart.reason === "executable_gone" ? "settingsExecutableGone" : "settingsNoRestart"));
-  }
-  const go = button(t("statsRestart"), async () => {
-    if (!confirm(t("statsRestartConfirm")) || !leaveEditor()) return;
-    clearTimeout(statsTimer); // the page reloads once the server answers again
-    go.disabled = true;
-    try {
-      await restartServer();
-    } catch (e) {
-      go.disabled = false;
-      alert(t("statsRestartFailed", { error: e.message }));
-    }
-  }, { title: t("statsRestartTitle") });
-  return el("div", "files-actions", go);
+  if (!statsRestart || statsRestart.restart) return el("div");
+  return el("p", "hint", t(statsRestart.reason === "executable_gone" ? "settingsExecutableGone" : "settingsNoRestart"));
 }
 
 async function loadServerStats(d) {
@@ -5686,17 +5757,14 @@ async function addGuide() {
   showNotebook(nb.id);
   showToast(t("guideAdded", { name: nb.name }));
 }
-// Theme: auto (the system's), light or dark, chosen in the settings menu and
-// kept in the browser; without a choice, the server's (see theme.js).
-function currentTheme() {
-  let chosen = null;
-  try { chosen = localStorage.getItem("ebira.theme"); } catch (_) { /* none */ }
-  return ["auto", "light", "dark"].includes(chosen) ? chosen : document.documentElement.dataset.serverTheme || "auto";
-}
+// LOOK_KEYS are the settings that apply once saved, without a restart.
+const LOOK_KEYS = ["lang", "theme"];
 
-function setTheme(choice) {
-  try { localStorage.setItem("ebira.theme", choice); } catch (_) { /* this page only */ }
+// applyTheme draws the page in the theme choice: auto (the system's), light or
+// dark.
+function applyTheme(choice) {
   const root = document.documentElement;
+  root.dataset.serverTheme = choice;
   if (choice === "auto") delete root.dataset.theme;
   else root.dataset.theme = choice;
   tellTheme();
@@ -5705,6 +5773,22 @@ function setTheme(choice) {
   if (!state.editing && state.note) loadNote();
 }
 
+// applyLook takes the language and the theme of the settings st just saved,
+// which the server serves at once (see pageLook): a language changed reloads
+// the page, after the question about the note edited; a theme changed draws
+// the page again. Those of the flags of the server do not change.
+function applyLook(st) {
+  const overridden = new Set(st.overridden);
+  const value = (k) => (overridden.has(k) ? null : st.machine[k] || (st.notes.defaults && st.notes.defaults[k]) || "");
+  const root = document.documentElement;
+  const l = value("lang");
+  if (l !== null && l !== (root.dataset.serverLang || "")) {
+    if (leaveEditor()) location.reload();
+    return;
+  }
+  const th = value("theme");
+  if (th !== null && (th || "auto") !== (root.dataset.serverTheme || "auto")) applyTheme(th || "auto");
+}
 
 // The size of the text of the body of notes, in the preview and the editor, kept
 // in the browser (see theme.js). It is a scale rather than a size, as the styles
@@ -6423,6 +6507,7 @@ $("logout").addEventListener("click", async () => {
     return;
   }
   openDeviceHash();
+  showRestartMark();
   for (const e of document.querySelectorAll(".kind-icon[data-kind]")) e.append(kindSVG(e.dataset.kind));
   for (const b of document.querySelectorAll("#side-tabs button")) {
     b.addEventListener("click", () => setSide(b.dataset.side));

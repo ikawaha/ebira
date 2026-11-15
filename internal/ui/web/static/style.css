@@ -176,6 +176,10 @@ mark.current { background: var(--mark-current); }
 .status.ng .status-dot { background: var(--ng); }
 .status.ng .status-text { color: var(--ng); }
 @media (max-width: 640px) { .status-text { display: none; } } /* the dot, with its title, on narrow screens */
+.restart-mark { border: none; background: none; padding: 0 4px; margin-left: 4px; color: var(--fg-muted); opacity: 0.6; font-size: var(--fs-sm); line-height: 1; cursor: pointer; }
+.restart-mark:hover, .restart-mark:focus-visible { opacity: 1; color: var(--fg); }
+.restart-mark.pending { opacity: 1; color: var(--accent); font-weight: 600; }
+#ebira-app-restart ~ .restart-mark { display: none; } /* the app's mark, for an outdated server, restarts it with the app's ebira */
 
 /* Panes */
 
@@ -242,8 +246,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .side-tabs button, .settings-tabs button { flex: 1; border: none; border-radius: var(--r-sm); padding: 4px 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
 .side-tabs button[aria-selected="true"], .settings-tabs button[aria-selected="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 /* The tabs of the settings dialog span it, with the size of its text. */
-.settings-tabs { margin: 8px 0 0; }
-.settings-tabs button { padding: 4px 8px; font-size: var(--fs-sm); }
+/* The tabs of the settings stand in a column on the left of the panel. */
+.settings-tabs { flex-direction: column; gap: 2px; margin: 0; padding: 0; background: none; }
+.settings-tabs button { flex: none; padding: 4px 12px; text-align: left; font-size: var(--fs-sm); }
+.settings-tabs button:hover { background: var(--bg-hover); color: var(--fg); }
+.settings-tabs button[aria-selected="true"] { background: var(--bg-hover); box-shadow: none; font-weight: 600; }
 .notebooks li.empty { color: var(--fg-muted); cursor: default; }
 /* The "…" of a notebook row shows on the row that is hovered, selected or
    focused, and stays while its menu is open. */
@@ -682,7 +689,10 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 .server-settings .hint { color: var(--fg-muted); font-size: var(--fs-xs); margin: 4px 0; overflow-wrap: anywhere; }
 .server-settings .error { white-space: pre-wrap; overflow-wrap: anywhere; }
 .server-settings .files-actions { gap: 8px; }
-.settings-body { height: 60vh; overflow-y: auto; }
+dialog.server-settings { max-width: min(860px, calc(100vw - 32px)); }
+.settings-main { display: grid; grid-template-columns: 10em 1fr; gap: 16px; margin-top: 8px; }
+.settings-main .settings-tabs { border-right: 1px solid var(--border); padding-right: 8px; }
+.settings-body { height: 60vh; overflow-y: auto; min-width: 0; }
 .settings-panel[hidden] { display: none; }
 .settings-section { margin: 12px 0; }
 .settings-section .settings-subhead { margin: 16px 0 4px; }
@@ -700,10 +710,21 @@ dialog.files-check { max-width: min(720px, calc(100vw - 32px)); width: 100%; max
 .settings-radios { display: flex; flex-wrap: wrap; gap: 4px 12px; padding-top: 4px; }
 .settings-check { display: inline-flex; gap: 4px; align-items: center; padding-top: 4px; }
 .settings-row[hidden] { display: none; } /* the grid would show it */
+/* A setting of a machine, and the check box that shares it. */
+.settings-share-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.settings-share-line input:not([type]) { flex: 1; width: auto; min-width: 12em; }
+.settings-share { display: inline-flex; gap: 4px; align-items: center; color: var(--fg-muted); font-size: var(--fs-xs); white-space: nowrap; cursor: pointer; }
 .settings-control .body-size { display: inline-flex; align-items: center; gap: 2px; }
 .settings-control .body-size > button:not(.icon-button) { min-width: 4.5em; font-variant-numeric: tabular-nums; }
 .settings-control .body-size button:disabled { opacity: 0.35; cursor: default; }
-@media (max-width: 560px) { .settings-row { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .settings-row { grid-template-columns: 1fr; }
+  /* On narrow screens the tabs go back to a row above the panel. */
+  .settings-main { grid-template-columns: 1fr; gap: 8px; }
+  .settings-main .settings-tabs { flex-direction: row; border-right: none; padding: 2px; background: var(--bg-hover); }
+  .settings-tabs button { flex: 1; text-align: center; }
+  .settings-tabs button[aria-selected="true"] { background: var(--bg); }
+}
 /* The dialog of the preview style sits at the bottom left, by the settings
    menu, and leaves the preview visible, where the style chosen is tried. */
 dialog.preview-style { width: min(360px, calc(100vw - 32px)); margin: auto auto 16px 16px; padding: 12px 16px; font-size: var(--fs-sm); }

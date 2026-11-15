@@ -65,6 +65,34 @@ func TestHandlerLang(t *testing.T) {
 	}
 }
 
+// TestHandlerLook checks that Look gives the language and the theme at each
+// request, as the server changes them when its settings are saved.
+func TestHandlerLook(t *testing.T) {
+	lang, theme := "en", "light"
+	srv := httptest.NewServer(Handler(Options{Lang: "ja", Look: func() (string, string) { return lang, theme }}))
+	defer srv.Close()
+	get := func() string {
+		res, err := http.Get(srv.URL + "/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		body, _ := io.ReadAll(res.Body)
+		return string(body)
+	}
+	if body := get(); !strings.Contains(body, `<html lang="en" data-theme="light">`) {
+		t.Errorf("first page: no lang en and theme light")
+	}
+	lang, theme = "ja", "auto"
+	if body := get(); !strings.Contains(body, `<html lang="ja">`) {
+		t.Errorf("page after the change: no lang ja without a theme")
+	}
+	lang = `x"><script>`
+	if body := get(); !strings.Contains(body, "<html>") {
+		t.Errorf("unknown language: put in the page")
+	}
+}
+
 // TestMessages checks that every language has the messages of English, with
 // the same {name}s, and that app.js knows the languages.
 func TestMessages(t *testing.T) {

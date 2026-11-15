@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/ikawaha/ebira/internal/auth"
 	"github.com/ikawaha/ebira/internal/config"
@@ -72,7 +74,7 @@ func overriddenSettings(fs *flag.FlagSet) []string {
 // serverSettings returns how the server of fs, listening on addr, handles its
 // settings: it restarts by restart, which stops it and starts its process
 // again as itself (see serve).
-func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart func()) service.Settings {
+func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart func(), saved func()) service.Settings {
 	return service.Settings{
 		Check:         checkSettings,
 		Overridden:    overriddenSettings(fs),
@@ -84,6 +86,7 @@ func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart
 			return nil
 		},
 		Restartable: restartable,
+		Saved:       saved,
 	}
 }
 
@@ -100,4 +103,53 @@ func restartable() string {
 		return service.RestartExecutableGone
 	}
 	return ""
+}
+
+// pageLook is the language and the theme of the web UI, which the server
+// takes again from its settings when they are saved, so that the page shows
+// them without a restart. The flags given win, as at the start.
+type pageLook struct {
+	fs       *flag.FlagSet
+	notesDir string
+	mu       sync.Mutex
+	lang     string
+	theme    string
+}
+
+// newPageLook returns the look of the server of fs at the start, of lang and
+// theme as its flags, the settings file and the defaults in _ebira.yaml of
+// notesDir gave them.
+func newPageLook(fs *flag.FlagSet, notesDir, lang, theme string) *pageLook {
+	return &pageLook{fs: fs, notesDir: notesDir, lang: lang, theme: theme}
+}
+
+// get returns the language and the theme.
+func (l *pageLook) get() (lang, theme string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.lang, l.theme
+}
+
+// reload reads the language and the theme again from the settings file and
+// the defaults in _ebira.yaml, except those of the flags given.
+func (l *pageLook) reload() {
+	c, err := config.Load()
+	if err != nil {
+		slog.Warn("reading the settings file again", "error", err)
+		return
+	}
+	d, _, err := config.LoadDefaults(l.notesDir)
+	if err != nil {
+		slog.Warn("reading the defaults again", "error", err)
+		return
+	}
+	c = config.Merge(c, d)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !flagSet(l.fs, "lang") {
+		l.lang = c.Lang
+	}
+	if !flagSet(l.fs, "theme") {
+		l.theme = c.Theme
+	}
 }

@@ -22,7 +22,7 @@ func TestSettings(t *testing.T) {
 	person := AsPerson(context.Background())
 	svc, _ := newTestService(t)
 	registered := false
-	restarted := 0
+	restarted, reloaded := 0, 0
 	svc.SetSettings(Settings{
 		Check: func(c config.Config) error {
 			if c.Lang == "fr" {
@@ -35,6 +35,7 @@ func TestSettings(t *testing.T) {
 		Passkeys:      func() bool { return registered },
 		DefaultModels: map[string]string{"gemini": "g"},
 		Restart:       func() error { restarted++; return nil },
+		Saved:         func() { reloaded++ },
 	})
 
 	got, err := svc.Settings(person, &gennotes.SettingsPayload{})
@@ -69,6 +70,9 @@ func TestSettings(t *testing.T) {
 	if saved.Version == got.Version {
 		t.Error("the version did not change")
 	}
+	if reloaded != 1 {
+		t.Errorf("Saved called %d times after saving, want 1", reloaded)
+	}
 
 	// An earlier version fails, as the settings were changed since.
 	if _, err := svc.SaveSettings(person, &gennotes.SaveSettingsPayload{Machine: &gennotes.MachineSettings{}, Notes: &gennotes.NotesSettings{}, Version: got.Version}); errorName(err) != "precondition_failed" {
@@ -83,6 +87,9 @@ func TestSettings(t *testing.T) {
 	}
 	if b2, _ := os.ReadFile(path); string(b2) != string(b) {
 		t.Errorf("the file changed:\n%s", b2)
+	}
+	if reloaded != 1 {
+		t.Errorf("Saved called %d times after the refusals, want 1", reloaded)
 	}
 	// With a passkey registered, auth: passkey is taken.
 	registered = true
