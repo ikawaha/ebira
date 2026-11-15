@@ -12,7 +12,7 @@ tags: [guide, settings]
 - Add the guide
 - Report an issue: open the page to post a request or a bug on GitHub
 - Manage passkeys… and Sign out, when signed in with a passkey
-- At the bottom, the version of ebira; choose it to copy the details, to tell in a report
+- At the bottom, the version of ebira; choose it to copy the details, to tell in a report. The GitHub mark at its right opens the repository of ebira
 
 In the desktop app, the gear menu leaves out what the menus of the app have ([Desktop App](desktop.md)).
 

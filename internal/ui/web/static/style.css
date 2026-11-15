@@ -218,7 +218,17 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu .menu-sep { height: 1px; margin: 4px 0; background: var(--border); }
 .menu .menu-label { padding: 4px 12px 0; font-size: var(--fs-xs); color: var(--fg-muted); }
 /* A long version (a pseudo-version) wraps in the width of the other items, not widening the menu. */
-.menu .menu-version { width: 0; min-width: 100%; font-size: var(--fs-xs); color: var(--fg-muted); white-space: normal; overflow-wrap: anywhere; }
+.menu .menu-version { flex: 1; width: 0; min-width: 0; font-size: var(--fs-xs); color: var(--fg-muted); white-space: normal; overflow-wrap: anywhere; }
+.menu .menu-version-row { display: flex; align-items: center; gap: 8px; }
+.menu .menu-version-row[hidden] { display: none; }
+/* The mark of GitHub, in black or white only as its guidelines ask. */
+.menu .github-link { display: flex; flex: none; padding: 4px 8px; border-radius: var(--r-sm); color: #000; }
+.menu .github-link:hover, .menu .github-link:focus-visible { background: var(--bg-hover); outline: none; }
+.menu .github-link svg { display: block; fill: currentColor; }
+:root[data-theme="dark"] .menu .github-link { color: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .menu .github-link { color: #fff; }
+}
 /* The desktop app has these in its menus. */
 :root[data-app] .menu .app-dup { display: none; }
 .menu button[role="menuitemradio"]::before { content: ""; display: inline-block; width: 1.2em; }

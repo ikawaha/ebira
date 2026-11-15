@@ -317,6 +317,7 @@
   "guideFailed": "ガイドを足せません: {error}",
   "versionLabel": "ebira {version}",
   "versionCopyTitle": "バージョンをコピーする（不具合の報告などに）",
+  "githubLink": "GitHub の ebira のリポジトリ",
   "versionCopied": "バージョンをコピーしました。",
   "markNamesHint": "赤は「重要」のように、それぞれのマークの意味を書きます。名前はノートと一緒に保存され、mark:名前 でそのマークのノートを探せます。",
   "settingsApply": "言語とテーマは保存するとすぐに変わります。ほかの設定はサーバーの起動時に読み込まれるので、保存したあと、右上の接続の表示の横の ↻ でサーバーを再起動すると反映されます。",

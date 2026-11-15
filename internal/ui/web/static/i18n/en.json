@@ -317,6 +317,7 @@
   "guideFailed": "Cannot add the guide: {error}",
   "versionLabel": "ebira {version}",
   "versionCopyTitle": "Copy the version, to tell in a report",
+  "githubLink": "ebira on GitHub",
   "versionCopied": "Copied the version.",
   "markNamesHint": "Say what each mark means, such as important for red. The names are kept with the notes, and mark:name finds the notes with one.",
   "settingsApply": "The language and the theme apply once saved. The server reads the other settings when it starts: to apply them, restart it with ↻ beside the connection status.",

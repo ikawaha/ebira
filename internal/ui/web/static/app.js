@@ -5639,7 +5639,7 @@ function toggleSettings(open = $("settings-menu").hidden) {
 
 $("settings").addEventListener("click", () => toggleSettings());
 $("settings-menu").addEventListener("click", (e) => {
-  if (e.target.closest("button")) toggleSettings(false);
+  if (e.target.closest("button, a")) toggleSettings(false);
 });
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
@@ -5672,11 +5672,13 @@ function openIssue() {
 }
 
 // The version of ebira, which the server gives the page, at the bottom of
-// the settings menu; choosing it copies all that ebira version prints, to
-// tell in a report. The desktop app shows it in its about panel instead.
+// the settings menu with the mark of GitHub linking the repository; choosing
+// the version copies all that ebira version prints, to tell in a report. The
+// desktop app shows it in its about panel, and the repository in its Help
+// menu, instead.
 function showVersion() {
   const { version } = document.documentElement.dataset;
-  $("version-sep").hidden = $("version-copy").hidden = !version || inApp();
+  $("version-sep").hidden = $("version-row").hidden = !version || inApp();
   if (version) $("version-copy").textContent = t("versionLabel", { version });
 }
 
