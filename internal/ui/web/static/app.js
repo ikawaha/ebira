@@ -4153,7 +4153,14 @@ function startEdit(note, nb = null) {
   delete pv.dataset.id;
   showNoteHash(note?.id);
   ed.loaded = formValues();
-  (note ? ed.view : f.title).focus();
+  if (!note) {
+    f.title.focus();
+    return;
+  }
+  ed.view.focus();
+  // A body kept with its history keeps its cursor, which may be far down:
+  // show it now rather than on the first key.
+  ed.view.dispatch({ effects: CM.EditorView.scrollIntoView(ed.view.state.selection.main.head, { y: "center" }) });
 }
 
 function formValues() {
