@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -168,6 +169,11 @@ func (s *Store) places() ([]string, error) {
 // Trash/<parent>/<sub>, whose ID in the trash is <parent>/<sub>. A sub
 // notebook deleted on its own is Trash/<parent>~<sub>, with that ID: "~"
 // cannot be in an ID, so it is told from a notebook in the trash.
+//
+// A notebook deleted while the trash holds one with the same ID gets a number
+// in the trash: Trash/<id>@2, Trash/<parent>~<sub>@3 and so on, with its sub
+// notebooks under it. "@" cannot be in an ID either, and the notebook goes
+// back to the ID without the number.
 
 // subSep separates the parent and the sub notebook in the ID of a sub
 // notebook deleted on its own.
@@ -182,18 +188,42 @@ func SplitNotebook(nb string) (parent, sub string) {
 	return nb, ""
 }
 
+// copySep separates the number that a notebook gets in the trash when the
+// trash already holds one with the same ID.
+const copySep = "@"
+
+// uncopied returns name, a directory directly in the trash, without its
+// number, and whether it had a valid one (from 2, without leading zeros).
+func uncopied(name string) (base string, numbered bool) {
+	base, n, ok := strings.Cut(name, copySep)
+	if !ok {
+		return name, false
+	}
+	if n == "" || n[0] == '0' || len(n) > 9 || strings.Trim(n, "0123456789") != "" || n == "1" {
+		return name, false
+	}
+	return base, true
+}
+
 // trashedSub returns the parent and the name of a sub notebook deleted on
 // its own, from its ID in the trash.
 func trashedSub(id string) (parent, sub string, ok bool) {
+	id, _ = uncopied(id)
 	parent, sub, ok = strings.Cut(id, subSep)
 	return parent, sub, ok && nameRe.MatchString(parent) && nameRe.MatchString(sub)
 }
 
 // validTrashed reports whether id can be the ID of a notebook in the trash:
-// a notebook ID, or the ID of a sub notebook deleted on its own.
+// a notebook ID, or the ID of a sub notebook deleted on its own, either with
+// a number; a notebook in the trash may hold sub notebooks, as <id>/<sub>.
 func validTrashed(id string) bool {
-	_, _, ok := trashedSub(id)
-	return ok || ValidNotebook(id)
+	top, sub, nested := strings.Cut(id, "/")
+	base, _ := uncopied(top)
+	if nested {
+		return nameRe.MatchString(base) && nameRe.MatchString(sub)
+	}
+	_, _, ok := trashedSub(base)
+	return ok || nameRe.MatchString(base)
 }
 
 // Store manages the notes directory.
@@ -804,7 +834,7 @@ func (s *Store) notebooksIn(dir string, valid func(string) bool) ([]string, erro
 			continue
 		}
 		nbs = append(nbs, name)
-		if !ValidNotebook(name + "/x") {
+		if base, _ := uncopied(name); !ValidNotebook(base + "/x") {
 			continue // no sub notebooks, such as in the inbox
 		}
 		subs, err := os.ReadDir(filepath.Join(dir, name))
@@ -876,37 +906,50 @@ func (s *Store) trashedDir(id string) string {
 }
 
 // RestoredNotebook returns the notebook that notebook id in the trash goes
-// back to: <parent>/<sub> for a sub notebook deleted on its own, else id.
+// back to: <parent>/<sub> for a sub notebook deleted on its own, else id,
+// without the number it may have in the trash.
 func RestoredNotebook(id string) string {
-	if parent, sub, ok := trashedSub(id); ok {
+	top, sub, nested := strings.Cut(id, "/")
+	top, _ = uncopied(top)
+	if nested {
+		return top + "/" + sub
+	}
+	if parent, sub, ok := trashedSub(top); ok {
 		return parent + "/" + sub
 	}
-	return id
+	return top
 }
 
 // TrashNotebook moves notebook nb with its notes, settings and sub notebooks
 // into the trash, as Trash/<nb>; a sub notebook goes as Trash/<parent>~<sub>.
-// It fails with ErrNotebookExists when the trash already holds a notebook
-// with the same ID.
-func (s *Store) TrashNotebook(nb string) error {
+// When the trash already holds a notebook with that ID, the notebook gets the
+// first number free, from 2: Trash/<nb>@2. It returns the ID of the notebook
+// in the trash.
+func (s *Store) TrashNotebook(nb string) (string, error) {
 	if !ValidNotebook(nb) {
-		return ErrInvalidNotebook
+		return "", ErrInvalidNotebook
 	}
 	if nb == Inbox || nb == Trash {
-		return ErrReserved
+		return "", ErrReserved
 	}
-	id := nb
+	base := nb
 	if parent, sub := SplitNotebook(nb); sub != "" {
-		id = parent + subSep + sub
+		base = parent + subSep + sub
 	}
-	from, to := filepath.Join(s.dir, filepath.FromSlash(nb)), s.trashedDir(id)
+	from := filepath.Join(s.dir, filepath.FromSlash(nb))
 	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
-		return ErrNotFound
+		return "", ErrNotFound
 	}
-	if _, err := os.Stat(to); err == nil {
-		return fmt.Errorf("%w in the trash: %s", ErrNotebookExists, nb)
+	id := base
+	for i := 2; ; i++ {
+		if _, err := os.Lstat(s.trashedDir(id)); errors.Is(err, fs.ErrNotExist) {
+			break
+		} else if err != nil {
+			return "", err
+		}
+		id = base + copySep + strconv.Itoa(i)
 	}
-	return os.Rename(from, to)
+	return id, os.Rename(from, s.trashedDir(id))
 }
 
 // ErrHasSubs is returned for a notebook with sub notebooks moved into
@@ -1004,7 +1047,7 @@ func (s *Store) RestoreNotebook(id string) (string, error) {
 		}
 	}
 	if _, err := os.Stat(to); err == nil {
-		return "", fmt.Errorf("%w: %s", ErrNotebookExists, nb)
+		return "", fmt.Errorf("%w: %s; rename, move or delete that notebook before restoring this one", ErrNotebookExists, nb)
 	}
 	return nb, os.Rename(from, to)
 }

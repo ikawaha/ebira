@@ -735,6 +735,13 @@ type MoveNotebookResponseBody struct {
 	Sort string `form:"sort" json:"sort" xml:"sort"`
 }
 
+// DeleteNotebookResponseBody is the type of the "notes" service
+// "delete_notebook" endpoint HTTP response body.
+type DeleteNotebookResponseBody struct {
+	// ID of the notebook in the trash, to restore it with
+	ID string `form:"id" json:"id" xml:"id"`
+}
+
 // TrashedNotebooksResponseBody is the type of the "notes" service
 // "trashed_notebooks" endpoint HTTP response body.
 type TrashedNotebooksResponseBody []*TrashedNotebookResponse
@@ -2651,24 +2658,6 @@ type DeleteNotebookBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// DeleteNotebookAlreadyExistsResponseBody is the type of the "notes" service
-// "delete_notebook" endpoint HTTP response body for the "already_exists" error.
-type DeleteNotebookAlreadyExistsResponseBody struct {
-	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
-	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
-	// Message is a human-readable explanation specific to this occurrence of the
-	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
-	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
-	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
-	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
-}
-
 // DeleteNotebookUnauthorizedResponseBody is the type of the "notes" service
 // "delete_notebook" endpoint HTTP response body for the "unauthorized" error.
 type DeleteNotebookUnauthorizedResponseBody struct {
@@ -4118,7 +4107,8 @@ type MarkInfoResponse struct {
 type TrashedNotebookResponse struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
 	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
-	// which goes back into its parent
+	// which goes back into its parent. A notebook deleted while the trash held one
+	// with the same ID has a number, as <id>@2, and goes back to the ID without it
 	ID string `form:"id" json:"id" xml:"id"`
 	// For a sub notebook deleted with its parent: the ID of the parent in the trash
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
@@ -4886,6 +4876,15 @@ func NewMoveNotebookResponseBody(res *notes.Notebook) *MoveNotebookResponseBody 
 		Kind:          res.Kind,
 		OwnKind:       res.OwnKind,
 		Sort:          res.Sort,
+	}
+	return body
+}
+
+// NewDeleteNotebookResponseBody builds the HTTP response body from the result
+// of the "delete_notebook" endpoint of the "notes" service.
+func NewDeleteNotebookResponseBody(res *notes.DeleteNotebookResult) *DeleteNotebookResponseBody {
+	body := &DeleteNotebookResponseBody{
+		ID: res.ID,
 	}
 	return body
 }
@@ -6451,20 +6450,6 @@ func NewDeleteNotebookNotFoundResponseBody(res *goa.ServiceError) *DeleteNoteboo
 // the result of the "delete_notebook" endpoint of the "notes" service.
 func NewDeleteNotebookBadRequestResponseBody(res *goa.ServiceError) *DeleteNotebookBadRequestResponseBody {
 	body := &DeleteNotebookBadRequestResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
-	}
-	return body
-}
-
-// NewDeleteNotebookAlreadyExistsResponseBody builds the HTTP response body
-// from the result of the "delete_notebook" endpoint of the "notes" service.
-func NewDeleteNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *DeleteNotebookAlreadyExistsResponseBody {
-	body := &DeleteNotebookAlreadyExistsResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,

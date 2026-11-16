@@ -717,6 +717,13 @@ type MoveNotebookResponseBody struct {
 	Sort *string `form:"sort,omitempty" json:"sort,omitempty" xml:"sort,omitempty"`
 }
 
+// DeleteNotebookResponseBody is the type of the "notes" service
+// "delete_notebook" endpoint HTTP response body.
+type DeleteNotebookResponseBody struct {
+	// ID of the notebook in the trash, to restore it with
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+}
+
 // RestoreNotebookResponseBody is the type of the "notes" service
 // "restore_notebook" endpoint HTTP response body.
 type RestoreNotebookResponseBody struct {
@@ -2625,24 +2632,6 @@ type DeleteNotebookBadRequestResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// DeleteNotebookAlreadyExistsResponseBody is the type of the "notes" service
-// "delete_notebook" endpoint HTTP response body for the "already_exists" error.
-type DeleteNotebookAlreadyExistsResponseBody struct {
-	// Name is the name of this class of errors.
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// ID is a unique identifier for this particular occurrence of the problem.
-	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	// Message is a human-readable explanation specific to this occurrence of the
-	// problem.
-	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
-	// Is the error temporary?
-	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
-	// Is the error a timeout?
-	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
-	// Is the error a server-side fault?
-	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
-}
-
 // DeleteNotebookUnauthorizedResponseBody is the type of the "notes" service
 // "delete_notebook" endpoint HTTP response body for the "unauthorized" error.
 type DeleteNotebookUnauthorizedResponseBody struct {
@@ -4092,7 +4081,8 @@ type MarkInfoResponse struct {
 type TrashedNotebookResponse struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
 	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
-	// which goes back into its parent
+	// which goes back into its parent. A notebook deleted while the trash held one
+	// with the same ID has a number, as <id>@2, and goes back to the ID without it
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// For a sub notebook deleted with its parent: the ID of the parent in the trash
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
@@ -6367,6 +6357,16 @@ func NewMoveNotebookVerificationRequired(body *MoveNotebookVerificationRequiredR
 	return v
 }
 
+// NewDeleteNotebookResultOK builds a "notes" service "delete_notebook"
+// endpoint result from a HTTP "OK" response.
+func NewDeleteNotebookResultOK(body *DeleteNotebookResponseBody) *notes.DeleteNotebookResult {
+	v := &notes.DeleteNotebookResult{
+		ID: *body.ID,
+	}
+
+	return v
+}
+
 // NewDeleteNotebookNotFound builds a notes service delete_notebook endpoint
 // not_found error.
 func NewDeleteNotebookNotFound(body *DeleteNotebookNotFoundResponseBody) *goa.ServiceError {
@@ -6385,21 +6385,6 @@ func NewDeleteNotebookNotFound(body *DeleteNotebookNotFoundResponseBody) *goa.Se
 // NewDeleteNotebookBadRequest builds a notes service delete_notebook endpoint
 // bad_request error.
 func NewDeleteNotebookBadRequest(body *DeleteNotebookBadRequestResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{
-		Name:      *body.Name,
-		ID:        *body.ID,
-		Message:   *body.Message,
-		Temporary: *body.Temporary,
-		Timeout:   *body.Timeout,
-		Fault:     *body.Fault,
-	}
-
-	return v
-}
-
-// NewDeleteNotebookAlreadyExists builds a notes service delete_notebook
-// endpoint already_exists error.
-func NewDeleteNotebookAlreadyExists(body *DeleteNotebookAlreadyExistsResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -7859,7 +7844,7 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -7933,7 +7918,7 @@ func ValidateCreateResponseBody(body *CreateResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -8007,7 +7992,7 @@ func ValidateUpdateResponseBody(body *UpdateResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -8108,7 +8093,7 @@ func ValidateRestoreResponseBody(body *RestoreResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -8182,7 +8167,7 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -8347,7 +8332,7 @@ func ValidateSetMarksResponseBody(body *SetMarksResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -8569,6 +8554,18 @@ func ValidateMoveNotebookResponseBody(body *MoveNotebookResponseBody) (err error
 		if !(*body.Sort == "order" || *body.Sort == "created" || *body.Sort == "updated" || *body.Sort == "title") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.sort", *body.Sort, []any{"order", "created", "updated", "title"}))
 		}
+	}
+	return
+}
+
+// ValidateDeleteNotebookResponseBody runs the validations defined on
+// DeleteNotebookResponseBody
+func ValidateDeleteNotebookResponseBody(body *DeleteNotebookResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	return
 }
@@ -11121,30 +11118,6 @@ func ValidateDeleteNotebookBadRequestResponseBody(body *DeleteNotebookBadRequest
 	return
 }
 
-// ValidateDeleteNotebookAlreadyExistsResponseBody runs the validations defined
-// on DeleteNotebookAlreadyExistsResponseBody
-func ValidateDeleteNotebookAlreadyExistsResponseBody(body *DeleteNotebookAlreadyExistsResponseBody) (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
-	}
-	if body.Message == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
-	}
-	if body.Temporary == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
-	}
-	if body.Timeout == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
-	}
-	if body.Fault == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
-	}
-	return
-}
-
 // ValidateDeleteNotebookUnauthorizedResponseBody runs the validations defined
 // on DeleteNotebookUnauthorizedResponseBody
 func ValidateDeleteNotebookUnauthorizedResponseBody(body *DeleteNotebookUnauthorizedResponseBody) (err error) {
@@ -12906,7 +12879,7 @@ func ValidateNoteSummaryResponseBody(body *NoteSummaryResponseBody) (err error) 
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -12972,7 +12945,7 @@ func validateNoteSummaryResponseBody(body *NoteSummaryResponseBody, path string)
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -13273,7 +13246,7 @@ func ValidateTrashedNotebookResponse(body *TrashedNotebookResponse) (err error) 
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
@@ -13302,7 +13275,7 @@ func validateTrashedNotebookResponse(body *TrashedNotebookResponse, path string)
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", path))
 	}
 	if body.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
@@ -13354,7 +13327,7 @@ func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {
@@ -13432,7 +13405,7 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
 	}
 	if body.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".trashed_notebook", *body.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.CreatedBy != nil {
 		if !(*body.CreatedBy == "ai") {

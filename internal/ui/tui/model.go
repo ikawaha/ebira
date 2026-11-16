@@ -444,16 +444,6 @@ const trashedPrefix = "trash/"
 
 func trashedID(filter string) (string, bool) { return strings.CutPrefix(filter, trashedPrefix) }
 
-// inTrash returns the ID that notebook nb has in the trash once deleted on
-// its own: a sub notebook, <parent>/<sub>, becomes <parent>~<sub>, told from
-// the sub notebooks deleted with their parent.
-func inTrash(nb *gennotes.Notebook) string {
-	if nb.Parent == nil {
-		return nb.ID
-	}
-	return *nb.Parent + "~" + strings.TrimPrefix(nb.ID, *nb.Parent+"/")
-}
-
 // parentOf returns the parent of notebook nb, "" for one that is not a sub
 // notebook.
 func parentOf(nb *gennotes.Notebook) string {
@@ -462,9 +452,6 @@ func parentOf(nb *gennotes.Notebook) string {
 	}
 	return *nb.Parent
 }
-
-// restoredAs returns the notebook that notebook id in the trash goes back to.
-func restoredAs(id string) string { return strings.Replace(id, "~", "/", 1) }
 
 // inTrashedNotebook reports whether the list shows the notes of a notebook in
 // the trash.
@@ -491,9 +478,16 @@ func (m *Model) trashContents() (notes, notebooks int) {
 // notebookOp runs an operation on a notebook as a whole, showing the message
 // status of the catalog when it is done.
 func (m *Model) notebookOp(status, show string, op func(ctx context.Context) error) tea.Cmd {
+	return m.notebookOpShow(status, func(ctx context.Context) (string, error) { return show, op(ctx) })
+}
+
+// notebookOpShow is notebookOp for an operation that tells what to show
+// once it is done, such as the ID a notebook gets in the trash.
+func (m *Model) notebookOpShow(status string, op func(ctx context.Context) (string, error)) tea.Cmd {
 	ctx := m.ctx
 	return func() tea.Msg {
-		return notebookOpMsg{status: status, show: show, err: op(ctx)}
+		show, err := op(ctx)
+		return notebookOpMsg{status: status, show: show, err: err}
 	}
 }
 
@@ -1539,8 +1533,13 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if kind == promptTrashNotebook {
 			if nb := m.selectedNotebook(); nb != nil {
 				id := nb.ID
-				return m, m.notebookOp("status.notebookTrashed", trashedPrefix+inTrash(nb), func(ctx context.Context) error {
-					return m.api.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: id})
+				// The server tells its ID in the trash, which may have a number.
+				return m, m.notebookOpShow("status.notebookTrashed", func(ctx context.Context) (string, error) {
+					res, err := m.api.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: id})
+					if err != nil {
+						return "", err
+					}
+					return trashedPrefix + res.ID, nil
 				})
 			}
 			return m, nil
@@ -1749,9 +1748,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "u":
 			if id, ok := trashedID(m.selectedRow().id); ok {
-				return m, m.notebookOp("status.notebookRestored", restoredAs(id), func(ctx context.Context) error {
-					_, err := m.api.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: id})
-					return err
+				return m, m.notebookOpShow("status.notebookRestored", func(ctx context.Context) (string, error) {
+					nb, err := m.api.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: id})
+					if err != nil {
+						return "", err
+					}
+					return nb.ID, nil
 				})
 			}
 			return m, nil

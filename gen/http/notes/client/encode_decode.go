@@ -3669,7 +3669,6 @@ func EncodeDeleteNotebookRequest(encoder func(*http.Request) goahttp.Encoder) fu
 // DecodeDeleteNotebookResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
-//   - "already_exists" (type *goa.ServiceError): http.StatusConflict
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
@@ -3694,8 +3693,21 @@ func DecodeDeleteNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 			}()
 		}
 		switch resp.StatusCode {
-		case http.StatusNoContent:
-			return nil, nil
+		case http.StatusOK:
+			var (
+				body DeleteNotebookResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_notebook", err)
+			}
+			err = ValidateDeleteNotebookResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
+			}
+			res := NewDeleteNotebookResultOK(&body)
+			return res, nil
 		case http.StatusNotFound:
 			var (
 				body DeleteNotebookNotFoundResponseBody
@@ -3724,20 +3736,6 @@ func DecodeDeleteNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
 			}
 			return nil, NewDeleteNotebookBadRequest(&body)
-		case http.StatusConflict:
-			var (
-				body DeleteNotebookAlreadyExistsResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "delete_notebook", err)
-			}
-			err = ValidateDeleteNotebookAlreadyExistsResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
-			}
-			return nil, NewDeleteNotebookAlreadyExists(&body)
 		case http.StatusUnauthorized:
 			var (
 				body DeleteNotebookUnauthorizedResponseBody

@@ -107,7 +107,7 @@ func TestSeparatorsMoveWithNotebook(t *testing.T) {
 	if seps, err := s.Separators(moved); err != nil || len(seps) != 1 {
 		t.Errorf("Separators of the moved notebook = %v, %v", seps, err)
 	}
-	if err := s.TrashNotebook(moved); err != nil {
+	if _, err := s.TrashNotebook(moved); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(s.Dir(), Trash, "home~work", SeparatorsFile)); err != nil {

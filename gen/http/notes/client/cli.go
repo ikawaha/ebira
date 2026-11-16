@@ -86,7 +86,7 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	{
 		if notesListTrashedNotebook != nil {
 			trashedNotebook = notesListTrashedNotebook
-			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *notesListTrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *notesListTrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 			if err != nil {
 				return nil, err
 			}
@@ -1276,7 +1276,7 @@ func BuildRestoreNotebookPayload(notesRestoreNotebookID *string, notesRestoreNot
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesRestoreNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -1304,7 +1304,7 @@ func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string, not
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesDeleteTrashedNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}

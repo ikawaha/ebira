@@ -1140,12 +1140,6 @@ function parentOf(id, trashed = false) {
   return (trashed ? state.trashed : state.notebooks).find((n) => n.id === id)?.parent;
 }
 
-// trashedID returns the ID that notebook nb has in the trash once deleted on
-// its own: a sub notebook is <parent>~<sub>.
-function trashedID(nb) {
-  return nb.parent ? nb.parent + "~" + nb.id.slice(nb.parent.length + 1) : nb.id;
-}
-
 // formatTime formats the time s in the language of the page, to the minute,
 // or to the second with seconds.
 function formatTime(s, seconds) {
@@ -1791,13 +1785,14 @@ async function trashNotebook(nb) {
   // The notes of its sub notebooks go with it.
   const n = state.notebooks.filter((x) => x.id === nb.id || x.parent === nb.id).reduce((a, x) => a + x.count + x.archived_count, 0);
   if (!confirm(t("confirmTrashNotebook", { name: notebookName(nb.id), n }))) return;
+  // Its ID in the trash, which has a number when the trash held the same ID.
+  let id;
   try {
-    await api(`/notebooks/${nbPath(nb.id)}`, { method: "DELETE" });
+    ({ id } = await api(`/notebooks/${nbPath(nb.id)}`, { method: "DELETE" }));
   } catch (e) {
     notebookFailed(e);
     return;
   }
-  const id = trashedID(nb);
   offerUndo(t("toastNotebookTrashed", { name: nb.name }), async () => {
     await api(`/trash/notebooks/restore/${nbPath(id)}`, { method: "POST" });
     await loadNotebooks().catch(() => {});

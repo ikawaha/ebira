@@ -830,7 +830,7 @@ func NewDeleteNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) 
 		if err != nil {
 			return nil, err
 		}
-		return nil, s.DeleteNotebook(ctx, p)
+		return s.DeleteNotebook(ctx, p)
 	}
 }
 

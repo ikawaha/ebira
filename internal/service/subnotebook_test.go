@@ -119,7 +119,7 @@ func TestTrashSubNotebook(t *testing.T) {
 	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("a"), Notebook: &design.ID, Title: "A"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: design.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: design.ID}); err != nil {
 		t.Fatal(err)
 	}
 	trashed, err := svc.TrashedNotebooks(person, nil)
@@ -135,7 +135,7 @@ func TestTrashSubNotebook(t *testing.T) {
 	}
 
 	// A sub notebook goes back only into its parent, with the same kind.
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: dev.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: dev.ID}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: "dev~design"}); errorName(err) != "bad_request" {
@@ -159,7 +159,7 @@ func TestTrashSubNotebook(t *testing.T) {
 	}
 
 	// Deleted with its parent, a sub notebook is listed under it.
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: dev.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: dev.ID}); err != nil {
 		t.Fatal(err)
 	}
 	trashed, err = svc.TrashedNotebooks(person, nil)

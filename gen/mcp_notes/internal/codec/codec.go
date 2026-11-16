@@ -351,7 +351,7 @@ func ValidateCreateAiNoteResultTransport(value *CreateAiNoteResultTransport) (er
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -838,7 +838,7 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -1056,7 +1056,7 @@ func ValidateImportAiNoteResultNoteTransport(value *ImportAiNoteResultNoteTransp
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -1210,7 +1210,7 @@ func ValidateListInputTransport(value *ListInputTransport) (err error) {
 		}
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.Sort != nil {
 		if !(*value.Sort == "order" || *value.Sort == "created" || *value.Sort == "updated" || *value.Sort == "title") {
@@ -1303,7 +1303,7 @@ func ValidateListPayloadTransport(value *ListPayloadTransport) (err error) {
 		}
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.Sort != nil {
 		if !(*value.Sort == "order" || *value.Sort == "created" || *value.Sort == "updated" || *value.Sort == "title") {
@@ -1398,7 +1398,7 @@ func ValidateListResultNoteSummaryTransport(value *ListResultNoteSummaryTranspor
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -1774,7 +1774,7 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2264,7 +2264,7 @@ func ValidateSearchResultNoteSummaryTransport(value *SearchResultNoteSummaryTran
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2742,7 +2742,7 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {

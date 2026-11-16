@@ -907,18 +907,22 @@ func (s *Notes) MoveNotebook(ctx context.Context, p *gennotes.MoveNotebookPayloa
 	return nil, gennotes.MakeNotFound(errors.New("notebook not found"))
 }
 
-// DeleteNotebook moves a notebook with its notes and settings into the trash.
-func (s *Notes) DeleteNotebook(ctx context.Context, p *gennotes.DeleteNotebookPayload) error {
+// DeleteNotebook moves a notebook with its notes and settings into the trash,
+// and returns its ID there.
+func (s *Notes) DeleteNotebook(ctx context.Context, p *gennotes.DeleteNotebookPayload) (*gennotes.DeleteNotebookResult, error) {
 	if err := peopleOnly(ctx); err != nil {
-		return err
+		return nil, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := s.store.TrashNotebook(p.ID); err != nil {
-		return mapErr(err)
+	id, err := s.store.TrashNotebook(p.ID)
+	if err != nil {
+		return nil, mapErr(err)
 	}
-	_, err := s.sync(ctx)
-	return err
+	if _, err := s.sync(ctx); err != nil {
+		return nil, err
+	}
+	return &gennotes.DeleteNotebookResult{ID: id}, nil
 }
 
 // TrashedNotebooks lists the notebooks in the trash. AI clients cannot see
