@@ -142,6 +142,7 @@ var NoteFile = Type("NoteFile", func() {
 	RequiredAttribute("path", String, "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)", func() {
 		Example("be4c1193735ee1.assets/screenshot.png")
 	})
+	Attribute("replaced", Boolean, "True when the file took the place of a file of the same name, which people can put back")
 })
 
 // AIUpload is a URL for an AI client to send one file to (start_ai_upload).
@@ -163,6 +164,18 @@ var NoteVersionTrait = func() {
 	RequiredAttribute("updated_at", String, "Last update time of the version", timeDSL)
 	RequiredAttribute("replaced_at", String, "When the version was replaced by a newer one", timeDSL)
 }
+
+// FileVersion is an earlier file of a note, replaced by one of the same name
+// or deleted, kept on this device.
+var FileVersion = Type("FileVersion", func() {
+	RequiredAttribute("rev", String, "ID of the earlier file among those of the note", revDSL)
+	RequiredAttribute("name", String, "File name", func() {
+		Example("screenshot.png")
+	})
+	RequiredAttribute("size", Int64, "Size of the file in bytes")
+	RequiredAttribute("replaced_at", String, "When the file was replaced or deleted", timeDSL)
+	RequiredAttribute("current", Boolean, "Whether the note has a file of the same name now, which putting this one back replaces")
+})
 
 // NoteVersionSummary is an entry of the history of a note.
 var NoteVersionSummary = Type("NoteVersionSummary", func() {
@@ -1180,7 +1193,7 @@ var _ = Service("notes", func() {
 
 	Method("add_ai_file", func() {
 		NoSecurity()
-		Description("Add a file of at most 5 MB to a note in a notebook of the collab kind: an image, which the body shows, or another file, such as a PDF, which the body links to. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path, with update_ai_note: ![description](path) for an image and [name](path) for another file. Notes in other notebooks are read-only for AI clients; to add a note with images to a notebook of the drop kind, use import_ai_note.")
+		Description("Add a file of at most 5 MB to a note in a notebook of the collab kind: an image, which the body shows, or another file, such as a PDF, which the body links to. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken, unless replace is set: then it replaces the file of that name, which is kept for people to put back. Refer to the file from the body with the returned path, with update_ai_note: ![description](path) for an image and [name](path) for another file. Notes in other notebooks are read-only for AI clients; to add a note with images to a notebook of the drop kind, use import_ai_note.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
@@ -1189,18 +1202,19 @@ var _ = Service("notes", func() {
 				Example("chart.png")
 			})
 			RequiredAttribute("content", Bytes, "The file, base64-encoded, at most 5 MB")
+			Attribute("replace", Boolean, "Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back")
 		})
 		Result(NoteFile)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
 		Error("too_large", ErrorResult, "The file is larger than 5 MB")
-		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is")
+		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A file of a name taken gets another name, such as name-2.png, unless replace is set to update the file of that name. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is")
 	})
 
 	Method("start_ai_upload", func() {
 		NoSecurity()
-		Description("Begin adding a file of at most 5 MB to a note in a notebook of the collab kind, sent as is rather than base64-encoded as with add_ai_file: the result is a URL for one upload, valid for 10 minutes. Send the file in the body of a PUT request to the URL, such as with curl -sS -T <file> <url>; the response is the JSON of add_ai_file, with the name and the path of the file. The name is cleaned up as with add_ai_file. Refer to the file from the body with the returned path, with update_ai_note: ![description](path) for an image and [name](path) for another file. A client that cannot run commands uses add_ai_file.")
+		Description("Begin adding a file of at most 5 MB to a note in a notebook of the collab kind, sent as is rather than base64-encoded as with add_ai_file: the result is a URL for one upload, valid for 10 minutes. Send the file in the body of a PUT request to the URL, such as with curl -sS -T <file> <url>; the response is the JSON of add_ai_file, with the name and the path of the file. The name is cleaned up as with add_ai_file, and replace replaces the file of that name as with add_ai_file. Refer to the file from the body with the returned path, with update_ai_note: ![description](path) for an image and [name](path) for another file. A client that cannot run commands uses add_ai_file.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			RequiredAttribute("name", String, "File name", func() {
@@ -1208,12 +1222,13 @@ var _ = Service("notes", func() {
 				MaxLength(255)
 				Example("chart.png")
 			})
+			Attribute("replace", Boolean, "Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back")
 		})
 		Result(AIUpload)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("start_ai_upload", "Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note")
+		Tool("start_ai_upload", "Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note; set replace to update the file of that name instead of adding one with another name")
 	})
 
 	Method("upload_ai_file", func() {
@@ -1239,6 +1254,21 @@ var _ = Service("notes", func() {
 			Response("forbidden", StatusForbidden)
 			Response("too_large", StatusRequestEntityTooLarge)
 		})
+	})
+
+	Method("delete_ai_file", func() {
+		NoSecurity()
+		Description("Delete a file of a note in a notebook of the collab kind, such as one no longer referred to after the body changed. The file is kept for people to put back. The body may still refer to it; change the body with update_ai_note.")
+		Payload(func() {
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
+			RequiredAttribute("name", String, "File name, as in the path the body refers to it by", func() {
+				Example("chart.png")
+			})
+		})
+		Error("not_found", ErrorResult, "The note or the file does not exist, or the note is hidden from AI clients")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
+		Tool("delete_ai_file", "Delete a file of a note in a notebook shared with AI (kind collab), such as one the body no longer refers to; people can put it back. To update a file, add it again with replace instead")
 	})
 
 	Method("update_ai_note", func() {
@@ -1459,7 +1489,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("delete_file", func() {
-		Description("Delete a file of a note. The body may still refer to it.")
+		Description("Delete a file of a note. The body may still refer to it. The file is kept on this device, to be put back with restore_file.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
@@ -1510,6 +1540,44 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		HTTP(func() {
 			GET("/notes/{id}/history/{rev}")
+			Response(StatusOK)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	// The earlier files of a note: those replaced by one of the same name or
+	// deleted, kept on this device (not synced) with the history of notes.
+	// For people only, as the history.
+	Method("file_history", func() {
+		Description("List the earlier files of a note, newest first: those replaced by a file of the same name or deleted, by people or AI clients, kept on this device; up to 20 per note, and those older than 30 days are dropped except the 5 newest. For people only.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
+		})
+		Result(ArrayOf(FileVersion))
+		Error("not_found", ErrorResult, "The note does not exist")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		HTTP(func() {
+			GET("/notes/{id}/file-history")
+			Response(StatusOK)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	Method("restore_file", func() {
+		Description("Put an earlier file of a note back under its name. The file of that name now, if any, is kept in its place, so that this can be undone. For people only.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
+			RequiredAttribute("rev", String, "ID of the earlier file", revDSL)
+		})
+		Result(NoteFile)
+		Error("not_found", ErrorResult, "The note or the earlier file does not exist")
+		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
+		HTTP(func() {
+			POST("/notes/{id}/file-history/{rev}/restore")
 			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)

@@ -4399,7 +4399,9 @@ function noteAnchor(id, title, d) {
 
 // History: the earlier versions of the note in the preview, kept on this
 // device by the server. Putting one back saves its content as the note, so the
-// content replaced goes into the history too.
+// content replaced goes into the history too. Below them, the files of the
+// note replaced by one of the same name or deleted, by people or AI clients,
+// which can be put back too.
 
 async function openHistory() {
   const n = state.note;
@@ -4409,15 +4411,16 @@ async function openHistory() {
     button("\u00d7", () => d.close(), { title: t("closeTitle") }));
   d.replaceChildren(head, el("p", "", t("historyLoading")));
   if (!d.open) d.showModal();
-  let versions;
+  let versions, files;
   try {
-    versions = await api(`${noteURL(n.id)}/history`);
+    [versions, files] = await Promise.all([api(`${noteURL(n.id)}/history`), api(`${noteURL(n.id)}/file-history`)]);
   } catch (e) {
     d.replaceChildren(head, el("p", "error", t("loadFailed", { error: e.message })));
     return;
   }
+  const fileSection = files.length ? [el("h3", "history-files-head", t("historyFiles")), el("p", "history-note", t("historyFilesNote")), fileVersions(n, files, d)] : [];
   if (!versions.length) {
-    d.replaceChildren(head, el("p", "empty", t("historyEmpty")));
+    d.replaceChildren(head, el("p", "empty", t("historyEmpty")), ...fileSection);
     return;
   }
   const list = el("ul", "history-list");
@@ -4446,8 +4449,36 @@ async function openHistory() {
     });
     list.append(li);
   }
-  d.replaceChildren(head, el("p", "history-note", t("historyNote")), el("div", "history-body", list, view));
+  d.replaceChildren(head, el("p", "history-note", t("historyNote")), el("div", "history-body", list, view), ...fileSection);
   show(versions[0], list.firstChild);
+}
+
+// fileVersions lists the earlier files of note n, each with a button to put
+// it back, in the dialog d.
+function fileVersions(n, files, d) {
+  const list = el("ul", "files-list history-files");
+  for (const f of files) {
+    const when = el("span", "history-time", t(f.current ? "historyFileReplaced" : "historyFileDeleted", { time: formatTime(f.replaced_at, true) }));
+    list.append(el("li", "", el("div", "history-file",
+      el("span", "history-file-name", el("code", "", f.name), el("span", "history-time", formatSize(f.size))), when,
+      button(t("historyFileRestore"), () => restoreFileVersion(n, f, d)))));
+  }
+  return list;
+}
+
+async function restoreFileVersion(n, f, d) {
+  const time = formatTime(f.replaced_at, true);
+  if (!confirm(t(f.current ? "historyFileRestoreConfirm" : "historyFileRestoreDeletedConfirm", { name: f.name, time }))) return;
+  try {
+    await api(`${noteURL(n.id)}/file-history/${encodeURIComponent(f.rev)}/restore`, { method: "POST" });
+  } catch (e) {
+    d.close();
+    actionFailed(e);
+    return;
+  }
+  showToast(t("historyFileRestored", { name: f.name }));
+  loadNote();
+  openHistory();
 }
 
 // renderVersion shows the version v of note n in view: what putting it back

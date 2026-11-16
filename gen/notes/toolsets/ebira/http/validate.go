@@ -339,6 +339,20 @@ func ValidateCreateAiSeparatorResultTransport(body *CreateAiSeparatorResultTrans
 	return
 }
 
+// ValidateDeleteAiFilePayloadTransport runs the validations defined on DeleteAiFilePayloadTransport.
+func ValidateDeleteAiFilePayloadTransport(body *DeleteAiFilePayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
 // ValidateDeleteAiNotePayloadTransport runs the validations defined on DeleteAiNotePayloadTransport.
 func ValidateDeleteAiNotePayloadTransport(body *DeleteAiNotePayloadTransport) (err error) {
 	if body.ID == nil {

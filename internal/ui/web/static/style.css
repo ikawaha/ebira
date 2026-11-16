@@ -781,6 +781,9 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .history-change { margin: 4px 0; overflow-wrap: anywhere; }
 .history-diff { margin: 0; padding: 8px; max-height: 50vh; overflow: auto; background: var(--bg-side); border-radius: var(--r-md); font-size: var(--fs-xs); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .history-diff span { display: block; }
+.history-files-head { margin: 16px 0 0; font-size: var(--fs-md); }
+.history-file { display: flex; align-items: center; gap: 12px; }
+.history-file-name { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .history-diff .add { background: color-mix(in srgb, var(--ok) 20%, transparent); }
 .history-diff .del { background: color-mix(in srgb, var(--ng) 20%, transparent); }
 .history-diff .skip { color: var(--fg-muted); }

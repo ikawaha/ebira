@@ -102,6 +102,14 @@ func CreateAiSeparatorResultCodec() tools.JSONCodec[*CreateAiSeparatorResult] {
 	}
 }
 
+// DeleteAiFilePayloadCodec returns a fresh codec for *DeleteAiFilePayload.
+func DeleteAiFilePayloadCodec() tools.JSONCodec[*DeleteAiFilePayload] {
+	return tools.JSONCodec[*DeleteAiFilePayload]{
+		ToJSON:   MarshalDeleteAiFilePayload,
+		FromJSON: UnmarshalDeleteAiFilePayload,
+	}
+}
+
 // DeleteAiNotePayloadCodec returns a fresh codec for *DeleteAiNotePayload.
 func DeleteAiNotePayloadCodec() tools.JSONCodec[*DeleteAiNotePayload] {
 	return tools.JSONCodec[*DeleteAiNotePayload]{
@@ -447,6 +455,19 @@ var (
 		},
 		FromJSON: func(data []byte) (any, error) {
 			return UnmarshalCreateAiSeparatorResult(data)
+		},
+	}
+	// deleteAiFilePayloadCodec provides an untyped codec for *DeleteAiFilePayload.
+	deleteAiFilePayloadCodec = tools.JSONCodec[any]{
+		ToJSON: func(v any) ([]byte, error) {
+			// Prefer typed marshal when the value matches the expected type.
+			if typed, ok := v.(*DeleteAiFilePayload); ok {
+				return MarshalDeleteAiFilePayload(typed)
+			}
+			return nil, fmt.Errorf("invalid value type for *DeleteAiFilePayload: %T", v)
+		},
+		FromJSON: func(data []byte) (any, error) {
+			return UnmarshalDeleteAiFilePayload(data)
 		},
 	}
 	// deleteAiNotePayloadCodec provides an untyped codec for *DeleteAiNotePayload.
@@ -820,6 +841,11 @@ var addAiFilePayloadFields = []tools.FieldMetadata{
 		JSONType:    "string",
 		Description: "The file, base64-encoded, at most 5 MB",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("replace")},
+		JSONType:    "boolean",
+		Description: "Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back",
+	},
 }
 var addAiFileResultFields = []tools.FieldMetadata{
 	{
@@ -834,6 +860,11 @@ var addAiFileResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("path")},
 		JSONType:    "string",
 		Description: "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("replaced")},
+		JSONType:    "boolean",
+		Description: "True when the file took the place of a file of the same name, which people can put back",
 	},
 }
 var archiveAiNotebookPayloadFields = []tools.FieldMetadata{
@@ -1215,6 +1246,21 @@ var createAiSeparatorResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("before")},
 		JSONType:    "string",
 		Description: "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
+	},
+}
+var deleteAiFilePayloadFields = []tools.FieldMetadata{
+	{
+		JSONType: "object",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("id")},
+		JSONType:    "string",
+		Description: "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("name")},
+		JSONType:    "string",
+		Description: "File name, as in the path the body refers to it by",
 	},
 }
 var deleteAiNotePayloadFields = []tools.FieldMetadata{
@@ -2314,6 +2360,11 @@ var startAiUploadPayloadFields = []tools.FieldMetadata{
 		JSONType:    "string",
 		Description: "File name",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("replace")},
+		JSONType:    "boolean",
+		Description: "Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back",
+	},
 }
 var startAiUploadResultFields = []tools.FieldMetadata{
 	{
@@ -2808,6 +2859,23 @@ func enrichCreateAiSeparatorResultValidationError(err error) error {
 	m := make(map[string]string)
 	for _, is := range issues {
 		if field, ok := tools.LookupFieldMetadata(createAiSeparatorResultFields, is.Field); ok && field.Description != "" {
+			m[is.Field] = field.Description
+		}
+	}
+	return tools.NewValidationError(ve.Error(), issues, m)
+}
+func enrichDeleteAiFilePayloadValidationError(err error) error {
+	var ve *tools.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	issues := ve.Issues()
+	if len(issues) == 0 {
+		return err
+	}
+	m := make(map[string]string)
+	for _, is := range issues {
+		if field, ok := tools.LookupFieldMetadata(deleteAiFilePayloadFields, is.Field); ok && field.Description != "" {
 			m[is.Field] = field.Description
 		}
 	}
@@ -3528,6 +3596,37 @@ func invalidCreateAiSeparatorResultFieldTypeError(err error) error {
 		field = "$payload"
 	}
 	metadata, ok := tools.LookupFieldMetadata(createAiSeparatorResultFields, field)
+	if !ok || metadata.JSONType == "" {
+		return err
+	}
+	actual := generatedUnmarshalJSONType(typeErr.Value)
+	if actual == "" {
+		return err
+	}
+	return tools.NewValidationError(
+		err.Error(),
+		[]*tools.FieldIssue{
+			{
+				Field:            field,
+				Constraint:       "invalid_field_type",
+				ExpectedJSONType: metadata.JSONType,
+				ActualJSONType:   actual,
+			},
+		},
+		nil,
+	)
+}
+func invalidDeleteAiFilePayloadFieldTypeError(err error) error {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err
+	}
+	field := typeErr.Field
+	field = strings.TrimPrefix(field, "DeleteAiFilePayloadTransport.")
+	if field == "" {
+		field = "$payload"
+	}
+	metadata, ok := tools.LookupFieldMetadata(deleteAiFilePayloadFields, field)
 	if !ok || metadata.JSONType == "" {
 		return err
 	}
@@ -4398,6 +4497,7 @@ func MarshalAddAiFilePayload(v *AddAiFilePayload) ([]byte, error) {
 		ID:      &in.ID,
 		Name:    &in.Name,
 		Content: in.Content,
+		Replace: in.Replace,
 	}
 	return json.Marshal(out)
 }
@@ -4426,6 +4526,7 @@ func UnmarshalAddAiFilePayload(data []byte) (*AddAiFilePayload, error) {
 		ID:      *in.ID,
 		Name:    *in.Name,
 		Content: in.Content,
+		Replace: in.Replace,
 	}
 	return out, nil
 }
@@ -4439,8 +4540,9 @@ func MarshalAddAiFileResult(v *AddAiFileResult) ([]byte, error) {
 	_ = in
 	var out *toolhttp.AddAiFileResultTransport
 	out = &toolhttp.AddAiFileResultTransport{
-		Name: &in.Name,
-		Path: &in.Path,
+		Name:     &in.Name,
+		Path:     &in.Path,
+		Replaced: in.Replaced,
 	}
 	return json.Marshal(out)
 }
@@ -4466,8 +4568,9 @@ func UnmarshalAddAiFileResult(data []byte) (*AddAiFileResult, error) {
 	_ = in
 	var out *AddAiFileResult
 	out = &AddAiFileResult{
-		Name: *in.Name,
-		Path: *in.Path,
+		Name:     *in.Name,
+		Path:     *in.Path,
+		Replaced: in.Replaced,
 	}
 	return out, nil
 }
@@ -4952,6 +5055,48 @@ func UnmarshalCreateAiSeparatorResult(data []byte) (*CreateAiSeparatorResult, er
 		Date:     in.Date,
 		Color:    in.Color,
 		Before:   in.Before,
+	}
+	return out, nil
+}
+
+// MarshalDeleteAiFilePayload serializes *DeleteAiFilePayload into JSON.
+func MarshalDeleteAiFilePayload(v *DeleteAiFilePayload) ([]byte, error) {
+	if v == nil {
+		return nil, fmt.Errorf("deleteAiFilePayload is nil")
+	}
+	in := v
+	_ = in
+	var out *toolhttp.DeleteAiFilePayloadTransport
+	out = &toolhttp.DeleteAiFilePayloadTransport{
+		ID:   &in.ID,
+		Name: &in.Name,
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalDeleteAiFilePayload deserializes JSON into *DeleteAiFilePayload.
+func UnmarshalDeleteAiFilePayload(data []byte) (*DeleteAiFilePayload, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("deleteAiFilePayload JSON is empty")
+	}
+	var tv toolhttp.DeleteAiFilePayloadTransport
+	if err := validateDeleteAiFilePayloadJSON(data); err != nil {
+		return nil, invalidDeleteAiFilePayloadFieldTypeError(err)
+	}
+	if err := json.Unmarshal(data, &tv); err != nil {
+		return nil, invalidDeleteAiFilePayloadFieldTypeError(err)
+	}
+	if err := toolhttp.ValidateDeleteAiFilePayloadTransport(&tv); err != nil {
+		err = newValidationError(err)
+		err = enrichDeleteAiFilePayloadValidationError(err)
+		return nil, err
+	}
+	in := &tv
+	_ = in
+	var out *DeleteAiFilePayload
+	out = &DeleteAiFilePayload{
+		ID:   *in.ID,
+		Name: *in.Name,
 	}
 	return out, nil
 }
@@ -6149,8 +6294,9 @@ func MarshalStartAiUploadPayload(v *StartAiUploadPayload) ([]byte, error) {
 	_ = in
 	var out *toolhttp.StartAiUploadPayloadTransport
 	out = &toolhttp.StartAiUploadPayloadTransport{
-		ID:   &in.ID,
-		Name: &in.Name,
+		ID:      &in.ID,
+		Name:    &in.Name,
+		Replace: in.Replace,
 	}
 	return json.Marshal(out)
 }
@@ -6176,8 +6322,9 @@ func UnmarshalStartAiUploadPayload(data []byte) (*StartAiUploadPayload, error) {
 	_ = in
 	var out *StartAiUploadPayload
 	out = &StartAiUploadPayload{
-		ID:   *in.ID,
-		Name: *in.Name,
+		ID:      *in.ID,
+		Name:    *in.Name,
+		Replace: in.Replace,
 	}
 	return out, nil
 }
@@ -6722,6 +6869,16 @@ func validateStartAiUploadResultJSON(data []byte) error {
 		return err
 	}
 	return validateStartAiUploadResultJSONValue("", root, "")
+}
+
+// validateDeleteAiFilePayloadJSON parses one JSON document and checks the exact value
+// shapes known from this generated Goa type.
+func validateDeleteAiFilePayloadJSON(data []byte) error {
+	root, err := readStrictToolJSON(data)
+	if err != nil {
+		return err
+	}
+	return validateDeleteAiFilePayloadJSONValue("", root, "")
 }
 
 // validateUpdateAiNotePayloadJSON parses one JSON document and checks the exact value
@@ -8497,11 +8654,19 @@ func validateAddAiFilePayloadJSONValue(path string, value any, description strin
 			); err != nil {
 				return err
 			}
+		case "replace":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"content",
 				"id",
 				"name",
+				"replace",
 			})
 		}
 	}
@@ -8542,10 +8707,18 @@ func validateAddAiFileResultJSONValue(path string, value any, description string
 			); err != nil {
 				return err
 			}
+		case "replaced":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "True when the file took the place of a file of the same name, which people can put back",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"name",
 				"path",
+				"replaced",
 			})
 		}
 	}
@@ -8586,10 +8759,18 @@ func validateStartAiUploadPayloadJSONValue(path string, value any, description s
 			); err != nil {
 				return err
 			}
+		case "replace":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"id",
 				"name",
+				"replace",
 			})
 		}
 	}
@@ -8663,6 +8844,50 @@ func validateInt64JSONValue(path string, value any, description string) error {
 	}
 	if _, err := strconv.ParseInt(typed.String(), 10, 64); err != nil {
 		return invalidGeneratedFieldTypeError(field, "integer", "number", description)
+	}
+	return nil
+}
+
+// validateDeleteAiFilePayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateDeleteAiFilePayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "id":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name, as in the path the body refers to it by",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"id",
+				"name",
+			})
+		}
 	}
 	return nil
 }

@@ -18,6 +18,9 @@ type (
 		Name string
 		// The file, base64-encoded, at most 5 MB
 		Content []byte
+		// Replace the file of the same name, if any, rather than add the file with
+		// another name; the replaced file is kept for people to put back
+		Replace *bool
 	}
 	// AddAiFileResult defines the JSON result for the ebira.add_ai_file tool.
 	AddAiFileResult = struct {
@@ -26,6 +29,9 @@ type (
 		// Path of the file relative to the note file, to refer to it from the body,
 		// such as ![](<path>)
 		Path string
+		// True when the file took the place of a file of the same name, which people
+		// can put back
+		Replaced *bool
 	}
 	// ArchiveAiNotebookPayload defines the JSON payload for the ebira.archive_ai_notebook tool.
 	ArchiveAiNotebookPayload = struct {
@@ -215,6 +221,15 @@ type (
 		// ID of the note that comes right after the separator in the manual order;
 		// absent when the separator comes after the last note
 		Before *string
+	}
+	// DeleteAiFilePayload defines the JSON payload for the ebira.delete_ai_file tool.
+	DeleteAiFilePayload = struct {
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
+		ID string
+		// File name, as in the path the body refers to it by
+		Name string
 	}
 	// DeleteAiNotePayload defines the JSON payload for the ebira.delete_ai_note tool.
 	DeleteAiNotePayload = struct {
@@ -507,6 +522,9 @@ type (
 		ID string
 		// File name
 		Name string
+		// Replace the file of the same name, if any, rather than add the file with
+		// another name; the replaced file is kept for people to put back
+		Replace *bool
 	}
 	// StartAiUploadResult defines the JSON result for the ebira.start_ai_upload tool.
 	StartAiUploadResult = struct {

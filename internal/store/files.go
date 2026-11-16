@@ -138,37 +138,45 @@ func validFileName(name string) bool {
 // AddFile adds a file with the content b to note id and returns its name
 // (see writeFile).
 func (s *Store) AddFile(id, name string, b []byte) (string, error) {
-	if len(b) > MaxFileSize {
-		return "", ErrFileTooLarge
-	}
+	name, _, err := s.PutFile(id, name, bytes.NewReader(b), nil)
+	return name, err
+}
+
+// PutFile adds a file with the content read from r to note id, as AddFile
+// does, and returns its name and whether it replaced a file. With keep, a file
+// of the same name is replaced rather than given another name: keep is called
+// with its path first, such as to keep a copy of it, and the file is left as
+// it was if keep fails.
+func (s *Store) PutFile(id, name string, r io.Reader, keep func(path string) error) (string, bool, error) {
 	place, err := s.locate(id)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	dir := s.assetsDir(place, id)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
+		return "", false, err
 	}
 	// MkdirAll takes a link to a folder for the folder: files are not
 	// written through one (see ErrLink).
 	if fi, err := os.Lstat(dir); err != nil || !fi.IsDir() {
-		return "", &fs.PathError{Op: "add", Path: dir, Err: ErrLink}
+		return "", false, &fs.PathError{Op: "add", Path: dir, Err: ErrLink}
 	}
-	return writeFile(dir, name, bytes.NewReader(b))
+	return writeFile(dir, name, r, keep)
 }
 
 // writeFile writes a file with the content read from r, at most MaxFileSize,
-// to dir and returns its name: name cleaned up (see CleanFileName) with the
-// extension of its type for an image and its own extension (see fileExt) for
-// another file, and a suffix such as -2 when the name is taken. Another file
-// keeps no extension of an image, so that the name tells the images, which
-// the UI shows as such. A file larger than MaxFileSize is not written; the
-// error of reading r is returned as is.
-func writeFile(dir, name string, r io.Reader) (string, error) {
+// to dir and returns its name, and whether it replaced a file: name cleaned
+// up (see CleanFileName) with the extension of its type for an image and its
+// own extension (see fileExt) for another file, and a suffix such as -2 when
+// the name is taken, unless keep is given (see PutFile). Another file keeps
+// no extension of an image, so that the name tells the images, which the UI
+// shows as such. A file larger than MaxFileSize is not written; the error of
+// reading r is returned as is.
+func writeFile(dir, name string, r io.Reader, keep func(path string) error) (string, bool, error) {
 	head := make([]byte, 512)
 	n, err := io.ReadFull(r, head)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return "", err
+		return "", false, err
 	}
 	head = head[:n]
 	ext := fileExt(name)
@@ -178,6 +186,10 @@ func writeFile(dir, name string, r io.Reader) (string, error) {
 		ext = ""
 	}
 	clean := CleanFileName(name, ext)
+	body := io.MultiReader(bytes.NewReader(head), r)
+	if keep != nil {
+		return replaceFile(dir, clean, body, keep)
+	}
 	stem := strings.TrimSuffix(clean, ext)
 	for i := 1; ; i++ {
 		name := clean
@@ -189,22 +201,65 @@ func writeFile(dir, name string, r io.Reader) (string, error) {
 			continue
 		}
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		// One byte more than allowed tells a file that is too large.
-		written, err := io.Copy(f, io.LimitReader(io.MultiReader(bytes.NewReader(head), r), MaxFileSize+1))
-		if err == nil && written > MaxFileSize {
-			err = ErrFileTooLarge
-		}
-		if cerr := f.Close(); err == nil {
-			err = cerr
-		}
-		if err != nil {
+		if err := copyLimited(f, body); err != nil {
 			os.Remove(f.Name())
-			return "", err
+			return "", false, err
 		}
-		return name, nil
+		return name, false, nil
 	}
+}
+
+// replaceFile writes the file name in dir with the content read from r,
+// replacing the file of that name, if any, after calling keep with its path.
+// The new content is written aside first, so that the file is whole at any
+// time.
+func replaceFile(dir, name string, r io.Reader, keep func(path string) error) (string, bool, error) {
+	path := filepath.Join(dir, name)
+	fi, err := os.Lstat(path)
+	exists := err == nil
+	if exists && !fi.Mode().IsRegular() {
+		return "", false, &fs.PathError{Op: "replace", Path: path, Err: ErrLink}
+	}
+	// The name of the file written aside is not one of a file of a note,
+	// so that no scan takes it (see validFileName).
+	f, err := os.CreateTemp(dir, ".tmp-*")
+	if err != nil {
+		return "", false, err
+	}
+	if err := copyLimited(f, r); err != nil {
+		os.Remove(f.Name())
+		return "", false, err
+	}
+	if exists {
+		if err := keep(path); err != nil {
+			os.Remove(f.Name())
+			return "", false, err
+		}
+	}
+	if err := os.Chmod(f.Name(), 0o644); err != nil {
+		os.Remove(f.Name())
+		return "", false, err
+	}
+	if err := os.Rename(f.Name(), path); err != nil {
+		os.Remove(f.Name())
+		return "", false, err
+	}
+	return name, exists, nil
+}
+
+// copyLimited copies r to f, at most MaxFileSize, and closes f.
+func copyLimited(f *os.File, r io.Reader) error {
+	// One byte more than allowed tells a file that is too large.
+	written, err := io.Copy(f, io.LimitReader(r, MaxFileSize+1))
+	if err == nil && written > MaxFileSize {
+		err = ErrFileTooLarge
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err
 }
 
 // stagePrefix starts the names of the folders of stages in the notes
@@ -253,7 +308,8 @@ func (s *Store) NewStage() (*Stage, error) {
 // Add writes a file with the content read from r to the stage, as AddFile
 // adds one to a note, and returns its name.
 func (st *Stage) Add(name string, r io.Reader) (string, error) {
-	return writeFile(st.dir, name, r)
+	name, _, err := writeFile(st.dir, name, r, nil)
+	return name, err
 }
 
 // rename is os.Rename, a variable for tests.
@@ -340,11 +396,17 @@ func (s *Store) File(id, name string) (string, error) {
 }
 
 // DeleteFile removes the file name of note id, and the directory of the
-// note's files once it is empty.
-func (s *Store) DeleteFile(id, name string) error {
+// note's files once it is empty. With keep, it is called with the path of the
+// file first, such as to keep a copy of it, and the file is left if it fails.
+func (s *Store) DeleteFile(id, name string, keep func(path string) error) error {
 	p, err := s.File(id, name)
 	if err != nil {
 		return err
+	}
+	if keep != nil {
+		if err := keep(p); err != nil {
+			return err
+		}
 	}
 	if err := os.Remove(p); err != nil {
 		return err

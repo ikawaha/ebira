@@ -58,6 +58,14 @@ func TestUploadAiFile(t *testing.T) {
 	if f.Name != "Chart-1.png" || f.Path != n.ID+".assets/Chart-1.png" {
 		t.Errorf("UploadAiFile = %+v", f)
 	}
+	// With replace, the file of the same name is replaced.
+	u, err := svc.StartAiUpload(ai, &gennotes.StartAiUploadPayload{ID: n.ID, Name: "Chart 1.png", Replace: ptr(true)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f, err := send(strings.TrimPrefix(u.URL, "http://localhost:13579"+UploadsPath), pngHead); err != nil || f.Name != "Chart-1.png" || f.Replaced == nil || !*f.Replaced {
+		t.Errorf("UploadAiFile with replace = %+v, %v", f, err)
+	}
 	// A URL works once.
 	if _, err := send(token, pngHead); errorName(err) != "not_found" {
 		t.Errorf("a used URL: %v", err)

@@ -123,7 +123,7 @@ func TestLinks(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(assets, "new.txt")); !errors.Is(err, os.ErrNotExist) {
 		t.Error("AddFile wrote outside the notes directory")
 	}
-	if err := s.DeleteFile("d", "x.txt"); err == nil {
+	if err := s.DeleteFile("d", "x.txt", nil); err == nil {
 		t.Error("DeleteFile removed a file through a linked folder")
 	}
 	if _, err := os.Stat(filepath.Join(assets, "x.txt")); err != nil {

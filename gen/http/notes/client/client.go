@@ -155,6 +155,14 @@ type Client struct {
 	// history_version endpoint.
 	HistoryVersionDoer goahttp.Doer
 
+	// FileHistory Doer is the HTTP client used to make requests to the
+	// file_history endpoint.
+	FileHistoryDoer goahttp.Doer
+
+	// RestoreFile Doer is the HTTP client used to make requests to the
+	// restore_file endpoint.
+	RestoreFileDoer goahttp.Doer
+
 	// CheckFiles Doer is the HTTP client used to make requests to the check_files
 	// endpoint.
 	CheckFilesDoer goahttp.Doer
@@ -253,6 +261,8 @@ func NewClient(
 		DeleteFileDoer:            doer,
 		HistoryDoer:               doer,
 		HistoryVersionDoer:        doer,
+		FileHistoryDoer:           doer,
+		RestoreFileDoer:           doer,
 		CheckFilesDoer:            doer,
 		EventsDoer:                doer,
 		GitStatusDoer:             doer,
@@ -1138,6 +1148,54 @@ func (c *Client) HistoryVersion() goa.Endpoint {
 		resp, err := c.HistoryVersionDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "history_version", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// FileHistory returns an endpoint that makes HTTP requests to the notes
+// service file_history server.
+func (c *Client) FileHistory() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeFileHistoryRequest(c.encoder)
+		decodeResponse = DecodeFileHistoryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildFileHistoryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.FileHistoryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "file_history", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// RestoreFile returns an endpoint that makes HTTP requests to the notes
+// service restore_file server.
+func (c *Client) RestoreFile() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeRestoreFileRequest(c.encoder)
+		decodeResponse = DecodeRestoreFileResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildRestoreFileRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.RestoreFileDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "restore_file", err)
 		}
 		return decodeResponse(resp)
 	}

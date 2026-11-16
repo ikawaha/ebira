@@ -1,5 +1,6 @@
 // Package history keeps the earlier versions of notes on this device, so that
-// a note can be put back as it was before it was saved or changed outside.
+// a note can be put back as it was before it was saved or changed outside,
+// and the files of notes replaced or deleted (see KeepFile).
 //
 // A version is written when a note's title, tags or body is replaced: by a
 // save through the API, or by a change of the file found by a sync (an
@@ -133,6 +134,12 @@ func revs(dir string) ([]string, error) {
 			rs = append(rs, rev)
 		}
 	}
+	sortRevs(rs)
+	return rs, nil
+}
+
+// sortRevs sorts revs newest first.
+func sortRevs(rs []string) {
 	// Revs of the same length compare as numbers; all are 19 digits until 2286.
 	slices.SortFunc(rs, func(a, b string) int {
 		if len(a) != len(b) {
@@ -140,7 +147,6 @@ func revs(dir string) ([]string, error) {
 		}
 		return strings.Compare(b, a)
 	})
-	return rs, nil
 }
 
 // prune drops the versions in dir beyond the limits.
@@ -286,6 +292,9 @@ func (s *Store) Sweep(keep func(id string) bool) error {
 			continue
 		}
 		if err := s.prune(dir, now); err != nil {
+			return err
+		}
+		if err := pruneFiles(filepath.Join(dir, filesDir), now); err != nil {
 			return err
 		}
 		if rs, err := revs(dir); err == nil && len(rs) == 0 {

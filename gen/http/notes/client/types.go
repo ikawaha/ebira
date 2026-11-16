@@ -785,6 +785,9 @@ type UploadAiFileResponseBody struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
 // AddFileResponseBody is the type of the "notes" service "add_file" endpoint
@@ -795,6 +798,9 @@ type AddFileResponseBody struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
 // HistoryVersionResponseBody is the type of the "notes" service
@@ -812,6 +818,19 @@ type HistoryVersionResponseBody struct {
 	Tags []string `form:"tags,omitempty" json:"tags,omitempty" xml:"tags,omitempty"`
 	// Body of the version in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
+}
+
+// RestoreFileResponseBody is the type of the "notes" service "restore_file"
+// endpoint HTTP response body.
+type RestoreFileResponseBody struct {
+	// File name
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path *string `form:"path,omitempty" json:"path,omitempty" xml:"path,omitempty"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
 // CheckFilesResponseBody is the type of the "notes" service "check_files"
@@ -3465,6 +3484,152 @@ type HistoryVersionVerificationRequiredResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// FileHistoryNotFoundResponseBody is the type of the "notes" service
+// "file_history" endpoint HTTP response body for the "not_found" error.
+type FileHistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FileHistoryBadRequestResponseBody is the type of the "notes" service
+// "file_history" endpoint HTTP response body for the "bad_request" error.
+type FileHistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FileHistoryUnauthorizedResponseBody is the type of the "notes" service
+// "file_history" endpoint HTTP response body for the "unauthorized" error.
+type FileHistoryUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FileHistoryVerificationRequiredResponseBody is the type of the "notes"
+// service "file_history" endpoint HTTP response body for the
+// "verification_required" error.
+type FileHistoryVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestoreFileNotFoundResponseBody is the type of the "notes" service
+// "restore_file" endpoint HTTP response body for the "not_found" error.
+type RestoreFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestoreFileBadRequestResponseBody is the type of the "notes" service
+// "restore_file" endpoint HTTP response body for the "bad_request" error.
+type RestoreFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestoreFileUnauthorizedResponseBody is the type of the "notes" service
+// "restore_file" endpoint HTTP response body for the "unauthorized" error.
+type RestoreFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// RestoreFileVerificationRequiredResponseBody is the type of the "notes"
+// service "restore_file" endpoint HTTP response body for the
+// "verification_required" error.
+type RestoreFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // CheckFilesUnauthorizedResponseBody is the type of the "notes" service
 // "check_files" endpoint HTTP response body for the "unauthorized" error.
 type CheckFilesUnauthorizedResponseBody struct {
@@ -4158,6 +4323,21 @@ type NoteVersionSummaryResponse struct {
 	UpdatedAt *string `form:"updated_at,omitempty" json:"updated_at,omitempty" xml:"updated_at,omitempty"`
 	// When the version was replaced by a newer one
 	ReplacedAt *string `form:"replaced_at,omitempty" json:"replaced_at,omitempty" xml:"replaced_at,omitempty"`
+}
+
+// FileVersionResponse is used to define fields on response body types.
+type FileVersionResponse struct {
+	// ID of the earlier file among those of the note
+	Rev *string `form:"rev,omitempty" json:"rev,omitempty" xml:"rev,omitempty"`
+	// File name
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Size of the file in bytes
+	Size *int64 `form:"size,omitempty" json:"size,omitempty" xml:"size,omitempty"`
+	// When the file was replaced or deleted
+	ReplacedAt *string `form:"replaced_at,omitempty" json:"replaced_at,omitempty" xml:"replaced_at,omitempty"`
+	// Whether the note has a file of the same name now, which putting this one
+	// back replaces
+	Current *bool `form:"current,omitempty" json:"current,omitempty" xml:"current,omitempty"`
 }
 
 // UnusedFileResponseBody is used to define fields on response body types.
@@ -6739,8 +6919,9 @@ func NewImportVerificationRequired(body *ImportVerificationRequiredResponseBody)
 // endpoint result from a HTTP "Created" response.
 func NewUploadAiFileNoteFileCreated(body *UploadAiFileResponseBody) *notes.NoteFile {
 	v := &notes.NoteFile{
-		Name: *body.Name,
-		Path: *body.Path,
+		Name:     *body.Name,
+		Path:     *body.Path,
+		Replaced: body.Replaced,
 	}
 
 	return v
@@ -6840,8 +7021,9 @@ func NewUploadAiFileUnauthorized(body *UploadAiFileUnauthorizedResponseBody) *go
 // result from a HTTP "Created" response.
 func NewAddFileNoteFileCreated(body *AddFileResponseBody) *notes.NoteFile {
 	v := &notes.NoteFile{
-		Name: *body.Name,
-		Path: *body.Path,
+		Name:     *body.Name,
+		Path:     *body.Path,
+		Replaced: body.Replaced,
 	}
 
 	return v
@@ -7190,6 +7372,153 @@ func NewHistoryVersionUnauthorized(body *HistoryVersionUnauthorizedResponseBody)
 // NewHistoryVersionVerificationRequired builds a notes service history_version
 // endpoint verification_required error.
 func NewHistoryVersionVerificationRequired(body *HistoryVersionVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFileHistoryFileVersionOK builds a "notes" service "file_history" endpoint
+// result from a HTTP "OK" response.
+func NewFileHistoryFileVersionOK(body []*FileVersionResponse) []*notes.FileVersion {
+	v := make([]*notes.FileVersion, len(body))
+	for i, val := range body {
+		if val == nil {
+			v[i] = nil
+			continue
+		}
+		v[i] = unmarshalFileVersionResponseToNotesFileVersion(val)
+	}
+
+	return v
+}
+
+// NewFileHistoryNotFound builds a notes service file_history endpoint
+// not_found error.
+func NewFileHistoryNotFound(body *FileHistoryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFileHistoryBadRequest builds a notes service file_history endpoint
+// bad_request error.
+func NewFileHistoryBadRequest(body *FileHistoryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFileHistoryUnauthorized builds a notes service file_history endpoint
+// unauthorized error.
+func NewFileHistoryUnauthorized(body *FileHistoryUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFileHistoryVerificationRequired builds a notes service file_history
+// endpoint verification_required error.
+func NewFileHistoryVerificationRequired(body *FileHistoryVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestoreFileNoteFileOK builds a "notes" service "restore_file" endpoint
+// result from a HTTP "OK" response.
+func NewRestoreFileNoteFileOK(body *RestoreFileResponseBody) *notes.NoteFile {
+	v := &notes.NoteFile{
+		Name:     *body.Name,
+		Path:     *body.Path,
+		Replaced: body.Replaced,
+	}
+
+	return v
+}
+
+// NewRestoreFileNotFound builds a notes service restore_file endpoint
+// not_found error.
+func NewRestoreFileNotFound(body *RestoreFileNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestoreFileBadRequest builds a notes service restore_file endpoint
+// bad_request error.
+func NewRestoreFileBadRequest(body *RestoreFileBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestoreFileUnauthorized builds a notes service restore_file endpoint
+// unauthorized error.
+func NewRestoreFileUnauthorized(body *RestoreFileUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewRestoreFileVerificationRequired builds a notes service restore_file
+// endpoint verification_required error.
+func NewRestoreFileVerificationRequired(body *RestoreFileVerificationRequiredResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -8704,6 +9033,18 @@ func ValidateHistoryVersionResponseBody(body *HistoryVersionResponseBody) (err e
 	}
 	if body.ReplacedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *body.ReplacedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// ValidateRestoreFileResponseBody runs the validations defined on
+// RestoreFileResponseBody
+func ValidateRestoreFileResponseBody(body *RestoreFileResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Path == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
 	}
 	return
 }
@@ -12225,6 +12566,198 @@ func ValidateHistoryVersionVerificationRequiredResponseBody(body *HistoryVersion
 	return
 }
 
+// ValidateFileHistoryNotFoundResponseBody runs the validations defined on
+// FileHistoryNotFoundResponseBody
+func ValidateFileHistoryNotFoundResponseBody(body *FileHistoryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFileHistoryBadRequestResponseBody runs the validations defined on
+// FileHistoryBadRequestResponseBody
+func ValidateFileHistoryBadRequestResponseBody(body *FileHistoryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFileHistoryUnauthorizedResponseBody runs the validations defined on
+// FileHistoryUnauthorizedResponseBody
+func ValidateFileHistoryUnauthorizedResponseBody(body *FileHistoryUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFileHistoryVerificationRequiredResponseBody runs the validations
+// defined on FileHistoryVerificationRequiredResponseBody
+func ValidateFileHistoryVerificationRequiredResponseBody(body *FileHistoryVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestoreFileNotFoundResponseBody runs the validations defined on
+// RestoreFileNotFoundResponseBody
+func ValidateRestoreFileNotFoundResponseBody(body *RestoreFileNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestoreFileBadRequestResponseBody runs the validations defined on
+// RestoreFileBadRequestResponseBody
+func ValidateRestoreFileBadRequestResponseBody(body *RestoreFileBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestoreFileUnauthorizedResponseBody runs the validations defined on
+// RestoreFileUnauthorizedResponseBody
+func ValidateRestoreFileUnauthorizedResponseBody(body *RestoreFileUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateRestoreFileVerificationRequiredResponseBody runs the validations
+// defined on RestoreFileVerificationRequiredResponseBody
+func ValidateRestoreFileVerificationRequiredResponseBody(body *RestoreFileVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateCheckFilesUnauthorizedResponseBody runs the validations defined on
 // CheckFilesUnauthorizedResponseBody
 func ValidateCheckFilesUnauthorizedResponseBody(body *CheckFilesUnauthorizedResponseBody) (err error) {
@@ -13517,6 +14050,59 @@ func validateNoteVersionSummaryResponse(body *NoteVersionSummaryResponse, path s
 	}
 	if body.UpdatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".updated_at", *body.UpdatedAt, goa.FormatDateTime))
+	}
+	if body.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".replaced_at", *body.ReplacedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// ValidateFileVersionResponse runs the validations defined on FileVersion
+func ValidateFileVersionResponse(body *FileVersionResponse) (err error) {
+	if body.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", "body"))
+	}
+	if body.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", "body"))
+	}
+	if body.Current == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("current", "body"))
+	}
+	if body.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.rev", *body.Rev, "^[0-9]{1,20}$"))
+	}
+	if body.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *body.ReplacedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// validateFileVersionResponse checks FileVersion and reports errors using the
+// path supplied by its caller
+func validateFileVersionResponse(body *FileVersionResponse, path string) (err error) {
+	if body.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", path))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", path))
+	}
+	if body.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", path))
+	}
+	if body.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", path))
+	}
+	if body.Current == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("current", path))
+	}
+	if body.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".rev", *body.Rev, "^[0-9]{1,20}$"))
 	}
 	if body.ReplacedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".replaced_at", *body.ReplacedAt, goa.FormatDateTime))
