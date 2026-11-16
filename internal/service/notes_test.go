@@ -759,10 +759,6 @@ func TestTrashNotebook(t *testing.T) {
 		t.Errorf("trashed notebook after restoring a = %+v", nb)
 	}
 
-	// A notebook in the trash does not come back over one with its ID.
-	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: diary.ID}); errorName(err) != "already_exists" {
-		t.Errorf("restoring while the notebook exists = %v, want already_exists", err)
-	}
 	// One deleted while the trash holds its ID gets a number there, and
 	// goes back to its ID.
 	del, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID})
@@ -826,9 +822,9 @@ func TestTrashNotebook(t *testing.T) {
 // A note of a notebook in the trash can be moved to another notebook on its
 // own, which takes it out of the trash and leaves the notebook there.
 // TestRestoreNotebookOverRenamed checks that a notebook in the trash comes
-// back next to one that took its ID and was renamed, which keeps the ID: it
-// takes another ID, keeping its name. One with the same name stays in the
-// trash, as names are told apart.
+// back next to one that took its ID, which renaming keeps: it takes another
+// ID, keeping its name, or next to one with its name too, the name with a
+// number.
 func TestRestoreNotebookOverRenamed(t *testing.T) {
 	person := AsPerson(context.Background())
 	svc, _ := newTestService(t)
@@ -843,27 +839,39 @@ func TestRestoreNotebookOverRenamed(t *testing.T) {
 		}
 		return nb
 	}
-	old := mk()
-	del, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: old.ID})
-	if err != nil {
-		t.Fatal(err)
+	trash := func(id string) string {
+		t.Helper()
+		del, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return del.ID
 	}
+	restore := func(id, wantID, wantName string) {
+		t.Helper()
+		nb, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: id})
+		if err != nil || nb.ID != wantID || nb.Name != wantName || nb.Count != 1 {
+			t.Fatalf("RestoreNotebook(%s) = %+v, %v, want %s named %s", id, nb, err, wantID, wantName)
+		}
+	}
+	first := trash(mk().ID)
 	other := mk()
-	if other.ID != old.ID {
-		t.Fatalf("the new notebook took %s, want %s", other.ID, old.ID)
-	}
-	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: del.ID}); errorName(err) != "already_exists" {
-		t.Errorf("restoring next to a notebook with its name = %v, want already_exists", err)
-	}
-	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: "plans@9"}); errorName(err) != "not_found" {
-		t.Errorf("restoring a notebook not in the trash = %v, want not_found", err)
+	if other.ID != "plans" || first != "plans" {
+		t.Fatalf("IDs %s and %s, want plans for both", first, other.ID)
 	}
 	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: other.ID, Name: ptr("Plans 2025")}); err != nil {
 		t.Fatal(err)
 	}
-	nb, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: del.ID})
-	if err != nil || nb.ID != old.ID+"-2" || nb.Name != "Plans" || nb.Count != 1 {
-		t.Fatalf("restoring next to the renamed one = %+v, %v, want %s-2 named Plans", nb, err, old.ID)
+	// The ID is taken by the renamed one, the name is not.
+	restore(first, "plans-2", "Plans")
+	// Both taken: another ID, and the name with a number.
+	second := trash("plans-2")
+	if again := mk(); again.ID != "plans-2" {
+		t.Fatalf("the new notebook took %s, want plans-2", again.ID)
+	}
+	restore(second, "plans-2-2", "Plans (2)")
+	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: "plans@9"}); errorName(err) != "not_found" {
+		t.Errorf("restoring a notebook not in the trash = %v, want not_found", err)
 	}
 }
 

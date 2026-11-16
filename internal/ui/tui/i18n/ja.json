@@ -36,6 +36,7 @@
   "status.notebookDeleted": "ノートブックを完全に削除しました",
   "status.trashAlreadyEmpty": "ゴミ箱は空です",
   "status.trashEmptied": "ゴミ箱を空にしました",
+  "status.notebookRestoredAs": "同じ名前のノートブックがあるので、「{name}」を「{as}」として元に戻しました",
   "status.notebookRestored": "ノートブックを元に戻しました",
   "status.discarded": "編集を捨てました",
   "status.draftDiscarded": "下書きを捨てました（写しは {path}）",

@@ -1796,6 +1796,7 @@ async function trashNotebook(nb) {
   offerUndo(t("toastNotebookTrashed", { name: nb.name }), async () => {
     // Its ID may have been taken meanwhile: it then comes back with another.
     const back = await api(`/trash/notebooks/restore/${nbPath(id)}`, { method: "POST" });
+    if (back.name !== nb.name) showToast(t("toastNotebookRestoredAs", { name: nb.name, as: back.name }));
     await loadNotebooks().catch(() => {});
     showNotebook(back.id);
   });
@@ -1820,6 +1821,7 @@ async function emptyTrash() {
 }
 
 async function restoreNotebook(id) {
+  const name = state.trashed.find((n) => n.id === id)?.name;
   let nb;
   try {
     nb = await api(`/trash/notebooks/restore/${nbPath(id)}`, { method: "POST" });
@@ -1827,6 +1829,8 @@ async function restoreNotebook(id) {
     notebookFailed(e);
     return;
   }
+  // Next to a notebook with its name, it comes back with a number.
+  if (name && nb.name !== name) showToast(t("toastNotebookRestoredAs", { name, as: nb.name }));
   await loadNotebooks().catch(() => {});
   showNotebook(nb.id);
 }

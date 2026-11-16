@@ -264,6 +264,7 @@ type (
 	// deleting it; show is the notebook filter to show afterwards.
 	notebookOpMsg struct {
 		status string
+		args   []any // of status
 		show   string
 		err    error
 	}
@@ -488,6 +489,28 @@ func (m *Model) notebookOpShow(status string, op func(ctx context.Context) (stri
 	return func() tea.Msg {
 		show, err := op(ctx)
 		return notebookOpMsg{status: status, show: show, err: err}
+	}
+}
+
+// restoreNotebook takes notebook id out of the trash and shows it, telling
+// the name it got when a notebook had its own.
+func (m *Model) restoreNotebook(id string) tea.Cmd {
+	ctx, api := m.ctx, m.api
+	name := ""
+	for _, nb := range m.trashed {
+		if nb.ID == id {
+			name = nb.Name
+		}
+	}
+	return func() tea.Msg {
+		nb, err := api.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: id})
+		if err != nil {
+			return notebookOpMsg{err: err}
+		}
+		if name != "" && nb.Name != name {
+			return notebookOpMsg{status: "status.notebookRestoredAs", args: []any{"name", name, "as", nb.Name}, show: nb.ID}
+		}
+		return notebookOpMsg{status: "status.notebookRestored", show: nb.ID}
 	}
 }
 
@@ -1161,7 +1184,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setStatusText(statusError, m.errText(msg.err))
 			return m, nil
 		}
-		m.setStatus(statusInfo, msg.status)
+		m.setStatus(statusInfo, msg.status, msg.args...)
 		m.notebook, m.sel, m.top = msg.show, 0, 0
 		return m, tea.Batch(m.loadNotebooks(), m.loadList())
 
@@ -1748,13 +1771,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "u":
 			if id, ok := trashedID(m.selectedRow().id); ok {
-				return m, m.notebookOpShow("status.notebookRestored", func(ctx context.Context) (string, error) {
-					nb, err := m.api.RestoreNotebook(ctx, &gennotes.RestoreNotebookPayload{ID: id})
-					if err != nil {
-						return "", err
-					}
-					return nb.ID, nil
-				})
+				return m, m.restoreNotebook(id)
 			}
 			return m, nil
 		}

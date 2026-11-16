@@ -5034,7 +5034,7 @@ paths:
             tags:
                 - notes
             summary: restore_notebook notes
-            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2, and keeps its name. Fails with already_exists if a notebook with the same name is where it goes back.
+            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to a notebook with its name, it gets the name with the first number free, as "Plans (2)". The result tells the ID and the name it got.
             operationId: notes#restore_notebook
             parameters:
                 - name: id
@@ -5117,19 +5117,6 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: not_found
-                                temporary: false
-                                timeout: false
-                "409":
-                    description: 'already_exists: A notebook with the same name is where it goes back'
-                    content:
-                        application/vnd.goa.error:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                            example:
-                                fault: false
-                                id: 123abc
-                                message: parameter 'p' must be an integer
-                                name: already_exists
                                 temporary: false
                                 timeout: false
             security:

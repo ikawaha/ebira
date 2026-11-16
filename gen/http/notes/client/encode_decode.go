@@ -3947,7 +3947,6 @@ func EncodeRestoreNotebookRequest(encoder func(*http.Request) goahttp.Encoder) f
 // DecodeRestoreNotebookResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
-//   - "already_exists" (type *goa.ServiceError): http.StatusConflict
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
@@ -4015,20 +4014,6 @@ func DecodeRestoreNotebookResponse(decoder func(*http.Response) goahttp.Decoder,
 				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
 			}
 			return nil, NewRestoreNotebookBadRequest(&body)
-		case http.StatusConflict:
-			var (
-				body RestoreNotebookAlreadyExistsResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "restore_notebook", err)
-			}
-			err = ValidateRestoreNotebookAlreadyExistsResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
-			}
-			return nil, NewRestoreNotebookAlreadyExists(&body)
 		case http.StatusUnauthorized:
 			var (
 				body RestoreNotebookUnauthorizedResponseBody

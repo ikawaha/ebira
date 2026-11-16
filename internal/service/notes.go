@@ -961,12 +961,23 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := s.restorableName(ctx, p.ID); err != nil {
+	name, err := s.restoredName(ctx, p.ID)
+	if err != nil {
 		return nil, err
 	}
 	id, err := s.store.RestoreNotebook(p.ID)
 	if err != nil {
 		return nil, mapErr(err)
+	}
+	if name != "" {
+		m, err := s.store.NotebookMeta(id)
+		if err != nil {
+			return nil, err
+		}
+		m.Name = name
+		if err := s.store.SaveNotebookMeta(id, m); err != nil {
+			return nil, err
+		}
 	}
 	if _, err := s.sync(ctx); err != nil {
 		return nil, err
@@ -983,21 +994,22 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 	return nil, gennotes.MakeNotFound(errors.New("notebook not found"))
 }
 
-// restorableName fails with already_exists when notebook id in the trash
-// would go back next to a notebook with its name, as names are told apart
-// among the notebooks of a parent. Its ID may be taken: it then gets another
-// (see store.RestoreNotebook).
-func (s *Notes) restorableName(ctx context.Context, id string) error {
+// restoredName returns the name that notebook id in the trash takes when it
+// goes back, as names are told apart among the notebooks of a parent: its
+// own, or with the first number free, as "Plans (2)", next to a notebook
+// with that name; "" to keep its own. Its ID may be taken too: it then gets
+// another (see store.RestoreNotebook).
+func (s *Notes) restoredName(ctx context.Context, id string) (string, error) {
 	trashed, err := s.store.TrashedNotebooks()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !slices.Contains(trashed, id) {
-		return nil // the store tells it is not there
+		return "", nil // the store tells it is not there
 	}
 	m, err := s.store.TrashedNotebookMeta(id)
 	if err != nil {
-		return mapErr(err)
+		return "", mapErr(err)
 	}
 	to := store.RestoredNotebook(id)
 	name := m.Name
@@ -1010,14 +1022,23 @@ func (s *Notes) restorableName(ctx context.Context, id string) error {
 	}
 	nbs, err := s.notebooks(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
+	taken := map[string]bool{}
 	for _, nb := range nbs {
-		if deref(nb.Parent) == parent && strings.EqualFold(norm.NFC.String(nb.Name), norm.NFC.String(name)) {
-			return gennotes.MakeAlreadyExists(fmt.Errorf("notebook %q already exists (%s); rename it before restoring this one", nb.Name, nb.ID))
+		if deref(nb.Parent) == parent {
+			taken[strings.ToLower(norm.NFC.String(nb.Name))] = true
 		}
 	}
-	return nil
+	key := func(name string) string { return strings.ToLower(norm.NFC.String(name)) }
+	if !taken[key(name)] {
+		return "", nil
+	}
+	for i := 2; ; i++ {
+		if c := fmt.Sprintf("%s (%d)", name, i); !taken[key(c)] {
+			return c, nil
+		}
+	}
 }
 
 // DeleteTrashedNotebook permanently deletes a notebook in the trash with its

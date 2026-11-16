@@ -438,6 +438,7 @@
   "toastSeparatorMoved": "Moved the separator.",
   "toastRenamed": "Renamed the notebook to {name}.",
   "toastKind": "Made {name} {kind}.",
+  "toastNotebookRestoredAs": "Restored the notebook {name} as {as}, as a notebook has that name.",
   "toastNotebookTrashed": "Moved the notebook {name} to the trash.",
   "searchClear": "Clear the search (Esc)",
   "themeAuto": "Auto",

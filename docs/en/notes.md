@@ -46,7 +46,7 @@ Notes and notebooks no longer in use but worth keeping can go to the archive. Wh
 
 - Deleting: for a note, the trash button of the preview, the right-click menu of the list, or a drag onto the Trash. For a notebook, the trash icon at the bottom of the menu of its row, or a drag onto the Trash; its notes and sub notebooks go with it.
 - Viewing: choose the Trash for the notes deleted one by one, under the notebooks deleted, shown as cells that open and close when clicked. A search with the Trash chosen searches the trash.
-- Notes in the trash cannot be edited. They can be restored (to their notebook, made again if it is gone), moved to another notebook, or deleted for good. A deleted notebook can be restored or deleted for good from the menu of its cell. A notebook deleted more than once, as when it is deleted, made again with the same name and deleted again, shows in the trash once for each. It cannot be restored next to a notebook with the same name: rename that one first.
+- Notes in the trash cannot be edited. They can be restored (to their notebook, made again if it is gone), moved to another notebook, or deleted for good. A deleted notebook can be restored or deleted for good from the menu of its cell. A notebook deleted more than once, as when it is deleted, made again with the same name and deleted again, shows in the trash once for each. Restored next to a notebook with the same name, it gets the name with a number, as "Plans (2)".
 - Emptying: "Empty trash…" in the menu of the Trash row deletes all there for good. What is deleted for good cannot come back.
 - Notes in the trash are left out of the other lists, searches and tag counts, and AI cannot see them. They cannot go to the archive.
 
