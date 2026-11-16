@@ -34,6 +34,7 @@ const UploadsPath = "/uploads/"
 // upload is a pending upload.
 type upload struct {
 	id, name string // the note and the name of the file
+	replace  bool   // whether the file replaces one of the same name
 	expires  time.Time
 }
 
@@ -99,7 +100,7 @@ func (s *Notes) StartAiUpload(ctx context.Context, p *gennotes.StartAiUploadPayl
 	}
 	base, _ := ctx.Value(baseURLKey{}).(string)
 	now := s.now()
-	u := upload{id: p.ID, name: p.Name, expires: now.Add(uploadMaxAge)}
+	u := upload{id: p.ID, name: p.Name, replace: p.Replace != nil && *p.Replace, expires: now.Add(uploadMaxAge)}
 	token := s.uploads.add(u, now)
 	return &gennotes.AIUpload{
 		URL:       base + UploadsPath + token,
@@ -123,5 +124,5 @@ func (s *Notes) UploadAiFile(ctx context.Context, p *gennotes.UploadAiFilePayloa
 	}
 	// The request has no mark of people, so this checks the note as AddAiFile
 	// does.
-	return s.AddAiFile(ctx, &gennotes.AddAiFilePayload{ID: u.id, Name: u.name, Content: b})
+	return s.AddAiFile(ctx, &gennotes.AddAiFilePayload{ID: u.id, Name: u.name, Content: b, Replace: &u.replace})
 }

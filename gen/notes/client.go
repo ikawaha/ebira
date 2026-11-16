@@ -51,6 +51,7 @@ type Client struct {
 	AddAiFileEndpoint             goa.Endpoint
 	StartAiUploadEndpoint         goa.Endpoint
 	UploadAiFileEndpoint          goa.Endpoint
+	DeleteAiFileEndpoint          goa.Endpoint
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
 	MoveAiNoteEndpoint            goa.Endpoint
@@ -66,6 +67,8 @@ type Client struct {
 	DeleteFileEndpoint            goa.Endpoint
 	HistoryEndpoint               goa.Endpoint
 	HistoryVersionEndpoint        goa.Endpoint
+	FileHistoryEndpoint           goa.Endpoint
+	RestoreFileEndpoint           goa.Endpoint
 	CheckFilesEndpoint            goa.Endpoint
 	EventsEndpoint                goa.Endpoint
 	GitStatusEndpoint             goa.Endpoint
@@ -80,7 +83,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, addFile, getFile, deleteFile, history, historyVersion, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -117,6 +120,7 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		AddAiFileEndpoint:             addAiFile,
 		StartAiUploadEndpoint:         startAiUpload,
 		UploadAiFileEndpoint:          uploadAiFile,
+		DeleteAiFileEndpoint:          deleteAiFile,
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
 		MoveAiNoteEndpoint:            moveAiNote,
@@ -132,6 +136,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		DeleteFileEndpoint:            deleteFile,
 		HistoryEndpoint:               history,
 		HistoryVersionEndpoint:        historyVersion,
+		FileHistoryEndpoint:           fileHistory,
+		RestoreFileEndpoint:           restoreFile,
 		CheckFilesEndpoint:            checkFiles,
 		EventsEndpoint:                events,
 		GitStatusEndpoint:             gitStatus,
@@ -669,6 +675,19 @@ func (c *Client) UploadAiFile(ctx context.Context, p *UploadAiFilePayload, req i
 	return ires.(*NoteFile), nil
 }
 
+// DeleteAiFile calls the "delete_ai_file" endpoint of the "notes" service.
+// DeleteAiFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note or the file does not exist, or the note is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) DeleteAiFile(ctx context.Context, p *DeleteAiFilePayload) (err error) {
+	_, err = c.DeleteAiFileEndpoint(ctx, p)
+	return
+}
+
 // UpdateAiNote calls the "update_ai_note" endpoint of the "notes" service.
 // UpdateAiNote may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
@@ -909,6 +928,38 @@ func (c *Client) HistoryVersion(ctx context.Context, p *HistoryVersionPayload) (
 		return
 	}
 	return ires.(*NoteVersion), nil
+}
+
+// FileHistory calls the "file_history" endpoint of the "notes" service.
+// FileHistory may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) FileHistory(ctx context.Context, p *FileHistoryPayload) (res []*FileVersion, err error) {
+	var ires any
+	ires, err = c.FileHistoryEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.([]*FileVersion), nil
+}
+
+// RestoreFile calls the "restore_file" endpoint of the "notes" service.
+// RestoreFile may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note or the earlier file does not exist
+//   - "bad_request" (type *goa.ServiceError): The note ID is used in more than one notebook
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) RestoreFile(ctx context.Context, p *RestoreFilePayload) (res *NoteFile, err error) {
+	var ires any
+	ires, err = c.RestoreFileEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*NoteFile), nil
 }
 
 // CheckFiles calls the "check_files" endpoint of the "notes" service.

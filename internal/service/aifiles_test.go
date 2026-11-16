@@ -3,12 +3,14 @@ package service
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/history"
 	"github.com/ikawaha/ebira/internal/store"
 )
 
@@ -96,5 +98,129 @@ func TestImportAiNoteWithImages(t *testing.T) {
 		if _, err := svc.ImportAiNote(ai, &gennotes.ImportAiNotePayload{Notebook: store.Inbox, Name: "x.md", Content: "x " + name, Files: files}); errorName(err) != "bad_request" {
 			t.Errorf("%s: %v, want bad_request", name, err)
 		}
+	}
+}
+
+func TestReplaceAndDeleteAiFile(t *testing.T) {
+	ai := context.Background()
+	person := AsPerson(ai)
+	svc, dir := newTestService(t)
+	h, err := history.New(filepath.Join(filepath.Dir(dir), "history"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.SetHistory(h)
+	shared, err := svc.CreateAiNotebook(ai, &gennotes.CreateAiNotebookPayload{Name: "shared"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := svc.CreateAiNote(ai, &gennotes.CreateAiNotePayload{Notebook: shared.ID, Title: "skill"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("mine"), Notebook: ptr("work"), Title: "mine"}); err != nil {
+		t.Fatal(err)
+	}
+	add := func(content string, replace bool) *gennotes.NoteFile {
+		t.Helper()
+		f, err := svc.AddAiFile(ai, &gennotes.AddAiFilePayload{ID: n.ID, Name: "other-repos.md", Content: []byte(content), Replace: &replace})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return f
+	}
+	read := func(name string) string {
+		t.Helper()
+		_, rc, err := svc.GetFile(person, &gennotes.GetFilePayload{ID: n.ID, Name: name})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rc.Close()
+		b, _ := io.ReadAll(rc)
+		return string(b)
+	}
+
+	if f := add("v1", false); f.Name != "other-repos.md" || f.Replaced != nil {
+		t.Errorf("AddAiFile = %+v", f)
+	}
+	if f := add("v2", false); f.Name != "other-repos-2.md" {
+		t.Errorf("AddAiFile without replace = %+v", f)
+	}
+	if f := add("v3", true); f.Name != "other-repos.md" || f.Replaced == nil || !*f.Replaced {
+		t.Errorf("AddAiFile with replace = %+v", f)
+	}
+	if got := read("other-repos.md"); got != "v3" {
+		t.Errorf("the replaced file = %q", got)
+	}
+	// Replacing a file that is not there adds it.
+	if f, err := svc.AddAiFile(ai, &gennotes.AddAiFilePayload{ID: n.ID, Name: "new.md", Content: []byte("new"), Replace: ptr(true)}); err != nil || f.Name != "new.md" || f.Replaced != nil {
+		t.Errorf("AddAiFile with replace of a new name = %+v, %v", f, err)
+	}
+
+	if err := svc.DeleteAiFile(ai, &gennotes.DeleteAiFilePayload{ID: n.ID, Name: "other-repos-2.md"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name, id, file, want string
+	}{
+		{"a missing file", n.ID, "other-repos-2.md", "not_found"},
+		{"a note of people", "mine", "a.md", "forbidden"},
+		{"a missing note", "missing", "a.md", "not_found"},
+	} {
+		if err := svc.DeleteAiFile(ai, &gennotes.DeleteAiFilePayload{ID: tt.id, Name: tt.file}); errorName(err) != tt.want {
+			t.Errorf("DeleteAiFile %s: %v, want %s", tt.name, err, tt.want)
+		}
+	}
+
+	// The replaced and the deleted files are kept, newest first, for people
+	// only.
+	if _, err := svc.FileHistory(ai, &gennotes.FileHistoryPayload{ID: n.ID}); errorName(err) != "not_found" {
+		t.Errorf("FileHistory for AI: %v", err)
+	}
+	fs, err := svc.FileHistory(person, &gennotes.FileHistoryPayload{ID: n.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fs) != 2 || fs[0].Name != "other-repos-2.md" || fs[0].Current || fs[1].Name != "other-repos.md" || !fs[1].Current || fs[1].Size != 2 {
+		t.Fatalf("FileHistory = %+v", fs)
+	}
+	if _, err := svc.RestoreFile(ai, &gennotes.RestoreFilePayload{ID: n.ID, Rev: fs[1].Rev}); errorName(err) != "not_found" {
+		t.Errorf("RestoreFile for AI: %v", err)
+	}
+
+	// Putting v1 back keeps v3 in its place, so that it can be undone.
+	f, err := svc.RestoreFile(person, &gennotes.RestoreFilePayload{ID: n.ID, Rev: fs[1].Rev})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Name != "other-repos.md" || f.Replaced == nil || !*f.Replaced {
+		t.Errorf("RestoreFile = %+v", f)
+	}
+	if got := read("other-repos.md"); got != "v1" {
+		t.Errorf("the restored file = %q", got)
+	}
+	if f, err := svc.RestoreFile(person, &gennotes.RestoreFilePayload{ID: n.ID, Rev: fs[0].Rev}); err != nil || f.Name != "other-repos-2.md" || f.Replaced != nil {
+		t.Errorf("RestoreFile of a deleted file = %+v, %v", f, err)
+	}
+	if got := read("other-repos-2.md"); got != "v2" {
+		t.Errorf("the restored deleted file = %q", got)
+	}
+	fs, err = svc.FileHistory(person, &gennotes.FileHistoryPayload{ID: n.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fs) != 1 || fs[0].Name != "other-repos.md" || fs[0].Size != 2 {
+		t.Errorf("FileHistory after restoring = %+v", fs)
+	}
+	if _, err := svc.RestoreFile(person, &gennotes.RestoreFilePayload{ID: n.ID, Rev: "1"}); errorName(err) != "not_found" {
+		t.Errorf("RestoreFile of a missing rev: %v", err)
+	}
+
+	// People deleting a file keep it too.
+	if err := svc.DeleteFile(person, &gennotes.DeleteFilePayload{ID: n.ID, Name: "new.md"}); err != nil {
+		t.Fatal(err)
+	}
+	if fs, err := svc.FileHistory(person, &gennotes.FileHistoryPayload{ID: n.ID}); err != nil || len(fs) != 2 || fs[0].Name != "new.md" {
+		t.Errorf("FileHistory after people deleted a file = %+v, %v", fs, err)
 	}
 }

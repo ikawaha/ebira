@@ -139,10 +139,10 @@ func TestFiles(t *testing.T) {
 		t.Errorf("after the failed move: %+v, %v", n, err)
 	}
 
-	if err := s.DeleteFile("n1", "shot-2.png"); err != nil {
+	if err := s.DeleteFile("n1", "shot-2.png", nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.DeleteFile("n1", "shot-2.png"); !errors.Is(err, ErrFileNotFound) {
+	if err := s.DeleteFile("n1", "shot-2.png", nil); !errors.Is(err, ErrFileNotFound) {
 		t.Errorf("DeleteFile twice: %v", err)
 	}
 	if err := s.Delete("n1"); err != nil {
@@ -166,7 +166,7 @@ func TestDeleteFileRemovesEmptyDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.DeleteFile("n1", name); err != nil {
+	if err := s.DeleteFile("n1", name, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, Inbox, "n1.assets")); !os.IsNotExist(err) {
@@ -368,4 +368,52 @@ type zeros struct{}
 func (zeros) Read(p []byte) (int, error) {
 	clear(p)
 	return len(p), nil
+}
+
+func TestPutFileReplace(t *testing.T) {
+	s, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Create(&Note{ID: "n1", Notebook: "work", Title: "t"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AddFile("n1", "a.md", []byte("v1")); err != nil {
+		t.Fatal(err)
+	}
+	var kept []string
+	keep := func(path string) error {
+		b, err := os.ReadFile(path)
+		kept = append(kept, filepath.Base(path)+": "+string(b))
+		return err
+	}
+	name, replaced, err := s.PutFile("n1", "a.md", strings.NewReader("v2"), keep)
+	if err != nil || name != "a.md" || !replaced || !slices.Equal(kept, []string{"a.md: v1"}) {
+		t.Fatalf("PutFile = %q, %v, %v, kept %q", name, replaced, err, kept)
+	}
+	p, _ := s.File("n1", "a.md")
+	if b, _ := os.ReadFile(p); string(b) != "v2" {
+		t.Errorf("the file = %q", b)
+	}
+	// A failing keep leaves the file as it was, and nothing aside.
+	if _, _, err := s.PutFile("n1", "a.md", strings.NewReader("v3"), func(string) error { return errors.New("failed") }); err == nil {
+		t.Error("PutFile with a failing keep: no error")
+	}
+	if b, _ := os.ReadFile(p); string(b) != "v2" {
+		t.Errorf("the file after a failing keep = %q", b)
+	}
+	if entries, _ := os.ReadDir(filepath.Dir(p)); len(entries) != 1 {
+		t.Errorf("the files of the note: %v", entries)
+	}
+	// Too large: nothing changes.
+	if _, _, err := s.PutFile("n1", "a.md", bytes.NewReader(make([]byte, MaxFileSize+1)), keep); !errors.Is(err, ErrFileTooLarge) {
+		t.Errorf("PutFile too large: %v", err)
+	}
+	if len(kept) != 1 {
+		t.Errorf("kept %q", kept)
+	}
+	// A deleted file is kept first.
+	if err := s.DeleteFile("n1", "a.md", keep); err != nil || len(kept) != 2 || kept[1] != "a.md: v2" {
+		t.Errorf("DeleteFile = %v, kept %q", err, kept)
+	}
 }

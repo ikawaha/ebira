@@ -33,6 +33,8 @@ func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 			return runtime.ExecuteMCPTool(ctx, caller, call, "create_ai_notebook", genebira.SpecCreateAiNotebook())
 		case genebira.CreateAiSeparator:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "create_ai_separator", genebira.SpecCreateAiSeparator())
+		case genebira.DeleteAiFile:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "delete_ai_file", genebira.SpecDeleteAiFile())
 		case genebira.DeleteAiNote:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "delete_ai_note", genebira.SpecDeleteAiNote())
 		case genebira.DeleteAiSeparator:

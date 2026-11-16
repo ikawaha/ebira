@@ -57,6 +57,8 @@ type Server struct {
 	DeleteFile            http.Handler
 	History               http.Handler
 	HistoryVersion        http.Handler
+	FileHistory           http.Handler
+	RestoreFile           http.Handler
 	CheckFiles            http.Handler
 	Events                http.Handler
 	GitStatus             http.Handler
@@ -133,6 +135,8 @@ func New(
 			{"DeleteFile", "DELETE", "/notes/{id}/files/{name}"},
 			{"History", "GET", "/notes/{id}/history"},
 			{"HistoryVersion", "GET", "/notes/{id}/history/{rev}"},
+			{"FileHistory", "GET", "/notes/{id}/file-history"},
+			{"RestoreFile", "POST", "/notes/{id}/file-history/{rev}/restore"},
 			{"CheckFiles", "GET", "/files/check"},
 			{"Events", "GET", "/events"},
 			{"GitStatus", "GET", "/git/status"},
@@ -181,6 +185,8 @@ func New(
 		DeleteFile:            NewDeleteFileHandler(e.DeleteFile, mux, decoder, encoder, errhandler, formatter),
 		History:               NewHistoryHandler(e.History, mux, decoder, encoder, errhandler, formatter),
 		HistoryVersion:        NewHistoryVersionHandler(e.HistoryVersion, mux, decoder, encoder, errhandler, formatter),
+		FileHistory:           NewFileHistoryHandler(e.FileHistory, mux, decoder, encoder, errhandler, formatter),
+		RestoreFile:           NewRestoreFileHandler(e.RestoreFile, mux, decoder, encoder, errhandler, formatter),
 		CheckFiles:            NewCheckFilesHandler(e.CheckFiles, mux, decoder, encoder, errhandler, formatter),
 		Events:                NewEventsHandler(e.Events, mux, decoder, encoder, errhandler, formatter),
 		GitStatus:             NewGitStatusHandler(e.GitStatus, mux, decoder, encoder, errhandler, formatter),
@@ -236,6 +242,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.DeleteFile = m(s.DeleteFile)
 	s.History = m(s.History)
 	s.HistoryVersion = m(s.HistoryVersion)
+	s.FileHistory = m(s.FileHistory)
+	s.RestoreFile = m(s.RestoreFile)
 	s.CheckFiles = m(s.CheckFiles)
 	s.Events = m(s.Events)
 	s.GitStatus = m(s.GitStatus)
@@ -290,6 +298,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountDeleteFileHandler(mux, h.DeleteFile)
 	MountHistoryHandler(mux, h.History)
 	MountHistoryVersionHandler(mux, h.HistoryVersion)
+	MountFileHistoryHandler(mux, h.FileHistory)
+	MountRestoreFileHandler(mux, h.RestoreFile)
 	MountCheckFilesHandler(mux, h.CheckFiles)
 	MountEventsHandler(mux, h.Events)
 	MountGitStatusHandler(mux, h.GitStatus)
@@ -2231,6 +2241,112 @@ func NewHistoryVersionHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "history_version")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountFileHistoryHandler configures the mux to serve the "notes" service
+// "file_history" endpoint.
+func MountFileHistoryHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/notes/{id}/file-history", f)
+}
+
+// NewFileHistoryHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "file_history" endpoint.
+func NewFileHistoryHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeFileHistoryRequest(mux, decoder)
+		encodeResponse = EncodeFileHistoryResponse(encoder)
+		encodeError    = EncodeFileHistoryError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "file_history")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountRestoreFileHandler configures the mux to serve the "notes" service
+// "restore_file" endpoint.
+func MountRestoreFileHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/notes/{id}/file-history/{rev}/restore", f)
+}
+
+// NewRestoreFileHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "restore_file" endpoint.
+func NewRestoreFileHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeRestoreFileRequest(mux, decoder)
+		encodeResponse = EncodeRestoreFileResponse(encoder)
+		encodeError    = EncodeRestoreFileError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "restore_file")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {
