@@ -5050,7 +5050,7 @@ paths:
             tags:
                 - notes
             summary: restore_notebook notes
-            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.
+            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2, and keeps its name. Fails with already_exists if a notebook with the same name is where it goes back.
             operationId: notes#restore_notebook
             parameters:
                 - name: id
@@ -5136,7 +5136,7 @@ paths:
                                 temporary: false
                                 timeout: false
                 "409":
-                    description: 'already_exists: A notebook with the same ID exists'
+                    description: 'already_exists: A notebook with the same name is where it goes back'
                     content:
                         application/vnd.goa.error:
                             schema:

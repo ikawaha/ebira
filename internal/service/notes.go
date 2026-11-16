@@ -961,6 +961,9 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.restorableName(ctx, p.ID); err != nil {
+		return nil, err
+	}
 	id, err := s.store.RestoreNotebook(p.ID)
 	if err != nil {
 		return nil, mapErr(err)
@@ -978,6 +981,43 @@ func (s *Notes) RestoreNotebook(ctx context.Context, p *gennotes.RestoreNotebook
 		}
 	}
 	return nil, gennotes.MakeNotFound(errors.New("notebook not found"))
+}
+
+// restorableName fails with already_exists when notebook id in the trash
+// would go back next to a notebook with its name, as names are told apart
+// among the notebooks of a parent. Its ID may be taken: it then gets another
+// (see store.RestoreNotebook).
+func (s *Notes) restorableName(ctx context.Context, id string) error {
+	trashed, err := s.store.TrashedNotebooks()
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(trashed, id) {
+		return nil // the store tells it is not there
+	}
+	m, err := s.store.TrashedNotebookMeta(id)
+	if err != nil {
+		return mapErr(err)
+	}
+	to := store.RestoredNotebook(id)
+	name := m.Name
+	if name == "" {
+		name = store.NotebookName(to)
+	}
+	parent, sub := store.SplitNotebook(to)
+	if sub == "" {
+		parent = ""
+	}
+	nbs, err := s.notebooks(ctx)
+	if err != nil {
+		return err
+	}
+	for _, nb := range nbs {
+		if deref(nb.Parent) == parent && strings.EqualFold(norm.NFC.String(nb.Name), norm.NFC.String(name)) {
+			return gennotes.MakeAlreadyExists(fmt.Errorf("notebook %q already exists (%s); rename it before restoring this one", nb.Name, nb.ID))
+		}
+	}
+	return nil
 }
 
 // DeleteTrashedNotebook permanently deletes a notebook in the trash with its
@@ -1050,7 +1090,7 @@ func (s *Notes) ensureNotebookFromTrash(id string) error {
 		return err
 	}
 	if cur.Kind != trashed.Kind {
-		return gennotes.MakeBadRequest(fmt.Errorf("notebook %s exists with the kind %s, but the note comes from a notebook of the kind %s; restore the whole notebook from the trash after renaming or deleting the existing one", nb, apiKind(cur.Kind), apiKind(trashed.Kind)))
+		return gennotes.MakeBadRequest(fmt.Errorf("notebook %s exists with the kind %s, but the note comes from a notebook of the kind %s; restore the whole notebook from the trash instead, which goes back next to it", nb, apiKind(cur.Kind), apiKind(trashed.Kind)))
 	}
 	return nil
 }

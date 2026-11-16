@@ -229,21 +229,32 @@ func TestTrashSameNotebook(t *testing.T) {
 		}
 	}
 
-	// A notebook with that ID out of the trash keeps it there; once it is
-	// gone too, the numbered one goes back to its ID, with its sub notebook.
-	if _, err := s.RestoreNotebook("dev@2"); !errors.Is(err, ErrNotebookExists) {
-		t.Errorf("RestoreNotebook(dev@2) over dev = %v, want ErrNotebookExists", err)
+	// Over a notebook with its ID (renamed, say, which keeps the ID), it
+	// takes another, as a new notebook would, keeping its name; its sub
+	// notebook goes with it.
+	if err := s.SaveNotebookMeta("dev", NotebookMeta{Name: "Old dev"}); err != nil {
+		t.Fatal(err)
 	}
-	trash("dev", "dev@3")
-	if nb, err := s.RestoreNotebook("dev@2"); err != nil || nb != "dev" {
-		t.Fatalf("RestoreNotebook(dev@2) = %q, %v", nb, err)
+	if nb, err := s.RestoreNotebook("dev@2"); err != nil || nb != "dev-2" {
+		t.Fatalf("RestoreNotebook(dev@2) over dev = %q, %v, want dev-2", nb, err)
 	}
-	if n, err := s.Load("c"); err != nil || n.Notebook != "dev/ops" || n.TrashedNotebook != "" {
+	if m, err := s.NotebookMeta("dev-2"); err != nil || m.Name != "dev" {
+		t.Errorf("NotebookMeta(dev-2) = %+v, %v, want the name it had", m, err)
+	}
+	if n, err := s.Load("c"); err != nil || n.Notebook != "dev-2/ops" || n.TrashedNotebook != "" {
 		t.Errorf("Load(c) after restoring = %+v, %v", n, err)
 	}
-	if m, err := s.TrashedNotebookMeta("dev~ops@2"); err != nil {
-		t.Errorf("TrashedNotebookMeta(dev~ops@2) = %+v, %v", m, err)
+	// A sub notebook likewise, in its parent.
+	if nb, err := s.RestoreNotebook("dev~ops"); err != nil || nb != "dev/ops" {
+		t.Fatalf("RestoreNotebook(dev~ops) = %q, %v", nb, err)
 	}
+	if nb, err := s.RestoreNotebook("dev~ops@2"); err != nil || nb != "dev/ops-2" {
+		t.Fatalf("RestoreNotebook(dev~ops@2) over dev/ops = %q, %v, want dev/ops-2", nb, err)
+	}
+	if n, err := s.Load("e"); err != nil || n.Notebook != "dev/ops-2" {
+		t.Errorf("Load(e) after restoring = %+v, %v", n, err)
+	}
+	trash("dev/ops-2", "dev~ops-2")
 	if err := s.EmptyTrash(); err != nil {
 		t.Fatal(err)
 	}

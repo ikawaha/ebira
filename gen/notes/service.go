@@ -133,8 +133,10 @@ type Service interface {
 	// and trashed_notebook.
 	TrashedNotebooks(context.Context, *TrashedNotebooksPayload) (res []*TrashedNotebook, err error)
 	// Move a notebook out of the trash with its notes and settings. A sub notebook
-	// goes back into its parent, which must not be in the trash. Fails with
-	// already_exists if a notebook with the same ID exists.
+	// goes back into its parent, which must not be in the trash. When a notebook
+	// has its ID (renaming keeps the ID), it gets another one, as <id>-2, and
+	// keeps its name. Fails with already_exists if a notebook with the same name
+	// is where it goes back.
 	RestoreNotebook(context.Context, *RestoreNotebookPayload) (res *Notebook, err error)
 	// Permanently delete a notebook in the trash with its notes and sub notebooks.
 	DeleteTrashedNotebook(context.Context, *DeleteTrashedNotebookPayload) (err error)

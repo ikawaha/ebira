@@ -1074,7 +1074,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("restore_notebook", func() {
-		Description("Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.")
+		Description("Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2, and keeps its name. Fails with already_exists if a notebook with the same name is where it goes back.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "ID in the trash", trashedNotebookIDDSL)
@@ -1082,7 +1082,7 @@ var _ = Service("notes", func() {
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook is not in the trash")
 		Error("bad_request", ErrorResult, "The notebook ID is invalid, or the parent of the sub notebook is not there")
-		Error("already_exists", ErrorResult, "A notebook with the same ID exists")
+		Error("already_exists", ErrorResult, "A notebook with the same name is where it goes back")
 		HTTP(func() {
 			POST("/trash/notebooks/restore/{*id}")
 			Response(StatusOK)

@@ -1030,8 +1030,10 @@ func (s *Store) MoveNotebook(nb, parent string) (string, error) {
 
 // RestoreNotebook moves notebook id out of the trash, and returns the ID of
 // the notebook it became: a sub notebook goes back into its parent, which
-// must exist (ErrNoParent). It fails with ErrNotebookExists when a notebook
-// with the same ID exists.
+// must exist (ErrNoParent). When a notebook has its ID, it takes the first
+// free one with a suffix, as a new notebook would ("-2", see
+// UniqueNotebookID), keeping its name: renaming a notebook keeps its ID, so
+// the ID may be taken by one with another name.
 func (s *Store) RestoreNotebook(id string) (string, error) {
 	if !validTrashed(id) {
 		return "", ErrInvalidNotebook
@@ -1046,10 +1048,36 @@ func (s *Store) RestoreNotebook(id string) (string, error) {
 			return "", fmt.Errorf("%w: %s", ErrNoParent, parent)
 		}
 	}
-	if _, err := os.Stat(to); err == nil {
-		return "", fmt.Errorf("%w: %s; rename, move or delete that notebook before restoring this one", ErrNotebookExists, nb)
+	exists := func(nb string) bool {
+		_, err := os.Lstat(filepath.Join(s.dir, filepath.FromSlash(nb)))
+		return !errors.Is(err, fs.ErrNotExist)
 	}
-	return nb, os.Rename(from, to)
+	if !exists(nb) {
+		return nb, os.Rename(from, to)
+	}
+	m, err := s.TrashedNotebookMeta(id)
+	if err != nil {
+		return "", err
+	}
+	name := m.Name
+	if name == "" {
+		name = NotebookName(nb)
+	}
+	parent, sub := SplitNotebook(nb)
+	if sub == "" {
+		nb = UniqueNotebookID(parent, exists)
+	} else {
+		nb = parent + "/" + UniqueNotebookID(sub, func(sub string) bool { return exists(parent + "/" + sub) })
+	}
+	if err := os.Rename(from, filepath.Join(s.dir, filepath.FromSlash(nb))); err != nil {
+		return "", err
+	}
+	// The name came from the ID without a settings file: it is kept there.
+	if m, err = s.NotebookMeta(nb); err != nil || m.Name != "" {
+		return nb, err
+	}
+	m.Name = name
+	return nb, s.SaveNotebookMeta(nb, m)
 }
 
 // DeleteTrashedNotebook permanently deletes notebook nb in the trash with its

@@ -1794,9 +1794,10 @@ async function trashNotebook(nb) {
     return;
   }
   offerUndo(t("toastNotebookTrashed", { name: nb.name }), async () => {
-    await api(`/trash/notebooks/restore/${nbPath(id)}`, { method: "POST" });
+    // Its ID may have been taken meanwhile: it then comes back with another.
+    const back = await api(`/trash/notebooks/restore/${nbPath(id)}`, { method: "POST" });
     await loadNotebooks().catch(() => {});
-    showNotebook(nb.id);
+    showNotebook(back.id);
   });
   const shown = state.notebook === nb.id;
   await loadNotebooks().catch(() => {});

@@ -825,6 +825,48 @@ func TestTrashNotebook(t *testing.T) {
 
 // A note of a notebook in the trash can be moved to another notebook on its
 // own, which takes it out of the trash and leaves the notebook there.
+// TestRestoreNotebookOverRenamed checks that a notebook in the trash comes
+// back next to one that took its ID and was renamed, which keeps the ID: it
+// takes another ID, keeping its name. One with the same name stays in the
+// trash, as names are told apart.
+func TestRestoreNotebookOverRenamed(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, _ := newTestService(t)
+	mk := func() *gennotes.Notebook {
+		t.Helper()
+		nb, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Plans", Kind: "default"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Create(person, &gennotes.CreatePayload{Notebook: &nb.ID, Title: "x"}); err != nil {
+			t.Fatal(err)
+		}
+		return nb
+	}
+	old := mk()
+	del, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: old.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := mk()
+	if other.ID != old.ID {
+		t.Fatalf("the new notebook took %s, want %s", other.ID, old.ID)
+	}
+	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: del.ID}); errorName(err) != "already_exists" {
+		t.Errorf("restoring next to a notebook with its name = %v, want already_exists", err)
+	}
+	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: "plans@9"}); errorName(err) != "not_found" {
+		t.Errorf("restoring a notebook not in the trash = %v, want not_found", err)
+	}
+	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: other.ID, Name: ptr("Plans 2025")}); err != nil {
+		t.Fatal(err)
+	}
+	nb, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: del.ID})
+	if err != nil || nb.ID != old.ID+"-2" || nb.Name != "Plans" || nb.Count != 1 {
+		t.Fatalf("restoring next to the renamed one = %+v, %v, want %s-2 named Plans", nb, err, old.ID)
+	}
+}
+
 func TestMoveNoteOutOfTrashedNotebook(t *testing.T) {
 	ctx := AsPerson(context.Background())
 	svc, _ := newTestService(t)
