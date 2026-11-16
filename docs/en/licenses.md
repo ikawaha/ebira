@@ -8,6 +8,8 @@ The licenses of ebira, and of the works of others in it.
 
 ebira is distributed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). Its source is at https://github.com/ikawaha/ebira.
 
+The GitHub mark in the settings menu is a trademark of GitHub, Inc., not under the license of ebira. As the GitHub logo guidelines ask, it is used only to link the repository of ebira, unchanged in shape and in color (black or white).
+
 ## Icon (chidori)
 
 The icon of the tab of the web UI and of the desktop app is changed from "日本文様-千鳥模様.svg" by Pneuma01 (Wikimedia Commons, https://commons.wikimedia.org/wiki/File:%E6%97%A5%E6%9C%AC%E6%96%87%E6%A7%98-%E5%8D%83%E9%B3%A5%E6%A8%A1%E6%A7%98.svg ). It is licensed under the Creative Commons Attribution 4.0 International license (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ ), not under the license of ebira. Changes: the editor's metadata is removed, the picture is centered on a white square with rounded corners, and the desktop app adds a margin around it. The mark of the notes made by AI in the web UI is the same picture, without the white square, drawn in the color of the text with the wing and the eye cut out.
