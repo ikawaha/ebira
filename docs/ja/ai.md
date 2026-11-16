@@ -148,7 +148,8 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `get_note` | ノートを、本文と版（version）と一緒に取得する |
 | `create_ai_note` | collab のノートブックに新しいノートを書く。drop のノートブックには置くだけ |
 | `import_ai_note` | Markdown のファイルを、front matter と参照する画像ごと、新しいノートとして同じように取り込む |
-| `add_ai_file` / `start_ai_upload` | collab のノートブックのノートに画像やファイルを足す（base64 か、1 回だけのアップロードの URL で） |
+| `add_ai_file` / `start_ai_upload` | collab のノートブックのノートに画像やファイルを足す（base64 か、1 回だけのアップロードの URL で）。`replace` で同じ名前のファイルを置き換える |
+| `delete_ai_file` | collab のノートブックのノートのファイルを消す |
 | `update_ai_note` | collab のノートブックのノートを書き換える。マークを付ける、アーカイブへ移すこともできる。`get_note` の版が要る。長い本文は一部だけ変えられる（`append` で末尾に書き足す、`edits` で本文の一部を置き換える） |
 | `delete_ai_note` | collab のノートブックのノートをゴミ箱へ移す。`get_note` の版が要る |
 | `move_ai_note` | collab のノートブックのノートを並べ替える |
@@ -157,7 +158,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `archive_ai_notebook` | collab のノートブックをアーカイブへ移す・戻す |
 | `make_notebook_private` | ノートブックを AI から見えなくする。戻せるのはあなただけ |
 
-版があるので、AI の変更は安全です。AI が読んだあとでノートが変わっていれば、その変更は拒まれ、あなたが書いた内容は上書きされません。
+版があるので、AI の変更は安全です。AI が読んだあとでノートが変わっていれば、その変更は拒まれ、あなたが書いた内容は上書きされません。AI が置き換えたり消したりしたファイルも残り、[履歴](history.md)から戻せます。
 
 つないだら、ふつうの言葉で頼めます:
 

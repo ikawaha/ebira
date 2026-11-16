@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"mime"
 	"os"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -45,13 +47,54 @@ func (s *Notes) AddAiFile(ctx context.Context, p *gennotes.AddAiFilePayload) (*g
 	if len(p.Content) > aiMaxFileSize {
 		return nil, gennotes.MakeTooLarge(fmt.Errorf("the file is larger than %d MB", aiMaxFileSize>>20))
 	}
+	var keep func(string) error
+	if p.Replace != nil && *p.Replace {
+		keep = s.keepFile(p.ID)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	name, err := s.store.AddFile(p.ID, p.Name, p.Content)
+	name, replaced, err := s.store.PutFile(p.ID, p.Name, bytes.NewReader(p.Content), keep)
 	if err != nil {
 		return nil, mapFileErr(err)
 	}
-	return &gennotes.NoteFile{Name: name, Path: store.FilePath(p.ID, name)}, nil
+	return noteFile(p.ID, name, replaced), nil
+}
+
+// noteFile returns the file name of note id for the API.
+func noteFile(id, name string, replaced bool) *gennotes.NoteFile {
+	res := &gennotes.NoteFile{Name: name, Path: store.FilePath(id, name)}
+	if replaced {
+		res.Replaced = ptr(true)
+	}
+	return res
+}
+
+// keepFile returns the function that keeps a file of note id, replaced or
+// deleted, in the history, for people to put back (see history.KeepFile). It
+// keeps nothing without a history, as in tests.
+func (s *Notes) keepFile(id string) func(path string) error {
+	return func(path string) error {
+		if s.history == nil {
+			return nil
+		}
+		return s.history.KeepFile(id, filepath.Base(path), path)
+	}
+}
+
+// DeleteAiFile deletes a file of a note in a notebook of the collab kind for
+// an AI client, keeping it for people to put back. A note hidden from AI
+// clients is not found.
+func (s *Notes) DeleteAiFile(ctx context.Context, p *gennotes.DeleteAiFilePayload) error {
+	n, err := s.Get(ctx, &gennotes.GetPayload{ID: p.ID})
+	if err != nil {
+		return err
+	}
+	if err := s.requireAINotebook(n.Notebook); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return mapFileErr(s.store.DeleteFile(p.ID, p.Name, s.keepFile(p.ID)))
 }
 
 // AddFile adds a file to a note (see store.AddFile).
@@ -71,7 +114,7 @@ func (s *Notes) AddFile(ctx context.Context, p *gennotes.AddFilePayload, body io
 	if err != nil {
 		return nil, mapFileErr(err)
 	}
-	return &gennotes.NoteFile{Name: name, Path: store.FilePath(p.ID, name)}, nil
+	return noteFile(p.ID, name, false), nil
 }
 
 // GetFile returns a file of a note. Images, told by their content, are served
@@ -118,14 +161,81 @@ func (s *Notes) GetFile(ctx context.Context, p *gennotes.GetFilePayload) (*genno
 	}, f, nil
 }
 
-// DeleteFile deletes a file of a note.
+// DeleteFile deletes a file of a note, keeping it to be put back.
 func (s *Notes) DeleteFile(ctx context.Context, p *gennotes.DeleteFilePayload) error {
 	if !fromPerson(ctx) {
 		return gennotes.MakeNotFound(errFilesForPeople)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return mapFileErr(s.store.DeleteFile(p.ID, p.Name))
+	return mapFileErr(s.store.DeleteFile(p.ID, p.Name, s.keepFile(p.ID)))
+}
+
+// FileHistory lists the earlier files of a note, replaced or deleted. Only
+// people see them, as the history of notes.
+func (s *Notes) FileHistory(ctx context.Context, p *gennotes.FileHistoryPayload) ([]*gennotes.FileVersion, error) {
+	if !fromPerson(ctx) {
+		return nil, gennotes.MakeNotFound(errFilesForPeople)
+	}
+	if err := requireVerified(ctx); err != nil {
+		return nil, err
+	}
+	if _, err := s.store.Stat(p.ID); err != nil {
+		return nil, mapErr(err)
+	}
+	res := []*gennotes.FileVersion{}
+	if s.history == nil {
+		return res, nil
+	}
+	fs, err := s.history.Files(p.ID)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range fs {
+		_, err := s.store.File(p.ID, f.Name)
+		res = append(res, &gennotes.FileVersion{Rev: f.Rev, Name: f.Name, Size: f.Size, ReplacedAt: store.FormatTime(f.ReplacedAt), Current: err == nil})
+	}
+	return res, nil
+}
+
+// RestoreFile puts an earlier file of a note back under its name, keeping
+// the file of that name now in its place.
+func (s *Notes) RestoreFile(ctx context.Context, p *gennotes.RestoreFilePayload) (*gennotes.NoteFile, error) {
+	if !fromPerson(ctx) {
+		return nil, gennotes.MakeNotFound(errFilesForPeople)
+	}
+	if err := requireVerified(ctx); err != nil {
+		return nil, err
+	}
+	if _, err := s.store.Stat(p.ID); err != nil {
+		return nil, mapErr(err)
+	}
+	if s.history == nil {
+		return nil, gennotes.MakeNotFound(history.ErrNotFound)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var res *gennotes.NoteFile
+	err := s.history.TakeFile(p.ID, p.Rev, func(f *history.File, path string) error {
+		in, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+		name, replaced, err := s.store.PutFile(p.ID, f.Name, in, s.keepFile(p.ID))
+		if err != nil {
+			return err
+		}
+		res = noteFile(p.ID, name, replaced)
+		return nil
+	})
+	if errors.Is(err, history.ErrNotFound) {
+		return nil, gennotes.MakeNotFound(err)
+	}
+	if err != nil {
+		return nil, mapFileErr(err)
+	}
+	return res, nil
 }
 
 // recentFile is how long a file counts as recently added, when the note it

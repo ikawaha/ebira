@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|archive-notes|archive-candidates|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|archive-notes|archive-candidates|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|file-history|restore-file|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-request|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -245,6 +245,15 @@ func ParseEndpoint(
 		notesHistoryVersionRevFlag     = new(cliStringFlag)
 		notesHistoryVersionSessionFlag = new(cliStringFlag)
 
+		notesFileHistoryFlags       = flag.NewFlagSet("file-history", flag.ExitOnError)
+		notesFileHistoryIDFlag      = new(cliStringFlag)
+		notesFileHistorySessionFlag = new(cliStringFlag)
+
+		notesRestoreFileFlags       = flag.NewFlagSet("restore-file", flag.ExitOnError)
+		notesRestoreFileIDFlag      = new(cliStringFlag)
+		notesRestoreFileRevFlag     = new(cliStringFlag)
+		notesRestoreFileSessionFlag = new(cliStringFlag)
+
 		notesCheckFilesFlags       = flag.NewFlagSet("check-files", flag.ExitOnError)
 		notesCheckFilesSessionFlag = new(cliStringFlag)
 
@@ -428,6 +437,11 @@ func ParseEndpoint(
 	notesHistoryVersionFlags.Var(notesHistoryVersionIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
 	notesHistoryVersionFlags.Var(notesHistoryVersionRevFlag, "rev", "ID of the version")
 	notesHistoryVersionFlags.Var(notesHistoryVersionSessionFlag, "session", "")
+	notesFileHistoryFlags.Var(notesFileHistoryIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
+	notesFileHistoryFlags.Var(notesFileHistorySessionFlag, "session", "")
+	notesRestoreFileFlags.Var(notesRestoreFileIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
+	notesRestoreFileFlags.Var(notesRestoreFileRevFlag, "rev", "ID of the earlier file")
+	notesRestoreFileFlags.Var(notesRestoreFileSessionFlag, "session", "")
 	notesCheckFilesFlags.Var(notesCheckFilesSessionFlag, "session", "")
 	notesEventsFlags.Var(notesEventsSessionFlag, "session", "")
 	notesGitStatusFlags.Var(notesGitStatusSessionFlag, "session", "")
@@ -499,6 +513,8 @@ func ParseEndpoint(
 	notesDeleteFileFlags.Usage = notesDeleteFileUsage
 	notesHistoryFlags.Usage = notesHistoryUsage
 	notesHistoryVersionFlags.Usage = notesHistoryVersionUsage
+	notesFileHistoryFlags.Usage = notesFileHistoryUsage
+	notesRestoreFileFlags.Usage = notesRestoreFileUsage
 	notesCheckFilesFlags.Usage = notesCheckFilesUsage
 	notesEventsFlags.Usage = notesEventsUsage
 	notesGitStatusFlags.Usage = notesGitStatusUsage
@@ -675,6 +691,12 @@ func ParseEndpoint(
 
 			case "history-version":
 				epf = notesHistoryVersionFlags
+
+			case "file-history":
+				epf = notesFileHistoryFlags
+
+			case "restore-file":
+				epf = notesRestoreFileFlags
 
 			case "check-files":
 				epf = notesCheckFilesFlags
@@ -916,6 +938,12 @@ func ParseEndpoint(
 			case "history-version":
 				endpoint = c.HistoryVersion()
 				data, err = notesc.BuildHistoryVersionPayload(notesHistoryVersionIDFlag.value, notesHistoryVersionRevFlag.value, notesHistoryVersionSessionFlag.value)
+			case "file-history":
+				endpoint = c.FileHistory()
+				data, err = notesc.BuildFileHistoryPayload(notesFileHistoryIDFlag.value, notesFileHistorySessionFlag.value)
+			case "restore-file":
+				endpoint = c.RestoreFile()
+				data, err = notesc.BuildRestoreFilePayload(notesRestoreFileIDFlag.value, notesRestoreFileRevFlag.value, notesRestoreFileSessionFlag.value)
 			case "check-files":
 				endpoint = c.CheckFiles()
 				data, err = notesc.BuildCheckFilesPayload(notesCheckFilesSessionFlag.value)
@@ -1048,9 +1076,11 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    upload-ai-file: Add a file to a note for an AI client, with a URL from start_ai_upload. The request body is the file, at most 5 MB. A URL works once, until it expires; the note must still be in a notebook of the collab kind.`)
 	fmt.Fprintln(os.Stderr, `    add-file: Add a file to a note. The request body is the file, of any type, at most 50 MB. The name is cleaned up (letters, digits, - and _), keeps its extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of its type), and gets a suffix such as -2 when it is taken. Refer to the file from the body with the returned path: ![description](path) shows an image, and [name](path) links to a file.`)
 	fmt.Fprintln(os.Stderr, `    get-file: Get a file of a note. The response body is the file. Images (PNG, JPEG, GIF and WebP, told by their content) and PDF files are served as their type to be shown; other files, which might run scripts if shown, as application/octet-stream to be downloaded.`)
-	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it.`)
+	fmt.Fprintln(os.Stderr, `    delete-file: Delete a file of a note. The body may still refer to it. The file is kept on this device, to be put back with restore_file.`)
 	fmt.Fprintln(os.Stderr, `    history: List the earlier versions of a note, newest first. A version is kept on this device whenever the title, tags or body is replaced, by a save or by a change of the file found by a sync; up to 50 per note, and those older than 30 days are dropped except the 5 newest. To put a version back, update the note with its content. For people only.`)
 	fmt.Fprintln(os.Stderr, `    history-version: Get an earlier version of a note from its history. For people only.`)
+	fmt.Fprintln(os.Stderr, `    file-history: List the earlier files of a note, newest first: those replaced by a file of the same name or deleted, by people or AI clients, kept on this device; up to 20 per note, and those older than 30 days are dropped except the 5 newest. For people only.`)
+	fmt.Fprintln(os.Stderr, `    restore-file: Put an earlier file of a note back under its name. The file of that name now, if any, is kept in its place, so that this can be undone. For people only.`)
 	fmt.Fprintln(os.Stderr, `    check-files: Check the files of notes against the note bodies: list the files that no body refers to, which can be deleted with delete_file, and the references to files that do not exist. A reference is <id>.assets/<name> anywhere in a body, including in code, so that a file counts as used rather than not. Files added within the last hour are marked recent, as the note may still be being edited, and files that only earlier versions of notes refer to are marked in_history, as putting such a version back would need them.`)
 	fmt.Fprintln(os.Stderr, `    events: Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
 	fmt.Fprintln(os.Stderr, `    git-status: Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
@@ -1794,7 +1824,7 @@ func notesDeleteFileUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Delete a file of a note. The body may still refer to it.`)
+	fmt.Fprintln(os.Stderr, `Delete a file of a note. The body may still refer to it. The file is kept on this device, to be put back with restore_file.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
@@ -1846,6 +1876,48 @@ func notesHistoryVersionUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes history-version --id \"be4c1193735ee1\" --rev \"1792400000000000000\" --session \"Voluptatem accusantium illum commodi sint.\"")
+}
+
+func notesFileHistoryUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes file-history", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `List the earlier files of a note, newest first: those replaced by a file of the same name or deleted, by people or AI clients, kept on this device; up to 20 per note, and those older than 30 days are dropped except the 5 newest. For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes file-history --id \"be4c1193735ee1\" --session \"Voluptas et quisquam laboriosam omnis eveniet.\"")
+}
+
+func notesRestoreFileUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes restore-file", os.Args[0])
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -rev STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Put an earlier file of a note back under its name. The file of that name now, if any, is kept in its place, so that this can be undone. For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
+	fmt.Fprintln(os.Stderr, `    -rev STRING: ID of the earlier file`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes restore-file --id \"be4c1193735ee1\" --rev \"1792400000000000000\" --session \"Tempore facilis qui error voluptatem dolorem.\"")
 }
 
 func notesCheckFilesUsage() {

@@ -29,6 +29,9 @@ type AddAiFilePayloadTransport struct {
 	Name *string `json:"name"`
 	// The file, base64-encoded, at most 5 MB
 	Content []byte `json:"content"`
+	// Replace the file of the same name, if any, rather than add the file with
+	// another name; the replaced file is kept for people to put back
+	Replace *bool `json:"replace,omitempty"`
 }
 
 // ValidateAddAiFilePayloadTransport checks decoded JSON before it becomes a service value.
@@ -66,6 +69,9 @@ type AddAiFileResultTransport struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path *string `json:"path"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `json:"replaced,omitempty"`
 }
 
 // ValidateAddAiFileResultTransport checks decoded JSON before it becomes a service value.
@@ -611,6 +617,33 @@ func ValidateCreateAiSeparatorResultTransport(value *CreateAiSeparatorResultTran
 	}
 	if value.Before != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *value.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// DeleteAiFilePayloadTransport stores JSON fields until they have been validated.
+type DeleteAiFilePayloadTransport struct {
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID *string `json:"id"`
+	// File name, as in the path the body refers to it by
+	Name *string `json:"name"`
+}
+
+// ValidateDeleteAiFilePayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateDeleteAiFilePayloadTransport(value *DeleteAiFilePayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -2369,6 +2402,9 @@ type StartAiUploadPayloadTransport struct {
 	ID *string `json:"id"`
 	// File name
 	Name *string `json:"name"`
+	// Replace the file of the same name, if any, rather than add the file with
+	// another name; the replaced file is kept for people to put back
+	Replace *bool `json:"replace,omitempty"`
 }
 
 // ValidateStartAiUploadPayloadTransport checks decoded JSON before it becomes a service value.
@@ -2897,6 +2933,7 @@ func DecodeAddAiFilePayload(data []byte) (out *notes.AddAiFilePayload, err error
 			ID:      *body.ID,
 			Name:    *body.Name,
 			Content: body.Content,
+			Replace: body.Replace,
 		}
 	}
 	return out, nil
@@ -2907,8 +2944,9 @@ func EncodeAddAiFileResult(in *notes.NoteFile) ([]byte, error) {
 	var body *AddAiFileResultTransport
 	{
 		body = &AddAiFileResultTransport{
-			Name: &in.Name,
-			Path: &in.Path,
+			Name:     &in.Name,
+			Path:     &in.Path,
+			Replaced: in.Replaced,
 		}
 	}
 	if err := ValidateAddAiFileResultTransport(body); err != nil {
@@ -3173,6 +3211,32 @@ func EncodeCreateAiSeparatorResult(in *notes.Separator) ([]byte, error) {
 		return nil, fmt.Errorf("encode CreateAiSeparatorResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// DecodeDeleteAiFilePayload checks JSON field names from the Goa design and returns a service value.
+func DecodeDeleteAiFilePayload(data []byte) (out *notes.DeleteAiFilePayload, err error) {
+	var body *DeleteAiFilePayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode DeleteAiFilePayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode DeleteAiFilePayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode DeleteAiFilePayload JSON after first value: %w", err)
+	}
+	if err := ValidateDeleteAiFilePayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate DeleteAiFilePayload JSON: %w", err)
+	}
+	{
+		out = &notes.DeleteAiFilePayload{
+			ID:   *body.ID,
+			Name: *body.Name,
+		}
+	}
+	return out, nil
 }
 
 // DecodeDeleteAiNotePayload checks JSON field names from the Goa design and returns a service value.
@@ -3911,8 +3975,9 @@ func DecodeStartAiUploadPayload(data []byte) (out *notes.StartAiUploadPayload, e
 	}
 	{
 		out = &notes.StartAiUploadPayload{
-			ID:   *body.ID,
-			Name: *body.Name,
+			ID:      *body.ID,
+			Name:    *body.Name,
+			Replace: body.Replace,
 		}
 	}
 	return out, nil

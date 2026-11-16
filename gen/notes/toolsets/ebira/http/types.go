@@ -21,6 +21,9 @@ type (
 		Name *string `json:"name"`
 		// The file, base64-encoded, at most 5 MB
 		Content []byte `json:"content"`
+		// Replace the file of the same name, if any, rather than add the file with
+		// another name; the replaced file is kept for people to put back
+		Replace *bool `json:"replace,omitempty"`
 	}
 	// AddAiFileResultTransport is the internal JSON transport type for AddAiFileResult.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -32,6 +35,9 @@ type (
 		// Path of the file relative to the note file, to refer to it from the body,
 		// such as ![](<path>)
 		Path *string `json:"path"`
+		// True when the file took the place of a file of the same name, which people
+		// can put back
+		Replaced *bool `json:"replaced,omitempty"`
 	}
 	// ArchiveAiNotebookPayloadTransport is the internal JSON transport type for ArchiveAiNotebookPayload.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -245,6 +251,18 @@ type (
 		// ID of the note that comes right after the separator in the manual order;
 		// absent when the separator comes after the last note
 		Before *string `json:"before,omitempty"`
+	}
+	// DeleteAiFilePayloadTransport is the internal JSON transport type for DeleteAiFilePayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	DeleteAiFilePayloadTransport struct {
+		// Note ID. A link to a note in the web UI, such as
+		// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+		// #note/
+		ID *string `json:"id"`
+		// File name, as in the path the body refers to it by
+		Name *string `json:"name"`
 	}
 	// DeleteAiNotePayloadTransport is the internal JSON transport type for DeleteAiNotePayload.
 	// It lives in the toolset-local http package and is used only for JSON
@@ -603,6 +621,9 @@ type (
 		ID *string `json:"id"`
 		// File name
 		Name *string `json:"name"`
+		// Replace the file of the same name, if any, rather than add the file with
+		// another name; the replaced file is kept for people to put back
+		Replace *bool `json:"replace,omitempty"`
 	}
 	// StartAiUploadResultTransport is the internal JSON transport type for StartAiUploadResult.
 	// It lives in the toolset-local http package and is used only for JSON

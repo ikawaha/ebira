@@ -179,26 +179,34 @@ type Service interface {
 	// image, which the body shows, or another file, such as a PDF, which the body
 	// links to. The name is cleaned up (letters, digits, - and _), keeps its
 	// extension (a PNG, JPEG, GIF or WebP image, told by its content, gets the
-	// extension of its type), and gets a suffix such as -2 when it is taken. Refer
-	// to the file from the body with the returned path, with update_ai_note:
-	// ![description](path) for an image and [name](path) for another file. Notes
-	// in other notebooks are read-only for AI clients; to add a note with images
-	// to a notebook of the drop kind, use import_ai_note.
+	// extension of its type), and gets a suffix such as -2 when it is taken,
+	// unless replace is set: then it replaces the file of that name, which is kept
+	// for people to put back. Refer to the file from the body with the returned
+	// path, with update_ai_note: ![description](path) for an image and
+	// [name](path) for another file. Notes in other notebooks are read-only for AI
+	// clients; to add a note with images to a notebook of the drop kind, use
+	// import_ai_note.
 	AddAiFile(context.Context, *AddAiFilePayload) (res *NoteFile, err error)
 	// Begin adding a file of at most 5 MB to a note in a notebook of the collab
 	// kind, sent as is rather than base64-encoded as with add_ai_file: the result
 	// is a URL for one upload, valid for 10 minutes. Send the file in the body of
 	// a PUT request to the URL, such as with curl -sS -T <file> <url>; the
 	// response is the JSON of add_ai_file, with the name and the path of the file.
-	// The name is cleaned up as with add_ai_file. Refer to the file from the body
-	// with the returned path, with update_ai_note: ![description](path) for an
-	// image and [name](path) for another file. A client that cannot run commands
-	// uses add_ai_file.
+	// The name is cleaned up as with add_ai_file, and replace replaces the file of
+	// that name as with add_ai_file. Refer to the file from the body with the
+	// returned path, with update_ai_note: ![description](path) for an image and
+	// [name](path) for another file. A client that cannot run commands uses
+	// add_ai_file.
 	StartAiUpload(context.Context, *StartAiUploadPayload) (res *AIUpload, err error)
 	// Add a file to a note for an AI client, with a URL from start_ai_upload. The
 	// request body is the file, at most 5 MB. A URL works once, until it expires;
 	// the note must still be in a notebook of the collab kind.
 	UploadAiFile(context.Context, *UploadAiFilePayload, io.ReadCloser) (res *NoteFile, err error)
+	// Delete a file of a note in a notebook of the collab kind, such as one no
+	// longer referred to after the body changed. The file is kept for people to
+	// put back. The body may still refer to it; change the body with
+	// update_ai_note.
+	DeleteAiFile(context.Context, *DeleteAiFilePayload) (err error)
 	// Update a note in a notebook of the collab kind. Omitted attributes are left
 	// unchanged. The version from get_note is required, so that changes made by
 	// people meanwhile are not overwritten. Setting notebook moves the note to
@@ -269,7 +277,8 @@ type Service interface {
 	// Consider [goa.design/goa/v3/pkg.SkipResponseWriter] to adapt existing
 	// implementations.
 	GetFile(context.Context, *GetFilePayload) (res *GetFileResult, body io.ReadCloser, err error)
-	// Delete a file of a note. The body may still refer to it.
+	// Delete a file of a note. The body may still refer to it. The file is kept on
+	// this device, to be put back with restore_file.
 	DeleteFile(context.Context, *DeleteFilePayload) (err error)
 	// List the earlier versions of a note, newest first. A version is kept on this
 	// device whenever the title, tags or body is replaced, by a save or by a
@@ -279,6 +288,15 @@ type Service interface {
 	History(context.Context, *HistoryPayload) (res []*NoteVersionSummary, err error)
 	// Get an earlier version of a note from its history. For people only.
 	HistoryVersion(context.Context, *HistoryVersionPayload) (res *NoteVersion, err error)
+	// List the earlier files of a note, newest first: those replaced by a file of
+	// the same name or deleted, by people or AI clients, kept on this device; up
+	// to 20 per note, and those older than 30 days are dropped except the 5
+	// newest. For people only.
+	FileHistory(context.Context, *FileHistoryPayload) (res []*FileVersion, err error)
+	// Put an earlier file of a note back under its name. The file of that name
+	// now, if any, is kept in its place, so that this can be undone. For people
+	// only.
+	RestoreFile(context.Context, *RestoreFilePayload) (res *NoteFile, err error)
 	// Check the files of notes against the note bodies: list the files that no
 	// body refers to, which can be deleted with delete_file, and the references to
 	// files that do not exist. A reference is <id>.assets/<name> anywhere in a
@@ -357,7 +375,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [61]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "add_file", "get_file", "delete_file", "history", "history_version", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+var MethodNames = [64]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -407,6 +425,9 @@ type AddAiFilePayload struct {
 	Name string
 	// The file, base64-encoded, at most 5 MB
 	Content []byte
+	// Replace the file of the same name, if any, rather than add the file with
+	// another name; the replaced file is kept for people to put back
+	Replace *bool
 }
 
 // AddFilePayload is the payload type of the notes service add_file method.
@@ -575,6 +596,17 @@ type CreateSeparatorPayload struct {
 	After *string
 }
 
+// DeleteAiFilePayload is the payload type of the notes service delete_ai_file
+// method.
+type DeleteAiFilePayload struct {
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID string
+	// File name, as in the path the body refers to it by
+	Name string
+}
+
 // DeleteAiNotePayload is the payload type of the notes service delete_ai_note
 // method.
 type DeleteAiNotePayload struct {
@@ -677,6 +709,31 @@ type FileCheck struct {
 	Unused []*UnusedFile
 	// References to files that do not exist, sorted by note and path
 	Broken []*BrokenFileRef
+}
+
+// FileHistoryPayload is the payload type of the notes service file_history
+// method.
+type FileHistoryPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID string
+}
+
+type FileVersion struct {
+	// ID of the earlier file among those of the note
+	Rev string
+	// File name
+	Name string
+	// Size of the file in bytes
+	Size int64
+	// When the file was replaced or deleted
+	ReplacedAt string
+	// Whether the note has a file of the same name now, which putting this one
+	// back replaces
+	Current bool
 }
 
 // GetFilePayload is the payload type of the notes service get_file method.
@@ -1060,6 +1117,9 @@ type NoteFile struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path string
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool
 }
 
 // NoteList is the result type of the notes service list method.
@@ -1236,6 +1296,19 @@ type PreviewStylePayload struct {
 type RestartServerPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
+}
+
+// RestoreFilePayload is the payload type of the notes service restore_file
+// method.
+type RestoreFilePayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID string
+	// ID of the earlier file
+	Rev string
 }
 
 // RestoreNotebookPayload is the payload type of the notes service
@@ -1444,6 +1517,9 @@ type StartAiUploadPayload struct {
 	ID string
 	// File name
 	Name string
+	// Replace the file of the same name, if any, rather than add the file with
+	// another name; the replaced file is kept for people to put back
+	Replace *bool
 }
 
 // A stop list of the ja search mode
@@ -1738,6 +1814,26 @@ func ValidatefileCheckInt64Transport(value fileCheckInt64Transport) (err error) 
 	return err
 }
 
+// fileVersionInt64Transport stores JSON fields until they have been validated.
+type fileVersionInt64Transport int64
+
+// UnmarshalJSON reads an exact whole JSON number and stores it within this type's
+// declared range. Decimal and exponent spellings do not change its value.
+func (value *fileVersionInt64Transport) UnmarshalJSON(data []byte) error {
+	number, err := rawjson.DecodeInteger[int64](data)
+	if err != nil {
+		return fmt.Errorf("decode fileVersionInt64Transport integer: %w", err)
+	}
+	*value = fileVersionInt64Transport(number)
+	return nil
+}
+
+// ValidatefileVersionInt64Transport checks decoded JSON before it becomes a service value.
+func ValidatefileVersionInt64Transport(value fileVersionInt64Transport) (err error) {
+
+	return err
+}
+
 // gitSyncResultIntTransport stores JSON fields until they have been validated.
 type gitSyncResultIntTransport int
 
@@ -1907,6 +2003,50 @@ func validatejsonFileCheckTransport(value *jsonFileCheckTransport) (err error) {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return err
+}
+
+// jsonFileVersionTransport stores JSON fields until they have been validated.
+type jsonFileVersionTransport struct {
+	// ID of the earlier file among those of the note
+	Rev *string `json:"rev"`
+	// File name
+	Name *string `json:"name"`
+	// Size of the file in bytes
+	Size *fileVersionInt64Transport `json:"size"`
+	// When the file was replaced or deleted
+	ReplacedAt *string `json:"replaced_at"`
+	// Whether the note has a file of the same name now, which putting this one
+	// back replaces
+	Current *bool `json:"current"`
+}
+
+// validatejsonFileVersionTransport checks decoded JSON before it becomes a service value.
+func validatejsonFileVersionTransport(value *jsonFileVersionTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Rev == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rev", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", "body"))
+	}
+	if value.ReplacedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("replaced_at", "body"))
+	}
+	if value.Current == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("current", "body"))
+	}
+	if value.Rev != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.rev", *value.Rev, "^[0-9]{1,20}$"))
+	}
+	if value.ReplacedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.replaced_at", *value.ReplacedAt, goa.FormatDateTime))
 	}
 	return err
 }
@@ -2211,6 +2351,9 @@ type jsonNoteFileTransport struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path *string `json:"path"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `json:"replaced,omitempty"`
 }
 
 // validatejsonNoteFileTransport checks decoded JSON before it becomes a service value.
@@ -3345,6 +3488,13 @@ func validateUnusedFileOriginal(value *UnusedFile) (err error) {
 	return err
 }
 
+// validateFileVersionOriginal checks the original typed value before JSON conversion.
+func validateFileVersionOriginal(value *FileVersion) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.rev", value.Rev, "^[0-9]{1,20}$"))
+	err = goa.MergeErrors(err, goa.ValidateFormat("value.replaced_at", value.ReplacedAt, goa.FormatDateTime))
+	return err
+}
+
 // validateGitConflictOriginal checks the original typed value before JSON conversion.
 func validateGitConflictOriginal(value *GitConflict) (err error) {
 	if value.NoteID != nil {
@@ -4106,6 +4256,103 @@ func DecodeFileCheck(data []byte) (out *FileCheck, err error) {
 				continue
 			}
 			out.Broken[i] = decodeBrokenFileRefTransportToBrokenFileRef(val)
+		}
+	}
+	return out, nil
+}
+
+// EncodeFileVersion turns a service value into JSON using the field names in the Goa design.
+func EncodeFileVersion(in *FileVersion) ([]byte, error) {
+	if err := checkFileVersionValue(in); err != nil {
+		return nil, fmt.Errorf("encode FileVersion JSON: %w", err)
+	}
+	if err := validateFileVersionOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate FileVersion value: %w", err)
+	}
+	var body *jsonFileVersionTransport
+	{
+		body = &jsonFileVersionTransport{
+			Rev:        &in.Rev,
+			Name:       &in.Name,
+			ReplacedAt: &in.ReplacedAt,
+			Current:    &in.Current,
+		}
+		size := fileVersionInt64Transport(in.Size)
+		body.Size = &size
+	}
+	if err := validatejsonFileVersionTransport(body); err != nil {
+		return nil, fmt.Errorf("validate FileVersion JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode FileVersion JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateFileVersionValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateFileVersionValue(in *FileVersion) error {
+	if err := checkFileVersionValue(in); err != nil {
+		return fmt.Errorf("validate FileVersion value: %w", err)
+	}
+	if err := validateFileVersionOriginal(in); err != nil {
+		return fmt.Errorf("validate FileVersion value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "FileVersion")
+	}
+
+	var body *jsonFileVersionTransport
+	{
+		body = &jsonFileVersionTransport{
+			Rev:        &in.Rev,
+			Name:       &in.Name,
+			ReplacedAt: &in.ReplacedAt,
+			Current:    &in.Current,
+		}
+		size := fileVersionInt64Transport(in.Size)
+		body.Size = &size
+	}
+	if err := validatejsonFileVersionTransport(body); err != nil {
+		return fmt.Errorf("validate FileVersion value: %w", err)
+	}
+	return nil
+}
+
+// DecodeFileVersion checks JSON field names from the Goa design and returns a service value.
+func DecodeFileVersion(data []byte) (out *FileVersion, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode FileVersion JSON: %w", err)
+	}
+	if err := validateFileVersionJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode FileVersion JSON: %w", err)
+	}
+	var body *jsonFileVersionTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode FileVersion JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode FileVersion JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode FileVersion JSON after first value: %w", err)
+	}
+	if err := validatejsonFileVersionTransport(body); err != nil {
+		return out, fmt.Errorf("validate FileVersion JSON: %w", err)
+	}
+	{
+		out = &FileVersion{
+			Rev:        *body.Rev,
+			Name:       *body.Name,
+			Size:       int64(*body.Size),
+			ReplacedAt: *body.ReplacedAt,
+			Current:    *body.Current,
 		}
 	}
 	return out, nil
@@ -5104,8 +5351,9 @@ func EncodeNoteFile(in *NoteFile) ([]byte, error) {
 	var body *jsonNoteFileTransport
 	{
 		body = &jsonNoteFileTransport{
-			Name: &in.Name,
-			Path: &in.Path,
+			Name:     &in.Name,
+			Path:     &in.Path,
+			Replaced: in.Replaced,
 		}
 	}
 	if err := validatejsonNoteFileTransport(body); err != nil {
@@ -5133,8 +5381,9 @@ func ValidateNoteFileValue(in *NoteFile) error {
 	var body *jsonNoteFileTransport
 	{
 		body = &jsonNoteFileTransport{
-			Name: &in.Name,
-			Path: &in.Path,
+			Name:     &in.Name,
+			Path:     &in.Path,
+			Replaced: in.Replaced,
 		}
 	}
 	if err := validatejsonNoteFileTransport(body); err != nil {
@@ -5169,8 +5418,9 @@ func DecodeNoteFile(data []byte) (out *NoteFile, err error) {
 	}
 	{
 		out = &NoteFile{
-			Name: *body.Name,
-			Path: *body.Path,
+			Name:     *body.Name,
+			Path:     *body.Path,
+			Replaced: body.Replaced,
 		}
 	}
 	return out, nil
@@ -7788,6 +8038,74 @@ func validateFileCheckJSONValue5(path string, value any, description string) err
 	return nil
 }
 
+// validateFileVersionJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateFileVersionJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "current":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the note has a file of the same name now, which putting this one back replaces",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "File name",
+			); err != nil {
+				return err
+			}
+		case "replaced_at":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "When the file was replaced or deleted",
+			); err != nil {
+				return err
+			}
+		case "rev":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "ID of the earlier file among those of the note",
+			); err != nil {
+				return err
+			}
+		case "size":
+			if err := validateAIUploadJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Size of the file in bytes",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"current",
+				"name",
+				"replaced_at",
+				"rev",
+				"size",
+			})
+		}
+	}
+	return nil
+}
+
 // validateGitConflictJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateGitConflictJSONValue(path string, value any, description string) error {
 	field := path
@@ -8695,10 +9013,18 @@ func validateNoteFileJSONValue(path string, value any, description string) error
 			); err != nil {
 				return err
 			}
+		case "replaced":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "True when the file took the place of a file of the same name, which people can put back",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"name",
 				"path",
+				"replaced",
 			})
 		}
 	}
@@ -10378,6 +10704,42 @@ func checkFileCheckUnusedFileValue(in *UnusedFile, field string, active map[any]
 		}
 		if !utf8.ValidString(string(in.AddedAt)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "added_at", false))
+		}
+	}
+	return nil
+}
+
+// checkFileVersionValue checks text and cycles before conversion.
+func checkFileVersionValue(in *FileVersion) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkFileVersionFileVersionValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkFileVersionFileVersionValue checks one generated value on the active path.
+func checkFileVersionFileVersionValue(in *FileVersion, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Rev)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "rev", false))
+		}
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+		if !utf8.ValidString(string(in.ReplacedAt)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "replaced_at", false))
 		}
 	}
 	return nil

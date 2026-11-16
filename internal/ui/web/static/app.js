@@ -2177,13 +2177,34 @@ function enableDrag(li, reorder, list) {
     li.classList.remove("dragging");
     for (const x of $("notes").children) x.classList.remove("drop-above", "drop-below", "drop-into");
     for (const x of $("notebooks").children) x.classList.remove("drop-into");
+    $("notes").closest(".list").classList.remove("drop-into");
   });
   const within = () => reorder && dragID && dragID !== rowID(li) && !draggedNotes() && list.some((it) => it.id === dragID);
   // A row of the list dragged where the list does not put it takes the drop
   // too, so as to say why nothing moves: only on a drop, not when the drag is
   // cancelled or let go elsewhere, which end alike.
   const refused = () => !!dragID && !within() && list.some((it) => it.id === dragID) && !!noReorder(li, reorder);
+  // A note of another list of the notebook shown, such as that of an open
+  // sub notebook, goes into the notebook of this list: where it is dropped
+  // when the list is in the manual order.
+  const foreign = () => {
+    if (!dragID || list.some((it) => it.id === dragID)) return null;
+    return notesInto(listOf(rowID(li)).nb);
+  };
+  const into = (e) => {
+    const { reorder } = listOf(rowID(li));
+    return reorder && !draggedNotes() ? dropAfter(li, e, list) : null;
+  };
   li.addEventListener("dragover", (e) => {
+    if (foreign()) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const at = into(e);
+      li.classList.toggle("drop-below", !!at?.below);
+      li.classList.toggle("drop-above", !!at && !at.below);
+      li.classList.toggle("drop-into", !at);
+      return;
+    }
     if (refused()) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
@@ -2198,8 +2219,17 @@ function enableDrag(li, reorder, list) {
     li.classList.toggle("drop-below", below);
     li.classList.toggle("drop-above", !below);
   });
-  li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below"));
+  li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below", "drop-into"));
   li.addEventListener("drop", (e) => {
+    const nb = foreign();
+    if (nb) {
+      e.preventDefault();
+      li.classList.remove("drop-above", "drop-below", "drop-into");
+      const many = draggedNotes();
+      if (many) moveNotesTo(many, nb);
+      else moveNoteTo(dragID, nb, into(e)?.after);
+      return;
+    }
     if (refused()) {
       e.preventDefault();
       showToast(noReorder(li, reorder));
@@ -2212,6 +2242,47 @@ function enableDrag(li, reorder, list) {
     const sep = list.find((it) => it.id === id)?.sep;
     if (sep) moveSeparator(sep, after);
     else moveNote(id, after);
+  });
+}
+
+// notesInto returns nb when the notes dragged, from the lists of the notebook
+// shown and its open sub notebooks, can be moved into it, one of those: when
+// some are elsewhere. Else null, as with a search, a tag, the trash or the
+// archive, whose lists mix notebooks or do not take notes.
+function notesInto(nb) {
+  if (!dragID || searching() || state.tag || state.archive || !state.notebook || state.notebook === "trash") return null;
+  return (draggedNotes() ?? [dragID]).some((x) => {
+    const n = findListed(x);
+    return !!n && n.notebook !== nb;
+  }) ? nb : null;
+}
+
+// The list below its rows takes the notes of open sub notebooks, so that a
+// notebook with sub notebooks only takes them too: they go last in the
+// manual order.
+{
+  const pane = $("notes").closest(".list");
+  const blank = (e) => !e.target.closest("li, .list-head");
+  pane.addEventListener("dragover", (e) => {
+    const ok = blank(e) && !!notesInto(state.notebook);
+    pane.classList.toggle("drop-into", ok);
+    if (!ok) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  });
+  pane.addEventListener("dragleave", (e) => {
+    if (!pane.contains(e.relatedTarget)) pane.classList.remove("drop-into");
+  });
+  pane.addEventListener("drop", (e) => {
+    pane.classList.remove("drop-into");
+    const nb = blank(e) && notesInto(state.notebook);
+    if (!nb) return;
+    e.preventDefault();
+    const many = draggedNotes();
+    if (many) return moveNotesTo(many, nb);
+    const all = state.notes.length >= state.total;
+    const last = listItems(state.notes, state.separators, state.total).at(-1)?.id ?? null;
+    moveNoteTo(dragID, nb, canReorder() && all ? last : undefined);
   });
 }
 
@@ -4399,7 +4470,9 @@ function noteAnchor(id, title, d) {
 
 // History: the earlier versions of the note in the preview, kept on this
 // device by the server. Putting one back saves its content as the note, so the
-// content replaced goes into the history too.
+// content replaced goes into the history too. Below them, the files of the
+// note replaced by one of the same name or deleted, by people or AI clients,
+// which can be put back too.
 
 async function openHistory() {
   const n = state.note;
@@ -4409,15 +4482,16 @@ async function openHistory() {
     button("\u00d7", () => d.close(), { title: t("closeTitle") }));
   d.replaceChildren(head, el("p", "", t("historyLoading")));
   if (!d.open) d.showModal();
-  let versions;
+  let versions, files;
   try {
-    versions = await api(`${noteURL(n.id)}/history`);
+    [versions, files] = await Promise.all([api(`${noteURL(n.id)}/history`), api(`${noteURL(n.id)}/file-history`)]);
   } catch (e) {
     d.replaceChildren(head, el("p", "error", t("loadFailed", { error: e.message })));
     return;
   }
+  const fileSection = files.length ? [el("h3", "history-files-head", t("historyFiles")), el("p", "history-note", t("historyFilesNote")), fileVersions(n, files, d)] : [];
   if (!versions.length) {
-    d.replaceChildren(head, el("p", "empty", t("historyEmpty")));
+    d.replaceChildren(head, el("p", "empty", t("historyEmpty")), ...fileSection);
     return;
   }
   const list = el("ul", "history-list");
@@ -4446,8 +4520,36 @@ async function openHistory() {
     });
     list.append(li);
   }
-  d.replaceChildren(head, el("p", "history-note", t("historyNote")), el("div", "history-body", list, view));
+  d.replaceChildren(head, el("p", "history-note", t("historyNote")), el("div", "history-body", list, view), ...fileSection);
   show(versions[0], list.firstChild);
+}
+
+// fileVersions lists the earlier files of note n, each with a button to put
+// it back, in the dialog d.
+function fileVersions(n, files, d) {
+  const list = el("ul", "files-list history-files");
+  for (const f of files) {
+    const when = el("span", "history-time", t(f.current ? "historyFileReplaced" : "historyFileDeleted", { time: formatTime(f.replaced_at, true) }));
+    list.append(el("li", "", el("div", "history-file",
+      el("span", "history-file-name", el("code", "", f.name), el("span", "history-time", formatSize(f.size))), when,
+      button(t("historyFileRestore"), () => restoreFileVersion(n, f, d)))));
+  }
+  return list;
+}
+
+async function restoreFileVersion(n, f, d) {
+  const time = formatTime(f.replaced_at, true);
+  if (!confirm(t(f.current ? "historyFileRestoreConfirm" : "historyFileRestoreDeletedConfirm", { name: f.name, time }))) return;
+  try {
+    await api(`${noteURL(n.id)}/file-history/${encodeURIComponent(f.rev)}/restore`, { method: "POST" });
+  } catch (e) {
+    d.close();
+    actionFailed(e);
+    return;
+  }
+  showToast(t("historyFileRestored", { name: f.name }));
+  loadNote();
+  openHistory();
 }
 
 // renderVersion shows the version v of note n in view: what putting it back
@@ -4933,8 +5035,9 @@ function acceptArchive(li) {
 }
 
 // moveNoteTo moves note id to notebook nb, or to the trash. A note being
-// edited is left alone, as the editor would save it back.
-async function moveNoteTo(id, nb) {
+// edited is left alone, as the editor would save it back. With after, a
+// note ID or null for first, it is put there in the manual order of nb.
+async function moveNoteTo(id, nb, after) {
   if (state.editing?.note?.id === id) {
     alert(t("moveWhileEditing"));
     return;
@@ -4949,6 +5052,7 @@ async function moveNoteTo(id, nb) {
       await api(noteURL(id), { method: "DELETE" });
     } else {
       await api(noteURL(id), { method: "PATCH", body: { notebook: nb } });
+      if (after !== undefined) await api(`${noteURL(id)}/move`, { method: "POST", body: after ? { after } : {} });
     }
     if (nb === "trash") {
       offerUndo(t("toastTrashed", { title }), () => undoTrash(id));
@@ -5639,7 +5743,7 @@ function toggleSettings(open = $("settings-menu").hidden) {
 
 $("settings").addEventListener("click", () => toggleSettings());
 $("settings-menu").addEventListener("click", (e) => {
-  if (e.target.closest("button")) toggleSettings(false);
+  if (e.target.closest("button, a")) toggleSettings(false);
 });
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
@@ -5672,11 +5776,13 @@ function openIssue() {
 }
 
 // The version of ebira, which the server gives the page, at the bottom of
-// the settings menu; choosing it copies all that ebira version prints, to
-// tell in a report. The desktop app shows it in its about panel instead.
+// the settings menu with the mark of GitHub linking the repository; choosing
+// the version copies all that ebira version prints, to tell in a report. The
+// desktop app shows it in its about panel, and the repository in its Help
+// menu, instead.
 function showVersion() {
   const { version } = document.documentElement.dataset;
-  $("version-sep").hidden = $("version-copy").hidden = !version || inApp();
+  $("version-sep").hidden = $("version-row").hidden = !version || inApp();
   if (version) $("version-copy").textContent = t("versionLabel", { version });
 }
 

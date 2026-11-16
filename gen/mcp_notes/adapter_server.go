@@ -310,9 +310,19 @@ func (a *MCPAdapter) invokeMCPMethod9(ctx context.Context, payload *notes.StartA
 	return result, nil
 }
 
-// invokeMCPMethod10 sends validated input to the configured UpdateAiNote endpoint
+// invokeMCPMethod10 sends validated input to the configured DeleteAiFile endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.UpdateAiNotePayload) (*notes.Note, error) {
+func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.DeleteAiFilePayload) error {
+	// The original endpoint middleware observes its authored service and method.
+	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+	ctx = context.WithValue(ctx, goa.MethodKey, "delete_ai_file")
+	_, err := a.endpoints.DeleteAiFile(ctx, payload)
+	return err
+}
+
+// invokeMCPMethod11 sends validated input to the configured UpdateAiNote endpoint
+// and returns its declared result. An unexpected Go type is an internal error.
+func (a *MCPAdapter) invokeMCPMethod11(ctx context.Context, payload *notes.UpdateAiNotePayload) (*notes.Note, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "update_ai_note")
@@ -328,9 +338,9 @@ func (a *MCPAdapter) invokeMCPMethod10(ctx context.Context, payload *notes.Updat
 	return result, nil
 }
 
-// invokeMCPMethod11 sends validated input to the configured DeleteAiNote endpoint
+// invokeMCPMethod12 sends validated input to the configured DeleteAiNote endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod11(ctx context.Context, payload *notes.DeleteAiNotePayload) error {
+func (a *MCPAdapter) invokeMCPMethod12(ctx context.Context, payload *notes.DeleteAiNotePayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "delete_ai_note")
@@ -338,9 +348,9 @@ func (a *MCPAdapter) invokeMCPMethod11(ctx context.Context, payload *notes.Delet
 	return err
 }
 
-// invokeMCPMethod12 sends validated input to the configured MoveAiNote endpoint
+// invokeMCPMethod13 sends validated input to the configured MoveAiNote endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod12(ctx context.Context, payload *notes.MoveAiNotePayload) (*notes.Note, error) {
+func (a *MCPAdapter) invokeMCPMethod13(ctx context.Context, payload *notes.MoveAiNotePayload) (*notes.Note, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "move_ai_note")
@@ -356,9 +366,9 @@ func (a *MCPAdapter) invokeMCPMethod12(ctx context.Context, payload *notes.MoveA
 	return result, nil
 }
 
-// invokeMCPMethod13 sends validated input to the configured CreateAiSeparator endpoint
+// invokeMCPMethod14 sends validated input to the configured CreateAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod13(ctx context.Context, payload *notes.CreateAiSeparatorPayload) (*notes.Separator, error) {
+func (a *MCPAdapter) invokeMCPMethod14(ctx context.Context, payload *notes.CreateAiSeparatorPayload) (*notes.Separator, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "create_ai_separator")
@@ -374,9 +384,9 @@ func (a *MCPAdapter) invokeMCPMethod13(ctx context.Context, payload *notes.Creat
 	return result, nil
 }
 
-// invokeMCPMethod14 sends validated input to the configured UpdateAiSeparator endpoint
+// invokeMCPMethod15 sends validated input to the configured UpdateAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod14(ctx context.Context, payload *notes.UpdateAiSeparatorPayload) (*notes.Separator, error) {
+func (a *MCPAdapter) invokeMCPMethod15(ctx context.Context, payload *notes.UpdateAiSeparatorPayload) (*notes.Separator, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "update_ai_separator")
@@ -392,9 +402,9 @@ func (a *MCPAdapter) invokeMCPMethod14(ctx context.Context, payload *notes.Updat
 	return result, nil
 }
 
-// invokeMCPMethod15 sends validated input to the configured DeleteAiSeparator endpoint
+// invokeMCPMethod16 sends validated input to the configured DeleteAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod15(ctx context.Context, payload *notes.DeleteAiSeparatorPayload) error {
+func (a *MCPAdapter) invokeMCPMethod16(ctx context.Context, payload *notes.DeleteAiSeparatorPayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "delete_ai_separator")
@@ -402,9 +412,9 @@ func (a *MCPAdapter) invokeMCPMethod15(ctx context.Context, payload *notes.Delet
 	return err
 }
 
-// invokeMCPMethod16 sends validated input to the configured MoveAiSeparator endpoint
+// invokeMCPMethod17 sends validated input to the configured MoveAiSeparator endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod16(ctx context.Context, payload *notes.MoveAiSeparatorPayload) (*notes.Separator, error) {
+func (a *MCPAdapter) invokeMCPMethod17(ctx context.Context, payload *notes.MoveAiSeparatorPayload) (*notes.Separator, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "move_ai_separator")
@@ -420,9 +430,9 @@ func (a *MCPAdapter) invokeMCPMethod16(ctx context.Context, payload *notes.MoveA
 	return result, nil
 }
 
-// invokeMCPMethod17 sends validated input to the configured CreateAiNotebook endpoint
+// invokeMCPMethod18 sends validated input to the configured CreateAiNotebook endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod17(ctx context.Context, payload *notes.CreateAiNotebookPayload) (*notes.Notebook, error) {
+func (a *MCPAdapter) invokeMCPMethod18(ctx context.Context, payload *notes.CreateAiNotebookPayload) (*notes.Notebook, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "create_ai_notebook")
@@ -438,9 +448,9 @@ func (a *MCPAdapter) invokeMCPMethod17(ctx context.Context, payload *notes.Creat
 	return result, nil
 }
 
-// invokeMCPMethod18 sends validated input to the configured MakeNotebookPrivate endpoint
+// invokeMCPMethod19 sends validated input to the configured MakeNotebookPrivate endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod18(ctx context.Context, payload *notes.MakeNotebookPrivatePayload) error {
+func (a *MCPAdapter) invokeMCPMethod19(ctx context.Context, payload *notes.MakeNotebookPrivatePayload) error {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "make_notebook_private")
@@ -448,9 +458,9 @@ func (a *MCPAdapter) invokeMCPMethod18(ctx context.Context, payload *notes.MakeN
 	return err
 }
 
-// invokeMCPMethod19 sends validated input to the configured ArchiveAiNotebook endpoint
+// invokeMCPMethod20 sends validated input to the configured ArchiveAiNotebook endpoint
 // and returns its declared result. An unexpected Go type is an internal error.
-func (a *MCPAdapter) invokeMCPMethod19(ctx context.Context, payload *notes.ArchiveAiNotebookPayload) (*notes.Notebook, error) {
+func (a *MCPAdapter) invokeMCPMethod20(ctx context.Context, payload *notes.ArchiveAiNotebookPayload) (*notes.Notebook, error) {
 	// The original endpoint middleware observes its authored service and method.
 	ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 	ctx = context.WithValue(ctx, goa.MethodKey, "archive_ai_notebook")
@@ -575,9 +585,9 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 	tools := []*ToolInfo{
 		{
 			Name:         "add_ai_file",
-			Description:  stringPtr("Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is"),
-			InputSchema:  json.RawMessage("{\"$defs\":{\"AddAiFilePayload\":{\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"title\":\"AddAiFilePayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\",\"content\"],\"title\":\"AddAiFilePayload\",\"type\":\"object\"}"),
-			OutputSchema: json.RawMessage("{\"$defs\":{\"NoteFile\":{\"properties\":{\"name\":{\"description\":\"File name\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"type\":\"string\"}},\"required\":[\"name\",\"path\"],\"title\":\"NoteFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"File name\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"type\":\"string\"}},\"required\":[\"name\",\"path\"],\"title\":\"NoteFile\",\"type\":\"object\"}"),
+			Description:  stringPtr("Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A file of a name taken gets another name, such as name-2.png, unless replace is set to update the file of that name. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is"),
+			InputSchema:  json.RawMessage("{\"$defs\":{\"AddAiFilePayload\":{\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"replace\":{\"description\":\"Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back\",\"type\":\"boolean\"}},\"required\":[\"id\",\"name\",\"content\"],\"title\":\"AddAiFilePayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"content\":{\"description\":\"The file, base64-encoded, at most 5 MB\",\"format\":\"byte\",\"type\":\"string\"},\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"replace\":{\"description\":\"Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back\",\"type\":\"boolean\"}},\"required\":[\"id\",\"name\",\"content\"],\"title\":\"AddAiFilePayload\",\"type\":\"object\"}"),
+			OutputSchema: json.RawMessage("{\"$defs\":{\"NoteFile\":{\"properties\":{\"name\":{\"description\":\"File name\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"type\":\"string\"},\"replaced\":{\"description\":\"True when the file took the place of a file of the same name, which people can put back\",\"type\":\"boolean\"}},\"required\":[\"name\",\"path\"],\"title\":\"NoteFile\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"name\":{\"description\":\"File name\",\"type\":\"string\"},\"path\":{\"description\":\"Path of the file relative to the note file, to refer to it from the body, such as ![](\\u003cpath\\u003e)\",\"type\":\"string\"},\"replaced\":{\"description\":\"True when the file took the place of a file of the same name, which people can put back\",\"type\":\"boolean\"}},\"required\":[\"name\",\"path\"],\"title\":\"NoteFile\",\"type\":\"object\"}"),
 		},
 		{
 			Name:         "archive_ai_notebook",
@@ -602,6 +612,11 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 			Description:  stringPtr("Put a separator (a bar with a heading, a date and a color, no body) between the notes of a notebook shared with AI (kind collab), after a note or a separator, or first"),
 			InputSchema:  json.RawMessage("{\"$defs\":{\"CreateAiSeparatorPayload\":{\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"format\":\"date\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"notebook\"],\"title\":\"CreateAiSeparatorPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"after\":{\"description\":\"ID of the note or the separator of the same notebook to put it after in the manual order; omit to put it first\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; omit for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; omit for none\",\"format\":\"date\",\"type\":\"string\"},\"notebook\":{\"description\":\"ID of a notebook of the collab kind\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; omit for none\",\"maxLength\":200,\"type\":\"string\"}},\"required\":[\"notebook\"],\"title\":\"CreateAiSeparatorPayload\",\"type\":\"object\"}"),
 			OutputSchema: json.RawMessage("{\"$defs\":{\"Separator\":{\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"title\":\"Separator\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"description\":\"A bar between the notes of a notebook in the manual order, to arrange them: a heading, a date and a color to show, but no body. It is not a note: it is not searched, tagged, counted or put in the trash, and shows only in the order sort of its notebook.\",\"properties\":{\"before\":{\"description\":\"ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"color\":{\"description\":\"Color of the bar, one of the color marks; absent for the plain one\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\"],\"type\":\"string\"},\"date\":{\"description\":\"Date to show, as YYYY-MM-DD; absent for none. It does not change the order\",\"format\":\"date\",\"type\":\"string\"},\"id\":{\"description\":\"Separator ID\",\"pattern\":\"^sep-[a-z0-9_-]{1,60}$\",\"type\":\"string\"},\"notebook\":{\"description\":\"Notebook the separator is in\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$\",\"type\":\"string\"},\"title\":{\"description\":\"Heading; absent for none\",\"type\":\"string\"}},\"required\":[\"id\",\"notebook\"],\"title\":\"Separator\",\"type\":\"object\"}"),
+		},
+		{
+			Name:        "delete_ai_file",
+			Description: stringPtr("Delete a file of a note in a notebook shared with AI (kind collab), such as one the body no longer refers to; people can put it back. To update a file, add it again with replace instead"),
+			InputSchema: json.RawMessage("{\"$defs\":{\"DeleteAiFilePayload\":{\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name, as in the path the body refers to it by\",\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"DeleteAiFilePayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name, as in the path the body refers to it by\",\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"DeleteAiFilePayload\",\"type\":\"object\"}"),
 		},
 		{
 			Name:        "delete_ai_note",
@@ -680,8 +695,8 @@ func (a *MCPAdapter) ToolsList(ctx context.Context, p *ToolsListPayload) (*Tools
 		},
 		{
 			Name:         "start_ai_upload",
-			Description:  stringPtr("Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note"),
-			InputSchema:  json.RawMessage("{\"$defs\":{\"StartAiUploadPayload\":{\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"StartAiUploadPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"id\",\"name\"],\"title\":\"StartAiUploadPayload\",\"type\":\"object\"}"),
+			Description:  stringPtr("Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note; set replace to update the file of that name instead of adding one with another name"),
+			InputSchema:  json.RawMessage("{\"$defs\":{\"StartAiUploadPayload\":{\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"replace\":{\"description\":\"Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back\",\"type\":\"boolean\"}},\"required\":[\"id\",\"name\"],\"title\":\"StartAiUploadPayload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"name\":{\"description\":\"File name\",\"maxLength\":255,\"minLength\":1,\"type\":\"string\"},\"replace\":{\"description\":\"Replace the file of the same name, if any, rather than add the file with another name; the replaced file is kept for people to put back\",\"type\":\"boolean\"}},\"required\":[\"id\",\"name\"],\"title\":\"StartAiUploadPayload\",\"type\":\"object\"}"),
 			OutputSchema: json.RawMessage("{\"$defs\":{\"AIUpload\":{\"properties\":{\"expires_at\":{\"description\":\"When the URL stops working\",\"format\":\"date-time\",\"type\":\"string\"},\"max_size\":{\"description\":\"The largest file the URL takes, in bytes\",\"format\":\"int64\",\"type\":\"integer\"},\"url\":{\"description\":\"The URL to send the file to, in the body of a PUT request\",\"type\":\"string\"}},\"required\":[\"url\",\"expires_at\",\"max_size\"],\"title\":\"AIUpload\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"expires_at\":{\"description\":\"When the URL stops working\",\"format\":\"date-time\",\"type\":\"string\"},\"max_size\":{\"description\":\"The largest file the URL takes, in bytes\",\"format\":\"int64\",\"type\":\"integer\"},\"url\":{\"description\":\"The URL to send the file to, in the body of a PUT request\",\"type\":\"string\"}},\"required\":[\"url\",\"expires_at\",\"max_size\"],\"title\":\"AIUpload\",\"type\":\"object\"}"),
 		},
 		{
@@ -759,7 +774,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod19(ctx, payload)
+		result, err := a.invokeMCPMethod20(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -819,7 +834,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod17(ctx, payload)
+		result, err := a.invokeMCPMethod18(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -849,7 +864,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod13(ctx, payload)
+		result, err := a.invokeMCPMethod14(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -870,6 +885,26 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 			Content:           []*ContentItem{},
 			StructuredContent: json.RawMessage(encoded),
 		})}, nil
+	case "delete_ai_file":
+		arguments := p.Arguments
+		if len(arguments) == 0 {
+			arguments = json.RawMessage("{}")
+		}
+		payload, err := mcpcodec.DecodeDeleteAiFilePayload(arguments)
+		if err != nil {
+			return toolCallError("invalid arguments: " + err.Error()), nil
+		}
+		err = a.invokeMCPMethod10(ctx, payload)
+		if err != nil {
+			failure := a.mapError(err, isEndpointFault(err))
+			span.RecordError(failure.err)
+			span.SetStatus(codes.Error, failure.err.Error())
+			if failure.internal {
+				return nil, failure.err
+			}
+			return toolCallError(failure.err.Error()), nil
+		}
+		return &ToolsCallResult{Outcome: NewToolsCallOutcomeComplete(&ToolsCallCompleteResult{Meta: resultMeta(), Content: []*ContentItem{}})}, nil
 	case "delete_ai_note":
 		arguments := p.Arguments
 		if len(arguments) == 0 {
@@ -879,7 +914,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod11(ctx, payload)
+		err = a.invokeMCPMethod12(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -899,7 +934,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod15(ctx, payload)
+		err = a.invokeMCPMethod16(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1124,7 +1159,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		err = a.invokeMCPMethod18(ctx, payload)
+		err = a.invokeMCPMethod19(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1144,7 +1179,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod12(ctx, payload)
+		result, err := a.invokeMCPMethod13(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1174,7 +1209,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod16(ctx, payload)
+		result, err := a.invokeMCPMethod17(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1269,7 +1304,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod10(ctx, payload)
+		result, err := a.invokeMCPMethod11(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
@@ -1299,7 +1334,7 @@ func (a *MCPAdapter) ToolsCall(ctx context.Context, p *ToolsCallPayload) (*Tools
 		if err != nil {
 			return toolCallError("invalid arguments: " + err.Error()), nil
 		}
-		result, err := a.invokeMCPMethod14(ctx, payload)
+		result, err := a.invokeMCPMethod15(ctx, payload)
 		if err != nil {
 			failure := a.mapError(err, isEndpointFault(err))
 			span.RecordError(failure.err)
