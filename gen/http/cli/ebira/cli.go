@@ -1067,9 +1067,9 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    create-notebook: Create a notebook from its display name. The ID, which is also the directory name, is derived from the name with only the characters an ID allows: an ASCII name is lower-cased with dashes ("My Notes" gives my-notes), and any other name is Punycode-encoded as in internationalized domain names, giving an ID that starts with xn--. A suffix such as -2 is added when the ID is taken.`)
 	fmt.Fprintln(os.Stderr, `    save-notebook: Set the display name, order, kind, note sort or archive of a notebook, creating the notebook if it does not exist. The order of inbox and trash cannot be changed.`)
 	fmt.Fprintln(os.Stderr, `    move-notebook: Move a notebook into another notebook, as a sub notebook, or a sub notebook out to the top or into another notebook. Its ID becomes <parent>/<name> or <name>; its notes keep their IDs. A notebook moved into another keeps its kind as its own; a sub notebook keeps its own kind, or takes that of its new parent without one, and one moved to the top keeps the kind it had. In a private parent, it is private. A notebook with sub notebooks cannot become one, as they are one level deep. Making a private notebook visible to AI this way is an important operation, as with save_notebook.`)
-	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
+	fmt.Fprintln(os.Stderr, `    delete-notebook: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. When the trash already holds a notebook with that ID, the notebook gets a number there, as <id>@2. Inbox and trash cannot be deleted.`)
 	fmt.Fprintln(os.Stderr, `    trashed-notebooks: List the notebooks in the trash. List their notes with list, notebook=trash and trashed_notebook.`)
-	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.`)
+	fmt.Fprintln(os.Stderr, `    restore-notebook: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to a notebook with its name, it gets the name with the first number free, as "Plans (2)". The result tells the ID and the name it got.`)
 	fmt.Fprintln(os.Stderr, `    delete-trashed-notebook: Permanently delete a notebook in the trash with its notes and sub notebooks.`)
 	fmt.Fprintln(os.Stderr, `    empty-trash: Permanently delete everything in the trash: the notes deleted on their own and the notebooks deleted as a whole, with their notes and files.`)
 	fmt.Fprintln(os.Stderr, `    import: Import a Markdown file as a new note with a random ID. A file whose content was imported before, even if the note is in the trash, is skipped unless force is set. Images the file refers to by relative paths can be sent with it; they are added to the note and the body refers to them. The request body is multipart/form-data: the fields name (the file name), content (the Markdown file, at most 5 MB) and modified_at (optional; the modification time of the file, for the times the front matter does not give, in RFC 3339), then, for each image, a field ref with the path as the file refers to it, followed by a file field file with the image, whose file name is the name of the image. The images are streamed to disk, each up to 50 MB and 1 GB in all; nothing is imported when the request is cut off. A JSON body with the attributes name, content, modified_at, notebook, force and files (the images, each with ref, name and the content base64-encoded) is accepted as well.`)
@@ -1633,7 +1633,7 @@ func notesDeleteNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.`)
+	fmt.Fprintln(os.Stderr, `Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. When the trash already holds a notebook with that ID, the notebook gets a number there, as <id>@2. Inbox and trash cannot be deleted.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: Notebook ID`)
@@ -1671,7 +1671,7 @@ func notesRestoreNotebookUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.`)
+	fmt.Fprintln(os.Stderr, `Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to a notebook with its name, it gets the name with the first number free, as "Plans (2)". The result tells the ID and the name it got.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -id STRING: ID in the trash`)

@@ -73,7 +73,7 @@ func TestPrivateLost(t *testing.T) {
 	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: plans.ID, Kind: ptr("private")}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: plans.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: plans.ID}); err != nil {
 		t.Fatal(err)
 	}
 	if got := lost(); len(got) != 0 {

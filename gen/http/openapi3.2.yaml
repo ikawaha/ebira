@@ -1774,7 +1774,7 @@ paths:
             tags:
                 - notes
             summary: delete_notebook notes
-            description: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.
+            description: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. When the trash already holds a notebook with that ID, the notebook gets a number there, as <id>@2. Inbox and trash cannot be deleted.
             operationId: notes#delete_notebook
             parameters:
                 - name: id
@@ -1788,8 +1788,14 @@ paths:
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
             responses:
-                "204":
-                    description: No Content response.
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteNotebookResponseBody'
+                            example:
+                                id: dev~design
                 "400":
                     description: 'bad_request: The notebook is inbox or trash'
                     content:
@@ -1840,19 +1846,6 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: not_found
-                                temporary: false
-                                timeout: false
-                "409":
-                    description: 'already_exists: The trash holds a notebook with the same ID'
-                    content:
-                        application/vnd.goa.error:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                            example:
-                                fault: false
-                                id: 123abc
-                                message: parameter 'p' must be an integer
-                                name: already_exists
                                 temporary: false
                                 timeout: false
             security:
@@ -2145,7 +2138,7 @@ paths:
                     type: string
                     description: With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: dev~design
                 - name: sort
                   in: query
@@ -5210,7 +5203,7 @@ paths:
                     type: string
                     description: ID in the trash
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: dev~design
             responses:
                 "204":
@@ -5274,7 +5267,7 @@ paths:
             tags:
                 - notes
             summary: restore_notebook notes
-            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.
+            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to a notebook with its name, it gets the name with the first number free, as "Plans (2)". The result tells the ID and the name it got.
             operationId: notes#restore_notebook
             parameters:
                 - name: id
@@ -5285,7 +5278,7 @@ paths:
                     type: string
                     description: ID in the trash
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: dev~design
             responses:
                 "200":
@@ -5357,19 +5350,6 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: not_found
-                                temporary: false
-                                timeout: false
-                "409":
-                    description: 'already_exists: A notebook with the same ID exists'
-                    content:
-                        application/vnd.goa.error:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                            example:
-                                fault: false
-                                id: 123abc
-                                message: parameter 'p' must be an integer
-                                name: already_exists
                                 temporary: false
                                 timeout: false
             security:
@@ -5800,6 +5780,18 @@ components:
                 title: October
             required:
                 - notebook
+        DeleteNotebookResponseBody:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: ID of the notebook in the trash, to restore it with
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
+            example:
+                id: dev~design
+            required:
+                - id
         DeviceApproveRequestBody:
             type: object
             properties:
@@ -6550,7 +6542,7 @@ components:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -6708,7 +6700,7 @@ components:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -7129,7 +7121,7 @@ components:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -8190,9 +8182,9 @@ components:
                     format: int64
                 id:
                     type: string
-                    description: 'ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent'
+                    description: 'ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent. A notebook deleted while the trash held one with the same ID has a number, as <id>@2, and goes back to the ID without it'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 kind:
                     type: string
                     description: Kind of the notebook, kept for when it is restored

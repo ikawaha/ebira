@@ -25,7 +25,7 @@ func TestRestoreKeepsPrivate(t *testing.T) {
 	if err := svc.Delete(person, &gennotes.DeletePayload{ID: "secret"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -114,7 +114,7 @@ func TestRestoreSubKeepsPrivate(t *testing.T) {
 
 	// The sub notebook is gone; its parent stays.
 	trash("one")
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Restore(person, &gennotes.RestorePayload{ID: "one"}); errorName(err) != "bad_request" {
@@ -128,7 +128,7 @@ func TestRestoreSubKeepsPrivate(t *testing.T) {
 
 	// The parent is gone with it.
 	trash("two")
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: work.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: work.ID}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Restore(person, &gennotes.RestorePayload{ID: "two"}); errorName(err) != "bad_request" {

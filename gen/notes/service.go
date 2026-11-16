@@ -125,16 +125,18 @@ type Service interface {
 	// this way is an important operation, as with save_notebook.
 	MoveNotebook(context.Context, *MoveNotebookPayload) (res *Notebook, err error)
 	// Move a notebook with its notes, settings and sub notebooks into the trash. A
-	// sub notebook deleted on its own is kept in the trash as <parent>~<sub>.
-	// Inbox and trash cannot be deleted. Fails with already_exists if the trash
-	// holds a notebook with the same ID.
-	DeleteNotebook(context.Context, *DeleteNotebookPayload) (err error)
+	// sub notebook deleted on its own is kept in the trash as <parent>~<sub>. When
+	// the trash already holds a notebook with that ID, the notebook gets a number
+	// there, as <id>@2. Inbox and trash cannot be deleted.
+	DeleteNotebook(context.Context, *DeleteNotebookPayload) (res *DeleteNotebookResult, err error)
 	// List the notebooks in the trash. List their notes with list, notebook=trash
 	// and trashed_notebook.
 	TrashedNotebooks(context.Context, *TrashedNotebooksPayload) (res []*TrashedNotebook, err error)
 	// Move a notebook out of the trash with its notes and settings. A sub notebook
-	// goes back into its parent, which must not be in the trash. Fails with
-	// already_exists if a notebook with the same ID exists.
+	// goes back into its parent, which must not be in the trash. When a notebook
+	// has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to
+	// a notebook with its name, it gets the name with the first number free, as
+	// "Plans (2)". The result tells the ID and the name it got.
 	RestoreNotebook(context.Context, *RestoreNotebookPayload) (res *Notebook, err error)
 	// Permanently delete a notebook in the trash with its notes and sub notebooks.
 	DeleteTrashedNotebook(context.Context, *DeleteTrashedNotebookPayload) (err error)
@@ -644,6 +646,13 @@ type DeleteNotebookPayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
 	// Notebook ID
+	ID string
+}
+
+// DeleteNotebookResult is the result type of the notes service delete_notebook
+// method.
+type DeleteNotebookResult struct {
+	// ID of the notebook in the trash, to restore it with
 	ID string
 }
 
@@ -1582,7 +1591,8 @@ type TrashNotesPayload struct {
 type TrashedNotebook struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
 	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
-	// which goes back into its parent
+	// which goes back into its parent. A notebook deleted while the trash held one
+	// with the same ID has a number, as <id>@2, and goes back to the ID without it
 	ID string
 	// For a sub notebook deleted with its parent: the ID of the parent in the trash
 	Parent *string
@@ -2475,7 +2485,7 @@ func validatejsonNoteSummaryTransport(value *jsonNoteSummaryTransport) (err erro
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -2593,7 +2603,7 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
 	}
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -3196,7 +3206,8 @@ func validatejsonTextRangeTransport(value *jsonTextRangeTransport) (err error) {
 type jsonTrashedNotebookTransport struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
 	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
-	// which goes back into its parent
+	// which goes back into its parent. A notebook deleted while the trash held one
+	// with the same ID has a number, as <id>@2, and goes back to the ID without it
 	ID *string `json:"id"`
 	// For a sub notebook deleted with its parent: the ID of the parent in the trash
 	Parent *string `json:"parent,omitempty"`
@@ -3226,7 +3237,7 @@ func validatejsonTrashedNotebookTransport(value *jsonTrashedNotebookTransport) (
 		err = goa.MergeErrors(err, goa.MissingFieldError("count", "body"))
 	}
 	if value.ID != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
@@ -3542,7 +3553,7 @@ func validateNoteOriginal(value *Note) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -3661,7 +3672,7 @@ func validateNoteSummaryOriginal(value *NoteSummary) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.created_at", value.CreatedAt, goa.FormatDateTime))
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.updated_at", value.UpdatedAt, goa.FormatDateTime))
 	if value.TrashedNotebook != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_notebook", *value.TrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.CreatedBy != nil {
 		if !(*value.CreatedBy == "ai") {
@@ -3846,7 +3857,7 @@ func validateSyncResultOriginal(value *SyncResult) (err error) {
 
 // validateTrashedNotebookOriginal checks the original typed value before JSON conversion.
 func validateTrashedNotebookOriginal(value *TrashedNotebook) (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	if value.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.parent", *value.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -10330,7 +10341,7 @@ func validateTrashedNotebookJSONValue(path string, value any, description string
 		case "id":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent",
+				typed[key], "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent. A notebook deleted while the trash held one with the same ID has a number, as <id>@2, and goes back to the ID without it",
 			); err != nil {
 				return err
 			}

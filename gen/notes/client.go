@@ -511,13 +511,16 @@ func (c *Client) MoveNotebook(ctx context.Context, p *MoveNotebookPayload) (res 
 // DeleteNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist
 //   - "bad_request" (type *goa.ServiceError): The notebook is inbox or trash
-//   - "already_exists" (type *goa.ServiceError): The trash holds a notebook with the same ID
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
-func (c *Client) DeleteNotebook(ctx context.Context, p *DeleteNotebookPayload) (err error) {
-	_, err = c.DeleteNotebookEndpoint(ctx, p)
-	return
+func (c *Client) DeleteNotebook(ctx context.Context, p *DeleteNotebookPayload) (res *DeleteNotebookResult, err error) {
+	var ires any
+	ires, err = c.DeleteNotebookEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*DeleteNotebookResult), nil
 }
 
 // TrashedNotebooks calls the "trashed_notebooks" endpoint of the "notes"
@@ -539,7 +542,6 @@ func (c *Client) TrashedNotebooks(ctx context.Context, p *TrashedNotebooksPayloa
 // RestoreNotebook may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook is not in the trash
 //   - "bad_request" (type *goa.ServiceError): The notebook ID is invalid, or the parent of the sub notebook is not there
-//   - "already_exists" (type *goa.ServiceError): A notebook with the same ID exists
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error

@@ -447,6 +447,7 @@
   "toastSeparatorMoved": "区切り線を動かしました。",
   "toastRenamed": "ノートブックの名前を「{name}」にしました。",
   "toastKind": "「{name}」の種別を {kind} にしました。",
+  "toastNotebookRestoredAs": "同じ名前のノートブックがあるので、「{name}」を「{as}」として元に戻しました。",
   "toastNotebookTrashed": "ノートブック「{name}」をゴミ箱へ移しました。",
   "searchClear": "検索を消す（Esc）",
   "themeAuto": "自動",

@@ -34,8 +34,10 @@ var notebookIDDSL = func() {
 // trashedNotebookIDDSL is the pattern and an example of the ID of a notebook
 // in the trash: a notebook ID, with <parent>/<sub> for a sub notebook deleted
 // with its parent, or <parent>~<sub> for a sub notebook deleted on its own.
+// A notebook deleted while the trash held one with the same ID has a number,
+// as <id>@2 (and <id>@2/<sub> for its sub notebooks).
 var trashedNotebookIDDSL = func() {
-	Pattern(`^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$`)
+	Pattern(`^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$`)
 	Example("dev~design")
 }
 

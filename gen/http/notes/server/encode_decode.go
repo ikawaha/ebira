@@ -107,7 +107,7 @@ func DecodeListRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			trashedNotebook = &trashedNotebookRaw
 		}
 		if trashedNotebook != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *trashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *trashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		}
 		sortRaw := qp.Get("sort")
 		if sortRaw != "" {
@@ -2986,8 +2986,11 @@ func EncodeMoveNotebookError(encoder func(context.Context, http.ResponseWriter) 
 // the notes delete_notebook endpoint.
 func EncodeDeleteNotebookResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
 	return func(ctx context.Context, w http.ResponseWriter, v any) error {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
+		res, _ := v.(*notes.DeleteNotebookResult)
+		enc := encoder(ctx, w)
+		body := NewDeleteNotebookResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
 	}
 }
 
@@ -3058,19 +3061,6 @@ func EncodeDeleteNotebookError(encoder func(context.Context, http.ResponseWriter
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
-			return enc.Encode(body)
-		case "already_exists":
-			var res *goa.ServiceError
-			errors.As(v, &res)
-			enc := encoder(ctx, w)
-			var body any
-			if formatter != nil {
-				body = formatter(ctx, res)
-			} else {
-				body = NewDeleteNotebookAlreadyExistsResponseBody(res)
-			}
-			w.Header().Set("goa-error", res.GoaErrorName())
-			w.WriteHeader(http.StatusConflict)
 			return enc.Encode(body)
 		case "unauthorized":
 			var res *goa.ServiceError
@@ -3207,7 +3197,7 @@ func DecodeRestoreNotebookRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {
@@ -3260,19 +3250,6 @@ func EncodeRestoreNotebookError(encoder func(context.Context, http.ResponseWrite
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusBadRequest)
-			return enc.Encode(body)
-		case "already_exists":
-			var res *goa.ServiceError
-			errors.As(v, &res)
-			enc := encoder(ctx, w)
-			var body any
-			if formatter != nil {
-				body = formatter(ctx, res)
-			} else {
-				body = NewRestoreNotebookAlreadyExistsResponseBody(res)
-			}
-			w.Header().Set("goa-error", res.GoaErrorName())
-			w.WriteHeader(http.StatusConflict)
 			return enc.Encode(body)
 		case "unauthorized":
 			var res *goa.ServiceError
@@ -3329,7 +3306,7 @@ func DecodeDeleteTrashedNotebookRequest(mux goahttp.Muxer, decoder func(*http.Re
 			params = mux.Vars(r)
 		)
 		id = params["id"]
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		c, _ = r.Cookie("ebira_session")
 		var sessionRaw string
 		if c != nil {

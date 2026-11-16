@@ -36,6 +36,7 @@
   "status.notebookDeleted": "deleted the notebook permanently",
   "status.trashAlreadyEmpty": "the trash is empty",
   "status.trashEmptied": "emptied the trash",
+  "status.notebookRestoredAs": "restored the notebook {name} as {as}, as a notebook has that name",
   "status.notebookRestored": "restored the notebook",
   "status.discarded": "discarded your changes",
   "status.draftDiscarded": "discarded the draft (copy at {path})",

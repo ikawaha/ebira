@@ -719,10 +719,10 @@ func TestTrashNotebook(t *testing.T) {
 		return m
 	}
 
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: store.Inbox}); errorName(err) != "bad_request" {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: store.Inbox}); errorName(err) != "bad_request" {
 		t.Errorf("deleting inbox = %v, want bad_request", err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, store.Trash, diary.ID, store.NotebookFile)); err != nil {
@@ -759,12 +759,17 @@ func TestTrashNotebook(t *testing.T) {
 		t.Errorf("trashed notebook after restoring a = %+v", nb)
 	}
 
-	// The same ID cannot be in the trash and outside twice.
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); errorName(err) != "already_exists" {
-		t.Errorf("deleting while the trash holds the same ID = %v, want already_exists", err)
+	// One deleted while the trash holds its ID gets a number there, and
+	// goes back to its ID.
+	del, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID})
+	if err != nil || del.ID != diary.ID+"@2" {
+		t.Fatalf("deleting while the trash holds the same ID = %+v, %v, want %s@2", del, err, diary.ID)
 	}
-	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: diary.ID}); errorName(err) != "already_exists" {
-		t.Errorf("restoring while the notebook exists = %v, want already_exists", err)
+	if nb := trashed()[del.ID]; nb == nil || nb.Name != "日記" || nb.Kind != "private" || nb.Count != 1 {
+		t.Errorf("numbered notebook in the trash = %+v", nb)
+	}
+	if nb, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: del.ID}); err != nil || nb.ID != diary.ID {
+		t.Fatalf("restoring %s = %+v, %v", del.ID, nb, err)
 	}
 
 	// Deleting a note of a trashed notebook deletes it permanently.
@@ -783,7 +788,7 @@ func TestTrashNotebook(t *testing.T) {
 	}
 
 	// A whole notebook comes back with its notes and kind.
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: diary.ID}); err != nil {
 		t.Fatal(err)
 	}
 	nb, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: diary.ID})
@@ -802,7 +807,7 @@ func TestTrashNotebook(t *testing.T) {
 	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("w"), Notebook: &work.ID, Title: "w"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: work.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: work.ID}); err != nil {
 		t.Fatal(err)
 	}
 	private := "private"
@@ -816,6 +821,60 @@ func TestTrashNotebook(t *testing.T) {
 
 // A note of a notebook in the trash can be moved to another notebook on its
 // own, which takes it out of the trash and leaves the notebook there.
+// TestRestoreNotebookOverRenamed checks that a notebook in the trash comes
+// back next to one that took its ID, which renaming keeps: it takes another
+// ID, keeping its name, or next to one with its name too, the name with a
+// number.
+func TestRestoreNotebookOverRenamed(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, _ := newTestService(t)
+	mk := func() *gennotes.Notebook {
+		t.Helper()
+		nb, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "Plans", Kind: "default"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Create(person, &gennotes.CreatePayload{Notebook: &nb.ID, Title: "x"}); err != nil {
+			t.Fatal(err)
+		}
+		return nb
+	}
+	trash := func(id string) string {
+		t.Helper()
+		del, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return del.ID
+	}
+	restore := func(id, wantID, wantName string) {
+		t.Helper()
+		nb, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: id})
+		if err != nil || nb.ID != wantID || nb.Name != wantName || nb.Count != 1 {
+			t.Fatalf("RestoreNotebook(%s) = %+v, %v, want %s named %s", id, nb, err, wantID, wantName)
+		}
+	}
+	first := trash(mk().ID)
+	other := mk()
+	if other.ID != "plans" || first != "plans" {
+		t.Fatalf("IDs %s and %s, want plans for both", first, other.ID)
+	}
+	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: other.ID, Name: ptr("Plans 2025")}); err != nil {
+		t.Fatal(err)
+	}
+	// The ID is taken by the renamed one, the name is not.
+	restore(first, "plans-2", "Plans")
+	// Both taken: another ID, and the name with a number.
+	second := trash("plans-2")
+	if again := mk(); again.ID != "plans-2" {
+		t.Fatalf("the new notebook took %s, want plans-2", again.ID)
+	}
+	restore(second, "plans-2-2", "Plans (2)")
+	if _, err := svc.RestoreNotebook(person, &gennotes.RestoreNotebookPayload{ID: "plans@9"}); errorName(err) != "not_found" {
+		t.Errorf("restoring a notebook not in the trash = %v, want not_found", err)
+	}
+}
+
 func TestMoveNoteOutOfTrashedNotebook(t *testing.T) {
 	ctx := AsPerson(context.Background())
 	svc, _ := newTestService(t)
@@ -827,7 +886,7 @@ func TestMoveNoteOutOfTrashedNotebook(t *testing.T) {
 	if _, err := svc.Create(ctx, &gennotes.CreatePayload{ID: ptr("c"), Notebook: ptr("work"), Title: "c"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: "old"}); err != nil {
+	if _, err := svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: "old"}); err != nil {
 		t.Fatal(err)
 	}
 	n, err := svc.Update(ctx, &gennotes.UpdatePayload{ID: "a", Notebook: ptr("work")})
@@ -875,7 +934,7 @@ func TestEmptyTrash(t *testing.T) {
 	if err := svc.Delete(person, &gennotes.DeletePayload{ID: "single"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: old.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: old.ID}); err != nil {
 		t.Fatal(err)
 	}
 	// A file ebira does not know stays.
@@ -936,7 +995,7 @@ func TestPeopleOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: other.ID}); err != nil {
+	if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: other.ID}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -967,7 +1026,8 @@ func TestPeopleOnly(t *testing.T) {
 			return err
 		},
 		"delete_notebook": func(ctx context.Context) error {
-			return svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: diary.ID})
+			_, err := svc.DeleteNotebook(ctx, &gennotes.DeleteNotebookPayload{ID: diary.ID})
+			return err
 		},
 		"move_notes": func(ctx context.Context) error {
 			return svc.MoveNotes(ctx, &gennotes.MoveNotesPayload{Ids: []string{n.ID}, Notebook: store.Inbox})

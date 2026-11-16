@@ -119,7 +119,7 @@ var Notebook = Type("Notebook", func() {
 // TrashedNotebook is a notebook deleted as a whole, kept in the trash with its
 // notes and settings.
 var TrashedNotebook = Type("TrashedNotebook", func() {
-	RequiredAttribute("id", String, "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent", trashedNotebookIDDSL)
+	RequiredAttribute("id", String, "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent. A notebook deleted while the trash held one with the same ID has a number, as <id>@2, and goes back to the ID without it", trashedNotebookIDDSL)
 	Attribute("parent", String, "For a sub notebook deleted with its parent: the ID of the parent in the trash", notebookIDDSL)
 	RequiredAttribute("name", String, "Display name")
 	RequiredAttribute("kind", String, "Kind of the notebook, kept for when it is restored", func() {
@@ -1058,20 +1058,21 @@ var _ = Service("notes", func() {
 	})
 
 	Method("delete_notebook", func() {
-		Description("Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.")
+		Description("Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. When the trash already holds a notebook with that ID, the notebook gets a number there, as <id>@2. Inbox and trash cannot be deleted.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "Notebook ID", notebookIDDSL)
 		})
+		Result(func() {
+			RequiredAttribute("id", String, "ID of the notebook in the trash, to restore it with", trashedNotebookIDDSL)
+		})
 		Error("not_found", ErrorResult, "The notebook does not exist")
 		Error("bad_request", ErrorResult, "The notebook is inbox or trash")
-		Error("already_exists", ErrorResult, "The trash holds a notebook with the same ID")
 		HTTP(func() {
 			DELETE("/notebooks/{*id}")
-			Response(StatusNoContent)
+			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
-			Response("already_exists", StatusConflict)
 		})
 	})
 
@@ -1086,7 +1087,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("restore_notebook", func() {
-		Description("Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.")
+		Description("Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to a notebook with its name, it gets the name with the first number free, as \"Plans (2)\". The result tells the ID and the name it got.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "ID in the trash", trashedNotebookIDDSL)
@@ -1094,13 +1095,11 @@ var _ = Service("notes", func() {
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook is not in the trash")
 		Error("bad_request", ErrorResult, "The notebook ID is invalid, or the parent of the sub notebook is not there")
-		Error("already_exists", ErrorResult, "A notebook with the same ID exists")
 		HTTP(func() {
 			POST("/trash/notebooks/restore/{*id}")
 			Response(StatusOK)
 			Response("not_found", StatusNotFound)
 			Response("bad_request", StatusBadRequest)
-			Response("already_exists", StatusConflict)
 		})
 	})
 
