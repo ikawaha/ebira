@@ -412,7 +412,7 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook.menu-open { background-color: var(--bg-hover); }
 .list li.sub-notebook.active { background-color: var(--bg-active); } /* the cell clicked last, where new notes go */
 .list li.sub-notebook.active .nb-more { visibility: visible; }
-.list li.sub-notebook.drop-into { box-shadow: inset 0 0 0 2px var(--accent); }
+.list li.drop-into, .list.drop-into { box-shadow: inset 0 0 0 2px var(--accent); }
 .list li.sub-notebook .nb-rename { flex: 1; min-width: 0; font: inherit; padding: 0 4px; border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--bg); color: var(--fg); }
 .notebook-new .inherited { color: var(--fg-muted); font-size: var(--fs-sm); }
 .list li.more-row { cursor: default; text-align: center; }
