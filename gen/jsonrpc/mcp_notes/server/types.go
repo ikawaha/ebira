@@ -63,6 +63,9 @@ type ServerDiscoverResponseBody struct {
 	TTLMs int64 `form:"ttlMs" json:"ttlMs" xml:"ttlMs"`
 	// Whether this response may be reused across authorization contexts
 	CacheScope string `form:"cacheScope" json:"cacheScope" xml:"cacheScope"`
+	// Guidance on using this server, which clients may add to the system prompt of
+	// the model
+	Instructions *string `form:"instructions,omitempty" json:"instructions,omitempty" xml:"instructions,omitempty"`
 }
 
 // ToolsListResponseBody is the type of the "mcp_notes" service "tools/list"
@@ -793,10 +796,11 @@ func (u *ToolsCallOutcomeResponseBody) UnmarshalJSON(data []byte) error {
 // of the "server/discover" endpoint of the "mcp_notes" service.
 func NewServerDiscoverResponseBody(res *mcpnotes.DiscoverResult) *ServerDiscoverResponseBody {
 	body := &ServerDiscoverResponseBody{
-		Meta:       res.Meta,
-		ResultType: res.ResultType,
-		TTLMs:      res.TTLMs,
-		CacheScope: res.CacheScope,
+		Meta:         res.Meta,
+		ResultType:   res.ResultType,
+		TTLMs:        res.TTLMs,
+		CacheScope:   res.CacheScope,
+		Instructions: res.Instructions,
 	}
 	if res.SupportedVersions != nil {
 		body.SupportedVersions = make([]string, len(res.SupportedVersions))
