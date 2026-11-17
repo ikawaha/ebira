@@ -366,7 +366,7 @@ func TestImportWhileNotebookMoves(t *testing.T) {
 	// The fields are read whole first; the hook runs while the image comes.
 	i := bytes.LastIndex(body.Bytes(), []byte("img/tera.png"))
 	r := io.MultiReader(bytes.NewReader(body.Bytes()[:i]), &hookReader{r: bytes.NewReader(body.Bytes()[i:]), hook: func() {
-		if err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: "travel"}); err != nil {
+		if _, err := svc.DeleteNotebook(person, &gennotes.DeleteNotebookPayload{ID: "travel"}); err != nil {
 			t.Error(err)
 		}
 	}})

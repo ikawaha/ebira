@@ -735,6 +735,13 @@ type MoveNotebookResponseBody struct {
 	Sort string `form:"sort" json:"sort" xml:"sort"`
 }
 
+// DeleteNotebookResponseBody is the type of the "notes" service
+// "delete_notebook" endpoint HTTP response body.
+type DeleteNotebookResponseBody struct {
+	// ID of the notebook in the trash, to restore it with
+	ID string `form:"id" json:"id" xml:"id"`
+}
+
 // TrashedNotebooksResponseBody is the type of the "notes" service
 // "trashed_notebooks" endpoint HTTP response body.
 type TrashedNotebooksResponseBody []*TrashedNotebookResponse
@@ -807,6 +814,9 @@ type UploadAiFileResponseBody struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path string `form:"path" json:"path" xml:"path"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
 // AddFileResponseBody is the type of the "notes" service "add_file" endpoint
@@ -817,6 +827,9 @@ type AddFileResponseBody struct {
 	// Path of the file relative to the note file, to refer to it from the body,
 	// such as ![](<path>)
 	Path string `form:"path" json:"path" xml:"path"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
 // HistoryResponseBody is the type of the "notes" service "history" endpoint
@@ -838,6 +851,23 @@ type HistoryVersionResponseBody struct {
 	Tags []string `form:"tags" json:"tags" xml:"tags"`
 	// Body of the version in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
+}
+
+// FileHistoryResponseBody is the type of the "notes" service "file_history"
+// endpoint HTTP response body.
+type FileHistoryResponseBody []*FileVersionResponse
+
+// RestoreFileResponseBody is the type of the "notes" service "restore_file"
+// endpoint HTTP response body.
+type RestoreFileResponseBody struct {
+	// File name
+	Name string `form:"name" json:"name" xml:"name"`
+	// Path of the file relative to the note file, to refer to it from the body,
+	// such as ![](<path>)
+	Path string `form:"path" json:"path" xml:"path"`
+	// True when the file took the place of a file of the same name, which people
+	// can put back
+	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
 // CheckFilesResponseBody is the type of the "notes" service "check_files"
@@ -2651,24 +2681,6 @@ type DeleteNotebookBadRequestResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// DeleteNotebookAlreadyExistsResponseBody is the type of the "notes" service
-// "delete_notebook" endpoint HTTP response body for the "already_exists" error.
-type DeleteNotebookAlreadyExistsResponseBody struct {
-	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
-	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
-	// Message is a human-readable explanation specific to this occurrence of the
-	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
-	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
-	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
-	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
-}
-
 // DeleteNotebookUnauthorizedResponseBody is the type of the "notes" service
 // "delete_notebook" endpoint HTTP response body for the "unauthorized" error.
 type DeleteNotebookUnauthorizedResponseBody struct {
@@ -2764,25 +2776,6 @@ type RestoreNotebookNotFoundResponseBody struct {
 // RestoreNotebookBadRequestResponseBody is the type of the "notes" service
 // "restore_notebook" endpoint HTTP response body for the "bad_request" error.
 type RestoreNotebookBadRequestResponseBody struct {
-	// Name is the name of this class of errors.
-	Name string `form:"name" json:"name" xml:"name"`
-	// ID is a unique identifier for this particular occurrence of the problem.
-	ID string `form:"id" json:"id" xml:"id"`
-	// Message is a human-readable explanation specific to this occurrence of the
-	// problem.
-	Message string `form:"message" json:"message" xml:"message"`
-	// Is the error temporary?
-	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
-	// Is the error a timeout?
-	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
-	// Is the error a server-side fault?
-	Fault bool `form:"fault" json:"fault" xml:"fault"`
-}
-
-// RestoreNotebookAlreadyExistsResponseBody is the type of the "notes" service
-// "restore_notebook" endpoint HTTP response body for the "already_exists"
-// error.
-type RestoreNotebookAlreadyExistsResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -3491,6 +3484,152 @@ type HistoryVersionVerificationRequiredResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// FileHistoryNotFoundResponseBody is the type of the "notes" service
+// "file_history" endpoint HTTP response body for the "not_found" error.
+type FileHistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// FileHistoryBadRequestResponseBody is the type of the "notes" service
+// "file_history" endpoint HTTP response body for the "bad_request" error.
+type FileHistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// FileHistoryUnauthorizedResponseBody is the type of the "notes" service
+// "file_history" endpoint HTTP response body for the "unauthorized" error.
+type FileHistoryUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// FileHistoryVerificationRequiredResponseBody is the type of the "notes"
+// service "file_history" endpoint HTTP response body for the
+// "verification_required" error.
+type FileHistoryVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestoreFileNotFoundResponseBody is the type of the "notes" service
+// "restore_file" endpoint HTTP response body for the "not_found" error.
+type RestoreFileNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestoreFileBadRequestResponseBody is the type of the "notes" service
+// "restore_file" endpoint HTTP response body for the "bad_request" error.
+type RestoreFileBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestoreFileUnauthorizedResponseBody is the type of the "notes" service
+// "restore_file" endpoint HTTP response body for the "unauthorized" error.
+type RestoreFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// RestoreFileVerificationRequiredResponseBody is the type of the "notes"
+// service "restore_file" endpoint HTTP response body for the
+// "verification_required" error.
+type RestoreFileVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // CheckFilesUnauthorizedResponseBody is the type of the "notes" service
 // "check_files" endpoint HTTP response body for the "unauthorized" error.
 type CheckFilesUnauthorizedResponseBody struct {
@@ -4118,7 +4257,8 @@ type MarkInfoResponse struct {
 type TrashedNotebookResponse struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
 	// with its parent, or <parent>~<sub> for a sub notebook deleted on its own,
-	// which goes back into its parent
+	// which goes back into its parent. A notebook deleted while the trash held one
+	// with the same ID has a number, as <id>@2, and goes back to the ID without it
 	ID string `form:"id" json:"id" xml:"id"`
 	// For a sub notebook deleted with its parent: the ID of the parent in the trash
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
@@ -4184,6 +4324,21 @@ type NoteVersionSummaryResponse struct {
 	UpdatedAt string `form:"updated_at" json:"updated_at" xml:"updated_at"`
 	// When the version was replaced by a newer one
 	ReplacedAt string `form:"replaced_at" json:"replaced_at" xml:"replaced_at"`
+}
+
+// FileVersionResponse is used to define fields on response body types.
+type FileVersionResponse struct {
+	// ID of the earlier file among those of the note
+	Rev string `form:"rev" json:"rev" xml:"rev"`
+	// File name
+	Name string `form:"name" json:"name" xml:"name"`
+	// Size of the file in bytes
+	Size int64 `form:"size" json:"size" xml:"size"`
+	// When the file was replaced or deleted
+	ReplacedAt string `form:"replaced_at" json:"replaced_at" xml:"replaced_at"`
+	// Whether the note has a file of the same name now, which putting this one
+	// back replaces
+	Current bool `form:"current" json:"current" xml:"current"`
 }
 
 // UnusedFileResponseBody is used to define fields on response body types.
@@ -4890,6 +5045,15 @@ func NewMoveNotebookResponseBody(res *notes.Notebook) *MoveNotebookResponseBody 
 	return body
 }
 
+// NewDeleteNotebookResponseBody builds the HTTP response body from the result
+// of the "delete_notebook" endpoint of the "notes" service.
+func NewDeleteNotebookResponseBody(res *notes.DeleteNotebookResult) *DeleteNotebookResponseBody {
+	body := &DeleteNotebookResponseBody{
+		ID: res.ID,
+	}
+	return body
+}
+
 // NewTrashedNotebooksResponseBody builds the HTTP response body from the
 // result of the "trashed_notebooks" endpoint of the "notes" service.
 func NewTrashedNotebooksResponseBody(res []*notes.TrashedNotebook) []*TrashedNotebookResponse {
@@ -4949,8 +5113,9 @@ func NewImportResponseBody(res *notes.ImportResult) *ImportResponseBody {
 // the "upload_ai_file" endpoint of the "notes" service.
 func NewUploadAiFileResponseBody(res *notes.NoteFile) *UploadAiFileResponseBody {
 	body := &UploadAiFileResponseBody{
-		Name: res.Name,
-		Path: res.Path,
+		Name:     res.Name,
+		Path:     res.Path,
+		Replaced: res.Replaced,
 	}
 	return body
 }
@@ -4959,8 +5124,9 @@ func NewUploadAiFileResponseBody(res *notes.NoteFile) *UploadAiFileResponseBody 
 // "add_file" endpoint of the "notes" service.
 func NewAddFileResponseBody(res *notes.NoteFile) *AddFileResponseBody {
 	body := &AddFileResponseBody{
-		Name: res.Name,
-		Path: res.Path,
+		Name:     res.Name,
+		Path:     res.Path,
+		Replaced: res.Replaced,
 	}
 	return body
 }
@@ -4996,6 +5162,31 @@ func NewHistoryVersionResponseBody(res *notes.NoteVersion) *HistoryVersionRespon
 		}
 	} else {
 		body.Tags = []string{}
+	}
+	return body
+}
+
+// NewFileHistoryResponseBody builds the HTTP response body from the result of
+// the "file_history" endpoint of the "notes" service.
+func NewFileHistoryResponseBody(res []*notes.FileVersion) []*FileVersionResponse {
+	body := make([]*FileVersionResponse, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalNotesFileVersionToFileVersionResponse(val)
+	}
+	return body
+}
+
+// NewRestoreFileResponseBody builds the HTTP response body from the result of
+// the "restore_file" endpoint of the "notes" service.
+func NewRestoreFileResponseBody(res *notes.NoteFile) *RestoreFileResponseBody {
+	body := &RestoreFileResponseBody{
+		Name:     res.Name,
+		Path:     res.Path,
+		Replaced: res.Replaced,
 	}
 	return body
 }
@@ -6461,20 +6652,6 @@ func NewDeleteNotebookBadRequestResponseBody(res *goa.ServiceError) *DeleteNoteb
 	return body
 }
 
-// NewDeleteNotebookAlreadyExistsResponseBody builds the HTTP response body
-// from the result of the "delete_notebook" endpoint of the "notes" service.
-func NewDeleteNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *DeleteNotebookAlreadyExistsResponseBody {
-	body := &DeleteNotebookAlreadyExistsResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
-	}
-	return body
-}
-
 // NewDeleteNotebookUnauthorizedResponseBody builds the HTTP response body from
 // the result of the "delete_notebook" endpoint of the "notes" service.
 func NewDeleteNotebookUnauthorizedResponseBody(res *goa.ServiceError) *DeleteNotebookUnauthorizedResponseBody {
@@ -6551,20 +6728,6 @@ func NewRestoreNotebookNotFoundResponseBody(res *goa.ServiceError) *RestoreNoteb
 // the result of the "restore_notebook" endpoint of the "notes" service.
 func NewRestoreNotebookBadRequestResponseBody(res *goa.ServiceError) *RestoreNotebookBadRequestResponseBody {
 	body := &RestoreNotebookBadRequestResponseBody{
-		Name:      res.Name,
-		ID:        res.ID,
-		Message:   res.Message,
-		Temporary: res.Temporary,
-		Timeout:   res.Timeout,
-		Fault:     res.Fault,
-	}
-	return body
-}
-
-// NewRestoreNotebookAlreadyExistsResponseBody builds the HTTP response body
-// from the result of the "restore_notebook" endpoint of the "notes" service.
-func NewRestoreNotebookAlreadyExistsResponseBody(res *goa.ServiceError) *RestoreNotebookAlreadyExistsResponseBody {
-	body := &RestoreNotebookAlreadyExistsResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -7103,6 +7266,118 @@ func NewHistoryVersionUnauthorizedResponseBody(res *goa.ServiceError) *HistoryVe
 // service.
 func NewHistoryVersionVerificationRequiredResponseBody(res *goa.ServiceError) *HistoryVersionVerificationRequiredResponseBody {
 	body := &HistoryVersionVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewFileHistoryNotFoundResponseBody builds the HTTP response body from the
+// result of the "file_history" endpoint of the "notes" service.
+func NewFileHistoryNotFoundResponseBody(res *goa.ServiceError) *FileHistoryNotFoundResponseBody {
+	body := &FileHistoryNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewFileHistoryBadRequestResponseBody builds the HTTP response body from the
+// result of the "file_history" endpoint of the "notes" service.
+func NewFileHistoryBadRequestResponseBody(res *goa.ServiceError) *FileHistoryBadRequestResponseBody {
+	body := &FileHistoryBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewFileHistoryUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "file_history" endpoint of the "notes" service.
+func NewFileHistoryUnauthorizedResponseBody(res *goa.ServiceError) *FileHistoryUnauthorizedResponseBody {
+	body := &FileHistoryUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewFileHistoryVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "file_history" endpoint of the "notes" service.
+func NewFileHistoryVerificationRequiredResponseBody(res *goa.ServiceError) *FileHistoryVerificationRequiredResponseBody {
+	body := &FileHistoryVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestoreFileNotFoundResponseBody builds the HTTP response body from the
+// result of the "restore_file" endpoint of the "notes" service.
+func NewRestoreFileNotFoundResponseBody(res *goa.ServiceError) *RestoreFileNotFoundResponseBody {
+	body := &RestoreFileNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestoreFileBadRequestResponseBody builds the HTTP response body from the
+// result of the "restore_file" endpoint of the "notes" service.
+func NewRestoreFileBadRequestResponseBody(res *goa.ServiceError) *RestoreFileBadRequestResponseBody {
+	body := &RestoreFileBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestoreFileUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "restore_file" endpoint of the "notes" service.
+func NewRestoreFileUnauthorizedResponseBody(res *goa.ServiceError) *RestoreFileUnauthorizedResponseBody {
+	body := &RestoreFileUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewRestoreFileVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "restore_file" endpoint of the "notes" service.
+func NewRestoreFileVerificationRequiredResponseBody(res *goa.ServiceError) *RestoreFileVerificationRequiredResponseBody {
+	body := &RestoreFileVerificationRequiredResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -7919,6 +8194,25 @@ func NewHistoryPayload(id string, session *string) *notes.HistoryPayload {
 // payload.
 func NewHistoryVersionPayload(id string, rev string, session *string) *notes.HistoryVersionPayload {
 	v := &notes.HistoryVersionPayload{}
+	v.ID = id
+	v.Rev = rev
+	v.Session = session
+
+	return v
+}
+
+// NewFileHistoryPayload builds a notes service file_history endpoint payload.
+func NewFileHistoryPayload(id string, session *string) *notes.FileHistoryPayload {
+	v := &notes.FileHistoryPayload{}
+	v.ID = id
+	v.Session = session
+
+	return v
+}
+
+// NewRestoreFilePayload builds a notes service restore_file endpoint payload.
+func NewRestoreFilePayload(id string, rev string, session *string) *notes.RestoreFilePayload {
+	v := &notes.RestoreFilePayload{}
 	v.ID = id
 	v.Rev = rev
 	v.Session = session

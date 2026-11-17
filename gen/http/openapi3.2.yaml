@@ -1774,7 +1774,7 @@ paths:
             tags:
                 - notes
             summary: delete_notebook notes
-            description: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. Inbox and trash cannot be deleted. Fails with already_exists if the trash holds a notebook with the same ID.
+            description: Move a notebook with its notes, settings and sub notebooks into the trash. A sub notebook deleted on its own is kept in the trash as <parent>~<sub>. When the trash already holds a notebook with that ID, the notebook gets a number there, as <id>@2. Inbox and trash cannot be deleted.
             operationId: notes#delete_notebook
             parameters:
                 - name: id
@@ -1788,8 +1788,14 @@ paths:
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: inbox
             responses:
-                "204":
-                    description: No Content response.
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteNotebookResponseBody'
+                            example:
+                                id: dev~design
                 "400":
                     description: 'bad_request: The notebook is inbox or trash'
                     content:
@@ -1840,19 +1846,6 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: not_found
-                                temporary: false
-                                timeout: false
-                "409":
-                    description: 'already_exists: The trash holds a notebook with the same ID'
-                    content:
-                        application/vnd.goa.error:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                            example:
-                                fault: false
-                                id: 123abc
-                                message: parameter 'p' must be an integer
-                                name: already_exists
                                 temporary: false
                                 timeout: false
             security:
@@ -2145,7 +2138,7 @@ paths:
                     type: string
                     description: With notebook=trash, list the notes of this notebook in the trash instead of the notes deleted on their own
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: dev~design
                 - name: sort
                   in: query
@@ -2897,6 +2890,222 @@ paths:
                                 timeout: false
             security:
                 - session_cookie_ebira_session: []
+    /notes/{id}/file-history:
+        get:
+            tags:
+                - notes
+            summary: file_history notes
+            description: 'List the earlier files of a note, newest first: those replaced by a file of the same name or deleted, by people or AI clients, kept on this device; up to 20 per note, and those older than 30 days are dropped except the 5 newest. For people only.'
+            operationId: notes#file_history
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/FileVersion'
+                                example:
+                                    - current: false
+                                      name: screenshot.png
+                                      replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      size: 8652509483350012047
+                                    - current: false
+                                      name: screenshot.png
+                                      replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      size: 8652509483350012047
+                                    - current: false
+                                      name: screenshot.png
+                                      replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      size: 8652509483350012047
+                                    - current: false
+                                      name: screenshot.png
+                                      replaced_at: "2026-10-16T09:30:00Z"
+                                      rev: "1792400000000000000"
+                                      size: 8652509483350012047
+                            example:
+                                - current: false
+                                  name: screenshot.png
+                                  replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  size: 8652509483350012047
+                                - current: false
+                                  name: screenshot.png
+                                  replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  size: 8652509483350012047
+                                - current: false
+                                  name: screenshot.png
+                                  replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  size: 8652509483350012047
+                                - current: false
+                                  name: screenshot.png
+                                  replaced_at: "2026-10-16T09:30:00Z"
+                                  rev: "1792400000000000000"
+                                  size: 8652509483350012047
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /notes/{id}/file-history/{rev}/restore:
+        post:
+            tags:
+                - notes
+            summary: restore_file notes
+            description: Put an earlier file of a note back under its name. The file of that name now, if any, is kept in its place, so that this can be undone. For people only.
+            operationId: notes#restore_file
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/'
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: be4c1193735ee1
+                - name: rev
+                  in: path
+                  description: ID of the earlier file
+                  required: true
+                  schema:
+                    type: string
+                    description: ID of the earlier file
+                    example: "1792400000000000000"
+                    pattern: ^[0-9]{1,20}$
+                  example: "1792400000000000000"
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NoteFile'
+                            example:
+                                name: screenshot.png
+                                path: be4c1193735ee1.assets/screenshot.png
+                                replaced: true
+                "400":
+                    description: 'bad_request: The note ID is used in more than one notebook'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note or the earlier file does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
     /notes/{id}/files:
         post:
             tags:
@@ -2937,6 +3146,7 @@ paths:
                             example:
                                 name: screenshot.png
                                 path: be4c1193735ee1.assets/screenshot.png
+                                replaced: true
                 "400":
                     description: 'bad_request: The note ID is used in more than one notebook'
                     content:
@@ -3009,7 +3219,7 @@ paths:
             tags:
                 - notes
             summary: delete_file notes
-            description: Delete a file of a note. The body may still refer to it.
+            description: Delete a file of a note. The body may still refer to it. The file is kept on this device, to be put back with restore_file.
             operationId: notes#delete_file
             parameters:
                 - name: id
@@ -4993,7 +5203,7 @@ paths:
                     type: string
                     description: ID in the trash
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: dev~design
             responses:
                 "204":
@@ -5057,7 +5267,7 @@ paths:
             tags:
                 - notes
             summary: restore_notebook notes
-            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. Fails with already_exists if a notebook with the same ID exists.
+            description: Move a notebook out of the trash with its notes and settings. A sub notebook goes back into its parent, which must not be in the trash. When a notebook has its ID (renaming keeps the ID), it gets another one, as <id>-2; next to a notebook with its name, it gets the name with the first number free, as "Plans (2)". The result tells the ID and the name it got.
             operationId: notes#restore_notebook
             parameters:
                 - name: id
@@ -5068,7 +5278,7 @@ paths:
                     type: string
                     description: ID in the trash
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                   example: dev~design
             responses:
                 "200":
@@ -5140,19 +5350,6 @@ paths:
                                 id: 123abc
                                 message: parameter 'p' must be an integer
                                 name: not_found
-                                temporary: false
-                                timeout: false
-                "409":
-                    description: 'already_exists: A notebook with the same ID exists'
-                    content:
-                        application/vnd.goa.error:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                            example:
-                                fault: false
-                                id: 123abc
-                                message: parameter 'p' must be an integer
-                                name: already_exists
                                 temporary: false
                                 timeout: false
             security:
@@ -5266,6 +5463,7 @@ paths:
                             example:
                                 name: screenshot.png
                                 path: be4c1193735ee1.assets/screenshot.png
+                                replaced: false
                 "400":
                     description: 'bad_request: The note ID is used in more than one notebook'
                     content:
@@ -5582,6 +5780,18 @@ components:
                 title: October
             required:
                 - notebook
+        DeleteNotebookResponseBody:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: ID of the notebook in the trash, to restore it with
+                    example: dev~design
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
+            example:
+                id: dev~design
+            required:
+                - id
         DeviceApproveRequestBody:
             type: object
             properties:
@@ -5800,6 +6010,44 @@ components:
             required:
                 - unused
                 - broken
+        FileVersion:
+            type: object
+            properties:
+                current:
+                    type: boolean
+                    description: Whether the note has a file of the same name now, which putting this one back replaces
+                    example: false
+                name:
+                    type: string
+                    description: File name
+                    example: screenshot.png
+                replaced_at:
+                    type: string
+                    description: When the file was replaced or deleted
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                rev:
+                    type: string
+                    description: ID of the earlier file among those of the note
+                    example: "1792400000000000000"
+                    pattern: ^[0-9]{1,20}$
+                size:
+                    type: integer
+                    description: Size of the file in bytes
+                    example: 8652509483350012047
+                    format: int64
+            example:
+                current: false
+                name: screenshot.png
+                replaced_at: "2026-10-16T09:30:00Z"
+                rev: "1792400000000000000"
+                size: 8652509483350012047
+            required:
+                - rev
+                - name
+                - size
+                - replaced_at
+                - current
         GitConflict:
             type: object
             properties:
@@ -6294,7 +6542,7 @@ components:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -6452,7 +6700,7 @@ components:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -6540,9 +6788,14 @@ components:
                     type: string
                     description: Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)
                     example: be4c1193735ee1.assets/screenshot.png
+                replaced:
+                    type: boolean
+                    description: True when the file took the place of a file of the same name, which people can put back
+                    example: false
             example:
                 name: screenshot.png
                 path: be4c1193735ee1.assets/screenshot.png
+                replaced: false
             required:
                 - name
                 - path
@@ -6868,7 +7121,7 @@ components:
                     type: string
                     description: 'For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 updated_at:
                     type: string
                     description: Last update time
@@ -7929,9 +8182,9 @@ components:
                     format: int64
                 id:
                     type: string
-                    description: 'ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent'
+                    description: 'ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent. A notebook deleted while the trash held one with the same ID has a number, as <id>@2, and goes back to the ID without it'
                     example: dev~design
-                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$
                 kind:
                     type: string
                     description: Kind of the notebook, kept for when it is restored

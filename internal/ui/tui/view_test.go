@@ -169,9 +169,6 @@ func TestSubNotebookRows(t *testing.T) {
 	if got := m.notebookName(trashedPrefix + "old/sub"); got != "↳ Old / Sub" {
 		t.Errorf("notebookName of a sub notebook in the trash = %q", got)
 	}
-	if got := inTrash(&gennotes.Notebook{ID: "dev/design", Parent: &dev}); got != "dev~design" || restoredAs(got) != "dev/design" {
-		t.Errorf("inTrash = %q, restoredAs = %q", got, restoredAs(got))
-	}
 }
 
 // TestMoveNotebook checks choosing where to move a notebook with m: a

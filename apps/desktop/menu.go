@@ -217,6 +217,10 @@ func (s *shell) onPageMessage(data string) {
 // UI).
 const issueURL = "https://github.com/ikawaha/ebira/issues/new"
 
+// repoURL is the repository of ebira (the GitHub mark of the settings menu of
+// the web UI).
+const repoURL = "https://github.com/ikawaha/ebira"
+
 // openURL opens url in the browser. The schemes are limited because the link
 // may come from a note, which AI can write too.
 func (s *shell) openURL(url string) {
@@ -358,6 +362,7 @@ func (s *shell) appMenu() *application.Menu {
 		// user did not click.
 		s.openURL(issueURL)
 	}))
+	help.Add("ebira on GitHub").OnClick(on(func() { s.openURL(repoURL) }))
 	if !mac {
 		help.AddSeparator()
 		help.Add("About ebira").OnClick(on(about))

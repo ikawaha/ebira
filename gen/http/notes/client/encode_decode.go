@@ -3669,7 +3669,6 @@ func EncodeDeleteNotebookRequest(encoder func(*http.Request) goahttp.Encoder) fu
 // DecodeDeleteNotebookResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
-//   - "already_exists" (type *goa.ServiceError): http.StatusConflict
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
@@ -3694,8 +3693,21 @@ func DecodeDeleteNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 			}()
 		}
 		switch resp.StatusCode {
-		case http.StatusNoContent:
-			return nil, nil
+		case http.StatusOK:
+			var (
+				body DeleteNotebookResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "delete_notebook", err)
+			}
+			err = ValidateDeleteNotebookResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
+			}
+			res := NewDeleteNotebookResultOK(&body)
+			return res, nil
 		case http.StatusNotFound:
 			var (
 				body DeleteNotebookNotFoundResponseBody
@@ -3724,20 +3736,6 @@ func DecodeDeleteNotebookResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
 			}
 			return nil, NewDeleteNotebookBadRequest(&body)
-		case http.StatusConflict:
-			var (
-				body DeleteNotebookAlreadyExistsResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "delete_notebook", err)
-			}
-			err = ValidateDeleteNotebookAlreadyExistsResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "delete_notebook", err)
-			}
-			return nil, NewDeleteNotebookAlreadyExists(&body)
 		case http.StatusUnauthorized:
 			var (
 				body DeleteNotebookUnauthorizedResponseBody
@@ -3949,7 +3947,6 @@ func EncodeRestoreNotebookRequest(encoder func(*http.Request) goahttp.Encoder) f
 // DecodeRestoreNotebookResponse may return the following errors:
 //   - "not_found" (type *goa.ServiceError): http.StatusNotFound
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
-//   - "already_exists" (type *goa.ServiceError): http.StatusConflict
 //   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
 //   - error: internal error
@@ -4017,20 +4014,6 @@ func DecodeRestoreNotebookResponse(decoder func(*http.Response) goahttp.Decoder,
 				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
 			}
 			return nil, NewRestoreNotebookBadRequest(&body)
-		case http.StatusConflict:
-			var (
-				body RestoreNotebookAlreadyExistsResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "restore_notebook", err)
-			}
-			err = ValidateRestoreNotebookAlreadyExistsResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "restore_notebook", err)
-			}
-			return nil, NewRestoreNotebookAlreadyExists(&body)
 		case http.StatusUnauthorized:
 			var (
 				body RestoreNotebookUnauthorizedResponseBody
@@ -5509,6 +5492,328 @@ func DecodeHistoryVersionResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrDecodingError("notes", "history_version", err)
 			}
 			return nil, goahttp.ErrInvalidResponse("notes", "history_version", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildFileHistoryRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "file_history" endpoint
+func (c *Client) BuildFileHistoryRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.FileHistoryPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "file_history", "*notes.FileHistoryPayload", v)
+		}
+		id = p.ID
+	}
+
+	rawPath := fmt.Sprintf("/notes/%v/file-history", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: FileHistoryNotesPath(id), RawPath: rawPath}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "file_history", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeFileHistoryRequest returns an encoder for requests sent to the notes
+// file_history server.
+func EncodeFileHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.FileHistoryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "file_history", "*notes.FileHistoryPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodeFileHistoryResponse returns a decoder for responses returned by the
+// notes file_history endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeFileHistoryResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeFileHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "file_history", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body []*FileVersionResponse
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := validateFileVersionResponse(e, "body[*]"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "file_history", err)
+			}
+			res := NewFileHistoryFileVersionOK(body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body FileHistoryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			err = ValidateFileHistoryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "file_history", err)
+			}
+			return nil, NewFileHistoryNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body FileHistoryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			err = ValidateFileHistoryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "file_history", err)
+			}
+			return nil, NewFileHistoryBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body FileHistoryUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			err = ValidateFileHistoryUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "file_history", err)
+			}
+			return nil, NewFileHistoryUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body FileHistoryVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			err = ValidateFileHistoryVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "file_history", err)
+			}
+			return nil, NewFileHistoryVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "file_history", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "file_history", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildRestoreFileRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "restore_file" endpoint
+func (c *Client) BuildRestoreFileRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id  string
+		rev string
+	)
+	{
+		p, ok := v.(*notes.RestoreFilePayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "restore_file", "*notes.RestoreFilePayload", v)
+		}
+		id = p.ID
+		rev = p.Rev
+	}
+
+	rawPath := fmt.Sprintf("/notes/%v/file-history/%v/restore", url.PathEscape(fmt.Sprint(id)), url.PathEscape(fmt.Sprint(rev)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: RestoreFileNotesPath(id, rev), RawPath: rawPath}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "restore_file", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeRestoreFileRequest returns an encoder for requests sent to the notes
+// restore_file server.
+func EncodeRestoreFileRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.RestoreFilePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "restore_file", "*notes.RestoreFilePayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodeRestoreFileResponse returns a decoder for responses returned by the
+// notes restore_file endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeRestoreFileResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeRestoreFileResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "restore_file", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body RestoreFileResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			err = ValidateRestoreFileResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_file", err)
+			}
+			res := NewRestoreFileNoteFileOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body RestoreFileNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			err = ValidateRestoreFileNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_file", err)
+			}
+			return nil, NewRestoreFileNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body RestoreFileBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			err = ValidateRestoreFileBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_file", err)
+			}
+			return nil, NewRestoreFileBadRequest(&body)
+		case http.StatusUnauthorized:
+			var (
+				body RestoreFileUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			err = ValidateRestoreFileUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_file", err)
+			}
+			return nil, NewRestoreFileUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body RestoreFileVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			err = ValidateRestoreFileVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "restore_file", err)
+			}
+			return nil, NewRestoreFileVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "restore_file", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "restore_file", resp.StatusCode, string(body))
 		}
 	}
 }
@@ -7058,6 +7363,20 @@ func unmarshalNoteVersionSummaryResponseToNotesNoteVersionSummary(v *NoteVersion
 		Title:      *v.Title,
 		UpdatedAt:  *v.UpdatedAt,
 		ReplacedAt: *v.ReplacedAt,
+	}
+
+	return res
+}
+
+// unmarshalFileVersionResponseToNotesFileVersion builds a value of type
+// *notes.FileVersion from a value of type *FileVersionResponse.
+func unmarshalFileVersionResponseToNotesFileVersion(v *FileVersionResponse) *notes.FileVersion {
+	res := &notes.FileVersion{
+		Rev:        *v.Rev,
+		Name:       *v.Name,
+		Size:       *v.Size,
+		ReplacedAt: *v.ReplacedAt,
+		Current:    *v.Current,
 	}
 
 	return res

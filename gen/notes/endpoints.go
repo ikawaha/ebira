@@ -52,6 +52,7 @@ type Endpoints struct {
 	AddAiFile             goa.Endpoint
 	StartAiUpload         goa.Endpoint
 	UploadAiFile          goa.Endpoint
+	DeleteAiFile          goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
 	MoveAiNote            goa.Endpoint
@@ -67,6 +68,8 @@ type Endpoints struct {
 	DeleteFile            goa.Endpoint
 	History               goa.Endpoint
 	HistoryVersion        goa.Endpoint
+	FileHistory           goa.Endpoint
+	RestoreFile           goa.Endpoint
 	CheckFiles            goa.Endpoint
 	Events                goa.Endpoint
 	GitStatus             goa.Endpoint
@@ -165,6 +168,7 @@ func NewEndpoints(s Service) *Endpoints {
 		AddAiFile:             NewAddAiFileEndpoint(s),
 		StartAiUpload:         NewStartAiUploadEndpoint(s),
 		UploadAiFile:          NewUploadAiFileEndpoint(s),
+		DeleteAiFile:          NewDeleteAiFileEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
 		MoveAiNote:            NewMoveAiNoteEndpoint(s),
@@ -180,6 +184,8 @@ func NewEndpoints(s Service) *Endpoints {
 		DeleteFile:            NewDeleteFileEndpoint(s, a.APIKeyAuth),
 		History:               NewHistoryEndpoint(s, a.APIKeyAuth),
 		HistoryVersion:        NewHistoryVersionEndpoint(s, a.APIKeyAuth),
+		FileHistory:           NewFileHistoryEndpoint(s, a.APIKeyAuth),
+		RestoreFile:           NewRestoreFileEndpoint(s, a.APIKeyAuth),
 		CheckFiles:            NewCheckFilesEndpoint(s, a.APIKeyAuth),
 		Events:                NewEventsEndpoint(s, a.APIKeyAuth),
 		GitStatus:             NewGitStatusEndpoint(s, a.APIKeyAuth),
@@ -231,6 +237,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.AddAiFile = m(e.AddAiFile)
 	e.StartAiUpload = m(e.StartAiUpload)
 	e.UploadAiFile = m(e.UploadAiFile)
+	e.DeleteAiFile = m(e.DeleteAiFile)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
 	e.MoveAiNote = m(e.MoveAiNote)
@@ -246,6 +253,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.DeleteFile = m(e.DeleteFile)
 	e.History = m(e.History)
 	e.HistoryVersion = m(e.HistoryVersion)
+	e.FileHistory = m(e.FileHistory)
+	e.RestoreFile = m(e.RestoreFile)
 	e.CheckFiles = m(e.CheckFiles)
 	e.Events = m(e.Events)
 	e.GitStatus = m(e.GitStatus)
@@ -830,7 +839,7 @@ func NewDeleteNotebookEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) 
 		if err != nil {
 			return nil, err
 		}
-		return nil, s.DeleteNotebook(ctx, p)
+		return s.DeleteNotebook(ctx, p)
 	}
 }
 
@@ -991,6 +1000,15 @@ func NewUploadAiFileEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		ep := req.(*UploadAiFileRequestData)
 		return s.UploadAiFile(ctx, ep.Payload, ep.Body)
+	}
+}
+
+// NewDeleteAiFileEndpoint returns an endpoint function that calls the method
+// "delete_ai_file" of service "notes".
+func NewDeleteAiFileEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*DeleteAiFilePayload)
+		return nil, s.DeleteAiFile(ctx, p)
 	}
 }
 
@@ -1200,6 +1218,52 @@ func NewHistoryVersionEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) 
 			return nil, err
 		}
 		return s.HistoryVersion(ctx, p)
+	}
+}
+
+// NewFileHistoryEndpoint returns an endpoint function that calls the method
+// "file_history" of service "notes".
+func NewFileHistoryEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*FileHistoryPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.FileHistory(ctx, p)
+	}
+}
+
+// NewRestoreFileEndpoint returns an endpoint function that calls the method
+// "restore_file" of service "notes".
+func NewRestoreFileEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*RestoreFilePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.RestoreFile(ctx, p)
 	}
 }
 

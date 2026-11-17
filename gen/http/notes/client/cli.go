@@ -86,7 +86,7 @@ func BuildListPayload(notesListNotebook *string, notesListTag *string, notesList
 	{
 		if notesListTrashedNotebook != nil {
 			trashedNotebook = notesListTrashedNotebook
-			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *notesListTrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+			err = goa.MergeErrors(err, goa.ValidatePattern("trashed_notebook", *notesListTrashedNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 			if err != nil {
 				return nil, err
 			}
@@ -1276,7 +1276,7 @@ func BuildRestoreNotebookPayload(notesRestoreNotebookID *string, notesRestoreNot
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesRestoreNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -1304,7 +1304,7 @@ func BuildDeleteTrashedNotebookPayload(notesDeleteTrashedNotebookID *string, not
 			return nil, fmt.Errorf("missing required flag --id")
 		}
 		id = *notesDeleteTrashedNotebookID
-		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}([/~][a-z0-9][a-z0-9_-]{0,63})?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}(~[a-z0-9][a-z0-9_-]{0,63})?(@[1-9][0-9]{0,8})?(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 		if err != nil {
 			return nil, err
 		}
@@ -1584,6 +1584,74 @@ func BuildHistoryVersionPayload(notesHistoryVersionID *string, notesHistoryVersi
 		}
 	}
 	v := &notes.HistoryVersionPayload{}
+	v.ID = id
+	v.Rev = rev
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildFileHistoryPayload builds the payload for the notes file_history
+// endpoint from CLI flags.
+func BuildFileHistoryPayload(notesFileHistoryID *string, notesFileHistorySession *string) (*notes.FileHistoryPayload, error) {
+	var err error
+	var id string
+	{
+		if notesFileHistoryID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesFileHistoryID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesFileHistorySession != nil {
+			session = notesFileHistorySession
+		}
+	}
+	v := &notes.FileHistoryPayload{}
+	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildRestoreFilePayload builds the payload for the notes restore_file
+// endpoint from CLI flags.
+func BuildRestoreFilePayload(notesRestoreFileID *string, notesRestoreFileRev *string, notesRestoreFileSession *string) (*notes.RestoreFilePayload, error) {
+	var err error
+	var id string
+	{
+		if notesRestoreFileID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesRestoreFileID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var rev string
+	{
+		if notesRestoreFileRev == nil {
+			return nil, fmt.Errorf("missing required flag --rev")
+		}
+		rev = *notesRestoreFileRev
+		err = goa.MergeErrors(err, goa.ValidatePattern("rev", rev, "^[0-9]{1,20}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesRestoreFileSession != nil {
+			session = notesRestoreFileSession
+		}
+	}
+	v := &notes.RestoreFilePayload{}
 	v.ID = id
 	v.Rev = rev
 	v.Session = session

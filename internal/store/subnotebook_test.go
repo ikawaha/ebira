@@ -113,7 +113,7 @@ func TestTrashSubNotebook(t *testing.T) {
 	}
 
 	// A sub notebook deleted on its own is told from a notebook in the trash.
-	if err := s.TrashNotebook("dev/design"); err != nil {
+	if _, err := s.TrashNotebook("dev/design"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, Trash, "dev~design", "a.yaml")); err != nil {
@@ -128,7 +128,7 @@ func TestTrashSubNotebook(t *testing.T) {
 	}
 
 	// The parent goes with its other sub notebooks.
-	if err := s.TrashNotebook("dev"); err != nil {
+	if _, err := s.TrashNotebook("dev"); err != nil {
 		t.Fatal(err)
 	}
 	trashed, err := s.TrashedNotebooks()
@@ -166,9 +166,95 @@ func TestTrashSubNotebook(t *testing.T) {
 	}
 
 	// Emptying the trash removes the sub notebooks deleted on their own.
-	if err := s.TrashNotebook("dev/ops"); err != nil {
+	if _, err := s.TrashNotebook("dev/ops"); err != nil {
 		t.Fatal(err)
 	}
+	if err := s.EmptyTrash(); err != nil {
+		t.Fatal(err)
+	}
+	if trashed, err := s.TrashedNotebooks(); err != nil || len(trashed) != 0 {
+		t.Errorf("TrashedNotebooks after EmptyTrash = %v, %v", trashed, err)
+	}
+}
+
+// TestTrashSameNotebook checks that a notebook deleted while the trash holds
+// one with the same ID gets a number there, and goes back to its ID.
+func TestTrashSameNotebook(t *testing.T) {
+	s, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mk := func(id, nb string) {
+		t.Helper()
+		if err := s.Create(&Note{ID: id, Notebook: nb, Title: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trash := func(nb, want string) {
+		t.Helper()
+		if id, err := s.TrashNotebook(nb); err != nil || id != want {
+			t.Fatalf("TrashNotebook(%s) = %q, %v, want %q", nb, id, err, want)
+		}
+	}
+	mk("a", "dev")
+	trash("dev", "dev")
+	mk("b", "dev")
+	mk("c", "dev/ops")
+	trash("dev", "dev@2")
+	mk("d", "dev/ops")
+	trash("dev/ops", "dev~ops")
+	mk("e", "dev/ops")
+	trash("dev/ops", "dev~ops@2")
+
+	trashed, err := s.TrashedNotebooks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"dev", "dev@2", "dev@2/ops", "dev~ops", "dev~ops@2"}; !slices.Equal(trashed, want) {
+		t.Errorf("TrashedNotebooks = %v, want %v", trashed, want)
+	}
+	for id, want := range map[string]string{"a": "dev", "b": "dev@2", "c": "dev@2/ops", "d": "dev~ops", "e": "dev~ops@2"} {
+		if n, err := s.Load(id); err != nil || n.Notebook != Trash || n.TrashedNotebook != want {
+			t.Errorf("Load(%s) = %+v, %v, want in %s", id, n, err, want)
+		}
+	}
+	for id, want := range map[string]string{"dev@2": "dev", "dev@2/ops": "dev/ops", "dev~ops@2": "dev/ops", "dev@12": "dev"} {
+		if got := RestoredNotebook(id); got != want {
+			t.Errorf("RestoredNotebook(%s) = %q, want %q", id, got, want)
+		}
+	}
+	for _, id := range []string{"dev@1", "dev@02", "dev@", "dev@2@3", "dev@x", "dev~ops@2/x", "dev/ops@2"} {
+		if validTrashed(id) {
+			t.Errorf("validTrashed(%q) = true", id)
+		}
+	}
+
+	// Over a notebook with its ID (renamed, say, which keeps the ID), it
+	// takes another, as a new notebook would, keeping its name; its sub
+	// notebook goes with it.
+	if err := s.SaveNotebookMeta("dev", NotebookMeta{Name: "Old dev"}); err != nil {
+		t.Fatal(err)
+	}
+	if nb, err := s.RestoreNotebook("dev@2"); err != nil || nb != "dev-2" {
+		t.Fatalf("RestoreNotebook(dev@2) over dev = %q, %v, want dev-2", nb, err)
+	}
+	if m, err := s.NotebookMeta("dev-2"); err != nil || m.Name != "dev" {
+		t.Errorf("NotebookMeta(dev-2) = %+v, %v, want the name it had", m, err)
+	}
+	if n, err := s.Load("c"); err != nil || n.Notebook != "dev-2/ops" || n.TrashedNotebook != "" {
+		t.Errorf("Load(c) after restoring = %+v, %v", n, err)
+	}
+	// A sub notebook likewise, in its parent.
+	if nb, err := s.RestoreNotebook("dev~ops"); err != nil || nb != "dev/ops" {
+		t.Fatalf("RestoreNotebook(dev~ops) = %q, %v", nb, err)
+	}
+	if nb, err := s.RestoreNotebook("dev~ops@2"); err != nil || nb != "dev/ops-2" {
+		t.Fatalf("RestoreNotebook(dev~ops@2) over dev/ops = %q, %v, want dev/ops-2", nb, err)
+	}
+	if n, err := s.Load("e"); err != nil || n.Notebook != "dev/ops-2" {
+		t.Errorf("Load(e) after restoring = %+v, %v", n, err)
+	}
+	trash("dev/ops-2", "dev~ops-2")
 	if err := s.EmptyTrash(); err != nil {
 		t.Fatal(err)
 	}

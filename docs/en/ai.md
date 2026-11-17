@@ -148,7 +148,8 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `get_note` | Get a note, with its body and its version |
 | `create_ai_note` | Write a new note in a collab notebook, or drop one in a drop notebook |
 | `import_ai_note` | Import a Markdown file, with its front matter and the images it refers to, as a new note, the same way |
-| `add_ai_file` / `start_ai_upload` | Add an image or another file to a note in a collab notebook, as base64 or by a URL for one upload |
+| `add_ai_file` / `start_ai_upload` | Add an image or another file to a note in a collab notebook, as base64 or by a URL for one upload; `replace` replaces the file of the same name |
+| `delete_ai_file` | Delete a file of a note in a collab notebook |
 | `update_ai_note` | Change a note in a collab notebook, or set its mark or put it in the archive; needs the version from `get_note`. A long body can be changed in part: `append` adds text at its end, and `edits` replace exact pieces of it |
 | `delete_ai_note` | Move a note in a collab notebook to the trash; needs the version from `get_note` |
 | `move_ai_note` | Reorder a note in a collab notebook |
@@ -157,7 +158,7 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `archive_ai_notebook` | Put a collab notebook in the archive, or take it out |
 | `make_notebook_private` | Hide a notebook from AI; only you can undo it |
 
-The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten.
+The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten. The files AI replaces or deletes are kept too, to be put back from the [history](history.md).
 
 Once connected, ask in your own words, for example:
 
