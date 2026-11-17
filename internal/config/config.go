@@ -80,6 +80,13 @@ type Config struct {
 	// listing the notes found by relevance, or filter, narrowing the list in
 	// its order. The TUI writes it with Set when it is switched.
 	TUISearch string `yaml:"tui_search"`
+	// ZennRepo is the URL of the GitHub repository that Zenn deploys the
+	// articles of the user from, to write notes to as articles; ZennBranch
+	// is its branch Zenn deploys (empty for the default branch), and
+	// ZennUser the user name on Zenn, to link to the articles.
+	ZennRepo   string `yaml:"zenn_repo"`
+	ZennBranch string `yaml:"zenn_branch"`
+	ZennUser   string `yaml:"zenn_user"`
 
 	// LegacyDataDir is data_dir of earlier builds, the directory above the
 	// notes directory; Load fails with it, telling what to write instead.
@@ -389,7 +396,7 @@ func Set(key, value string) (string, error) {
 // UpdatedKeys are the keys of the settings file that Update writes, those
 // the web UI shows to change: not notes_dir and addr, which a restart of the
 // server keeps.
-var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search"}
+var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search", "zenn_repo", "zenn_branch", "zenn_user"}
 
 // Update writes the values of c for UpdatedKeys to the settings file, and
 // keeps the rest of it, with its comments. A zero value is left out, for the
@@ -433,7 +440,7 @@ func Update(c Config) (string, error) {
 // old values; a zero value removes its key, for the default. keys are of
 // those of the settings file other than notes_dir.
 func SetKeys(m *yaml.Node, c Config, keys []string) {
-	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview, "tui_search": c.TUISearch}
+	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview, "tui_search": c.TUISearch, "zenn_repo": c.ZennRepo, "zenn_branch": c.ZennBranch, "zenn_user": c.ZennUser}
 	for _, k := range keys {
 		var v *yaml.Node
 		switch {

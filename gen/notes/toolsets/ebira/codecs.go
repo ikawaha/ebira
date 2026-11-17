@@ -1042,6 +1042,51 @@ var createAiNoteResultFields = []tools.FieldMetadata{
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1373,6 +1418,51 @@ var getNoteResultFields = []tools.FieldMetadata{
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
 		JSONType:    "string",
 		Description: "Body in Markdown",
@@ -1551,6 +1641,51 @@ var importAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("archived")},
 		JSONType:    "boolean",
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note"), tools.FixedField("body")},
@@ -1856,6 +1991,51 @@ var listNotesResultFields = []tools.FieldMetadata{
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
 		JSONType:    "string",
 		Description: "Excerpt around the matched terms (search only)",
@@ -2063,6 +2243,51 @@ var moveAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
 		JSONType:    "boolean",
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
@@ -2294,6 +2519,51 @@ var searchNotesResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("archived")},
 		JSONType:    "boolean",
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("notes"), tools.DynamicField{}, tools.FixedField("snippet")},
@@ -2534,6 +2804,51 @@ var updateAiNoteResultFields = []tools.FieldMetadata{
 		Path:        []tools.FieldPathSegment{tools.FixedField("archived")},
 		JSONType:    "boolean",
 		Description: "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn")},
+		JSONType:    "object",
+		Description: "The article of Zenn the user wrote the note as; absent when it was not",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("slug")},
+		JSONType:    "string",
+		Description: "Slug of the article: its file is articles/<slug>.md in the repository",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("published")},
+		JSONType:    "boolean",
+		Description: "Whether the article is published, rather than a draft",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("changed")},
+		JSONType:    "boolean",
+		Description: "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("url")},
+		JSONType:    "string",
+		Description: "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("emoji")},
+		JSONType:    "string",
+		Description: "Emoji of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("type")},
+		JSONType:    "string",
+		Description: "Type of the article: tech or idea (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics")},
+		JSONType:    "array",
+		Description: "Topics of the article (get only)",
+	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("zenn"), tools.FixedField("topics"), tools.DynamicField{}},
+		JSONType:    "string",
+		Description: "Topics of the article (get only)",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("body")},
@@ -4767,6 +5082,9 @@ func MarshalCreateAiNoteResult(v *CreateAiNoteResult) ([]byte, error) {
 			out.Marks[i] = val
 		}
 	}
+	if in.Zenn != nil {
+		out.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -4833,6 +5151,9 @@ func UnmarshalCreateAiNoteResult(data []byte) (*CreateAiNoteResult, error) {
 		for i, val := range in.Marks {
 			out.Marks[i] = val
 		}
+	}
+	if in.Zenn != nil {
+		out.Zenn = decodeZennArticleTransportToZennArticle(in.Zenn)
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -5259,6 +5580,9 @@ func MarshalGetNoteResult(v *GetNoteResult) ([]byte, error) {
 			out.Marks[i] = val
 		}
 	}
+	if in.Zenn != nil {
+		out.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -5325,6 +5649,9 @@ func UnmarshalGetNoteResult(data []byte) (*GetNoteResult, error) {
 		for i, val := range in.Marks {
 			out.Marks[i] = val
 		}
+	}
+	if in.Zenn != nil {
+		out.Zenn = decodeZennArticleTransportToZennArticle(in.Zenn)
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -5983,6 +6310,9 @@ func MarshalMoveAiNoteResult(v *MoveAiNoteResult) ([]byte, error) {
 			out.Marks[i] = val
 		}
 	}
+	if in.Zenn != nil {
+		out.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -6049,6 +6379,9 @@ func UnmarshalMoveAiNoteResult(data []byte) (*MoveAiNoteResult, error) {
 		for i, val := range in.Marks {
 			out.Marks[i] = val
 		}
+	}
+	if in.Zenn != nil {
+		out.Zenn = decodeZennArticleTransportToZennArticle(in.Zenn)
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -6503,6 +6836,9 @@ func MarshalUpdateAiNoteResult(v *UpdateAiNoteResult) ([]byte, error) {
 			out.Marks[i] = val
 		}
 	}
+	if in.Zenn != nil {
+		out.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -6569,6 +6905,9 @@ func UnmarshalUpdateAiNoteResult(data []byte) (*UpdateAiNoteResult, error) {
 		for i, val := range in.Marks {
 			out.Marks[i] = val
 		}
+	}
+	if in.Zenn != nil {
+		out.Zenn = decodeZennArticleTransportToZennArticle(in.Zenn)
 	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
@@ -7437,6 +7776,13 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 			); err != nil {
 				return err
 			}
+		case "zenn":
+			if err := validateListNotesResultZennArticleTransportJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The article of Zenn the user wrote the note as; absent when it was not",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"archived",
@@ -7452,6 +7798,7 @@ func validateListNotesResultNoteSummaryTransportJSONValue(path string, value any
 				"title_highlights",
 				"trashed_notebook",
 				"updated_at",
+				"zenn",
 			})
 		}
 	}
@@ -7560,6 +7907,90 @@ func validateListNotesResultTextRangeTransportJSONValue(path string, value any, 
 			return unknownJSONFieldError(path, key, []string{
 				"end",
 				"start",
+			})
+		}
+	}
+	return nil
+}
+
+// validateListNotesResultZennArticleTransportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListNotesResultZennArticleTransportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "changed":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+			); err != nil {
+				return err
+			}
+		case "emoji":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Emoji of the article (get only)",
+			); err != nil {
+				return err
+			}
+		case "published":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the article is published, rather than a draft",
+			); err != nil {
+				return err
+			}
+		case "slug":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Slug of the article: its file is articles/<slug>.md in the repository",
+			); err != nil {
+				return err
+			}
+		case "topics":
+			if err := validateListNotesResultNoteSummaryTransportMarksJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Topics of the article (get only)",
+			); err != nil {
+				return err
+			}
+		case "type":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Type of the article: tech or idea (get only)",
+			); err != nil {
+				return err
+			}
+		case "url":
+			if err := validateStringJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"changed",
+				"emoji",
+				"published",
+				"slug",
+				"topics",
+				"type",
+				"url",
 			})
 		}
 	}
@@ -7842,6 +8273,13 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 			); err != nil {
 				return err
 			}
+		case "zenn":
+			if err := validateListNotesResultZennArticleTransportJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The article of Zenn the user wrote the note as; absent when it was not",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"archived",
@@ -7860,6 +8298,7 @@ func validateGetNoteResultJSONValue(path string, value any, description string) 
 				"trashed_notebook",
 				"updated_at",
 				"version",
+				"zenn",
 			})
 		}
 	}
@@ -9623,10 +10062,46 @@ func unknownJSONFieldError(path, field string, allowed []string) error {
 }
 
 // Helper transform functions
+func decodeZennArticleTransportToZennArticle(v *toolhttp.ZennArticleTransport) *ZennArticle {
+	res := &ZennArticle{
+		Slug:      *v.Slug,
+		Published: *v.Published,
+		Changed:   *v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
 func decodeTextRangeTransportToTextRange(v *toolhttp.TextRangeTransport) *TextRange {
 	res := &TextRange{
 		Start: *v.Start,
 		End:   *v.End,
+	}
+
+	return res
+}
+func encodeZennArticleToZennArticleTransport(v *ZennArticle) *toolhttp.ZennArticleTransport {
+	res := &toolhttp.ZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
 	}
 
 	return res
@@ -9682,6 +10157,9 @@ func decodeNoteTransportToNote(v *toolhttp.NoteTransport) *Note {
 			res.Marks[i] = val
 		}
 	}
+	if v.Zenn != nil {
+		res.Zenn = decodeZennArticleTransportToZennArticle(v.Zenn)
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -9729,6 +10207,9 @@ func encodeNoteToNoteTransport(v *Note) *toolhttp.NoteTransport {
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToZennArticleTransport(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(v.TitleHighlights))
@@ -9829,6 +10310,9 @@ func decodeNoteSummaryTransportToNoteSummary(v *toolhttp.NoteSummaryTransport) *
 			res.Marks[i] = val
 		}
 	}
+	if v.Zenn != nil {
+		res.Zenn = decodeZennArticleTransportToZennArticle(v.Zenn)
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -9885,6 +10369,9 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *toolhttp.NoteSumma
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToZennArticleTransport(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*toolhttp.TextRangeTransport, len(v.TitleHighlights))

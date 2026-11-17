@@ -27,7 +27,7 @@ import (
 
 // DefaultKeys are the keys of the defaults that the web UI changes: those of
 // UpdatedKeys other than auth.
-var DefaultKeys = []string{"lang", "theme", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search"}
+var DefaultKeys = []string{"lang", "theme", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search", "zenn_repo", "zenn_branch", "zenn_user"}
 
 // LoadDefaults reads the defaults of the settings file in _ebira.yaml of the
 // notes directory notesDir. A missing file has none. It also returns a
@@ -129,6 +129,9 @@ func Merge(c, d Config) Config {
 	or(&c.GitSync, d.GitSync)
 	or(&c.TUIPreview, d.TUIPreview)
 	or(&c.TUISearch, d.TUISearch)
+	or(&c.ZennRepo, d.ZennRepo)
+	or(&c.ZennBranch, d.ZennBranch)
+	or(&c.ZennUser, d.ZennUser)
 	if c.Watch == nil {
 		c.Watch = d.Watch
 	}

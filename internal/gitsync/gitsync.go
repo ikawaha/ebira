@@ -665,3 +665,16 @@ func (r *Repo) git(ctx context.Context, args ...string) (string, error) {
 	}
 	return out.String(), nil
 }
+
+// CheckURL refuses a remote repository URL that git could take for an option
+// or that holds a control character, as for a repository other than the
+// notes', such as one to publish to.
+func CheckURL(url string) error { return checkURL(url) }
+
+// Run runs the git command in dir, as Sync does: without asking for input,
+// in the C locale, with a time limit. It returns the standard output, and an
+// error with the standard error when the command fails.
+func Run(ctx context.Context, dir string, args ...string) (string, error) {
+	r := &Repo{root: dir}
+	return r.git(ctx, args...)
+}

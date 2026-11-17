@@ -35,6 +35,7 @@ items:
     color: gray
   - note: ai.md
   - note: sync.md
+  - note: zenn.md
   - note: passkey.md
   - separator: 見た目と設定
   - note: settings.md

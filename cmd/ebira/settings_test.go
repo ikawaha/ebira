@@ -78,3 +78,16 @@ func TestPageLook(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckBranch(t *testing.T) {
+	for _, b := range []string{"", "main", "zenn/articles", "release-1.0"} {
+		if err := checkBranch(b); err != nil {
+			t.Errorf("%q: %v", b, err)
+		}
+	}
+	for _, b := range []string{"git@github.com:you/zenn.git", "https://github.com/you/zenn", "github.com/you/zenn.git", "github.com/you/zenn", "-x", "a b", "a..b", "a/", "x.lock"} {
+		if checkBranch(b) == nil {
+			t.Errorf("%q: no error", b)
+		}
+	}
+}

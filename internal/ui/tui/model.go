@@ -81,6 +81,10 @@ type Model struct {
 	signIn  func(session string) // makes the clients send the session
 	th      theme
 
+	// zenn tells whether notes go to Zenn on the server: the notes written
+	// there are marked only then (see checkZenn).
+	zenn bool
+
 	width, height int
 
 	items   []*gennotes.NoteSummary
@@ -283,7 +287,20 @@ type (
 )
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.loadList(), m.loadNotebooks(), m.checkAuth())
+	return tea.Batch(m.loadList(), m.loadNotebooks(), m.checkAuth(), m.checkZenn())
+}
+
+// zennMsg tells whether notes go to Zenn on the server.
+type zennMsg struct{ on bool }
+
+// checkZenn asks the server whether notes go to Zenn, to mark the notes
+// written there only then.
+func (m *Model) checkZenn() tea.Cmd {
+	ctx, api := m.ctx, m.api
+	return func() tea.Msg {
+		res, err := api.ZennStatus(ctx, &gennotes.ZennStatusPayload{})
+		return zennMsg{on: err == nil && res.Configured}
+	}
 }
 
 func (m *Model) loadNotebooks() tea.Cmd {
@@ -1076,6 +1093,13 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.applyList(msg)
+
+	case zennMsg:
+		if msg.on != m.zenn {
+			m.zenn = msg.on
+			m.renderPreview(true)
+		}
+		return m, nil
 
 	case assistantStatusMsg:
 		if errorName(msg.err) == "unauthorized" {

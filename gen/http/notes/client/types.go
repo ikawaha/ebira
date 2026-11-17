@@ -196,6 +196,27 @@ type GitSyncRequestBody struct {
 	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
 }
 
+// ExportZennRequestBody is the type of the "notes" service "export_zenn"
+// endpoint HTTP request body.
+type ExportZennRequestBody struct {
+	// Emoji of the article, one; the one used last, or one chosen at random, by
+	// default
+	Emoji *string `form:"emoji,omitempty" json:"emoji,omitempty" xml:"emoji,omitempty"`
+	// Type of the article: tech, a technical article, or idea; the one used last,
+	// or tech, by default
+	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
+	// Topics of the article, up to 5, each up to 18 characters without spaces or
+	// symbols; the tags of the note that can be topics by default
+	Topics []string `form:"topics,omitempty" json:"topics,omitempty" xml:"topics,omitempty"`
+	// Publish the article; false keeps it a draft
+	Published bool `form:"published" json:"published" xml:"published"`
+	// Overwrite the article file even when it was changed in the repository since
+	// it was written
+	Force bool `form:"force" json:"force" xml:"force"`
+	// Allow a note of a private notebook to be published
+	Private bool `form:"private" json:"private" xml:"private"`
+}
+
 // AddGuideRequestBody is the type of the "notes" service "add_guide" endpoint
 // HTTP request body.
 type AddGuideRequestBody struct {
@@ -264,6 +285,8 @@ type GetResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
@@ -307,6 +330,8 @@ type CreateResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
@@ -350,6 +375,8 @@ type UpdateResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
@@ -408,6 +435,8 @@ type RestoreResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
@@ -451,6 +480,8 @@ type MoveResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Notebook the note was in before it was moved to the trash
@@ -548,6 +579,8 @@ type SetMarksResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -892,6 +925,36 @@ type GitSyncResponseBody struct {
 	Conflicts []*GitConflictResponseBody `form:"conflicts,omitempty" json:"conflicts,omitempty" xml:"conflicts,omitempty"`
 	// Files that could not be read when the index was updated after the sync
 	Errors []string `form:"errors,omitempty" json:"errors,omitempty" xml:"errors,omitempty"`
+}
+
+// ZennStatusResponseBody is the type of the "notes" service "zenn_status"
+// endpoint HTTP response body.
+type ZennStatusResponseBody struct {
+	// Whether notes can be written to Zenn: the repository is set, as zenn_repo of
+	// the settings
+	Configured *bool `form:"configured,omitempty" json:"configured,omitempty" xml:"configured,omitempty"`
+	// URL of the GitHub repository Zenn deploys from
+	Repo *string `form:"repo,omitempty" json:"repo,omitempty" xml:"repo,omitempty"`
+	// Branch Zenn deploys from; absent for the default branch of the repository
+	Branch *string `form:"branch,omitempty" json:"branch,omitempty" xml:"branch,omitempty"`
+	// User name on Zenn; absent when it is not set, and then the articles have no
+	// URLs
+	User *string `form:"user,omitempty" json:"user,omitempty" xml:"user,omitempty"`
+	// Whether the server finds the git command, which writing to the repository
+	// needs
+	Git *bool `form:"git,omitempty" json:"git,omitempty" xml:"git,omitempty"`
+}
+
+// ExportZennResponseBody is the type of the "notes" service "export_zenn"
+// endpoint HTTP response body.
+type ExportZennResponseBody struct {
+	// The note, with the article it was written as
+	Note *NoteResponseBody `form:"note,omitempty" json:"note,omitempty" xml:"note,omitempty"`
+	// Whether a commit was pushed: false when the article was in the repository
+	// already as it is
+	Pushed *bool `form:"pushed,omitempty" json:"pushed,omitempty" xml:"pushed,omitempty"`
+	// What was left out of the article
+	Warnings []*ZennWarningResponseBody `form:"warnings,omitempty" json:"warnings,omitempty" xml:"warnings,omitempty"`
 }
 
 // AddGuideResponseBody is the type of the "notes" service "add_guide" endpoint
@@ -3782,6 +3845,134 @@ type GitSyncUnauthorizedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
+// ZennStatusUnauthorizedResponseBody is the type of the "notes" service
+// "zenn_status" endpoint HTTP response body for the "unauthorized" error.
+type ZennStatusUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ZennStatusVerificationRequiredResponseBody is the type of the "notes"
+// service "zenn_status" endpoint HTTP response body for the
+// "verification_required" error.
+type ZennStatusVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ExportZennNotFoundResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "not_found" error.
+type ExportZennNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ExportZennBadRequestResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "bad_request" error.
+type ExportZennBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ExportZennArticleChangedResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "article_changed" error.
+type ExportZennArticleChangedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ExportZennUnauthorizedResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "unauthorized" error.
+type ExportZennUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ExportZennVerificationRequiredResponseBody is the type of the "notes"
+// service "export_zenn" endpoint HTTP response body for the
+// "verification_required" error.
+type ExportZennVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
 // AddGuideUnauthorizedResponseBody is the type of the "notes" service
 // "add_guide" endpoint HTTP response body for the "unauthorized" error.
 type AddGuideUnauthorizedResponseBody struct {
@@ -4123,6 +4314,8 @@ type NoteSummaryResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `form:"snippet,omitempty" json:"snippet,omitempty" xml:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -4131,6 +4324,26 @@ type NoteSummaryResponseBody struct {
 	// Ranges of the snippet matched by the query, sorted and not overlapping
 	// (search only)
 	SnippetHighlights []*TextRangeResponseBody `form:"snippet_highlights,omitempty" json:"snippet_highlights,omitempty" xml:"snippet_highlights,omitempty"`
+}
+
+// ZennArticleResponseBody is used to define fields on response body types.
+type ZennArticleResponseBody struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `form:"slug,omitempty" json:"slug,omitempty" xml:"slug,omitempty"`
+	// Whether the article is published, rather than a draft
+	Published *bool `form:"published,omitempty" json:"published,omitempty" xml:"published,omitempty"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `form:"changed,omitempty" json:"changed,omitempty" xml:"changed,omitempty"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `form:"emoji,omitempty" json:"emoji,omitempty" xml:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `form:"topics,omitempty" json:"topics,omitempty" xml:"topics,omitempty"`
 }
 
 // TextRangeResponseBody is used to define fields on response body types.
@@ -4269,6 +4482,8 @@ type NoteResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `form:"body,omitempty" json:"body,omitempty" xml:"body,omitempty"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -4355,6 +4570,16 @@ type GitConflictResponseBody struct {
 	CopyID *string `form:"copy_id,omitempty" json:"copy_id,omitempty" xml:"copy_id,omitempty"`
 }
 
+// ZennWarningResponseBody is used to define fields on response body types.
+type ZennWarningResponseBody struct {
+	// What was left out: file, a link to a file of a note other than its images,
+	// which Zenn cannot hold, made its text; note, a link to a note that is no
+	// article, made its text; tag, a tag that cannot be a topic
+	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
+	// Name of the file, ID of the note or the tag
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
 // MachineSettingsResponseBody is used to define fields on response body types.
 type MachineSettingsResponseBody struct {
 	// Language of the UI; empty for the browser's
@@ -4377,6 +4602,13 @@ type MachineSettingsResponseBody struct {
 	// What the search box of the TUI does: search lists the notes found by
 	// relevance, filter narrows the list in its order; empty for search
 	TuiSearch *string `form:"tui_search,omitempty" json:"tui_search,omitempty" xml:"tui_search,omitempty"`
+	// URL of the GitHub repository Zenn deploys from, to write notes to as
+	// articles; empty for none
+	ZennRepo *string `form:"zenn_repo,omitempty" json:"zenn_repo,omitempty" xml:"zenn_repo,omitempty"`
+	// Branch of that repository Zenn deploys from; empty for its default branch
+	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
+	// User name on Zenn, to link to the articles; empty for none
+	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
 }
 
 // NotesSettingsResponseBody is used to define fields on response body types.
@@ -4426,6 +4658,13 @@ type MachineSettingsRequestBody struct {
 	// What the search box of the TUI does: search lists the notes found by
 	// relevance, filter narrows the list in its order; empty for search
 	TuiSearch *string `form:"tui_search,omitempty" json:"tui_search,omitempty" xml:"tui_search,omitempty"`
+	// URL of the GitHub repository Zenn deploys from, to write notes to as
+	// articles; empty for none
+	ZennRepo *string `form:"zenn_repo,omitempty" json:"zenn_repo,omitempty" xml:"zenn_repo,omitempty"`
+	// Branch of that repository Zenn deploys from; empty for its default branch
+	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
+	// User name on Zenn, to link to the articles; empty for none
+	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
 }
 
 // NotesSettingsRequestBody is used to define fields on request body types.
@@ -4660,6 +4899,43 @@ func NewGitSyncRequestBody(p *notes.GitSyncPayload) *GitSyncRequestBody {
 	return body
 }
 
+// NewExportZennRequestBody builds the HTTP request body from the payload of
+// the "export_zenn" endpoint of the "notes" service.
+func NewExportZennRequestBody(p *notes.ExportZennPayload) *ExportZennRequestBody {
+	body := &ExportZennRequestBody{
+		Emoji:     p.Emoji,
+		Type:      p.Type,
+		Published: p.Published,
+		Force:     p.Force,
+		Private:   p.Private,
+	}
+	if p.Topics != nil {
+		body.Topics = make([]string, len(p.Topics))
+		for i, val := range p.Topics {
+			body.Topics[i] = val
+		}
+	}
+	{
+		var zero bool
+		if body.Published == zero {
+			body.Published = false
+		}
+	}
+	{
+		var zero bool
+		if body.Force == zero {
+			body.Force = false
+		}
+	}
+	{
+		var zero bool
+		if body.Private == zero {
+			body.Private = false
+		}
+	}
+	return body
+}
+
 // NewAddGuideRequestBody builds the HTTP request body from the payload of the
 // "add_guide" endpoint of the "notes" service.
 func NewAddGuideRequestBody(p *notes.AddGuidePayload) *AddGuideRequestBody {
@@ -4790,6 +5066,9 @@ func NewGetNoteOK(body *GetResponseBody, version string) *notes.Note {
 			v.Marks[i] = val
 		}
 	}
+	if body.Zenn != nil {
+		v.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(body.Zenn)
+	}
 	if body.TitleHighlights != nil {
 		v.TitleHighlights = make([]*notes.TextRange, len(body.TitleHighlights))
 		for i, val := range body.TitleHighlights {
@@ -4897,6 +5176,9 @@ func NewCreateNoteCreated(body *CreateResponseBody, version string) *notes.Note 
 		for i, val := range body.Marks {
 			v.Marks[i] = val
 		}
+	}
+	if body.Zenn != nil {
+		v.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(body.Zenn)
 	}
 	if body.TitleHighlights != nil {
 		v.TitleHighlights = make([]*notes.TextRange, len(body.TitleHighlights))
@@ -5007,6 +5289,9 @@ func NewUpdateNoteOK(body *UpdateResponseBody, version string) *notes.Note {
 		for i, val := range body.Marks {
 			v.Marks[i] = val
 		}
+	}
+	if body.Zenn != nil {
+		v.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(body.Zenn)
 	}
 	if body.TitleHighlights != nil {
 		v.TitleHighlights = make([]*notes.TextRange, len(body.TitleHighlights))
@@ -5375,6 +5660,9 @@ func NewRestoreNoteOK(body *RestoreResponseBody, version string) *notes.Note {
 			v.Marks[i] = val
 		}
 	}
+	if body.Zenn != nil {
+		v.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(body.Zenn)
+	}
 	if body.TitleHighlights != nil {
 		v.TitleHighlights = make([]*notes.TextRange, len(body.TitleHighlights))
 		for i, val := range body.TitleHighlights {
@@ -5499,6 +5787,9 @@ func NewMoveNoteOK(body *MoveResponseBody, version string) *notes.Note {
 		for i, val := range body.Marks {
 			v.Marks[i] = val
 		}
+	}
+	if body.Zenn != nil {
+		v.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(body.Zenn)
 	}
 	if body.TitleHighlights != nil {
 		v.TitleHighlights = make([]*notes.TextRange, len(body.TitleHighlights))
@@ -5997,6 +6288,9 @@ func NewSetMarksNoteOK(body *SetMarksResponseBody) *notes.Note {
 		for i, val := range body.Marks {
 			v.Marks[i] = val
 		}
+	}
+	if body.Zenn != nil {
+		v.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(body.Zenn)
 	}
 	if body.TitleHighlights != nil {
 		v.TitleHighlights = make([]*notes.TextRange, len(body.TitleHighlights))
@@ -7703,6 +7997,144 @@ func NewGitSyncUnauthorized(body *GitSyncUnauthorizedResponseBody) *goa.ServiceE
 	return v
 }
 
+// NewZennStatusZennStatusOK builds a "notes" service "zenn_status" endpoint
+// result from a HTTP "OK" response.
+func NewZennStatusZennStatusOK(body *ZennStatusResponseBody) *notes.ZennStatus {
+	v := &notes.ZennStatus{
+		Configured: *body.Configured,
+		Repo:       body.Repo,
+		Branch:     body.Branch,
+		User:       body.User,
+		Git:        *body.Git,
+	}
+
+	return v
+}
+
+// NewZennStatusUnauthorized builds a notes service zenn_status endpoint
+// unauthorized error.
+func NewZennStatusUnauthorized(body *ZennStatusUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewZennStatusVerificationRequired builds a notes service zenn_status
+// endpoint verification_required error.
+func NewZennStatusVerificationRequired(body *ZennStatusVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewExportZennZennExportOK builds a "notes" service "export_zenn" endpoint
+// result from a HTTP "OK" response.
+func NewExportZennZennExportOK(body *ExportZennResponseBody) *notes.ZennExport {
+	v := &notes.ZennExport{
+		Pushed: *body.Pushed,
+	}
+	v.Note = unmarshalNoteResponseBodyToNotesNote(body.Note)
+	v.Warnings = make([]*notes.ZennWarning, len(body.Warnings))
+	for i, val := range body.Warnings {
+		if val == nil {
+			v.Warnings[i] = nil
+			continue
+		}
+		v.Warnings[i] = unmarshalZennWarningResponseBodyToNotesZennWarning(val)
+	}
+
+	return v
+}
+
+// NewExportZennNotFound builds a notes service export_zenn endpoint not_found
+// error.
+func NewExportZennNotFound(body *ExportZennNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewExportZennBadRequest builds a notes service export_zenn endpoint
+// bad_request error.
+func NewExportZennBadRequest(body *ExportZennBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewExportZennArticleChanged builds a notes service export_zenn endpoint
+// article_changed error.
+func NewExportZennArticleChanged(body *ExportZennArticleChangedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewExportZennUnauthorized builds a notes service export_zenn endpoint
+// unauthorized error.
+func NewExportZennUnauthorized(body *ExportZennUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewExportZennVerificationRequired builds a notes service export_zenn
+// endpoint verification_required error.
+func NewExportZennVerificationRequired(body *ExportZennVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewAddGuideNotebookOK builds a "notes" service "add_guide" endpoint result
 // from a HTTP "OK" response.
 func NewAddGuideNotebookOK(body *AddGuideResponseBody) *notes.Notebook {
@@ -8154,6 +8586,11 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -8228,6 +8665,11 @@ func ValidateCreateResponseBody(body *CreateResponseBody) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -8300,6 +8742,11 @@ func ValidateUpdateResponseBody(body *UpdateResponseBody) (err error) {
 	for _, e := range body.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.TrashedFrom != nil {
@@ -8403,6 +8850,11 @@ func ValidateRestoreResponseBody(body *RestoreResponseBody) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -8475,6 +8927,11 @@ func ValidateMoveResponseBody(body *MoveResponseBody) (err error) {
 	for _, e := range body.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.TrashedFrom != nil {
@@ -8640,6 +9097,11 @@ func ValidateSetMarksResponseBody(body *SetMarksResponseBody) (err error) {
 	for _, e := range body.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.TrashedFrom != nil {
@@ -9087,6 +9549,45 @@ func ValidateGitSyncResponseBody(body *GitSyncResponseBody) (err error) {
 	for _, e := range body.Conflicts {
 		if e != nil {
 			if err2 := validateGitConflictResponseBody(e, "body.conflicts[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateZennStatusResponseBody runs the validations defined on
+// ZennStatusResponseBody
+func ValidateZennStatusResponseBody(body *ZennStatusResponseBody) (err error) {
+	if body.Configured == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("configured", "body"))
+	}
+	if body.Git == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("git", "body"))
+	}
+	return
+}
+
+// ValidateExportZennResponseBody runs the validations defined on
+// ExportZennResponseBody
+func ValidateExportZennResponseBody(body *ExportZennResponseBody) (err error) {
+	if body.Note == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note", "body"))
+	}
+	if body.Pushed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pushed", "body"))
+	}
+	if body.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "body"))
+	}
+	if body.Note != nil {
+		if err2 := validateNoteResponseBody(body.Note, "body.note"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	for _, e := range body.Warnings {
+		if e != nil {
+			if err2 := validateZennWarningResponseBody(e, "body.warnings[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -12913,6 +13414,174 @@ func ValidateGitSyncUnauthorizedResponseBody(body *GitSyncUnauthorizedResponseBo
 	return
 }
 
+// ValidateZennStatusUnauthorizedResponseBody runs the validations defined on
+// ZennStatusUnauthorizedResponseBody
+func ValidateZennStatusUnauthorizedResponseBody(body *ZennStatusUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateZennStatusVerificationRequiredResponseBody runs the validations
+// defined on ZennStatusVerificationRequiredResponseBody
+func ValidateZennStatusVerificationRequiredResponseBody(body *ZennStatusVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateExportZennNotFoundResponseBody runs the validations defined on
+// ExportZennNotFoundResponseBody
+func ValidateExportZennNotFoundResponseBody(body *ExportZennNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateExportZennBadRequestResponseBody runs the validations defined on
+// ExportZennBadRequestResponseBody
+func ValidateExportZennBadRequestResponseBody(body *ExportZennBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateExportZennArticleChangedResponseBody runs the validations defined on
+// ExportZennArticleChangedResponseBody
+func ValidateExportZennArticleChangedResponseBody(body *ExportZennArticleChangedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateExportZennUnauthorizedResponseBody runs the validations defined on
+// ExportZennUnauthorizedResponseBody
+func ValidateExportZennUnauthorizedResponseBody(body *ExportZennUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateExportZennVerificationRequiredResponseBody runs the validations
+// defined on ExportZennVerificationRequiredResponseBody
+func ValidateExportZennVerificationRequiredResponseBody(body *ExportZennVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
 // ValidateAddGuideUnauthorizedResponseBody runs the validations defined on
 // AddGuideUnauthorizedResponseBody
 func ValidateAddGuideUnauthorizedResponseBody(body *AddGuideUnauthorizedResponseBody) (err error) {
@@ -13369,6 +14038,11 @@ func ValidateNoteSummaryResponseBody(body *NoteSummaryResponseBody) (err error) 
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, "body.title_highlights[*]"); err2 != nil {
@@ -13435,6 +14109,11 @@ func validateNoteSummaryResponseBody(body *NoteSummaryResponseBody, path string)
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, path+".zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := validateTextRangeResponseBody(e, path+".title_highlights[*]"); err2 != nil {
@@ -13447,6 +14126,45 @@ func validateNoteSummaryResponseBody(body *NoteSummaryResponseBody, path string)
 			if err2 := validateTextRangeResponseBody(e, path+".snippet_highlights[*]"); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return
+}
+
+// ValidateZennArticleResponseBody runs the validations defined on ZennArticle
+func ValidateZennArticleResponseBody(body *ZennArticleResponseBody) (err error) {
+	if body.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if body.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if body.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if body.Type != nil {
+		if !(*body.Type == "tech" || *body.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"tech", "idea"}))
+		}
+	}
+	return
+}
+
+// validateZennArticleResponseBody checks ZennArticle and reports errors using
+// the path supplied by its caller
+func validateZennArticleResponseBody(body *ZennArticleResponseBody, path string) (err error) {
+	if body.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", path))
+	}
+	if body.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", path))
+	}
+	if body.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", path))
+	}
+	if body.Type != nil {
+		if !(*body.Type == "tech" || *body.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".type", *body.Type, []any{"tech", "idea"}))
 		}
 	}
 	return
@@ -13817,6 +14535,11 @@ func ValidateNoteResponseBody(body *NoteResponseBody) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, "body.zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -13893,6 +14616,11 @@ func validateNoteResponseBody(body *NoteResponseBody, path string) (err error) {
 	for _, e := range body.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if body.Zenn != nil {
+		if err2 := validateZennArticleResponseBody(body.Zenn, path+".zenn"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.TrashedFrom != nil {
@@ -14157,6 +14885,39 @@ func validateGitConflictResponseBody(body *GitConflictResponseBody, path string)
 	}
 	if body.CopyID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".copy_id", *body.CopyID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateZennWarningResponseBody runs the validations defined on ZennWarning
+func ValidateZennWarningResponseBody(body *ZennWarningResponseBody) (err error) {
+	if body.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Kind != nil {
+		if !(*body.Kind == "file" || *body.Kind == "note" || *body.Kind == "tag") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"file", "note", "tag"}))
+		}
+	}
+	return
+}
+
+// validateZennWarningResponseBody checks ZennWarning and reports errors using
+// the path supplied by its caller
+func validateZennWarningResponseBody(body *ZennWarningResponseBody, path string) (err error) {
+	if body.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", path))
+	}
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", path))
+	}
+	if body.Kind != nil {
+		if !(*body.Kind == "file" || *body.Kind == "note" || *body.Kind == "tag") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".kind", *body.Kind, []any{"file", "note", "tag"}))
+		}
 	}
 	return
 }

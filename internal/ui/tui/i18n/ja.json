@@ -245,6 +245,8 @@
   "list.archive": "ノートだけをアーカイブへ移したものはありません。アーカイブのノートブックは、左の列のアーカイブの下にあります。",
   "preview.archived": "{time} からアーカイブ",
   "preview.archivedWithNotebook": "ノートブックごとアーカイブ",
+  "preview.zennPublished": "Zenn で公開中",
+  "preview.zennDraft": "Zenn の下書き",
   "key.archive": "アーカイブへ",
   "key.unarchive": "アーカイブから戻す",
   "status.noteArchived": "ノートをアーカイブへ移しました",

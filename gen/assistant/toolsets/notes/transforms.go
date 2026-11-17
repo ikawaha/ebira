@@ -49,6 +49,9 @@ func InitGetToolResult(in *notes.Note) *GetResult {
 			out.Marks[i] = val
 		}
 	}
+	if in.Zenn != nil {
+		out.Zenn = transformZennArticleToZennArticle(in.Zenn)
+	}
 	if in.TitleHighlights != nil {
 		out.TitleHighlights = make([]*TextRange, len(in.TitleHighlights))
 		for i, val := range in.TitleHighlights {
@@ -122,6 +125,24 @@ func InitSearchToolResult(in *notes.SearchResult) *SearchResult {
 }
 
 // Helper transform functions
+func transformZennArticleToZennArticle(v *notes.ZennArticle) *ZennArticle {
+	res := &ZennArticle{
+		Slug:      v.Slug,
+		Published: v.Published,
+		Changed:   v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
 func transformTextRangeToTextRange(v *notes.TextRange) *TextRange {
 	res := &TextRange{
 		Start: v.Start,
@@ -155,6 +176,9 @@ func transformNoteSummaryToNoteSummary(v *notes.NoteSummary) *NoteSummary {
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = transformZennArticleToZennArticle(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))

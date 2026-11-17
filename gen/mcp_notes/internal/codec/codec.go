@@ -300,6 +300,8 @@ type CreateAiNoteResultTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *CreateAiNoteResultZennArticleTransport `json:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -372,6 +374,11 @@ func ValidateCreateAiNoteResultTransport(value *CreateAiNoteResultTransport) (er
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if value.Zenn != nil {
+		if err2 := ValidateCreateAiNoteResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -390,6 +397,48 @@ func ValidateCreateAiNoteResultTransport(value *CreateAiNoteResultTransport) (er
 			if err2 := ValidateCreateAiNoteResultTextRangeTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// CreateAiNoteResultZennArticleTransport stores JSON fields until they have been validated.
+type CreateAiNoteResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateCreateAiNoteResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateCreateAiNoteResultZennArticleTransport(value *CreateAiNoteResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
 	}
 	return err
@@ -814,6 +863,8 @@ type GetResultTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *GetResultZennArticleTransport `json:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -886,6 +937,11 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if value.Zenn != nil {
+		if err2 := ValidateGetResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -904,6 +960,48 @@ func ValidateGetResultTransport(value *GetResultTransport) (err error) {
 			if err2 := ValidateGetResultTextRangeTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// GetResultZennArticleTransport stores JSON fields until they have been validated.
+type GetResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateGetResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateGetResultZennArticleTransport(value *GetResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
 	}
 	return err
@@ -1032,6 +1130,8 @@ type ImportAiNoteResultNoteTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ImportAiNoteResultZennArticleTransport `json:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -1102,6 +1202,11 @@ func ValidateImportAiNoteResultNoteTransport(value *ImportAiNoteResultNoteTransp
 	for _, e := range value.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if value.Zenn != nil {
+		if err2 := ValidateImportAiNoteResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -1184,6 +1289,48 @@ func ValidateImportAiNoteResultTransport(value *ImportAiNoteResultTransport) (er
 	}
 	if value.DuplicateOf != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *value.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// ImportAiNoteResultZennArticleTransport stores JSON fields until they have been validated.
+type ImportAiNoteResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateImportAiNoteResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateImportAiNoteResultZennArticleTransport(value *ImportAiNoteResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
+		}
 	}
 	return err
 }
@@ -1385,6 +1532,8 @@ type ListResultNoteSummaryTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ListResultZennArticleTransport `json:"zenn,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `json:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -1444,6 +1593,11 @@ func ValidateListResultNoteSummaryTransport(value *ListResultNoteSummaryTranspor
 	for _, e := range value.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if value.Zenn != nil {
+		if err2 := ValidateListResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	for _, e := range value.TitleHighlights {
@@ -1568,6 +1722,48 @@ func ValidateListResultTransport(value *ListResultTransport) (err error) {
 			if err2 := ValidateListResultSeparatorTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// ListResultZennArticleTransport stores JSON fields until they have been validated.
+type ListResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateListResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateListResultZennArticleTransport(value *ListResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
 	}
 	return err
@@ -1750,6 +1946,8 @@ type MoveAiNoteResultTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *MoveAiNoteResultZennArticleTransport `json:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -1822,6 +2020,11 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if value.Zenn != nil {
+		if err2 := ValidateMoveAiNoteResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -1840,6 +2043,48 @@ func ValidateMoveAiNoteResultTransport(value *MoveAiNoteResultTransport) (err er
 			if err2 := ValidateMoveAiNoteResultTextRangeTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// MoveAiNoteResultZennArticleTransport stores JSON fields until they have been validated.
+type MoveAiNoteResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateMoveAiNoteResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateMoveAiNoteResultZennArticleTransport(value *MoveAiNoteResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
 	}
 	return err
@@ -2251,6 +2496,8 @@ type SearchResultNoteSummaryTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *SearchResultZennArticleTransport `json:"zenn,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `json:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -2310,6 +2557,11 @@ func ValidateSearchResultNoteSummaryTransport(value *SearchResultNoteSummaryTran
 	for _, e := range value.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if value.Zenn != nil {
+		if err2 := ValidateSearchResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	for _, e := range value.TitleHighlights {
@@ -2389,6 +2641,48 @@ func ValidateSearchResultTransport(value *SearchResultTransport) (err error) {
 			if err2 := ValidateSearchResultNoteSummaryTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// SearchResultZennArticleTransport stores JSON fields until they have been validated.
+type SearchResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateSearchResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateSearchResultZennArticleTransport(value *SearchResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
 	}
 	return err
@@ -2721,6 +3015,8 @@ type UpdateAiNoteResultTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *UpdateAiNoteResultZennArticleTransport `json:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -2793,6 +3089,11 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if value.Zenn != nil {
+		if err2 := ValidateUpdateAiNoteResultZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -2811,6 +3112,48 @@ func ValidateUpdateAiNoteResultTransport(value *UpdateAiNoteResultTransport) (er
 			if err2 := ValidateUpdateAiNoteResultTextRangeTransport(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+	}
+	return err
+}
+
+// UpdateAiNoteResultZennArticleTransport stores JSON fields until they have been validated.
+type UpdateAiNoteResultZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// ValidateUpdateAiNoteResultZennArticleTransport checks decoded JSON before it becomes a service value.
+func ValidateUpdateAiNoteResultZennArticleTransport(value *UpdateAiNoteResultZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
 	}
 	return err
@@ -3074,6 +3417,9 @@ func EncodeCreateAiNoteResult(in *notes.Note) ([]byte, error) {
 			for i, val := range in.Marks {
 				body.Marks[i] = val
 			}
+		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToCreateAiNoteResultZennArticleTransport(in.Zenn)
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*CreateAiNoteResultTextRangeTransport, len(in.TitleHighlights))
@@ -3366,6 +3712,9 @@ func EncodeGetResult(in *notes.Note) ([]byte, error) {
 			for i, val := range in.Marks {
 				body.Marks[i] = val
 			}
+		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToGetResultZennArticleTransport(in.Zenn)
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*GetResultTextRangeTransport, len(in.TitleHighlights))
@@ -3716,6 +4065,9 @@ func EncodeMoveAiNoteResult(in *notes.Note) ([]byte, error) {
 			for i, val := range in.Marks {
 				body.Marks[i] = val
 			}
+		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToMoveAiNoteResultZennArticleTransport(in.Zenn)
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*MoveAiNoteResultTextRangeTransport, len(in.TitleHighlights))
@@ -4161,6 +4513,9 @@ func EncodeUpdateAiNoteResult(in *notes.Note) ([]byte, error) {
 				body.Marks[i] = val
 			}
 		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToUpdateAiNoteResultZennArticleTransport(in.Zenn)
+		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*UpdateAiNoteResultTextRangeTransport, len(in.TitleHighlights))
 			for i, val := range in.TitleHighlights {
@@ -4295,6 +4650,9 @@ func encodeNoteSummaryToListResultNoteSummaryTransport(v *notes.NoteSummary) *Li
 			res.Marks[i] = val
 		}
 	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToListResultZennArticleTransport(v.Zenn)
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*ListResultTextRangeTransport, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -4340,6 +4698,9 @@ func encodeNoteSummaryToSearchResultNoteSummaryTransport(v *notes.NoteSummary) *
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToSearchResultZennArticleTransport(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*SearchResultTextRangeTransport, len(v.TitleHighlights))
@@ -4389,6 +4750,9 @@ func encodeNoteToImportAiNoteResultNoteTransport(v *notes.Note) *ImportAiNoteRes
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToImportAiNoteResultZennArticleTransport(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*ImportAiNoteResultTextRangeTransport, len(v.TitleHighlights))
@@ -4576,6 +4940,139 @@ func encodeTextRangeToUpdateAiNoteResultTextRangeTransport2(v *notes.TextRange) 
 	res := &UpdateAiNoteResultTextRangeTransport{
 		Start: &v.Start,
 		End:   &v.End,
+	}
+
+	return res
+}
+
+func encodeZennArticleToCreateAiNoteResultZennArticleTransport(v *notes.ZennArticle) *CreateAiNoteResultZennArticleTransport {
+	res := &CreateAiNoteResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennArticleToGetResultZennArticleTransport(v *notes.ZennArticle) *GetResultZennArticleTransport {
+	res := &GetResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennArticleToImportAiNoteResultZennArticleTransport(v *notes.ZennArticle) *ImportAiNoteResultZennArticleTransport {
+	res := &ImportAiNoteResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennArticleToListResultZennArticleTransport(v *notes.ZennArticle) *ListResultZennArticleTransport {
+	res := &ListResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennArticleToMoveAiNoteResultZennArticleTransport(v *notes.ZennArticle) *MoveAiNoteResultZennArticleTransport {
+	res := &MoveAiNoteResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennArticleToSearchResultZennArticleTransport(v *notes.ZennArticle) *SearchResultZennArticleTransport {
+	res := &SearchResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennArticleToUpdateAiNoteResultZennArticleTransport(v *notes.ZennArticle) *UpdateAiNoteResultZennArticleTransport {
+	res := &UpdateAiNoteResultZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
 	}
 
 	return res

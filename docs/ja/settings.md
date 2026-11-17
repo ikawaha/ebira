@@ -55,7 +55,7 @@ git_sync: 10m        # git と自動で同期する間隔
 auth: none           # passkey でパスキーを求める
 ```
 
-キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）、`tui_search`（`search` か `filter`。TUI の検索欄の Tab で切り替えると書き換えます）です。各キーはコマンドのフラグの既定値になり（[コマンド](cli.md)）、知らないキーはエラーになります。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
+キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）、`tui_search`（`search` か `filter`。TUI の検索欄の Tab で切り替えると書き換えます）、`zenn_repo`・`zenn_branch`・`zenn_user`（[Zenn に書き出す](zenn.md)）です。各キーはコマンドのフラグの既定値になり（[コマンド](cli.md)）、知らないキーはエラーになります。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
 設定のダイアログからも、項目ごとに変えられます（ファイルのコメントは残ります）。言語とテーマのほかは、サーバーの起動時に読み込まれるので、保存してからサーバーを再起動すると反映されます。ただし `notes_dir` と `addr` は、サーバーを止めてから起動し直したときに反映されます。
 

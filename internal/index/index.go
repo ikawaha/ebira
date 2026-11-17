@@ -83,7 +83,15 @@ type Summary struct {
 	// Archived reports whether the note is in the archive on its own (see
 	// store.Note.ArchivedAt), not whether its notebook is.
 	Archived bool
-	Snippet  string
+	// ZennSlug is the slug of the article of Zenn the note was written as,
+	// empty when it was not, and ZennPublished whether the article is
+	// published rather than a draft (see store.Note.Zenn).
+	ZennSlug      string
+	ZennPublished bool
+	// ZennChanged is whether the note changed since it was written to Zenn
+	// last (store.Note.ZennChanged).
+	ZennChanged bool
+	Snippet     string
 	// TitleHighlights and SnippetHighlights are the ranges of Title and
 	// Snippet matched by the query of a search.
 	TitleHighlights   []Span
@@ -203,7 +211,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 11 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived; 11: no archive in the inbox
+const schemaVersion = 13 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived; 11: no archive in the inbox; 12: notes.zenn_slug, zenn_published; 13: notes.zenn_changed
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -325,6 +333,12 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	if err != nil {
 		return err
 	}
+	var zennSlug string
+	var zennPublished bool
+	if n.Zenn != nil {
+		zennSlug, zennPublished = n.Zenn.Slug, n.Zenn.Published
+	}
+	zennChanged := n.ZennChanged()
 	tx, err := ix.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -339,14 +353,14 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	// An update keeps the note's seq, and so its rowid in the full-text tables.
 	var seq int64
 	if err := tx.QueryRowContext(ctx, `
-INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, archived, import_hash, file_mtime, file_size)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, archived, import_hash, zenn_slug, zenn_published, zenn_changed, file_mtime, file_size)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO UPDATE SET
 	notebook = excluded.notebook, trashed_notebook = excluded.trashed_notebook, title = excluded.title, tags = excluded.tags, marks = excluded.marks, body = excluded.body,
 	created_at = excluded.created_at, updated_at = excluded.updated_at, sort_key = excluded.sort_key, title_key = excluded.title_key,
-	created_by = excluded.created_by, archived = excluded.archived, import_hash = excluded.import_hash, file_mtime = excluded.file_mtime, file_size = excluded.file_size
+	created_by = excluded.created_by, archived = excluded.archived, import_hash = excluded.import_hash, zenn_slug = excluded.zenn_slug, zenn_published = excluded.zenn_published, zenn_changed = excluded.zenn_changed, file_mtime = excluded.file_mtime, file_size = excluded.file_size
 RETURNING seq`,
-		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.InArchive(), n.ImportHash, f.ModTime.UnixNano(), f.Size,
+		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.InArchive(), n.ImportHash, zennSlug, zennPublished, zennChanged, f.ModTime.UnixNano(), f.Size,
 	).Scan(&seq); err != nil {
 		return err
 	}
@@ -639,7 +653,7 @@ func (ix *Index) Tags(ctx context.Context, notebook string, a Archive, exclude .
 }
 
 // summaryColumns are the columns that query scans.
-const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.marks, n.created_at, n.updated_at, n.created_by, n.archived`
+const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.marks, n.created_at, n.updated_at, n.created_by, n.archived, n.zenn_slug, n.zenn_published, n.zenn_changed`
 
 // orderBy returns the ORDER BY clause of a list in the order sort (one of
 // store.Sorts; empty for store.SortOrder). The ID breaks ties, so that the
@@ -1253,7 +1267,7 @@ func (ix *Index) query(ctx context.Context, q string, args ...any) ([]*Summary, 
 	for rows.Next() {
 		var s Summary
 		var tags, marks, created, updated string
-		if err := rows.Scan(&s.ID, &s.Notebook, &s.TrashedNotebook, &s.Title, &tags, &marks, &created, &updated, &s.CreatedBy, &s.Archived, &s.Snippet); err != nil {
+		if err := rows.Scan(&s.ID, &s.Notebook, &s.TrashedNotebook, &s.Title, &tags, &marks, &created, &updated, &s.CreatedBy, &s.Archived, &s.ZennSlug, &s.ZennPublished, &s.ZennChanged, &s.Snippet); err != nil {
 			return nil, err
 		}
 		if s.CreatedAt, err = time.Parse(time.RFC3339, created); err != nil {

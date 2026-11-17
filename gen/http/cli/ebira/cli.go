@@ -25,7 +25,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|archive-notes|archive-candidates|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|file-history|restore-file|check-files|events|git-status|git-sync|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
+		"notes (list|get|create|update|delete|move-notes|trash-notes|search|restore|move|create-separator|update-separator|delete-separator|move-separator|notebooks|tags|marks|set-marks|archive-notes|archive-candidates|save-mark-names|create-notebook|save-notebook|move-notebook|delete-notebook|trashed-notebooks|restore-notebook|delete-trashed-notebook|empty-trash|import|upload-ai-file|add-file|get-file|delete-file|history|history-version|file-history|restore-file|check-files|events|git-status|git-sync|zenn-status|export-zenn|add-guide|preview-style|set-preview-style|settings|save-settings|restart-server|sync)",
 		"assistant (status|ask)",
 		"auth (status|register-begin|register-finish|login-begin|login-finish|device-start|device-token|device-request|device-approve|passkeys|delete-passkey|revoke-sessions|logout)",
 	}
@@ -267,6 +267,14 @@ func ParseEndpoint(
 		notesGitSyncBodyFlag    = new(cliStringFlag)
 		notesGitSyncSessionFlag = new(cliStringFlag)
 
+		notesZennStatusFlags       = flag.NewFlagSet("zenn-status", flag.ExitOnError)
+		notesZennStatusSessionFlag = new(cliStringFlag)
+
+		notesExportZennFlags       = flag.NewFlagSet("export-zenn", flag.ExitOnError)
+		notesExportZennBodyFlag    = new(cliStringFlag)
+		notesExportZennIDFlag      = new(cliStringFlag)
+		notesExportZennSessionFlag = new(cliStringFlag)
+
 		notesAddGuideFlags       = flag.NewFlagSet("add-guide", flag.ExitOnError)
 		notesAddGuideBodyFlag    = new(cliStringFlag)
 		notesAddGuideSessionFlag = new(cliStringFlag)
@@ -447,6 +455,10 @@ func ParseEndpoint(
 	notesGitStatusFlags.Var(notesGitStatusSessionFlag, "session", "")
 	notesGitSyncFlags.Var(notesGitSyncBodyFlag, "body", "")
 	notesGitSyncFlags.Var(notesGitSyncSessionFlag, "session", "")
+	notesZennStatusFlags.Var(notesZennStatusSessionFlag, "session", "")
+	notesExportZennFlags.Var(notesExportZennBodyFlag, "body", "")
+	notesExportZennFlags.Var(notesExportZennIDFlag, "id", "Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/")
+	notesExportZennFlags.Var(notesExportZennSessionFlag, "session", "")
 	notesAddGuideFlags.Var(notesAddGuideBodyFlag, "body", "")
 	notesAddGuideFlags.Var(notesAddGuideSessionFlag, "session", "")
 	notesPreviewStyleFlags.Var(notesPreviewStyleSessionFlag, "session", "")
@@ -519,6 +531,8 @@ func ParseEndpoint(
 	notesEventsFlags.Usage = notesEventsUsage
 	notesGitStatusFlags.Usage = notesGitStatusUsage
 	notesGitSyncFlags.Usage = notesGitSyncUsage
+	notesZennStatusFlags.Usage = notesZennStatusUsage
+	notesExportZennFlags.Usage = notesExportZennUsage
 	notesAddGuideFlags.Usage = notesAddGuideUsage
 	notesPreviewStyleFlags.Usage = notesPreviewStyleUsage
 	notesSetPreviewStyleFlags.Usage = notesSetPreviewStyleUsage
@@ -709,6 +723,12 @@ func ParseEndpoint(
 
 			case "git-sync":
 				epf = notesGitSyncFlags
+
+			case "zenn-status":
+				epf = notesZennStatusFlags
+
+			case "export-zenn":
+				epf = notesExportZennFlags
 
 			case "add-guide":
 				epf = notesAddGuideFlags
@@ -956,6 +976,12 @@ func ParseEndpoint(
 			case "git-sync":
 				endpoint = c.GitSync()
 				data, err = notesc.BuildGitSyncPayload(notesGitSyncBodyFlag.value, notesGitSyncSessionFlag.value)
+			case "zenn-status":
+				endpoint = c.ZennStatus()
+				data, err = notesc.BuildZennStatusPayload(notesZennStatusSessionFlag.value)
+			case "export-zenn":
+				endpoint = c.ExportZenn()
+				data, err = notesc.BuildExportZennPayload(notesExportZennBodyFlag.value, notesExportZennIDFlag.value, notesExportZennSessionFlag.value)
 			case "add-guide":
 				endpoint = c.AddGuide()
 				data, err = notesc.BuildAddGuidePayload(notesAddGuideBodyFlag.value, notesAddGuideSessionFlag.value)
@@ -1085,6 +1111,8 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    events: Stream note changes as Server-Sent Events. Events missed while disconnected are not replayed; the ready event sent on every (re)connection tells clients to reload the note list.`)
 	fmt.Fprintln(os.Stderr, `    git-status: Tell whether the notes are in a git repository, and its upstream branch, such as to offer git_sync. For people only; others are told there is none.`)
 	fmt.Fprintln(os.Stderr, `    git-sync: Sync the notes with their git repository: commit the changes of the notes directory, then, when the branch has an upstream branch, fetch it, merge it and push. A merge never stops in conflict: a note changed on both sides keeps this side's version, and the other side's version becomes a new note in the same notebook, with the conflict in its title; another file keeps this side's version; a file deleted on one side and changed on the other keeps the changed version. The index is updated afterwards. For people only.`)
+	fmt.Fprintln(os.Stderr, `    zenn-status: Tell whether notes can be written to Zenn (zenn.dev) as articles, and where to. For people only; others are told they cannot.`)
+	fmt.Fprintln(os.Stderr, `    export-zenn: Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with its images in images/<slug>/, of the GitHub repository Zenn deploys from, committed and pushed. The slug is the ID of the note. Images of the note go with it; a link to another file of a note becomes its text, and so does a link to a note that is no article. The same note goes to the same article again. For people only.`)
 	fmt.Fprintln(os.Stderr, `    add-guide: Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.`)
 	fmt.Fprintln(os.Stderr, `    preview-style: Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.`)
 	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
@@ -1994,6 +2022,46 @@ func notesGitSyncUsage() {
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes git-sync --body '{\n      \"remote\": \"git@github.com:you/notes.git\"\n   }' --session \"Voluptas est harum enim corrupti fugit.\"")
 }
 
+func notesZennStatusUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes zenn-status", os.Args[0])
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Tell whether notes can be written to Zenn (zenn.dev) as articles, and where to. For people only; others are told they cannot.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes zenn-status --session \"Cupiditate dolorem alias quo id aperiam.\"")
+}
+
+func notesExportZennUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] notes export-zenn", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -id STRING")
+	fmt.Fprint(os.Stderr, " -session STRING")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with its images in images/<slug>/, of the GitHub repository Zenn deploys from, committed and pushed. The slug is the ID of the note. Images of the note go with it; a link to another file of a note becomes its text, and so does a link to a note that is no article. The same note goes to the same article again. For people only.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -id STRING: Note ID. A link to a note in the web UI, such as http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after #note/`)
+	fmt.Fprintln(os.Stderr, `    -session STRING: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes export-zenn --body '{\n      \"emoji\": \"📝\",\n      \"force\": true,\n      \"private\": true,\n      \"published\": false,\n      \"topics\": [\n         \"At facilis voluptatem facere.\",\n         \"Voluptas minima aperiam.\",\n         \"Temporibus expedita pariatur.\"\n      ],\n      \"type\": \"idea\"\n   }' --id \"be4c1193735ee1\" --session \"Voluptatem quos sapiente aperiam rerum corrupti.\"")
+}
+
 func notesAddGuideUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] notes add-guide", os.Args[0])
@@ -2087,7 +2155,7 @@ func notesSaveSettingsUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-settings --body '{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"tui_search\": \"search\",\n         \"watch\": true\n      },\n      \"notes\": {\n         \"defaults\": {\n            \"auth\": \"none\",\n            \"git_sync\": \"10m\",\n            \"lang\": \"ja\",\n            \"model\": \"Vel sit soluta aut corporis nostrum.\",\n            \"provider\": \"anthropic\",\n            \"theme\": \"auto\",\n            \"tui_preview\": \"rendered\",\n            \"tui_search\": \"search\",\n            \"watch\": true\n         },\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }' --session \"Saepe optio.\"")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "notes save-settings --body '{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"tui_search\": \"search\",\n         \"watch\": true,\n         \"zenn_branch\": \"main\",\n         \"zenn_repo\": \"git@github.com:you/zenn-content.git\",\n         \"zenn_user\": \"you\"\n      },\n      \"notes\": {\n         \"defaults\": {\n            \"auth\": \"none\",\n            \"git_sync\": \"10m\",\n            \"lang\": \"ja\",\n            \"model\": \"Vel sit soluta aut corporis nostrum.\",\n            \"provider\": \"anthropic\",\n            \"theme\": \"auto\",\n            \"tui_preview\": \"rendered\",\n            \"tui_search\": \"search\",\n            \"watch\": true,\n            \"zenn_branch\": \"main\",\n            \"zenn_repo\": \"git@github.com:you/zenn-content.git\",\n            \"zenn_user\": \"you\"\n         },\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }' --session \"Saepe optio.\"")
 }
 
 func notesRestartServerUsage() {

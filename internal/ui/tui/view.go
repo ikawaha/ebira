@@ -261,6 +261,17 @@ func (m *Model) renderPreview(keepOffset bool) {
 	if createdByAI(m.note.CreatedBy) {
 		meta = append(meta, aiMark+" AI")
 	}
+	if z := m.note.Zenn; z != nil && m.zenn {
+		key := "preview.zennDraft"
+		if z.Published {
+			key = "preview.zennPublished"
+		}
+		mark := zennMark
+		if z.Changed {
+			mark += zennChangedMark
+		}
+		meta = append(meta, mark+" "+m.tr.t(key))
+	}
 	b.WriteString("  " + m.th.style(m.th.dim).Render(strings.Join(meta, " · ")) + "\n")
 	b.WriteString("  " + m.th.style(m.th.border).Render(strings.Repeat("─", max(0, width-4))) + "\n")
 	header := strings.Count(b.String(), "\n")
@@ -543,8 +554,18 @@ func (m Model) renderList(w, h int) string {
 		// instead.
 		badge, badgeW := styledMarkBadge(it.Marks, titleSt)
 		titleLine := badge + padHighlight(title, titleHL, titleSt, hl.Bold(true), innerW-1-badgeW)
+		mark := ""
 		if createdByAI(it.CreatedBy) {
-			mark := " " + aiMark + " "
+			mark += " " + aiMark
+		}
+		if it.Zenn != nil && m.zenn {
+			mark += " " + zennMark
+			if it.Zenn.Changed {
+				mark += zennChangedMark
+			}
+		}
+		if mark != "" {
+			mark += " "
 			titleLine = badge + padHighlight(title, titleHL, titleSt, hl.Bold(true), innerW-1-badgeW-ansi.StringWidth(mark)) + titleSt.Render(mark)
 		}
 		lines = append(lines,
@@ -686,6 +707,16 @@ const iconWidth = 2
 // the sparkles that apps put on what AI made, as a narrow character that
 // keeps the columns aligned in every terminal and takes the color of the text.
 const aiMark = "\u2726"
+
+// zennMark is the mark of a note written to Zenn as an article, at the end
+// of its line in the list and of the preview's meta line: an arrow going out,
+// a narrow character in every terminal, as aiMark is (the arrows that are
+// ambiguous in width, such as the one up and right, are not).
+const zennMark = "\u21d7"
+
+// zennChangedMark follows zennMark when the note changed since it was
+// written, so that its article lags behind.
+const zennChangedMark = "*"
 
 func createdByAI(v *string) bool { return v != nil && *v == "ai" }
 

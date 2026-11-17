@@ -1732,6 +1732,89 @@ func BuildGitSyncPayload(notesGitSyncBody *string, notesGitSyncSession *string) 
 	return v, nil
 }
 
+// BuildZennStatusPayload builds the payload for the notes zenn_status endpoint
+// from CLI flags.
+func BuildZennStatusPayload(notesZennStatusSession *string) (*notes.ZennStatusPayload, error) {
+	var session *string
+	{
+		if notesZennStatusSession != nil {
+			session = notesZennStatusSession
+		}
+	}
+	v := &notes.ZennStatusPayload{}
+	v.Session = session
+
+	return v, nil
+}
+
+// BuildExportZennPayload builds the payload for the notes export_zenn endpoint
+// from CLI flags.
+func BuildExportZennPayload(notesExportZennBody *string, notesExportZennID *string, notesExportZennSession *string) (*notes.ExportZennPayload, error) {
+	var err error
+	var body ExportZennRequestBody
+	{
+		if notesExportZennBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*notesExportZennBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"emoji\": \"📝\",\n      \"force\": true,\n      \"private\": true,\n      \"published\": false,\n      \"topics\": [\n         \"At facilis voluptatem facere.\",\n         \"Voluptas minima aperiam.\",\n         \"Temporibus expedita pariatur.\"\n      ],\n      \"type\": \"idea\"\n   }'")
+		}
+	}
+	var id string
+	{
+		if notesExportZennID == nil {
+			return nil, fmt.Errorf("missing required flag --id")
+		}
+		id = *notesExportZennID
+		err = goa.MergeErrors(err, goa.ValidatePattern("id", id, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var session *string
+	{
+		if notesExportZennSession != nil {
+			session = notesExportZennSession
+		}
+	}
+	v := &notes.ExportZennPayload{
+		Emoji:     body.Emoji,
+		Type:      body.Type,
+		Published: body.Published,
+		Force:     body.Force,
+		Private:   body.Private,
+	}
+	if body.Topics != nil {
+		v.Topics = make([]string, len(body.Topics))
+		for i, val := range body.Topics {
+			v.Topics[i] = val
+		}
+	}
+	{
+		var zero bool
+		if v.Published == zero {
+			v.Published = false
+		}
+	}
+	{
+		var zero bool
+		if v.Force == zero {
+			v.Force = false
+		}
+	}
+	{
+		var zero bool
+		if v.Private == zero {
+			v.Private = false
+		}
+	}
+	v.ID = id
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildAddGuidePayload builds the payload for the notes add_guide endpoint
 // from CLI flags.
 func BuildAddGuidePayload(notesAddGuideBody *string, notesAddGuideSession *string) (*notes.AddGuidePayload, error) {
@@ -1830,7 +1913,7 @@ func BuildSaveSettingsPayload(notesSaveSettingsBody *string, notesSaveSettingsSe
 		}
 		err = json.Unmarshal([]byte(*notesSaveSettingsBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"tui_search\": \"search\",\n         \"watch\": true\n      },\n      \"notes\": {\n         \"defaults\": {\n            \"auth\": \"none\",\n            \"git_sync\": \"10m\",\n            \"lang\": \"ja\",\n            \"model\": \"Vel sit soluta aut corporis nostrum.\",\n            \"provider\": \"anthropic\",\n            \"theme\": \"auto\",\n            \"tui_preview\": \"rendered\",\n            \"tui_search\": \"search\",\n            \"watch\": true\n         },\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"machine\": {\n         \"auth\": \"none\",\n         \"git_sync\": \"10m\",\n         \"lang\": \"ja\",\n         \"model\": \"Vel sit soluta aut corporis nostrum.\",\n         \"provider\": \"anthropic\",\n         \"theme\": \"auto\",\n         \"tui_preview\": \"rendered\",\n         \"tui_search\": \"search\",\n         \"watch\": true,\n         \"zenn_branch\": \"main\",\n         \"zenn_repo\": \"git@github.com:you/zenn-content.git\",\n         \"zenn_user\": \"you\"\n      },\n      \"notes\": {\n         \"defaults\": {\n            \"auth\": \"none\",\n            \"git_sync\": \"10m\",\n            \"lang\": \"ja\",\n            \"model\": \"Vel sit soluta aut corporis nostrum.\",\n            \"provider\": \"anthropic\",\n            \"theme\": \"auto\",\n            \"tui_preview\": \"rendered\",\n            \"tui_search\": \"search\",\n            \"watch\": true,\n            \"zenn_branch\": \"main\",\n            \"zenn_repo\": \"git@github.com:you/zenn-content.git\",\n            \"zenn_user\": \"you\"\n         },\n         \"search\": \"bigram\",\n         \"stop_tags\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         },\n         \"stop_words\": {\n            \"use\": \"none\",\n            \"words\": [\n               \"Consequatur dicta dolorem sint aut aliquid aut.\",\n               \"Consequuntur perferendis dolorum magnam consequatur.\",\n               \"Aliquid incidunt.\",\n               \"Reprehenderit ad dolores aut est omnis.\"\n            ]\n         }\n      },\n      \"version\": \"Quibusdam perferendis impedit.\"\n   }'")
 		}
 	}
 	var session *string

@@ -219,6 +219,16 @@ func GitSyncNotesPath() string {
 	return "/git/sync"
 }
 
+// ZennStatusNotesPath returns the URL path to the notes service zenn_status HTTP endpoint.
+func ZennStatusNotesPath() string {
+	return "/zenn"
+}
+
+// ExportZennNotesPath returns the URL path to the notes service export_zenn HTTP endpoint.
+func ExportZennNotesPath(id string) string {
+	return fmt.Sprintf("/notes/%v/zenn", id)
+}
+
 // AddGuideNotesPath returns the URL path to the notes service add_guide HTTP endpoint.
 func AddGuideNotesPath() string {
 	return "/guide"

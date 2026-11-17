@@ -245,6 +245,8 @@
   "list.archive": "No notes were put in the archive on their own. The notebooks in the archive are under the archive in the left column.",
   "preview.archived": "in the archive since {time}",
   "preview.archivedWithNotebook": "in the archive with its notebook",
+  "preview.zennPublished": "Published on Zenn",
+  "preview.zennDraft": "A draft on Zenn",
   "key.archive": "archive",
   "key.unarchive": "take out of the archive",
   "status.noteArchived": "Put the note in the archive",

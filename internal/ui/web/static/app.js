@@ -1018,6 +1018,12 @@ const KIND_SVG = {
   // searches instead.
   funnel: ["M4 5h16l-6 7.5v5.5l-4 2v-7.5z"],
   funnelOff: ["M4 5h16l-6 7.5v5.5l-4 2v-7.5z", "M3 3l18 18"],
+  // A note written to Zenn: an arrow out of a box, drawn by ebira rather
+  // than the logo of Zenn.
+  zenn: ["M12.5 3.5H7A3.5 3.5 0 0 0 3.5 7v10A3.5 3.5 0 0 0 7 20.5h10a3.5 3.5 0 0 0 3.5-3.5v-5.5", "M7.5 11h5l-5 5.5h5", "M16 3.5h4.5V8", "M20.5 3.5 15 9"],
+  // Another one at random: two arrows crossing.
+  external: ["M14 4h6v6", "M20 4l-9 9", "M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"],
+  shuffle: ["M4 7h3.5l9 10H20", "M4 17h3.5l2.6-2.9", "M13.9 9.9 16.5 7H20", "M17.5 4.5 20 7l-2.5 2.5", "M17.5 14.5 20 17l-2.5 2.5"],
 };
 
 // iconButton returns a button that shows the drawing of KIND_SVG named icon,
@@ -2424,6 +2430,8 @@ function noteRow(n, sort, reorder, list, cls) {
   const head = el("div", "title-row", ...noteMarks(n), el("div", "title", highlighted(n.title || t("untitled"), n.title_highlights)));
   const mark = aiMark(n);
   if (mark) head.append(mark);
+  const zm = zennMark(n);
+  if (zm) head.append(zm);
   if (n.archived && showsArchived()) {
     // Among the other notes, a note in the archive is marked and pale.
     const box = el("span", "archived-mark", kindSVG("archive"));
@@ -2867,8 +2875,12 @@ async function loadNote() {
   if (n.archived) meta.append(el("span", "archived", kindSVG("archive"), t(n.archived_at ? "archivedAt" : "archivedWithNotebook", { time: n.archived_at ? formatTime(n.archived_at) : "" })));
   const mark = aiMark(n, t("createdByAI"));
   if (mark) meta.append(mark);
-  const actions = el("div", "actions", iconButton("find", t("findTitle"), () => (find.open ? closeFind() : openFind())), iconButton("document", t("copyTitle"), copyNote));
+  const za = zennArticle(n);
+  if (za) meta.append(za);
+  const copyButton = iconButton("document", t("copyTitle"), copyNote);
+  const actions = el("div", "actions", iconButton("find", t("findTitle"), () => (find.open ? closeFind() : openFind())), copyButton);
   if (n.notebook !== "trash") {
+    copyButton.before(iconButton("edit", t("editTitle"), () => startEdit(n)));
     const markButton = iconButton("flag", t("markTitle"), () => openMarkMenu(n, markButton));
     markButton.id = "mark-open";
     actions.prepend(markButton);
@@ -2879,9 +2891,12 @@ async function loadNote() {
       moveSelect((nb) => moveNoteTo(n.id, nb)),
       button(t("deletePermanently"), deleteNote, { cls: "danger" }));
   } else {
-    actions.append(
-      iconButton("edit", t("editTitle"), () => startEdit(n)),
-      iconButton("history", t("historyTitle"), openHistory));
+    actions.append(iconButton("history", t("historyTitle"), openHistory));
+    if (zenn.configured) {
+      const b = iconButton("zenn", t("zennTitle"), () => openZenn(n));
+      if (n.zenn?.changed) b.append(zennDot());
+      actions.append(b);
+    }
     if (n.notebook !== "inbox") actions.append(iconButton(n.archived_at ? "archiveOff" : "archive", t(n.archived_at ? "unarchiveTitle" : "toArchiveTitle"), () => archiveNotes([n.id], !n.archived_at)));
     actions.append(iconButton("trash", t("toTrashTitle"), deleteNote));
   }
@@ -3155,7 +3170,7 @@ async function openSettings() {
   const watchValue = (w) => (w === undefined || w === null ? "" : String(w));
   // The defaults shared with the notes, as read; an earlier server has none.
   const sd = cur.notes.defaults || null;
-  const keys = ["lang", "theme", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search"]; // config.DefaultKeys
+  const keys = ["lang", "theme", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search", "zenn_repo", "zenn_branch", "zenn_user"]; // config.DefaultKeys
   const has = (v, k) => !!v && v[k] !== undefined && v[k] !== null && v[k] !== "";
   // Each setting of a machine has one control, of the value of this machine,
   // else of the one shared with the notes. Its check box tells that the value
@@ -3181,6 +3196,9 @@ async function openSettings() {
     model: text(start.model),
     tui_preview: select(start.tui_preview, options.tui_preview),
     tui_search: select(start.tui_search, options.tui_search),
+    zenn_repo: text(start.zenn_repo, "git@github.com:you/zenn-content.git"),
+    zenn_branch: text(start.zenn_branch, t("settingsZennBranchPlaceholder")),
+    zenn_user: text(start.zenn_user),
     auth: select(m.auth === "none" ? "" : m.auth, [["", t("settingsAuthNone")], ["passkey", t("settingsAuthPasskey")]]),
     search: select(cur.notes.search === "bigram" ? "" : cur.notes.search, [["", "bigram"], ["like", "like"], ["trigram", "trigram"], ["en", "en"], ["ja", "ja"]]),
   };
@@ -3301,15 +3319,15 @@ async function openSettings() {
   };
   const initial = JSON.stringify([machineValue(), notesValue()]);
   const dirty = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
-  // The settings the server reads when it starts: all but the language and
-  // the theme, which apply once saved.
+  // The settings the server reads when it starts: all but those that apply
+  // once saved, the language, the theme and those of Zenn.
   const startup = () => {
     const m = { ...machineValue() };
     const n = notesValue();
-    for (const k of LOOK_KEYS) delete m[k];
+    for (const k of NOW_KEYS) delete m[k];
     if (n.defaults) {
       n.defaults = { ...n.defaults };
-      for (const k of LOOK_KEYS) delete n.defaults[k];
+      for (const k of NOW_KEYS) delete n.defaults[k];
     }
     return JSON.stringify([m, n]);
   };
@@ -3347,6 +3365,7 @@ async function openSettings() {
       if (pending) await markRestartPending();
       showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart"));
       applyLook(cur);
+      loadZenn();
     }
   }, { cls: "primary" });
 
@@ -3410,7 +3429,12 @@ async function openSettings() {
       ...jaRows),
     tab("sync",
       machineRow("git_sync", t("settingsGitSync")),
-      machineRow("watch", t("settingsWatch"), t("settingsWatchLabel"))),
+      machineRow("watch", t("settingsWatch"), t("settingsWatchLabel")),
+      el("h3", "", t("settingsZenn")),
+      el("p", "hint", t("settingsZennHint")),
+      machineRow("zenn_repo", t("settingsZennRepo"), t("settingsZennRepoHint")),
+      machineRow("zenn_branch", t("settingsZennBranch"), t("settingsZennBranchHint")),
+      machineRow("zenn_user", t("settingsZennUser"))),
     tab("assistant",
       machineRow("provider", t("settingsProvider")),
       machineRow("model", t("settingsModel"))),
@@ -5289,6 +5313,220 @@ async function showGitSync() {
   tellState();
 }
 
+// Zenn: a note goes to Zenn as an article, written to the GitHub repository
+// Zenn deploys from (POST /notes/{id}/zenn), by people. The note keeps the
+// article, which the list and the preview mark (zennMark). The repository is
+// set in the settings (zenn_repo), read with GET /zenn.
+
+const zenn = { configured: false, user: "", repo: "", git: true };
+
+// loadZenn reads whether notes can be written to Zenn, and shows the note
+// again with its button.
+async function loadZenn() {
+  let st;
+  try {
+    st = await api("/zenn");
+  } catch (_) {
+    return; // a server without it
+  }
+  const was = zenn.configured;
+  zenn.configured = !!st.configured;
+  zenn.user = st.user || "";
+  zenn.repo = st.repo || "";
+  zenn.git = st.git !== false; // an earlier server does not tell
+  if (zenn.configured === was) return;
+  renderNotes();
+  if (state.note && !state.editing) loadNote();
+}
+
+// zennURL returns the URL of the article a on Zenn, or "" without the user
+// name.
+function zennURL(a) {
+  return a.url || (zenn.user ? `https://zenn.dev/${encodeURIComponent(zenn.user)}/articles/${encodeURIComponent(a.slug)}` : "");
+}
+
+// zennMark returns the mark of note n written to Zenn, pale for a draft;
+// with label, it tells what it is, linking to the article.
+function zennMark(n) {
+  const a = n.zenn;
+  if (!a || !zenn.configured) return null; // only while notes go to Zenn
+  const m = el("span", "zenn-mark", kindSVG("zenn"));
+  if (!a.published) m.classList.add("draft");
+  if (a.changed) {
+    m.classList.add("changed");
+    m.append(zennDot());
+  }
+  m.title = t(a.published ? "zennPublished" : "zennDraft");
+  return m;
+}
+
+// zennArticle returns the line of the preview's meta that tells the article
+// of the note on Zenn, as text that opens it, or null.
+function zennArticle(n) {
+  const a = n.zenn;
+  if (!a || !zenn.configured) return null;
+  const what = t(a.published ? "zennMetaPublished" : "zennMetaDraft");
+  const url = zennURL(a);
+  if (!url) return el("span", "zenn-article", what);
+  const link = el("a", "zenn-article", what, kindSVG("external"));
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.title = t("zennOpen");
+  return link;
+}
+
+// zennDot tells that a note changed since it was written to Zenn, so that
+// its article lags behind.
+function zennDot() {
+  return el("span", "zenn-dot");
+}
+
+// ZENN_SYMBOL matches what Zenn refuses in topics: ASCII spaces, symbols and
+// controls.
+const ZENN_SYMBOL = /[\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]/;
+
+// zennTopics makes topics of tags as the server does: in NFKC and lower
+// case, without those Zenn refuses, up to five.
+function zennTopics(tags) {
+  const res = [];
+  for (const tag of tags || []) {
+    const v = tag.trim().normalize("NFKC").toLowerCase();
+    if (v && v.length <= 18 && !ZENN_SYMBOL.test(v) && !res.includes(v) && res.length < 5) res.push(v);
+  }
+  return res;
+}
+
+// ZENN_EMOJI are the emoji an article gets at random, as zenn.Emoji of the
+// server.
+const ZENN_EMOJI = ["\u{1F4DD}", "\u{1F4D8}", "\u{1F4D7}", "\u{1F4D9}", "\u{1F516}", "\u{1F4A1}", "\u{1F50D}", "\u{1F6E0}", "\u{1F9EA}", "\u{1F9E9}", "\u{1F680}", "\u{1F331}", "\u{1F426}", "\u{1F994}", "\u{1F419}", "\u{1F375}", "\u{1F3AF}", "\u{1F9ED}", "\u2699\uFE0F", "\u2728"];
+
+function randomEmoji() {
+  return ZENN_EMOJI[Math.floor(Math.random() * ZENN_EMOJI.length)];
+}
+
+// oneEmoji reports whether v is one emoji, as Zenn takes for an article: one
+// grapheme, of no letters, digits or spaces.
+function oneEmoji(v) {
+  if (!v || /[\p{L}\p{N}\s]/u.test(v.replace(/[\u{1F1E6}-\u{1F1FF}\u20E3\uFE0F]/gu, ""))) return false;
+  if (typeof Intl === "undefined" || !Intl.Segmenter) return [...v].length <= 8;
+  return [...new Intl.Segmenter().segment(v)].length === 1;
+}
+
+// openZenn asks how to write note n to Zenn, and writes it.
+function openZenn(n) {
+  const d = $("zenn");
+  const a = n.zenn;
+  const field = (label, input) => el("label", "field", el("span", "", label), input);
+  const emoji = el("input", "zenn-emoji");
+  emoji.value = a?.emoji || randomEmoji();
+  emoji.maxLength = 16;
+  emoji.autocomplete = "off";
+  emoji.setAttribute("aria-label", t("zennEmoji"));
+  const shuffle = iconButton("shuffle", t("zennEmojiShuffle"), () => {
+    let v;
+    do v = randomEmoji(); while (v === emoji.value && ZENN_EMOJI.length > 1);
+    emoji.value = v;
+  });
+  shuffle.type = "button";
+  const type = el("select");
+  for (const v of ["tech", "idea"]) {
+    const o = el("option", "", t(v === "tech" ? "zennTypeTech" : "zennTypeIdea"));
+    o.value = v;
+    type.append(o);
+  }
+  type.value = a?.type || "tech";
+  const topics = el("input");
+  topics.value = (a ? a.topics || [] : zennTopics(n.tags)).join(", ");
+  topics.autocomplete = "off";
+  const publish = el("input");
+  publish.type = "checkbox";
+  publish.checked = !!a?.published;
+  const msg = el("div", "zenn-result");
+  const go = el("button", "primary", t("zennWrite"));
+  go.type = "submit";
+  const cancel = button(t("cancel"), () => d.close());
+  const form = el("form", "zenn-form",
+    el("p", "", t(a ? "zennUpdateText" : "zennNewText", { slug: a?.slug || n.id, repo: zenn.repo })),
+    el("div", "zenn-row",
+      el("div", "field", el("span", "", t("zennEmoji")), el("div", "zenn-emoji-row", emoji, shuffle)),
+      field(t("zennType"), type)),
+    el("p", "note", t("zennEmojiHint")),
+    field(t("zennTopics"), topics),
+    el("label", "check", publish, t("zennPublish")),
+    el("p", "note", t("zennPublishNote")),
+    msg,
+    el("div", "form-actions", cancel, go));
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!oneEmoji(emoji.value.trim())) {
+      msg.replaceChildren(el("p", "error", t("zennEmojiInvalid")));
+      emoji.focus();
+      return;
+    }
+    const nb = state.notebooks.find((x) => x.id === n.notebook);
+    const priv = nb?.kind === "private";
+    if (priv && !confirm(t("zennPrivateConfirm"))) return;
+    const body = {
+      emoji: emoji.value.trim(),
+      type: type.value,
+      topics: topics.value.split(/[,\u3001]/).map((v) => v.trim()).filter(Boolean),
+      published: publish.checked,
+      private: priv,
+    };
+    go.disabled = true;
+    msg.replaceChildren(el("p", "msg", t("zennWriting")));
+    let res;
+    for (;;) {
+      try {
+        res = await api(noteURL(n.id) + "/zenn", { method: "POST", body });
+        break;
+      } catch (err) {
+        if (err.name === "article_changed" && !body.force && confirm(t("zennChangedConfirm"))) {
+          body.force = true;
+          continue;
+        }
+        msg.replaceChildren(el("p", "error", t("zennFailed", { error: err.message })));
+        go.disabled = false;
+        return;
+      }
+    }
+    const url = zennURL(res.note.zenn);
+    const done = [el("p", "", t(res.pushed ? "zennPushed" : "zennUnchanged"))];
+    const warn = { file: "zennWarnFile", note: "zennWarnNote", tag: "zennWarnTag" };
+    if (res.warnings.length) done.push(el("ul", "zenn-warnings", ...res.warnings.map((w) => el("li", "", t(warn[w.kind], { name: w.name })))));
+    if (url) {
+      const open = el("a", "", t("zennOpen"));
+      open.href = url;
+      open.target = "_blank";
+      open.rel = "noopener";
+      done.push(el("p", "", open));
+    }
+    msg.replaceChildren(...done);
+    cancel.textContent = t("zennClose");
+    go.hidden = true;
+    if (state.note?.id === n.id && !state.editing) loadNote();
+  });
+  d.replaceChildren(el("div", "files-head", el("h2", "", t("zennHead")), closeButton(() => d.close())), form);
+  d.showModal();
+  go.focus();
+  // Writing runs git on the server: without it, tell why at once. It is
+  // asked again, as git may have been put there meanwhile.
+  const noGit = () => {
+    msg.replaceChildren(el("p", "error", t("zennNoGit")));
+    go.disabled = true;
+  };
+  if (!zenn.git) noGit();
+  loadZenn().then(() => {
+    if (!d.open) return;
+    if (!zenn.git) noGit();
+    else if (go.disabled && !go.hidden && msg.querySelector("p.error")) {
+      msg.replaceChildren();
+      go.disabled = false;
+    }
+  });
+}
+
 // syncGit syncs the notes with their git repository (POST /git/sync) and
 // shows the outcome. The changed notes come back as change events.
 async function syncGit() {
@@ -5905,6 +6143,10 @@ async function addGuide() {
 }
 // LOOK_KEYS are the settings that apply once saved, without a restart.
 const LOOK_KEYS = ["lang", "theme"];
+
+// NOW_KEYS are the settings that apply once saved: those of the look, and
+// those of Zenn, which the server reads at each use.
+const NOW_KEYS = [...LOOK_KEYS, "zenn_repo", "zenn_branch", "zenn_user"];
 
 // applyTheme draws the page in the theme choice: auto (the system's), light or
 // dark.
@@ -6677,4 +6919,5 @@ $("logout").addEventListener("click", async () => {
   if (linked) selectNote(linked);
   connect();
   showGitSync();
+  loadZenn();
 })();
