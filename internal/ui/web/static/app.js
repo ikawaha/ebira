@@ -2459,7 +2459,7 @@ function noteRow(n, sort, reorder, list, cls) {
   // Searches in a notebook find the notes of its sub notebooks too.
   // In the cells of the archive, the cell tells it.
   if ((!state.notebook || n.notebook !== state.notebook) && !(state.archive && !searching())) meta.append(el("span", "where", notebookName(n.notebook)));
-  meta.append(...tagList(n.tags));
+  if (n.tags?.length) meta.append(el("span", "tags", ...tagList(n.tags)));
   li.append(meta);
   if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
   li.addEventListener("click", (e) => chooseNote(n.id, e));
