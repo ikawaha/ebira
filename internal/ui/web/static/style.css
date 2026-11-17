@@ -328,14 +328,19 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   padding: 8px 16px;
   color: var(--fg-muted);
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   border-bottom: 1px solid var(--border);
 }
-.list-head > span { flex: 1; min-width: 0; }
+/* The text keeps a width of its own: in a narrow column the sort and the
+   new button go down to a line of their own together, instead of squeezing
+   the text to a character a line. */
+.list-head > span { flex: 1 1 12em; min-width: 0; }
+.list-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 #new-note { display: inline-flex; align-items: center; gap: 4px; }
 #new-note [data-icon] > svg { width: 12px; height: 12px; }
 .list-head select {
