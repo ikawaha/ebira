@@ -6322,6 +6322,297 @@ func DecodeGitSyncResponse(decoder func(*http.Response) goahttp.Decoder, restore
 	}
 }
 
+// BuildZennStatusRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "zenn_status" endpoint
+func (c *Client) BuildZennStatusRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ZennStatusNotesPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "zenn_status", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeZennStatusRequest returns an encoder for requests sent to the notes
+// zenn_status server.
+func EncodeZennStatusRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.ZennStatusPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "zenn_status", "*notes.ZennStatusPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+
+// DecodeZennStatusResponse returns a decoder for responses returned by the
+// notes zenn_status endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeZennStatusResponse may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeZennStatusResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "zenn_status", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "zenn_status", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body ZennStatusResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "zenn_status", err)
+			}
+			err = ValidateZennStatusResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "zenn_status", err)
+			}
+			res := NewZennStatusZennStatusOK(&body)
+			return res, nil
+		case http.StatusUnauthorized:
+			var (
+				body ZennStatusUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "zenn_status", err)
+			}
+			err = ValidateZennStatusUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "zenn_status", err)
+			}
+			return nil, NewZennStatusUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body ZennStatusVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "zenn_status", err)
+			}
+			err = ValidateZennStatusVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "zenn_status", err)
+			}
+			return nil, NewZennStatusVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "zenn_status", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "zenn_status", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildExportZennRequest instantiates a HTTP request object with method and
+// path set to call the "notes" service "export_zenn" endpoint
+func (c *Client) BuildExportZennRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		id string
+	)
+	{
+		p, ok := v.(*notes.ExportZennPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("notes", "export_zenn", "*notes.ExportZennPayload", v)
+		}
+		id = p.ID
+	}
+
+	rawPath := fmt.Sprintf("/notes/%v/zenn", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ExportZennNotesPath(id), RawPath: rawPath}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("notes", "export_zenn", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeExportZennRequest returns an encoder for requests sent to the notes
+// export_zenn server.
+func EncodeExportZennRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notes.ExportZennPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notes", "export_zenn", "*notes.ExportZennPayload", v)
+		}
+		if p.Session != nil {
+			v := *p.Session
+			req.AddCookie(&http.Cookie{
+				Name:  "ebira_session",
+				Value: v,
+			})
+		}
+		body := NewExportZennRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notes", "export_zenn", err)
+		}
+		return nil
+	}
+}
+
+// DecodeExportZennResponse returns a decoder for responses returned by the
+// notes export_zenn endpoint. restoreBody controls whether the response body
+// should be restored after having been read.
+// DecodeExportZennResponse may return the following errors:
+//   - "not_found" (type *goa.ServiceError): http.StatusNotFound
+//   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//   - "article_changed" (type *goa.ServiceError): http.StatusConflict
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - error: internal error
+func DecodeExportZennResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("notes", "export_zenn", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body ExportZennResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			err = ValidateExportZennResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "export_zenn", err)
+			}
+			res := NewExportZennZennExportOK(&body)
+			return res, nil
+		case http.StatusNotFound:
+			var (
+				body ExportZennNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			err = ValidateExportZennNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "export_zenn", err)
+			}
+			return nil, NewExportZennNotFound(&body)
+		case http.StatusBadRequest:
+			var (
+				body ExportZennBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			err = ValidateExportZennBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "export_zenn", err)
+			}
+			return nil, NewExportZennBadRequest(&body)
+		case http.StatusConflict:
+			var (
+				body ExportZennArticleChangedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			err = ValidateExportZennArticleChangedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "export_zenn", err)
+			}
+			return nil, NewExportZennArticleChanged(&body)
+		case http.StatusUnauthorized:
+			var (
+				body ExportZennUnauthorizedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			err = ValidateExportZennUnauthorizedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "export_zenn", err)
+			}
+			return nil, NewExportZennUnauthorized(&body)
+		case http.StatusForbidden:
+			var (
+				body ExportZennVerificationRequiredResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			err = ValidateExportZennVerificationRequiredResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("notes", "export_zenn", err)
+			}
+			return nil, NewExportZennVerificationRequired(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("notes", "export_zenn", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notes", "export_zenn", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildAddGuideRequest instantiates a HTTP request object with method and path
 // set to call the "notes" service "add_guide" endpoint
 func (c *Client) BuildAddGuideRequest(ctx context.Context, v any) (*http.Request, error) {
@@ -7195,6 +7486,9 @@ func unmarshalNoteSummaryResponseBodyToNotesNoteSummary(v *NoteSummaryResponseBo
 			res.Marks[i] = val
 		}
 	}
+	if v.Zenn != nil {
+		res.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(v.Zenn)
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*notes.TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -7213,6 +7507,27 @@ func unmarshalNoteSummaryResponseBodyToNotesNoteSummary(v *NoteSummaryResponseBo
 				continue
 			}
 			res.SnippetHighlights[i] = unmarshalTextRangeResponseBodyToNotesTextRange(val)
+		}
+	}
+
+	return res
+}
+
+// unmarshalZennArticleResponseBodyToNotesZennArticle builds a value of type
+// *notes.ZennArticle from a value of type *ZennArticleResponseBody.
+func unmarshalZennArticleResponseBodyToNotesZennArticle(v *ZennArticleResponseBody) *notes.ZennArticle {
+	res := &notes.ZennArticle{
+		Slug:      *v.Slug,
+		Published: *v.Published,
+		Changed:   *v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
 		}
 	}
 
@@ -7330,6 +7645,9 @@ func unmarshalNoteResponseBodyToNotesNote(v *NoteResponseBody) *notes.Note {
 			res.Marks[i] = val
 		}
 	}
+	if v.Zenn != nil {
+		res.Zenn = unmarshalZennArticleResponseBodyToNotesZennArticle(v.Zenn)
+	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*notes.TextRange, len(v.TitleHighlights))
 		for i, val := range v.TitleHighlights {
@@ -7423,6 +7741,17 @@ func unmarshalGitConflictResponseBodyToNotesGitConflict(v *GitConflictResponseBo
 	return res
 }
 
+// unmarshalZennWarningResponseBodyToNotesZennWarning builds a value of type
+// *notes.ZennWarning from a value of type *ZennWarningResponseBody.
+func unmarshalZennWarningResponseBodyToNotesZennWarning(v *ZennWarningResponseBody) *notes.ZennWarning {
+	res := &notes.ZennWarning{
+		Kind: *v.Kind,
+		Name: *v.Name,
+	}
+
+	return res
+}
+
 // unmarshalMachineSettingsResponseBodyToNotesMachineSettings builds a value of
 // type *notes.MachineSettings from a value of type
 // *MachineSettingsResponseBody.
@@ -7437,6 +7766,9 @@ func unmarshalMachineSettingsResponseBodyToNotesMachineSettings(v *MachineSettin
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
 		TuiSearch:  v.TuiSearch,
+		ZennRepo:   v.ZennRepo,
+		ZennBranch: v.ZennBranch,
+		ZennUser:   v.ZennUser,
 	}
 
 	return res
@@ -7486,6 +7818,9 @@ func marshalNotesMachineSettingsToMachineSettingsRequestBody(v *notes.MachineSet
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
 		TuiSearch:  v.TuiSearch,
+		ZennRepo:   v.ZennRepo,
+		ZennBranch: v.ZennBranch,
+		ZennUser:   v.ZennUser,
 	}
 
 	return res
@@ -7539,6 +7874,9 @@ func marshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsR
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
 		TuiSearch:  v.TuiSearch,
+		ZennRepo:   v.ZennRepo,
+		ZennBranch: v.ZennBranch,
+		ZennUser:   v.ZennUser,
 	}
 
 	return res

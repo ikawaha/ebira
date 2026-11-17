@@ -601,3 +601,66 @@ func TestConflictCopy(t *testing.T) {
 		t.Error("not a note: no error")
 	}
 }
+
+func TestZenn(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := `title: 記事
+tags: []
+created_at: 2026-10-01T09:00:00Z
+updated_at: 2026-10-01T09:00:00Z
+body: |
+  本文
+`
+	p := filepath.Join(dir, Inbox, "memo.yaml")
+	if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	n, err := s.Load("memo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n.Zenn = &Zenn{Slug: "memo12345678", Emoji: "📝", Type: "tech", Topics: []string{"go", "検索"}, Hash: "abc"}
+	if err := s.Save(n); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `title: 記事
+tags: []
+created_at: 2026-10-01T09:00:00.000Z
+updated_at: 2026-10-01T09:00:00.000Z
+zenn:
+  slug: memo12345678
+  emoji: "\U0001F4DD"
+  type: tech
+  topics: [go, 検索]
+  published: false
+  hash: abc
+body: |
+  本文
+`
+	if got := string(b); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+	got, err := s.Load("memo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Zenn == nil || got.Zenn.Emoji != "📝" || len(got.Zenn.Topics) != 2 {
+		t.Errorf("zenn = %+v", got.Zenn)
+	}
+
+	// A zenn key written by hand in another form does not break the note.
+	if err := os.WriteFile(p, []byte(src+"zenn: yes\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.Load("memo"); err != nil || got.Zenn != nil && got.Zenn.Slug != "" {
+		t.Errorf("zenn = %+v, %v", got, err)
+	}
+}

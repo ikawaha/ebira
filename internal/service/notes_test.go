@@ -1100,6 +1100,10 @@ func TestPeopleOnly(t *testing.T) {
 		"restart_server": func(ctx context.Context) error {
 			return svc.RestartServer(ctx, &gennotes.RestartServerPayload{})
 		},
+		"export_zenn": func(ctx context.Context) error {
+			_, err := svc.ExportZenn(ctx, &gennotes.ExportZennPayload{ID: n.ID, Private: true})
+			return err
+		},
 	}
 	for name, call := range calls {
 		if err := call(ai); errorName(err) != "unauthorized" {

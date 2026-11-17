@@ -39,6 +39,7 @@ var NoteTrait = func() {
 	})
 	Attribute("marks", ArrayOf(String), "Marks of the note, to tell it at a glance, one at most for now: a color or a symbol (see list_marks for what each means to the user); absent for none", marksDSL)
 	Attribute("archived", Boolean, "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not")
+	Attribute("zenn", ZennArticle, "The article of Zenn the user wrote the note as; absent when it was not")
 }
 
 // NoteEdit is a change of part of the body of a note: the text to replace,
@@ -349,6 +350,49 @@ var GitSyncResult = Type("GitSyncResult", func() {
 	RequiredAttribute("errors", ArrayOf(String), "Files that could not be read when the index was updated after the sync")
 })
 
+// ZennArticle is the article of Zenn (zenn.dev) a note was written as, in
+// the GitHub repository Zenn deploys from.
+var ZennArticle = Type("ZennArticle", func() {
+	RequiredAttribute("slug", String, "Slug of the article: its file is articles/<slug>.md in the repository", func() {
+		Example("5d22fdc56c57a0")
+	})
+	RequiredAttribute("published", Boolean, "Whether the article is published, rather than a draft")
+	RequiredAttribute("changed", Boolean, "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again")
+	Attribute("url", String, "URL of the article on Zenn (get only); absent when the user name on Zenn is not set", func() {
+		Example("https://zenn.dev/you/articles/5d22fdc56c57a0")
+	})
+	Attribute("emoji", String, "Emoji of the article (get only)", func() {
+		Example("📝")
+	})
+	Attribute("type", String, "Type of the article: tech or idea (get only)", func() {
+		Enum("tech", "idea")
+	})
+	Attribute("topics", ArrayOf(String), "Topics of the article (get only)")
+})
+
+var ZennStatus = Type("ZennStatus", func() {
+	RequiredAttribute("configured", Boolean, "Whether notes can be written to Zenn: the repository is set, as zenn_repo of the settings")
+	Attribute("repo", String, "URL of the GitHub repository Zenn deploys from", func() {
+		Example("git@github.com:you/zenn-content.git")
+	})
+	Attribute("branch", String, "Branch Zenn deploys from; absent for the default branch of the repository")
+	Attribute("user", String, "User name on Zenn; absent when it is not set, and then the articles have no URLs")
+	RequiredAttribute("git", Boolean, "Whether the server finds the git command, which writing to the repository needs")
+})
+
+var ZennWarning = Type("ZennWarning", func() {
+	RequiredAttribute("kind", String, "What was left out: file, a link to a file of a note other than its images, which Zenn cannot hold, made its text; note, a link to a note that is no article, made its text; tag, a tag that cannot be a topic", func() {
+		Enum("file", "note", "tag")
+	})
+	RequiredAttribute("name", String, "Name of the file, ID of the note or the tag")
+})
+
+var ZennExport = Type("ZennExport", func() {
+	RequiredAttribute("note", Note, "The note, with the article it was written as")
+	RequiredAttribute("pushed", Boolean, "Whether a commit was pushed: false when the article was in the repository already as it is")
+	RequiredAttribute("warnings", ArrayOf(ZennWarning), "What was left out of the article")
+})
+
 var GitStatus = Type("GitStatus", func() {
 	RequiredAttribute("repository", Boolean, "Whether the notes are in a git repository, so that git_sync can sync them; git is optional")
 	Attribute("upstream", String, "Upstream branch that git_sync merges and pushes to; absent when there is none", func() {
@@ -398,6 +442,15 @@ var MachineSettings = Type("MachineSettings", func() {
 	})
 	Attribute("tui_search", String, "What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search", func() {
 		Enum("search", "filter")
+	})
+	Attribute("zenn_repo", String, "URL of the GitHub repository Zenn deploys from, to write notes to as articles; empty for none", func() {
+		Example("git@github.com:you/zenn-content.git")
+	})
+	Attribute("zenn_branch", String, "Branch of that repository Zenn deploys from; empty for its default branch", func() {
+		Example("main")
+	})
+	Attribute("zenn_user", String, "User name on Zenn, to link to the articles; empty for none", func() {
+		Example("you")
 	})
 })
 
@@ -1708,6 +1761,61 @@ var _ = Service("notes", func() {
 			})
 			Response("forbidden", StatusForbidden)
 			Response("bad_request", StatusBadRequest)
+		})
+	})
+
+	// Notes are written to Zenn by people only, as it publishes them: not an
+	// MCP tool.
+	Method("zenn_status", func() {
+		Description("Tell whether notes can be written to Zenn (zenn.dev) as articles, and where to. For people only; others are told they cannot.")
+		Payload(sessionDSL)
+		Result(ZennStatus)
+		HTTP(func() {
+			GET("/zenn")
+		})
+	})
+
+	Method("export_zenn", func() {
+		Description("Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with its images in images/<slug>/, of the GitHub repository Zenn deploys from, committed and pushed. The slug is the ID of the note. Images of the note go with it; a link to another file of a note becomes its text, and so does a link to a note that is no article. The same note goes to the same article again. For people only.")
+		Payload(func() {
+			sessionDSL()
+			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
+			Attribute("emoji", String, "Emoji of the article, one; the one used last, or one chosen at random, by default", func() {
+				Example("📝")
+			})
+			Attribute("type", String, "Type of the article: tech, a technical article, or idea; the one used last, or tech, by default", func() {
+				Enum("tech", "idea")
+			})
+			Attribute("topics", ArrayOf(String), "Topics of the article, up to 5, each up to 18 characters without spaces or symbols; the tags of the note that can be topics by default", func() {
+				MaxLength(5)
+			})
+			Attribute("published", Boolean, "Publish the article; false keeps it a draft", func() {
+				Default(false)
+			})
+			Attribute("force", Boolean, "Overwrite the article file even when it was changed in the repository since it was written", func() {
+				Default(false)
+			})
+			Attribute("private", Boolean, "Allow a note of a private notebook to be published", func() {
+				Default(false)
+			})
+		})
+		Result(ZennExport)
+		Error("not_found", ErrorResult, "The note does not exist")
+		Error("bad_request", ErrorResult, "The repository is not set, the note is in the trash or in a private notebook, it cannot be an article as it is, such as with a title too long or an image Zenn does not take, or a git command failed, such as a push")
+		Error("article_changed", ErrorResult, "The article file was changed in the repository since it was written, as on GitHub; force overwrites it")
+		HTTP(func() {
+			POST("/notes/{id}/zenn")
+			Body(func() {
+				Attribute("emoji")
+				Attribute("type")
+				Attribute("topics")
+				Attribute("published")
+				Attribute("force")
+				Attribute("private")
+			})
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+			Response("article_changed", StatusConflict)
 		})
 	})
 

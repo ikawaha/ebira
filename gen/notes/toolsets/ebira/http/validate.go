@@ -189,6 +189,11 @@ func ValidateCreateAiNoteResultTransport(body *CreateAiNoteResultTransport) (err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := ValidateZennArticleTransport(body.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -452,6 +457,11 @@ func ValidateGetNoteResultTransport(body *GetNoteResultTransport) (err error) {
 	for _, e := range body.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if body.Zenn != nil {
+		if err2 := ValidateZennArticleTransport(body.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.TrashedFrom != nil {
@@ -733,6 +743,11 @@ func ValidateMoveAiNoteResultTransport(body *MoveAiNoteResultTransport) (err err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := ValidateZennArticleTransport(body.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -1000,6 +1015,11 @@ func ValidateUpdateAiNoteResultTransport(body *UpdateAiNoteResultTransport) (err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := ValidateZennArticleTransport(body.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if body.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.trashed_from", *body.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
@@ -1188,6 +1208,11 @@ func ValidateNoteSummaryTransport(body *NoteSummaryTransport) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if body.Zenn != nil {
+		if err2 := ValidateZennArticleTransport(body.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	for _, e := range body.TitleHighlights {
 		if e != nil {
 			if err2 := ValidateTextRangeTransport(e); err2 != nil {
@@ -1257,6 +1282,11 @@ func ValidateNoteTransport(body *NoteTransport) (err error) {
 	for _, e := range body.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if body.Zenn != nil {
+		if err2 := ValidateZennArticleTransport(body.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.TrashedFrom != nil {
@@ -1381,6 +1411,25 @@ func ValidateTextRangeTransport(body *TextRangeTransport) (err error) {
 	}
 	if body.End == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("end", "body"))
+	}
+	return
+}
+
+// ValidateZennArticleTransport runs the validations defined on ZennArticleTransport.
+func ValidateZennArticleTransport(body *ZennArticleTransport) (err error) {
+	if body.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if body.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if body.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if body.Type != nil {
+		if !(*body.Type == "tech" || *body.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"tech", "idea"}))
+		}
 	}
 	return
 }

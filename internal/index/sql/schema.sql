@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS notes (
 	created_by TEXT NOT NULL DEFAULT '', -- ai for a note created by an AI client (store.Note.CreatedBy)
 	archived   INTEGER NOT NULL DEFAULT 0, -- 1 for a note put in the archive on its own (store.Note.ArchivedAt)
 	import_hash TEXT NOT NULL DEFAULT '', -- hash of the file the note was imported from (store.Note.ImportHash)
+	zenn_slug  TEXT NOT NULL DEFAULT '', -- slug of the article of Zenn the note was written as (store.Note.Zenn)
+	zenn_published INTEGER NOT NULL DEFAULT 0, -- 1 when that article is published, not a draft
+	zenn_changed INTEGER NOT NULL DEFAULT 0, -- 1 when the note changed since it was written to Zenn last
 	file_mtime INTEGER NOT NULL, -- used by Sync to skip unchanged files
 	file_size  INTEGER NOT NULL
 );

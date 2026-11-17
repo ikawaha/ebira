@@ -320,6 +320,16 @@ type Service interface {
 	// this side's version; a file deleted on one side and changed on the other
 	// keeps the changed version. The index is updated afterwards. For people only.
 	GitSync(context.Context, *GitSyncPayload) (res *GitSyncResult, err error)
+	// Tell whether notes can be written to Zenn (zenn.dev) as articles, and where
+	// to. For people only; others are told they cannot.
+	ZennStatus(context.Context, *ZennStatusPayload) (res *ZennStatus, err error)
+	// Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with
+	// its images in images/<slug>/, of the GitHub repository Zenn deploys from,
+	// committed and pushed. The slug is the ID of the note. Images of the note go
+	// with it; a link to another file of a note becomes its text, and so does a
+	// link to a note that is no article. The same note goes to the same article
+	// again. For people only.
+	ExportZenn(context.Context, *ExportZennPayload) (res *ZennExport, err error)
 	// Add the guide of ebira, notes that tell how to use it, as a new notebook
 	// after the others. The notebooks there are left as they are: a guide added
 	// before stays, and the new one takes another name, such as with (2). For
@@ -375,7 +385,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [64]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+var MethodNames = [66]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "zenn_status", "export_zenn", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -702,6 +712,33 @@ type EventsPayload struct {
 	Session *string
 }
 
+// ExportZennPayload is the payload type of the notes service export_zenn
+// method.
+type ExportZennPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+	// Note ID. A link to a note in the web UI, such as
+	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
+	// #note/
+	ID string
+	// Emoji of the article, one; the one used last, or one chosen at random, by
+	// default
+	Emoji *string
+	// Type of the article: tech, a technical article, or idea; the one used last,
+	// or tech, by default
+	Type *string
+	// Topics of the article, up to 5, each up to 18 characters without spaces or
+	// symbols; the tags of the note that can be topics by default
+	Topics []string
+	// Publish the article; false keeps it a draft
+	Published bool
+	// Overwrite the article file even when it was changed in the repository since
+	// it was written
+	Force bool
+	// Allow a note of a private notebook to be published
+	Private bool
+}
+
 // FileCheck is the result type of the notes service check_files method.
 type FileCheck struct {
 	// Files that no note body, including those in the trash, refers to, sorted by
@@ -945,6 +982,13 @@ type MachineSettings struct {
 	// What the search box of the TUI does: search lists the notes found by
 	// relevance, filter narrows the list in its order; empty for search
 	TuiSearch *string
+	// URL of the GitHub repository Zenn deploys from, to write notes to as
+	// articles; empty for none
+	ZennRepo *string
+	// Branch of that repository Zenn deploys from; empty for its default branch
+	ZennBranch *string
+	// User name on Zenn, to link to the articles; empty for none
+	ZennUser *string
 }
 
 // MakeNotebookPrivatePayload is the payload type of the notes service
@@ -1072,6 +1116,8 @@ type Note struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticle
 	// Body in Markdown
 	Body string
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -1162,6 +1208,8 @@ type NoteSummary struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticle
 	// Excerpt around the matched terms (search only)
 	Snippet *string
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -1729,6 +1777,69 @@ type UploadAiFilePayload struct {
 	Token string
 }
 
+type ZennArticle struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug string
+	// Whether the article is published, rather than a draft
+	Published bool
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed bool
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string
+	// Emoji of the article (get only)
+	Emoji *string
+	// Type of the article: tech or idea (get only)
+	Type *string
+	// Topics of the article (get only)
+	Topics []string
+}
+
+// ZennExport is the result type of the notes service export_zenn method.
+type ZennExport struct {
+	// The note, with the article it was written as
+	Note *Note
+	// Whether a commit was pushed: false when the article was in the repository
+	// already as it is
+	Pushed bool
+	// What was left out of the article
+	Warnings []*ZennWarning
+}
+
+// ZennStatus is the result type of the notes service zenn_status method.
+type ZennStatus struct {
+	// Whether notes can be written to Zenn: the repository is set, as zenn_repo of
+	// the settings
+	Configured bool
+	// URL of the GitHub repository Zenn deploys from
+	Repo *string
+	// Branch Zenn deploys from; absent for the default branch of the repository
+	Branch *string
+	// User name on Zenn; absent when it is not set, and then the articles have no
+	// URLs
+	User *string
+	// Whether the server finds the git command, which writing to the repository
+	// needs
+	Git bool
+}
+
+// ZennStatusPayload is the payload type of the notes service zenn_status
+// method.
+type ZennStatusPayload struct {
+	// Session of people signed in with a passkey, set as a cookie by the server
+	Session *string
+}
+
+type ZennWarning struct {
+	// What was left out: file, a link to a file of a note other than its images,
+	// which Zenn cannot hold, made its text; note, a link to a note that is no
+	// article, made its text; tag, a tag that cannot be a topic
+	Kind string
+	// Name of the file, ID of the note or the tag
+	Name string
+}
+
 // MakeUnauthorized builds a goa.ServiceError from an error.
 func MakeUnauthorized(err error) *goa.ServiceError {
 	return goa.NewServiceError(err, "unauthorized", false, false, false)
@@ -1767,6 +1878,11 @@ func MakeForbidden(err error) *goa.ServiceError {
 // MakeTooLarge builds a goa.ServiceError from an error.
 func MakeTooLarge(err error) *goa.ServiceError {
 	return goa.NewServiceError(err, "too_large", false, false, false)
+}
+
+// MakeArticleChanged builds a goa.ServiceError from an error.
+func MakeArticleChanged(err error) *goa.ServiceError {
+	return goa.NewServiceError(err, "article_changed", false, false, false)
 }
 
 // MakeUnavailable builds a goa.ServiceError from an error.
@@ -2209,6 +2325,13 @@ type jsonMachineSettingsTransport struct {
 	// What the search box of the TUI does: search lists the notes found by
 	// relevance, filter narrows the list in its order; empty for search
 	TuiSearch *string `json:"tui_search,omitempty"`
+	// URL of the GitHub repository Zenn deploys from, to write notes to as
+	// articles; empty for none
+	ZennRepo *string `json:"zenn_repo,omitempty"`
+	// Branch of that repository Zenn deploys from; empty for its default branch
+	ZennBranch *string `json:"zenn_branch,omitempty"`
+	// User name on Zenn, to link to the articles; empty for none
+	ZennUser *string `json:"zenn_user,omitempty"`
 }
 
 // validatejsonMachineSettingsTransport checks decoded JSON before it becomes a service value.
@@ -2439,6 +2562,8 @@ type jsonNoteSummaryTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *jsonZennArticleTransport `json:"zenn,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `json:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -2500,6 +2625,11 @@ func validatejsonNoteSummaryTransport(value *jsonNoteSummaryTransport) (err erro
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if value.Zenn != nil {
+		if err2 := validatejsonZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	for _, e := range value.TitleHighlights {
 		if e != nil {
 			if err2 := validatejsonTextRangeTransport(e); err2 != nil {
@@ -2546,6 +2676,8 @@ type jsonNoteTransport struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `json:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *jsonZennArticleTransport `json:"zenn,omitempty"`
 	// Body in Markdown
 	Body *string `json:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -2616,6 +2748,11 @@ func validatejsonNoteTransport(value *jsonNoteTransport) (err error) {
 	for _, e := range value.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if value.Zenn != nil {
+		if err2 := validatejsonZennArticleTransport(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if value.TrashedFrom != nil {
@@ -3310,6 +3447,148 @@ func validatejsonUnusedFileTransport(value *jsonUnusedFileTransport) (err error)
 	return err
 }
 
+// jsonZennArticleTransport stores JSON fields until they have been validated.
+type jsonZennArticleTransport struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug *string `json:"slug"`
+	// Whether the article is published, rather than a draft
+	Published *bool `json:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed *bool `json:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `json:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `json:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `json:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `json:"topics,omitempty"`
+}
+
+// validatejsonZennArticleTransport checks decoded JSON before it becomes a service value.
+func validatejsonZennArticleTransport(value *jsonZennArticleTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Slug == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("slug", "body"))
+	}
+	if value.Published == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("published", "body"))
+	}
+	if value.Changed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("changed", "body"))
+	}
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
+		}
+	}
+	return err
+}
+
+// jsonZennExportTransport stores JSON fields until they have been validated.
+type jsonZennExportTransport struct {
+	// The note, with the article it was written as
+	Note *jsonNoteTransport `json:"note"`
+	// Whether a commit was pushed: false when the article was in the repository
+	// already as it is
+	Pushed *bool `json:"pushed"`
+	// What was left out of the article
+	Warnings []*jsonZennWarningTransport `json:"warnings"`
+}
+
+// validatejsonZennExportTransport checks decoded JSON before it becomes a service value.
+func validatejsonZennExportTransport(value *jsonZennExportTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Note == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note", "body"))
+	}
+	if value.Pushed == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("pushed", "body"))
+	}
+	if value.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "body"))
+	}
+	if value.Note != nil {
+		if err2 := validatejsonNoteTransport(value.Note); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	for _, e := range value.Warnings {
+		if e != nil {
+			if err2 := validatejsonZennWarningTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
+// jsonZennStatusTransport stores JSON fields until they have been validated.
+type jsonZennStatusTransport struct {
+	// Whether notes can be written to Zenn: the repository is set, as zenn_repo of
+	// the settings
+	Configured *bool `json:"configured"`
+	// URL of the GitHub repository Zenn deploys from
+	Repo *string `json:"repo,omitempty"`
+	// Branch Zenn deploys from; absent for the default branch of the repository
+	Branch *string `json:"branch,omitempty"`
+	// User name on Zenn; absent when it is not set, and then the articles have no
+	// URLs
+	User *string `json:"user,omitempty"`
+	// Whether the server finds the git command, which writing to the repository
+	// needs
+	Git *bool `json:"git"`
+}
+
+// validatejsonZennStatusTransport checks decoded JSON before it becomes a service value.
+func validatejsonZennStatusTransport(value *jsonZennStatusTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Configured == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("configured", "body"))
+	}
+	if value.Git == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("git", "body"))
+	}
+	return err
+}
+
+// jsonZennWarningTransport stores JSON fields until they have been validated.
+type jsonZennWarningTransport struct {
+	// What was left out: file, a link to a file of a note other than its images,
+	// which Zenn cannot hold, made its text; note, a link to a note that is no
+	// article, made its text; tag, a tag that cannot be a topic
+	Kind *string `json:"kind"`
+	// Name of the file, ID of the note or the tag
+	Name *string `json:"name"`
+}
+
+// validatejsonZennWarningTransport checks decoded JSON before it becomes a service value.
+func validatejsonZennWarningTransport(value *jsonZennWarningTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Kind == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("kind", "body"))
+	}
+	if value.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if value.Kind != nil {
+		if !(*value.Kind == "file" || *value.Kind == "note" || *value.Kind == "tag") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *value.Kind, []any{"file", "note", "tag"}))
+		}
+	}
+	return err
+}
+
 // noteListIntTransport stores JSON fields until they have been validated.
 type noteListIntTransport int
 
@@ -3568,11 +3847,26 @@ func validateNoteOriginal(value *Note) (err error) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
 		}
 	}
+	if value.Zenn != nil {
+		if err2 := validateZennArticleOriginal(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if value.TrashedFrom != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.trashed_from", *value.TrashedFrom, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.ArchivedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("value.archived_at", *value.ArchivedAt, goa.FormatDateTime))
+	}
+	return err
+}
+
+// validateZennArticleOriginal checks the original typed value before JSON conversion.
+func validateZennArticleOriginal(value *ZennArticle) (err error) {
+	if value.Type != nil {
+		if !(*value.Type == "tech" || *value.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", *value.Type, []any{"tech", "idea"}))
+		}
 	}
 	return err
 }
@@ -3685,6 +3979,11 @@ func validateNoteSummaryOriginal(value *NoteSummary) (err error) {
 	for _, e := range value.Marks {
 		if !(e == "red" || e == "orange" || e == "yellow" || e == "green" || e == "blue" || e == "purple" || e == "gray" || e == "star" || e == "important" || e == "question" || e == "done" || e == "pin" || e == "urgent" || e == "idea" || e == "wip" || e == "hold" || e == "dropped" || e == "reply" || e == "waiting" || e == "review") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.marks[*]", e, []any{"red", "orange", "yellow", "green", "blue", "purple", "gray", "star", "important", "question", "done", "pin", "urgent", "idea", "wip", "hold", "dropped", "reply", "waiting", "review"}))
+		}
+	}
+	if value.Zenn != nil {
+		if err2 := validateZennArticleOriginal(value.Zenn); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return err
@@ -3863,6 +4162,37 @@ func validateTrashedNotebookOriginal(value *TrashedNotebook) (err error) {
 	}
 	if !(value.Kind == "default" || value.Kind == "collab" || value.Kind == "drop" || value.Kind == "private") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"default", "collab", "drop", "private"}))
+	}
+	return err
+}
+
+// validateZennExportOriginal checks the original typed value before JSON conversion.
+func validateZennExportOriginal(value *ZennExport) (err error) {
+	if value.Note == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("note", "value"))
+	}
+	if value.Warnings == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("warnings", "value"))
+	}
+	if value.Note != nil {
+		if err2 := validateNoteOriginal(value.Note); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	for _, e := range value.Warnings {
+		if e != nil {
+			if err2 := validateZennWarningOriginal(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return err
+}
+
+// validateZennWarningOriginal checks the original typed value before JSON conversion.
+func validateZennWarningOriginal(value *ZennWarning) (err error) {
+	if !(value.Kind == "file" || value.Kind == "note" || value.Kind == "tag") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"file", "note", "tag"}))
 	}
 	return err
 }
@@ -4786,6 +5116,9 @@ func EncodeMachineSettings(in *MachineSettings) ([]byte, error) {
 			Model:      in.Model,
 			TuiPreview: in.TuiPreview,
 			TuiSearch:  in.TuiSearch,
+			ZennRepo:   in.ZennRepo,
+			ZennBranch: in.ZennBranch,
+			ZennUser:   in.ZennUser,
 		}
 	}
 	if err := validatejsonMachineSettingsTransport(body); err != nil {
@@ -4825,6 +5158,9 @@ func ValidateMachineSettingsValue(in *MachineSettings) error {
 			Model:      in.Model,
 			TuiPreview: in.TuiPreview,
 			TuiSearch:  in.TuiSearch,
+			ZennRepo:   in.ZennRepo,
+			ZennBranch: in.ZennBranch,
+			ZennUser:   in.ZennUser,
 		}
 	}
 	if err := validatejsonMachineSettingsTransport(body); err != nil {
@@ -4868,6 +5204,9 @@ func DecodeMachineSettings(data []byte) (out *MachineSettings, err error) {
 			Model:      body.Model,
 			TuiPreview: body.TuiPreview,
 			TuiSearch:  body.TuiSearch,
+			ZennRepo:   body.ZennRepo,
+			ZennBranch: body.ZennBranch,
+			ZennUser:   body.ZennUser,
 		}
 	}
 	return out, nil
@@ -4996,6 +5335,9 @@ func EncodeNote(in *Note) ([]byte, error) {
 				body.Marks[i] = val
 			}
 		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
+		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*jsonTextRangeTransport, len(in.TitleHighlights))
 			for i, val := range in.TitleHighlights {
@@ -5067,6 +5409,9 @@ func ValidateNoteValue(in *Note) error {
 			for i, val := range in.Marks {
 				body.Marks[i] = val
 			}
+		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*jsonTextRangeTransport, len(in.TitleHighlights))
@@ -5143,6 +5488,9 @@ func DecodeNote(data []byte) (out *Note, err error) {
 			for i, val := range body.Marks {
 				out.Marks[i] = val
 			}
+		}
+		if body.Zenn != nil {
+			out.Zenn = decodeZennArticleTransportToZennArticle(body.Zenn)
 		}
 		if body.TitleHighlights != nil {
 			out.TitleHighlights = make([]*TextRange, len(body.TitleHighlights))
@@ -5594,6 +5942,9 @@ func EncodeNoteSummary(in *NoteSummary) ([]byte, error) {
 				body.Marks[i] = val
 			}
 		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
+		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*jsonTextRangeTransport, len(in.TitleHighlights))
 			for i, val := range in.TitleHighlights {
@@ -5662,6 +6013,9 @@ func ValidateNoteSummaryValue(in *NoteSummary) error {
 			for i, val := range in.Marks {
 				body.Marks[i] = val
 			}
+		}
+		if in.Zenn != nil {
+			body.Zenn = encodeZennArticleToZennArticleTransport(in.Zenn)
 		}
 		if in.TitleHighlights != nil {
 			body.TitleHighlights = make([]*jsonTextRangeTransport, len(in.TitleHighlights))
@@ -5735,6 +6089,9 @@ func DecodeNoteSummary(data []byte) (out *NoteSummary, err error) {
 			for i, val := range body.Marks {
 				out.Marks[i] = val
 			}
+		}
+		if body.Zenn != nil {
+			out.Zenn = decodeZennArticleTransportToZennArticle(body.Zenn)
 		}
 		if body.TitleHighlights != nil {
 			out.TitleHighlights = make([]*TextRange, len(body.TitleHighlights))
@@ -7206,6 +7563,407 @@ func DecodeUnusedFile(data []byte) (out *UnusedFile, err error) {
 	return out, nil
 }
 
+// EncodeZennArticle turns a service value into JSON using the field names in the Goa design.
+func EncodeZennArticle(in *ZennArticle) ([]byte, error) {
+	if err := checkZennArticleValue(in); err != nil {
+		return nil, fmt.Errorf("encode ZennArticle JSON: %w", err)
+	}
+	if err := validateZennArticleOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate ZennArticle value: %w", err)
+	}
+	var body *jsonZennArticleTransport
+	{
+		body = &jsonZennArticleTransport{
+			Slug:      &in.Slug,
+			Published: &in.Published,
+			Changed:   &in.Changed,
+			URL:       in.URL,
+			Emoji:     in.Emoji,
+			Type:      in.Type,
+		}
+		if in.Topics != nil {
+			body.Topics = make([]string, len(in.Topics))
+			for i, val := range in.Topics {
+				body.Topics[i] = val
+			}
+		}
+	}
+	if err := validatejsonZennArticleTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ZennArticle JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ZennArticle JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateZennArticleValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateZennArticleValue(in *ZennArticle) error {
+	if err := checkZennArticleValue(in); err != nil {
+		return fmt.Errorf("validate ZennArticle value: %w", err)
+	}
+	if err := validateZennArticleOriginal(in); err != nil {
+		return fmt.Errorf("validate ZennArticle value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ZennArticle")
+	}
+
+	var body *jsonZennArticleTransport
+	{
+		body = &jsonZennArticleTransport{
+			Slug:      &in.Slug,
+			Published: &in.Published,
+			Changed:   &in.Changed,
+			URL:       in.URL,
+			Emoji:     in.Emoji,
+			Type:      in.Type,
+		}
+		if in.Topics != nil {
+			body.Topics = make([]string, len(in.Topics))
+			for i, val := range in.Topics {
+				body.Topics[i] = val
+			}
+		}
+	}
+	if err := validatejsonZennArticleTransport(body); err != nil {
+		return fmt.Errorf("validate ZennArticle value: %w", err)
+	}
+	return nil
+}
+
+// DecodeZennArticle checks JSON field names from the Goa design and returns a service value.
+func DecodeZennArticle(data []byte) (out *ZennArticle, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ZennArticle JSON: %w", err)
+	}
+	if err := validateImportResultJSONValue8("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ZennArticle JSON: %w", err)
+	}
+	var body *jsonZennArticleTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ZennArticle JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ZennArticle JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ZennArticle JSON after first value: %w", err)
+	}
+	if err := validatejsonZennArticleTransport(body); err != nil {
+		return out, fmt.Errorf("validate ZennArticle JSON: %w", err)
+	}
+	{
+		out = &ZennArticle{
+			Slug:      *body.Slug,
+			Published: *body.Published,
+			Changed:   *body.Changed,
+			URL:       body.URL,
+			Emoji:     body.Emoji,
+			Type:      body.Type,
+		}
+		if body.Topics != nil {
+			out.Topics = make([]string, len(body.Topics))
+			for i, val := range body.Topics {
+				out.Topics[i] = val
+			}
+		}
+	}
+	return out, nil
+}
+
+// EncodeZennExport turns a service value into JSON using the field names in the Goa design.
+func EncodeZennExport(in *ZennExport) ([]byte, error) {
+	if err := checkZennExportValue(in); err != nil {
+		return nil, fmt.Errorf("encode ZennExport JSON: %w", err)
+	}
+	if err := validateZennExportOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate ZennExport value: %w", err)
+	}
+	var body *jsonZennExportTransport
+	{
+		body = &jsonZennExportTransport{
+			Pushed: &in.Pushed,
+		}
+		body.Note = encodeNoteToNoteTransport2(in.Note)
+		body.Warnings = make([]*jsonZennWarningTransport, len(in.Warnings))
+		for i, val := range in.Warnings {
+			if val == nil {
+				body.Warnings[i] = nil
+				continue
+			}
+			body.Warnings[i] = encodeZennWarningToZennWarningTransport(val)
+		}
+	}
+	if err := validatejsonZennExportTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ZennExport JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ZennExport JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateZennExportValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateZennExportValue(in *ZennExport) error {
+	if err := checkZennExportValue(in); err != nil {
+		return fmt.Errorf("validate ZennExport value: %w", err)
+	}
+	if err := validateZennExportOriginal(in); err != nil {
+		return fmt.Errorf("validate ZennExport value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ZennExport")
+	}
+
+	var body *jsonZennExportTransport
+	{
+		body = &jsonZennExportTransport{
+			Pushed: &in.Pushed,
+		}
+		body.Note = encodeNoteToNoteTransport2(in.Note)
+		body.Warnings = make([]*jsonZennWarningTransport, len(in.Warnings))
+		for i, val := range in.Warnings {
+			if val == nil {
+				body.Warnings[i] = nil
+				continue
+			}
+			body.Warnings[i] = encodeZennWarningToZennWarningTransport(val)
+		}
+	}
+	if err := validatejsonZennExportTransport(body); err != nil {
+		return fmt.Errorf("validate ZennExport value: %w", err)
+	}
+	return nil
+}
+
+// DecodeZennExport checks JSON field names from the Goa design and returns a service value.
+func DecodeZennExport(data []byte) (out *ZennExport, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ZennExport JSON: %w", err)
+	}
+	if err := validateZennExportJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ZennExport JSON: %w", err)
+	}
+	var body *jsonZennExportTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ZennExport JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ZennExport JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ZennExport JSON after first value: %w", err)
+	}
+	if err := validatejsonZennExportTransport(body); err != nil {
+		return out, fmt.Errorf("validate ZennExport JSON: %w", err)
+	}
+	{
+		out = &ZennExport{
+			Pushed: *body.Pushed,
+		}
+		out.Note = decodeNoteTransportToNote(body.Note)
+		out.Warnings = make([]*ZennWarning, len(body.Warnings))
+		for i, val := range body.Warnings {
+			if val == nil {
+				out.Warnings[i] = nil
+				continue
+			}
+			out.Warnings[i] = decodeZennWarningTransportToZennWarning(val)
+		}
+	}
+	return out, nil
+}
+
+// EncodeZennStatus turns a service value into JSON using the field names in the Goa design.
+func EncodeZennStatus(in *ZennStatus) ([]byte, error) {
+	if err := checkZennStatusValue(in); err != nil {
+		return nil, fmt.Errorf("encode ZennStatus JSON: %w", err)
+	}
+	var body *jsonZennStatusTransport
+	{
+		body = &jsonZennStatusTransport{
+			Configured: &in.Configured,
+			Repo:       in.Repo,
+			Branch:     in.Branch,
+			User:       in.User,
+			Git:        &in.Git,
+		}
+	}
+	if err := validatejsonZennStatusTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ZennStatus JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ZennStatus JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateZennStatusValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateZennStatusValue(in *ZennStatus) error {
+	if err := checkZennStatusValue(in); err != nil {
+		return fmt.Errorf("validate ZennStatus value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ZennStatus")
+	}
+
+	var body *jsonZennStatusTransport
+	{
+		body = &jsonZennStatusTransport{
+			Configured: &in.Configured,
+			Repo:       in.Repo,
+			Branch:     in.Branch,
+			User:       in.User,
+			Git:        &in.Git,
+		}
+	}
+	if err := validatejsonZennStatusTransport(body); err != nil {
+		return fmt.Errorf("validate ZennStatus value: %w", err)
+	}
+	return nil
+}
+
+// DecodeZennStatus checks JSON field names from the Goa design and returns a service value.
+func DecodeZennStatus(data []byte) (out *ZennStatus, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ZennStatus JSON: %w", err)
+	}
+	if err := validateZennStatusJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ZennStatus JSON: %w", err)
+	}
+	var body *jsonZennStatusTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ZennStatus JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ZennStatus JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ZennStatus JSON after first value: %w", err)
+	}
+	if err := validatejsonZennStatusTransport(body); err != nil {
+		return out, fmt.Errorf("validate ZennStatus JSON: %w", err)
+	}
+	{
+		out = &ZennStatus{
+			Configured: *body.Configured,
+			Repo:       body.Repo,
+			Branch:     body.Branch,
+			User:       body.User,
+			Git:        *body.Git,
+		}
+	}
+	return out, nil
+}
+
+// EncodeZennWarning turns a service value into JSON using the field names in the Goa design.
+func EncodeZennWarning(in *ZennWarning) ([]byte, error) {
+	if err := checkZennWarningValue(in); err != nil {
+		return nil, fmt.Errorf("encode ZennWarning JSON: %w", err)
+	}
+	if err := validateZennWarningOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate ZennWarning value: %w", err)
+	}
+	var body *jsonZennWarningTransport
+	{
+		body = &jsonZennWarningTransport{
+			Kind: &in.Kind,
+			Name: &in.Name,
+		}
+	}
+	if err := validatejsonZennWarningTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ZennWarning JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ZennWarning JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateZennWarningValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateZennWarningValue(in *ZennWarning) error {
+	if err := checkZennWarningValue(in); err != nil {
+		return fmt.Errorf("validate ZennWarning value: %w", err)
+	}
+	if err := validateZennWarningOriginal(in); err != nil {
+		return fmt.Errorf("validate ZennWarning value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ZennWarning")
+	}
+
+	var body *jsonZennWarningTransport
+	{
+		body = &jsonZennWarningTransport{
+			Kind: &in.Kind,
+			Name: &in.Name,
+		}
+	}
+	if err := validatejsonZennWarningTransport(body); err != nil {
+		return fmt.Errorf("validate ZennWarning value: %w", err)
+	}
+	return nil
+}
+
+// DecodeZennWarning checks JSON field names from the Goa design and returns a service value.
+func DecodeZennWarning(data []byte) (out *ZennWarning, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ZennWarning JSON: %w", err)
+	}
+	if err := validateZennExportJSONValue3("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ZennWarning JSON: %w", err)
+	}
+	var body *jsonZennWarningTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ZennWarning JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ZennWarning JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ZennWarning JSON after first value: %w", err)
+	}
+	if err := validatejsonZennWarningTransport(body); err != nil {
+		return out, fmt.Errorf("validate ZennWarning JSON: %w", err)
+	}
+	{
+		out = &ZennWarning{
+			Kind: *body.Kind,
+			Name: *body.Name,
+		}
+	}
+	return out, nil
+}
+
 func decodeBrokenFileRefTransportToBrokenFileRef(v *jsonBrokenFileRefTransport) *BrokenFileRef {
 	res := &BrokenFileRef{
 		NoteID: *v.NoteID,
@@ -7237,6 +7995,9 @@ func decodeMachineSettingsTransportToMachineSettings(v *jsonMachineSettingsTrans
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
 		TuiSearch:  v.TuiSearch,
+		ZennRepo:   v.ZennRepo,
+		ZennBranch: v.ZennBranch,
+		ZennUser:   v.ZennUser,
 	}
 
 	return res
@@ -7263,6 +8024,9 @@ func decodeNoteSummaryTransportToNoteSummary(v *jsonNoteSummaryTransport) *NoteS
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = decodeZennArticleTransportToZennArticle(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
@@ -7312,6 +8076,9 @@ func decodeNoteTransportToNote(v *jsonNoteTransport) *Note {
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = decodeZennArticleTransportToZennArticle(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*TextRange, len(v.TitleHighlights))
@@ -7401,6 +8168,34 @@ func decodeUnusedFileTransportToUnusedFile(v *jsonUnusedFileTransport) *UnusedFi
 	return res
 }
 
+func decodeZennArticleTransportToZennArticle(v *jsonZennArticleTransport) *ZennArticle {
+	res := &ZennArticle{
+		Slug:      *v.Slug,
+		Published: *v.Published,
+		Changed:   *v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func decodeZennWarningTransportToZennWarning(v *jsonZennWarningTransport) *ZennWarning {
+	res := &ZennWarning{
+		Kind: *v.Kind,
+		Name: *v.Name,
+	}
+
+	return res
+}
+
 func encodeBrokenFileRefToBrokenFileRefTransport(v *BrokenFileRef) *jsonBrokenFileRefTransport {
 	res := &jsonBrokenFileRefTransport{
 		NoteID: &v.NoteID,
@@ -7432,6 +8227,9 @@ func encodeMachineSettingsToMachineSettingsTransport(v *MachineSettings) *jsonMa
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
 		TuiSearch:  v.TuiSearch,
+		ZennRepo:   v.ZennRepo,
+		ZennBranch: v.ZennBranch,
+		ZennUser:   v.ZennUser,
 	}
 
 	return res
@@ -7448,6 +8246,9 @@ func encodeMachineSettingsToMachineSettingsTransport2(v *MachineSettings) *jsonM
 		Model:      v.Model,
 		TuiPreview: v.TuiPreview,
 		TuiSearch:  v.TuiSearch,
+		ZennRepo:   v.ZennRepo,
+		ZennBranch: v.ZennBranch,
+		ZennUser:   v.ZennUser,
 	}
 
 	return res
@@ -7474,6 +8275,9 @@ func encodeNoteSummaryToNoteSummaryTransport(v *NoteSummary) *jsonNoteSummaryTra
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToZennArticleTransport(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*jsonTextRangeTransport, len(v.TitleHighlights))
@@ -7523,6 +8327,61 @@ func encodeNoteToNoteTransport(v *Note) *jsonNoteTransport {
 		for i, val := range v.Marks {
 			res.Marks[i] = val
 		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToZennArticleTransport(v.Zenn)
+	}
+	if v.TitleHighlights != nil {
+		res.TitleHighlights = make([]*jsonTextRangeTransport, len(v.TitleHighlights))
+		for i, val := range v.TitleHighlights {
+			if val == nil {
+				res.TitleHighlights[i] = nil
+				continue
+			}
+			res.TitleHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+		}
+	}
+	if v.BodyHighlights != nil {
+		res.BodyHighlights = make([]*jsonTextRangeTransport, len(v.BodyHighlights))
+		for i, val := range v.BodyHighlights {
+			if val == nil {
+				res.BodyHighlights[i] = nil
+				continue
+			}
+			res.BodyHighlights[i] = encodeTextRangeToTextRangeTransport(val)
+		}
+	}
+
+	return res
+}
+
+func encodeNoteToNoteTransport2(v *Note) *jsonNoteTransport {
+	res := &jsonNoteTransport{
+		ID:              &v.ID,
+		Notebook:        &v.Notebook,
+		Title:           &v.Title,
+		CreatedAt:       &v.CreatedAt,
+		UpdatedAt:       &v.UpdatedAt,
+		TrashedNotebook: v.TrashedNotebook,
+		CreatedBy:       v.CreatedBy,
+		Archived:        v.Archived,
+		Body:            &v.Body,
+		Version:         &v.Version,
+		TrashedFrom:     v.TrashedFrom,
+		ArchivedAt:      v.ArchivedAt,
+	}
+	res.Tags = make([]string, len(v.Tags))
+	for i, val := range v.Tags {
+		res.Tags[i] = val
+	}
+	if v.Marks != nil {
+		res.Marks = make([]string, len(v.Marks))
+		for i, val := range v.Marks {
+			res.Marks[i] = val
+		}
+	}
+	if v.Zenn != nil {
+		res.Zenn = encodeZennArticleToZennArticleTransport(v.Zenn)
 	}
 	if v.TitleHighlights != nil {
 		res.TitleHighlights = make([]*jsonTextRangeTransport, len(v.TitleHighlights))
@@ -7624,6 +8483,34 @@ func encodeUnusedFileToUnusedFileTransport(v *UnusedFile) *jsonUnusedFileTranspo
 	}
 	size := fileCheckInt64Transport(v.Size)
 	res.Size = &size
+
+	return res
+}
+
+func encodeZennArticleToZennArticleTransport(v *ZennArticle) *jsonZennArticleTransport {
+	res := &jsonZennArticleTransport{
+		Slug:      &v.Slug,
+		Published: &v.Published,
+		Changed:   &v.Changed,
+		URL:       v.URL,
+		Emoji:     v.Emoji,
+		Type:      v.Type,
+	}
+	if v.Topics != nil {
+		res.Topics = make([]string, len(v.Topics))
+		for i, val := range v.Topics {
+			res.Topics[i] = val
+		}
+	}
+
+	return res
+}
+
+func encodeZennWarningToZennWarningTransport(v *ZennWarning) *jsonZennWarningTransport {
+	res := &jsonZennWarningTransport{
+		Kind: &v.Kind,
+		Name: &v.Name,
+	}
 
 	return res
 }
@@ -8387,7 +9274,7 @@ func validateImportResultJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "warnings":
-			if err := validateImportResultJSONValue8(
+			if err := validateImportResultJSONValue10(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "What could not be converted as is, such as images left out",
 			); err != nil {
@@ -8537,6 +9424,13 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 			); err != nil {
 				return err
 			}
+		case "zenn":
+			if err := validateImportResultJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The article of Zenn the user wrote the note as; absent when it was not",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"archived",
@@ -8555,6 +9449,7 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 				"trashed_notebook",
 				"updated_at",
 				"version",
+				"zenn",
 			})
 		}
 	}
@@ -8714,6 +9609,114 @@ func validateImportResultJSONValue8(path string, value any, description string) 
 		field = "$payload"
 	}
 	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "changed":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+			); err != nil {
+				return err
+			}
+		case "emoji":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Emoji of the article (get only)",
+			); err != nil {
+				return err
+			}
+		case "published":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the article is published, rather than a draft",
+			); err != nil {
+				return err
+			}
+		case "slug":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Slug of the article: its file is articles/<slug>.md in the repository",
+			); err != nil {
+				return err
+			}
+		case "topics":
+			if err := validateImportResultJSONValue9(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Topics of the article (get only)",
+			); err != nil {
+				return err
+			}
+		case "type":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Type of the article: tech or idea (get only)",
+			); err != nil {
+				return err
+			}
+		case "url":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"changed",
+				"emoji",
+				"published",
+				"slug",
+				"topics",
+				"type",
+				"url",
+			})
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue9(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateAIImportFileJSONValue3(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateImportResultJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateImportResultJSONValue10(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
 		return invalidGeneratedFieldTypeError(field, "array", "null", description)
 	}
 	typed, ok := value.([]any)
@@ -8814,6 +9817,27 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 			); err != nil {
 				return err
 			}
+		case "zenn_branch":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Branch of that repository Zenn deploys from; empty for its default branch",
+			); err != nil {
+				return err
+			}
+		case "zenn_repo":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "URL of the GitHub repository Zenn deploys from, to write notes to as articles; empty for none",
+			); err != nil {
+				return err
+			}
+		case "zenn_user":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "User name on Zenn, to link to the articles; empty for none",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"auth",
@@ -8825,6 +9849,9 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 				"tui_preview",
 				"tui_search",
 				"watch",
+				"zenn_branch",
+				"zenn_repo",
+				"zenn_user",
 			})
 		}
 	}
@@ -9221,6 +10248,13 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 			); err != nil {
 				return err
 			}
+		case "zenn":
+			if err := validateImportResultJSONValue8(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The article of Zenn the user wrote the note as; absent when it was not",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"archived",
@@ -9236,6 +10270,7 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 				"title_highlights",
 				"trashed_notebook",
 				"updated_at",
+				"zenn",
 			})
 		}
 	}
@@ -10379,6 +11414,197 @@ func validateTrashedNotebookJSONValue(path string, value any, description string
 	return nil
 }
 
+// validateZennExportJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateZennExportJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "note":
+			if err := validateImportResultJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The note, with the article it was written as",
+			); err != nil {
+				return err
+			}
+		case "pushed":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether a commit was pushed: false when the article was in the repository already as it is",
+			); err != nil {
+				return err
+			}
+		case "warnings":
+			if err := validateZennExportJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "What was left out of the article",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"note",
+				"pushed",
+				"warnings",
+			})
+		}
+	}
+	return nil
+}
+
+// validateZennExportJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateZennExportJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if item == nil {
+			continue
+		}
+		if err := validateZennExportJSONValue3(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateZennExportJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateZennExportJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "kind":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "What was left out: file, a link to a file of a note other than its images, which Zenn cannot hold, made its text; note, a link to a note that is no article, made its text; tag, a tag that cannot be a topic",
+			); err != nil {
+				return err
+			}
+		case "name":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Name of the file, ID of the note or the tag",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"kind",
+				"name",
+			})
+		}
+	}
+	return nil
+}
+
+// validateZennStatusJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateZennStatusJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "branch":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Branch Zenn deploys from; absent for the default branch of the repository",
+			); err != nil {
+				return err
+			}
+		case "configured":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether notes can be written to Zenn: the repository is set, as zenn_repo of the settings",
+			); err != nil {
+				return err
+			}
+		case "git":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the server finds the git command, which writing to the repository needs",
+			); err != nil {
+				return err
+			}
+		case "repo":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "URL of the GitHub repository Zenn deploys from",
+			); err != nil {
+				return err
+			}
+		case "user":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "User name on Zenn; absent when it is not set, and then the articles have no URLs",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"branch",
+				"configured",
+				"git",
+				"repo",
+				"user",
+			})
+		}
+	}
+	return nil
+}
+
 // readStrictJSON checks the complete JSON document for malformed text and
 // duplicate members, then returns values with their original number text.
 func readStrictJSON(data []byte) (any, error) {
@@ -10958,6 +12184,9 @@ func checkImportResultNoteValue(in *Note, field string, active map[any]bool) err
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "marks", false), strconv.Itoa(index1), true))
 			}
 		}
+		if err := checkImportResultZennArticleValue(in.Zenn, generatedJSONChildPath(field, "zenn", false), active); err != nil {
+			return err
+		}
 		if !utf8.ValidString(string(in.Body)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "body", false))
 		}
@@ -10986,6 +12215,46 @@ func checkImportResultNoteValue(in *Note, field string, active map[any]bool) err
 			_ = item1
 			if err := checkImportResultTextRangeValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "body_highlights", false), strconv.Itoa(index1), true), active); err != nil {
 				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkImportResultZennArticleValue checks one generated value on the active path.
+func checkImportResultZennArticleValue(in *ZennArticle, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Slug)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "slug", false))
+		}
+		if in.URL != nil {
+			if !utf8.ValidString(string(*in.URL)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
+			}
+		}
+		if in.Emoji != nil {
+			if !utf8.ValidString(string(*in.Emoji)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "emoji", false))
+			}
+		}
+		if in.Type != nil {
+			if !utf8.ValidString(string(*in.Type)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "type", false))
+			}
+		}
+		for index1, item1 := range in.Topics {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "topics", false), strconv.Itoa(index1), true))
 			}
 		}
 	}
@@ -11068,6 +12337,21 @@ func checkMachineSettingsMachineSettingsValue(in *MachineSettings, field string,
 		if in.TuiSearch != nil {
 			if !utf8.ValidString(string(*in.TuiSearch)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "tui_search", false))
+			}
+		}
+		if in.ZennRepo != nil {
+			if !utf8.ValidString(string(*in.ZennRepo)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "zenn_repo", false))
+			}
+		}
+		if in.ZennBranch != nil {
+			if !utf8.ValidString(string(*in.ZennBranch)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "zenn_branch", false))
+			}
+		}
+		if in.ZennUser != nil {
+			if !utf8.ValidString(string(*in.ZennUser)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "zenn_user", false))
 			}
 		}
 	}
@@ -11320,6 +12604,9 @@ func checkNoteListNoteSummaryValue(in *NoteSummary, field string, active map[any
 			if !utf8.ValidString(string(item1)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "marks", false), strconv.Itoa(index1), true))
 			}
+		}
+		if err := checkImportResultZennArticleValue(in.Zenn, generatedJSONChildPath(field, "zenn", false), active); err != nil {
+			return err
 		}
 		if in.Snippet != nil {
 			if !utf8.ValidString(string(*in.Snippet)) {
@@ -11897,6 +13184,130 @@ func checkUnusedFileValue(in *UnusedFile) error {
 	}
 	active := make(map[any]bool)
 	if err := checkFileCheckUnusedFileValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkZennArticleValue checks text and cycles before conversion.
+func checkZennArticleValue(in *ZennArticle) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkImportResultZennArticleValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkZennExportValue checks text and cycles before conversion.
+func checkZennExportValue(in *ZennExport) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkZennExportZennExportValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkZennExportZennExportValue checks one generated value on the active path.
+func checkZennExportZennExportValue(in *ZennExport, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if err := checkImportResultNoteValue(in.Note, generatedJSONChildPath(field, "note", false), active); err != nil {
+			return err
+		}
+		for index1, item1 := range in.Warnings {
+			_ = index1
+			_ = item1
+			if err := checkZennExportZennWarningValue(item1, generatedJSONChildPath(generatedJSONChildPath(field, "warnings", false), strconv.Itoa(index1), true), active); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkZennExportZennWarningValue checks one generated value on the active path.
+func checkZennExportZennWarningValue(in *ZennWarning, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.Kind)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "kind", false))
+		}
+		if !utf8.ValidString(string(in.Name)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "name", false))
+		}
+	}
+	return nil
+}
+
+// checkZennStatusValue checks text and cycles before conversion.
+func checkZennStatusValue(in *ZennStatus) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkZennStatusZennStatusValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkZennStatusZennStatusValue checks one generated value on the active path.
+func checkZennStatusZennStatusValue(in *ZennStatus, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if in.Repo != nil {
+			if !utf8.ValidString(string(*in.Repo)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "repo", false))
+			}
+		}
+		if in.Branch != nil {
+			if !utf8.ValidString(string(*in.Branch)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "branch", false))
+			}
+		}
+		if in.User != nil {
+			if !utf8.ValidString(string(*in.User)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "user", false))
+			}
+		}
+	}
+	return nil
+}
+
+// checkZennWarningValue checks text and cycles before conversion.
+func checkZennWarningValue(in *ZennWarning) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkZennExportZennWarningValue(in, "$", active); err != nil {
 		return err
 	}
 	return nil

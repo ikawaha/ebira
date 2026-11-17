@@ -236,6 +236,7 @@ func machineSettings(c config.Config) *gennotes.MachineSettings {
 	return &gennotes.MachineSettings{
 		Lang: opt(c.Lang), Theme: opt(c.Theme), Auth: opt(c.Auth), GitSync: opt(c.GitSync),
 		Watch: c.Watch, Provider: opt(c.Provider), Model: opt(c.Model), TuiPreview: opt(c.TUIPreview), TuiSearch: opt(c.TUISearch),
+		ZennRepo: opt(c.ZennRepo), ZennBranch: opt(c.ZennBranch), ZennUser: opt(c.ZennUser),
 	}
 }
 
@@ -254,6 +255,7 @@ func machineConfig(m *gennotes.MachineSettings) config.Config {
 	return config.Config{
 		Lang: v(m.Lang), Theme: v(m.Theme), Auth: v(m.Auth), GitSync: v(m.GitSync),
 		Watch: m.Watch, Provider: v(m.Provider), Model: v(m.Model), TUIPreview: v(m.TuiPreview), TUISearch: v(m.TuiSearch),
+		ZennRepo: v(m.ZennRepo), ZennBranch: v(m.ZennBranch), ZennUser: v(m.ZennUser),
 	}
 }
 

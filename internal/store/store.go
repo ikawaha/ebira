@@ -81,7 +81,10 @@ type Note struct {
 	// ImportHash a hash of its content, to tell a file imported before.
 	ImportedFrom string `yaml:"imported_from,omitempty"`
 	ImportHash   string `yaml:"import_hash,omitempty"`
-	Body         string `yaml:"body"`
+	// Zenn tells the article of Zenn the note was written as, nil when it
+	// was not (see internal/zenn).
+	Zenn *Zenn  `yaml:"zenn,omitempty"`
+	Body string `yaml:"body"`
 	// Extra holds more keys for a new note file, such as the front matter of
 	// an imported file: pairs of key and value nodes. Keys of the note itself
 	// are ignored, and so is Extra when the file exists, whose other keys are
@@ -92,6 +95,49 @@ type Note struct {
 	TrashedNotebook string `yaml:"-"`
 	// Version is a strong entity tag computed from the file content.
 	Version string `yaml:"-"`
+}
+
+// Zenn is the article of Zenn a note was written as, to write it again to
+// the same article and to tell it in lists. Writing it changes no content,
+// as with marks.
+type Zenn struct {
+	Slug      string   `yaml:"slug"`
+	Emoji     string   `yaml:"emoji"`
+	Type      string   `yaml:"type"`
+	Topics    []string `yaml:"topics"`
+	Published bool     `yaml:"published"`
+	// Hash is the hash of the article file written last, to tell whether it
+	// was changed in the repository since.
+	Hash string `yaml:"hash"`
+	// Source is the ZennSource of the note written last, to tell whether
+	// the note changed since; empty for articles written before it was kept.
+	Source string `yaml:"source,omitempty"`
+}
+
+// ZennSource is the hash of what of a note makes its article: its title and
+// body.
+func ZennSource(title, body string) string {
+	h := sha256.Sum256([]byte(title + "\x00" + body))
+	return hex.EncodeToString(h[:])
+}
+
+// ZennChanged reports whether the note changed since it was written to Zenn
+// last, so that the article lags behind it.
+func (n *Note) ZennChanged() bool {
+	return n.Zenn != nil && n.Zenn.Source != "" && n.Zenn.Source != ZennSource(n.Title, n.Body)
+}
+
+// UnmarshalYAML reads the article, leaving it out when it is not a mapping
+// of its keys, as one written by hand, rather than failing to read the note.
+func (z *Zenn) UnmarshalYAML(n *yaml.Node) error {
+	type plain Zenn
+	var v plain
+	if err := n.Decode(&v); err != nil || v.Slug == "" {
+		*z = Zenn{}
+		return nil
+	}
+	*z = Zenn(v)
+	return nil
 }
 
 // TimeLayout is how the times of notes are written: RFC 3339 in UTC with
@@ -1249,6 +1295,20 @@ func encode(old []byte, n *Note) ([]byte, error) {
 	} else {
 		unset(m, "created_by")
 	}
+	if n.Zenn != nil && n.Zenn.Slug != "" {
+		var z yaml.Node
+		if err := z.Encode(n.Zenn); err != nil {
+			return nil, err
+		}
+		for i := 1; i < len(z.Content); i += 2 {
+			if z.Content[i].Kind == yaml.SequenceNode {
+				z.Content[i].Style = yaml.FlowStyle
+			}
+		}
+		setBefore(m, "zenn", &z, "body")
+	} else {
+		unset(m, "zenn")
+	}
 	set(m, "body", str(n.Body, bodyStyle))
 
 	var sb strings.Builder
@@ -1300,7 +1360,7 @@ func setBefore(m *yaml.Node, key string, v *yaml.Node, next string) {
 }
 
 // noteKeys are the keys of note files that Note sets.
-var noteKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "archived_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "body"}
+var noteKeys = []string{"title", "tags", "marks", "created_at", "updated_at", "archived_at", "trashed_from", "order", "created_by", "imported_from", "import_hash", "zenn", "body"}
 
 // has reports whether the mapping node m has key.
 func has(m *yaml.Node, key string) bool {

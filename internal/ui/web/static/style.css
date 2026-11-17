@@ -478,6 +478,8 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border-color: transparent; background: none; color: var(--fg-muted); }
 .icon-button:hover, .icon-button:focus-visible { color: var(--fg); background: var(--bg-hover); }
 .icon-button svg { width: 16px; height: 16px; }
+.icon-button { position: relative; }
+.icon-button > .zenn-dot { position: absolute; top: 4px; right: 4px; margin: 0; }
 .note-head .meta { color: var(--fg-muted); font-size: var(--fs-xs); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .matches { margin-left: auto; display: flex; gap: 4px; align-items: center; }
 /* The find in the note, under the meta of the head of the preview. */
@@ -490,6 +492,30 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .find-bar .find-count { min-width: 3.5em; color: var(--fg-muted); font-size: var(--fs-xs); }
 .find-bar button { padding: 0 8px; }
 .ai-mark + .matches { margin-left: 0; }
+.zenn-mark { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; text-decoration: none; }
+.zenn-mark svg { width: 15px; height: 15px; }
+.zenn-mark.draft { opacity: .5; }
+.zenn-article { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; text-decoration: none; }
+.zenn-article svg { width: 12px; height: 12px; }
+a.zenn-article:hover { color: var(--accent); }
+.ai-mark ~ .zenn-article { margin-left: 8px; }
+.zenn-mark.changed { opacity: 1; }
+.zenn-dot { flex: none; align-self: flex-start; width: 8px; height: 8px; margin-left: -8px; border-radius: 50%; background: var(--mk-red); }
+.ai-mark ~ .zenn-mark { margin-left: 8px; }
+.zenn-mark + .matches { margin-left: 0; }
+.zenn-form { display: flex; flex-direction: column; gap: 12px; }
+.zenn-form .field { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); color: var(--fg-muted); }
+.zenn-form .field input, .zenn-form .field select { font: inherit; font-size: var(--fs-md); padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); color: var(--fg); }
+.zenn-row { display: flex; gap: 12px; align-items: flex-start; }
+.zenn-row > .field:last-child { flex: 1; }
+.zenn-emoji-row { display: flex; align-items: center; gap: 4px; }
+.zenn-form .field input.zenn-emoji { width: 3.5em; text-align: center; font-size: var(--fs-lg); padding: 0 4px; }
+.zenn-form .check { display: flex; align-items: center; gap: 8px; }
+.zenn-form p { margin: 0; }
+.zenn-form p.note { font-size: var(--fs-xs); color: var(--fg-muted); }
+.zenn-form .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.zenn-form .form-actions button { font-size: var(--fs-sm); padding: 4px 16px; }
+.zenn-warnings { margin: 4px 0; padding-left: 20px; font-size: var(--fs-xs); color: var(--fg-muted); }
 .matches button { padding: 0 8px; }
 
 .body { overflow-wrap: anywhere; }

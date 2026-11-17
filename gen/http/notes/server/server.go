@@ -63,6 +63,8 @@ type Server struct {
 	Events                http.Handler
 	GitStatus             http.Handler
 	GitSync               http.Handler
+	ZennStatus            http.Handler
+	ExportZenn            http.Handler
 	AddGuide              http.Handler
 	PreviewStyle          http.Handler
 	SetPreviewStyle       http.Handler
@@ -141,6 +143,8 @@ func New(
 			{"Events", "GET", "/events"},
 			{"GitStatus", "GET", "/git/status"},
 			{"GitSync", "POST", "/git/sync"},
+			{"ZennStatus", "GET", "/zenn"},
+			{"ExportZenn", "POST", "/notes/{id}/zenn"},
 			{"AddGuide", "POST", "/guide"},
 			{"PreviewStyle", "GET", "/preview-style"},
 			{"SetPreviewStyle", "PUT", "/preview-style"},
@@ -191,6 +195,8 @@ func New(
 		Events:                NewEventsHandler(e.Events, mux, decoder, encoder, errhandler, formatter),
 		GitStatus:             NewGitStatusHandler(e.GitStatus, mux, decoder, encoder, errhandler, formatter),
 		GitSync:               NewGitSyncHandler(e.GitSync, mux, decoder, encoder, errhandler, formatter),
+		ZennStatus:            NewZennStatusHandler(e.ZennStatus, mux, decoder, encoder, errhandler, formatter),
+		ExportZenn:            NewExportZennHandler(e.ExportZenn, mux, decoder, encoder, errhandler, formatter),
 		AddGuide:              NewAddGuideHandler(e.AddGuide, mux, decoder, encoder, errhandler, formatter),
 		PreviewStyle:          NewPreviewStyleHandler(e.PreviewStyle, mux, decoder, encoder, errhandler, formatter),
 		SetPreviewStyle:       NewSetPreviewStyleHandler(e.SetPreviewStyle, mux, decoder, encoder, errhandler, formatter),
@@ -248,6 +254,8 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Events = m(s.Events)
 	s.GitStatus = m(s.GitStatus)
 	s.GitSync = m(s.GitSync)
+	s.ZennStatus = m(s.ZennStatus)
+	s.ExportZenn = m(s.ExportZenn)
 	s.AddGuide = m(s.AddGuide)
 	s.PreviewStyle = m(s.PreviewStyle)
 	s.SetPreviewStyle = m(s.SetPreviewStyle)
@@ -304,6 +312,8 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountEventsHandler(mux, h.Events)
 	MountGitStatusHandler(mux, h.GitStatus)
 	MountGitSyncHandler(mux, h.GitSync)
+	MountZennStatusHandler(mux, h.ZennStatus)
+	MountExportZennHandler(mux, h.ExportZenn)
 	MountAddGuideHandler(mux, h.AddGuide)
 	MountPreviewStyleHandler(mux, h.PreviewStyle)
 	MountSetPreviewStyleHandler(mux, h.SetPreviewStyle)
@@ -2571,6 +2581,112 @@ func NewGitSyncHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "git_sync")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountZennStatusHandler configures the mux to serve the "notes" service
+// "zenn_status" endpoint.
+func MountZennStatusHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/zenn", f)
+}
+
+// NewZennStatusHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "zenn_status" endpoint.
+func NewZennStatusHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeZennStatusRequest(mux, decoder)
+		encodeResponse = EncodeZennStatusResponse(encoder)
+		encodeError    = EncodeZennStatusError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "zenn_status")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		res, err := endpoint(ctx, payload)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountExportZennHandler configures the mux to serve the "notes" service
+// "export_zenn" endpoint.
+func MountExportZennHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/notes/{id}/zenn", f)
+}
+
+// NewExportZennHandler creates a HTTP handler which loads the HTTP request and
+// calls the "notes" service "export_zenn" endpoint.
+func NewExportZennHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeExportZennRequest(mux, decoder)
+		encodeResponse = EncodeExportZennResponse(encoder)
+		encodeError    = EncodeExportZennError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "export_zenn")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
 		payload, err := decodeRequest(r)
 		if err != nil {

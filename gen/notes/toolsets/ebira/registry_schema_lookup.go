@@ -24,41 +24,41 @@ func ToolSchema(name tools.Ident) (*genregistry.ToolSchema, bool) {
 	case "ebira.create_ai_note":
 		return declarations.schema42(), true
 	case "ebira.create_ai_notebook":
-		return declarations.schema83(), true
+		return declarations.schema92(), true
 	case "ebira.create_ai_separator":
-		return declarations.schema106(), true
+		return declarations.schema115(), true
 	case "ebira.delete_ai_file":
-		return declarations.schema129(), true
-	case "ebira.delete_ai_note":
 		return declarations.schema138(), true
-	case "ebira.delete_ai_separator":
+	case "ebira.delete_ai_note":
 		return declarations.schema147(), true
-	case "ebira.get_note":
+	case "ebira.delete_ai_separator":
 		return declarations.schema156(), true
+	case "ebira.get_note":
+		return declarations.schema165(), true
 	case "ebira.import_ai_note":
-		return declarations.schema191(), true
+		return declarations.schema209(), true
 	case "ebira.list_marks":
-		return declarations.schema243(), true
+		return declarations.schema270(), true
 	case "ebira.list_notebooks":
-		return declarations.schema254(), true
+		return declarations.schema281(), true
 	case "ebira.list_notes":
-		return declarations.schema274(), true
+		return declarations.schema301(), true
 	case "ebira.list_tags":
-		return declarations.schema329(), true
+		return declarations.schema365(), true
 	case "ebira.make_notebook_private":
-		return declarations.schema343(), true
+		return declarations.schema379(), true
 	case "ebira.move_ai_note":
-		return declarations.schema350(), true
+		return declarations.schema386(), true
 	case "ebira.move_ai_separator":
-		return declarations.schema385(), true
+		return declarations.schema430(), true
 	case "ebira.search_notes":
-		return declarations.schema404(), true
+		return declarations.schema449(), true
 	case "ebira.start_ai_upload":
-		return declarations.schema447(), true
+		return declarations.schema501(), true
 	case "ebira.update_ai_note":
-		return declarations.schema463(), true
+		return declarations.schema517(), true
 	case "ebira.update_ai_separator":
-		return declarations.schema526(), true
+		return declarations.schema589(), true
 	default:
 		return nil, false
 	}

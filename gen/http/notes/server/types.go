@@ -198,6 +198,27 @@ type GitSyncRequestBody struct {
 	Remote *string `form:"remote,omitempty" json:"remote,omitempty" xml:"remote,omitempty"`
 }
 
+// ExportZennRequestBody is the type of the "notes" service "export_zenn"
+// endpoint HTTP request body.
+type ExportZennRequestBody struct {
+	// Emoji of the article, one; the one used last, or one chosen at random, by
+	// default
+	Emoji *string `form:"emoji,omitempty" json:"emoji,omitempty" xml:"emoji,omitempty"`
+	// Type of the article: tech, a technical article, or idea; the one used last,
+	// or tech, by default
+	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
+	// Topics of the article, up to 5, each up to 18 characters without spaces or
+	// symbols; the tags of the note that can be topics by default
+	Topics []string `form:"topics,omitempty" json:"topics,omitempty" xml:"topics,omitempty"`
+	// Publish the article; false keeps it a draft
+	Published *bool `form:"published,omitempty" json:"published,omitempty" xml:"published,omitempty"`
+	// Overwrite the article file even when it was changed in the repository since
+	// it was written
+	Force *bool `form:"force,omitempty" json:"force,omitempty" xml:"force,omitempty"`
+	// Allow a note of a private notebook to be published
+	Private *bool `form:"private,omitempty" json:"private,omitempty" xml:"private,omitempty"`
+}
+
 // AddGuideRequestBody is the type of the "notes" service "add_guide" endpoint
 // HTTP request body.
 type AddGuideRequestBody struct {
@@ -266,6 +287,8 @@ type GetResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -309,6 +332,8 @@ type CreateResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -352,6 +377,8 @@ type UpdateResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -410,6 +437,8 @@ type RestoreResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -453,6 +482,8 @@ type MoveResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Notebook the note was in before it was moved to the trash
@@ -562,6 +593,8 @@ type SetMarksResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -922,6 +955,36 @@ type GitSyncResponseBody struct {
 	Conflicts []*GitConflictResponseBody `form:"conflicts" json:"conflicts" xml:"conflicts"`
 	// Files that could not be read when the index was updated after the sync
 	Errors []string `form:"errors" json:"errors" xml:"errors"`
+}
+
+// ZennStatusResponseBody is the type of the "notes" service "zenn_status"
+// endpoint HTTP response body.
+type ZennStatusResponseBody struct {
+	// Whether notes can be written to Zenn: the repository is set, as zenn_repo of
+	// the settings
+	Configured bool `form:"configured" json:"configured" xml:"configured"`
+	// URL of the GitHub repository Zenn deploys from
+	Repo *string `form:"repo,omitempty" json:"repo,omitempty" xml:"repo,omitempty"`
+	// Branch Zenn deploys from; absent for the default branch of the repository
+	Branch *string `form:"branch,omitempty" json:"branch,omitempty" xml:"branch,omitempty"`
+	// User name on Zenn; absent when it is not set, and then the articles have no
+	// URLs
+	User *string `form:"user,omitempty" json:"user,omitempty" xml:"user,omitempty"`
+	// Whether the server finds the git command, which writing to the repository
+	// needs
+	Git bool `form:"git" json:"git" xml:"git"`
+}
+
+// ExportZennResponseBody is the type of the "notes" service "export_zenn"
+// endpoint HTTP response body.
+type ExportZennResponseBody struct {
+	// The note, with the article it was written as
+	Note *NoteResponseBody `form:"note" json:"note" xml:"note"`
+	// Whether a commit was pushed: false when the article was in the repository
+	// already as it is
+	Pushed bool `form:"pushed" json:"pushed" xml:"pushed"`
+	// What was left out of the article
+	Warnings []*ZennWarningResponseBody `form:"warnings" json:"warnings" xml:"warnings"`
 }
 
 // AddGuideResponseBody is the type of the "notes" service "add_guide" endpoint
@@ -3812,6 +3875,134 @@ type GitSyncUnauthorizedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// ZennStatusUnauthorizedResponseBody is the type of the "notes" service
+// "zenn_status" endpoint HTTP response body for the "unauthorized" error.
+type ZennStatusUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ZennStatusVerificationRequiredResponseBody is the type of the "notes"
+// service "zenn_status" endpoint HTTP response body for the
+// "verification_required" error.
+type ZennStatusVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ExportZennNotFoundResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "not_found" error.
+type ExportZennNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ExportZennBadRequestResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "bad_request" error.
+type ExportZennBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ExportZennArticleChangedResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "article_changed" error.
+type ExportZennArticleChangedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ExportZennUnauthorizedResponseBody is the type of the "notes" service
+// "export_zenn" endpoint HTTP response body for the "unauthorized" error.
+type ExportZennUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// ExportZennVerificationRequiredResponseBody is the type of the "notes"
+// service "export_zenn" endpoint HTTP response body for the
+// "verification_required" error.
+type ExportZennVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // AddGuideUnauthorizedResponseBody is the type of the "notes" service
 // "add_guide" endpoint HTTP response body for the "unauthorized" error.
 type AddGuideUnauthorizedResponseBody struct {
@@ -4153,6 +4344,8 @@ type NoteSummaryResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Excerpt around the matched terms (search only)
 	Snippet *string `form:"snippet,omitempty" json:"snippet,omitempty" xml:"snippet,omitempty"`
 	// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -4161,6 +4354,26 @@ type NoteSummaryResponseBody struct {
 	// Ranges of the snippet matched by the query, sorted and not overlapping
 	// (search only)
 	SnippetHighlights []*TextRangeResponseBody `form:"snippet_highlights,omitempty" json:"snippet_highlights,omitempty" xml:"snippet_highlights,omitempty"`
+}
+
+// ZennArticleResponseBody is used to define fields on response body types.
+type ZennArticleResponseBody struct {
+	// Slug of the article: its file is articles/<slug>.md in the repository
+	Slug string `form:"slug" json:"slug" xml:"slug"`
+	// Whether the article is published, rather than a draft
+	Published bool `form:"published" json:"published" xml:"published"`
+	// Whether the title or the body of the note changed since it was written to
+	// Zenn last, so that the article lags behind the note until it is written again
+	Changed bool `form:"changed" json:"changed" xml:"changed"`
+	// URL of the article on Zenn (get only); absent when the user name on Zenn is
+	// not set
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+	// Emoji of the article (get only)
+	Emoji *string `form:"emoji,omitempty" json:"emoji,omitempty" xml:"emoji,omitempty"`
+	// Type of the article: tech or idea (get only)
+	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
+	// Topics of the article (get only)
+	Topics []string `form:"topics,omitempty" json:"topics,omitempty" xml:"topics,omitempty"`
 }
 
 // TextRangeResponseBody is used to define fields on response body types.
@@ -4299,6 +4512,8 @@ type NoteResponseBody struct {
 	// notebook: kept, but left out of lists and searches unless they ask for it;
 	// absent when it is not
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty" xml:"archived,omitempty"`
+	// The article of Zenn the user wrote the note as; absent when it was not
+	Zenn *ZennArticleResponseBody `form:"zenn,omitempty" json:"zenn,omitempty" xml:"zenn,omitempty"`
 	// Body in Markdown
 	Body string `form:"body" json:"body" xml:"body"`
 	// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -4385,6 +4600,16 @@ type GitConflictResponseBody struct {
 	CopyID *string `form:"copy_id,omitempty" json:"copy_id,omitempty" xml:"copy_id,omitempty"`
 }
 
+// ZennWarningResponseBody is used to define fields on response body types.
+type ZennWarningResponseBody struct {
+	// What was left out: file, a link to a file of a note other than its images,
+	// which Zenn cannot hold, made its text; note, a link to a note that is no
+	// article, made its text; tag, a tag that cannot be a topic
+	Kind string `form:"kind" json:"kind" xml:"kind"`
+	// Name of the file, ID of the note or the tag
+	Name string `form:"name" json:"name" xml:"name"`
+}
+
 // MachineSettingsResponseBody is used to define fields on response body types.
 type MachineSettingsResponseBody struct {
 	// Language of the UI; empty for the browser's
@@ -4407,6 +4632,13 @@ type MachineSettingsResponseBody struct {
 	// What the search box of the TUI does: search lists the notes found by
 	// relevance, filter narrows the list in its order; empty for search
 	TuiSearch *string `form:"tui_search,omitempty" json:"tui_search,omitempty" xml:"tui_search,omitempty"`
+	// URL of the GitHub repository Zenn deploys from, to write notes to as
+	// articles; empty for none
+	ZennRepo *string `form:"zenn_repo,omitempty" json:"zenn_repo,omitempty" xml:"zenn_repo,omitempty"`
+	// Branch of that repository Zenn deploys from; empty for its default branch
+	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
+	// User name on Zenn, to link to the articles; empty for none
+	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
 }
 
 // NotesSettingsResponseBody is used to define fields on response body types.
@@ -4456,6 +4688,13 @@ type MachineSettingsRequestBody struct {
 	// What the search box of the TUI does: search lists the notes found by
 	// relevance, filter narrows the list in its order; empty for search
 	TuiSearch *string `form:"tui_search,omitempty" json:"tui_search,omitempty" xml:"tui_search,omitempty"`
+	// URL of the GitHub repository Zenn deploys from, to write notes to as
+	// articles; empty for none
+	ZennRepo *string `form:"zenn_repo,omitempty" json:"zenn_repo,omitempty" xml:"zenn_repo,omitempty"`
+	// Branch of that repository Zenn deploys from; empty for its default branch
+	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
+	// User name on Zenn, to link to the articles; empty for none
+	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
 }
 
 // NotesSettingsRequestBody is used to define fields on request body types.
@@ -4544,6 +4783,9 @@ func NewGetResponseBody(res *notes.Note) *GetResponseBody {
 			body.Marks[i] = val
 		}
 	}
+	if res.Zenn != nil {
+		body.Zenn = marshalNotesZennArticleToZennArticleResponseBody(res.Zenn)
+	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
 		for i, val := range res.TitleHighlights {
@@ -4597,6 +4839,9 @@ func NewCreateResponseBody(res *notes.Note) *CreateResponseBody {
 			body.Marks[i] = val
 		}
 	}
+	if res.Zenn != nil {
+		body.Zenn = marshalNotesZennArticleToZennArticleResponseBody(res.Zenn)
+	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
 		for i, val := range res.TitleHighlights {
@@ -4649,6 +4894,9 @@ func NewUpdateResponseBody(res *notes.Note) *UpdateResponseBody {
 		for i, val := range res.Marks {
 			body.Marks[i] = val
 		}
+	}
+	if res.Zenn != nil {
+		body.Zenn = marshalNotesZennArticleToZennArticleResponseBody(res.Zenn)
 	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
@@ -4726,6 +4974,9 @@ func NewRestoreResponseBody(res *notes.Note) *RestoreResponseBody {
 			body.Marks[i] = val
 		}
 	}
+	if res.Zenn != nil {
+		body.Zenn = marshalNotesZennArticleToZennArticleResponseBody(res.Zenn)
+	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
 		for i, val := range res.TitleHighlights {
@@ -4778,6 +5029,9 @@ func NewMoveResponseBody(res *notes.Note) *MoveResponseBody {
 		for i, val := range res.Marks {
 			body.Marks[i] = val
 		}
+	}
+	if res.Zenn != nil {
+		body.Zenn = marshalNotesZennArticleToZennArticleResponseBody(res.Zenn)
 	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
@@ -4916,6 +5170,9 @@ func NewSetMarksResponseBody(res *notes.Note) *SetMarksResponseBody {
 		for i, val := range res.Marks {
 			body.Marks[i] = val
 		}
+	}
+	if res.Zenn != nil {
+		body.Zenn = marshalNotesZennArticleToZennArticleResponseBody(res.Zenn)
 	}
 	if res.TitleHighlights != nil {
 		body.TitleHighlights = make([]*TextRangeResponseBody, len(res.TitleHighlights))
@@ -5271,6 +5528,43 @@ func NewGitSyncResponseBody(res *notes.GitSyncResult) *GitSyncResponseBody {
 		}
 	} else {
 		body.Errors = []string{}
+	}
+	return body
+}
+
+// NewZennStatusResponseBody builds the HTTP response body from the result of
+// the "zenn_status" endpoint of the "notes" service.
+func NewZennStatusResponseBody(res *notes.ZennStatus) *ZennStatusResponseBody {
+	body := &ZennStatusResponseBody{
+		Configured: res.Configured,
+		Repo:       res.Repo,
+		Branch:     res.Branch,
+		User:       res.User,
+		Git:        res.Git,
+	}
+	return body
+}
+
+// NewExportZennResponseBody builds the HTTP response body from the result of
+// the "export_zenn" endpoint of the "notes" service.
+func NewExportZennResponseBody(res *notes.ZennExport) *ExportZennResponseBody {
+	body := &ExportZennResponseBody{
+		Pushed: res.Pushed,
+	}
+	if res.Note != nil {
+		body.Note = marshalNotesNoteToNoteResponseBody(res.Note)
+	}
+	if res.Warnings != nil {
+		body.Warnings = make([]*ZennWarningResponseBody, len(res.Warnings))
+		for i, val := range res.Warnings {
+			if val == nil {
+				body.Warnings[i] = nil
+				continue
+			}
+			body.Warnings[i] = marshalNotesZennWarningToZennWarningResponseBody(val)
+		}
+	} else {
+		body.Warnings = []*ZennWarningResponseBody{}
 	}
 	return body
 }
@@ -7528,6 +7822,104 @@ func NewGitSyncUnauthorizedResponseBody(res *goa.ServiceError) *GitSyncUnauthori
 	return body
 }
 
+// NewZennStatusUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "zenn_status" endpoint of the "notes" service.
+func NewZennStatusUnauthorizedResponseBody(res *goa.ServiceError) *ZennStatusUnauthorizedResponseBody {
+	body := &ZennStatusUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewZennStatusVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "zenn_status" endpoint of the "notes" service.
+func NewZennStatusVerificationRequiredResponseBody(res *goa.ServiceError) *ZennStatusVerificationRequiredResponseBody {
+	body := &ZennStatusVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewExportZennNotFoundResponseBody builds the HTTP response body from the
+// result of the "export_zenn" endpoint of the "notes" service.
+func NewExportZennNotFoundResponseBody(res *goa.ServiceError) *ExportZennNotFoundResponseBody {
+	body := &ExportZennNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewExportZennBadRequestResponseBody builds the HTTP response body from the
+// result of the "export_zenn" endpoint of the "notes" service.
+func NewExportZennBadRequestResponseBody(res *goa.ServiceError) *ExportZennBadRequestResponseBody {
+	body := &ExportZennBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewExportZennArticleChangedResponseBody builds the HTTP response body from
+// the result of the "export_zenn" endpoint of the "notes" service.
+func NewExportZennArticleChangedResponseBody(res *goa.ServiceError) *ExportZennArticleChangedResponseBody {
+	body := &ExportZennArticleChangedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewExportZennUnauthorizedResponseBody builds the HTTP response body from the
+// result of the "export_zenn" endpoint of the "notes" service.
+func NewExportZennUnauthorizedResponseBody(res *goa.ServiceError) *ExportZennUnauthorizedResponseBody {
+	body := &ExportZennUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewExportZennVerificationRequiredResponseBody builds the HTTP response body
+// from the result of the "export_zenn" endpoint of the "notes" service.
+func NewExportZennVerificationRequiredResponseBody(res *goa.ServiceError) *ExportZennVerificationRequiredResponseBody {
+	body := &ExportZennVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewAddGuideUnauthorizedResponseBody builds the HTTP response body from the
 // result of the "add_guide" endpoint of the "notes" service.
 func NewAddGuideUnauthorizedResponseBody(res *goa.ServiceError) *AddGuideUnauthorizedResponseBody {
@@ -8254,6 +8646,50 @@ func NewGitSyncPayload(body *GitSyncRequestBody, session *string) *notes.GitSync
 	return v
 }
 
+// NewZennStatusPayload builds a notes service zenn_status endpoint payload.
+func NewZennStatusPayload(session *string) *notes.ZennStatusPayload {
+	v := &notes.ZennStatusPayload{}
+	v.Session = session
+
+	return v
+}
+
+// NewExportZennPayload builds a notes service export_zenn endpoint payload.
+func NewExportZennPayload(body *ExportZennRequestBody, id string, session *string) *notes.ExportZennPayload {
+	v := &notes.ExportZennPayload{
+		Emoji: body.Emoji,
+		Type:  body.Type,
+	}
+	if body.Published != nil {
+		v.Published = *body.Published
+	}
+	if body.Force != nil {
+		v.Force = *body.Force
+	}
+	if body.Private != nil {
+		v.Private = *body.Private
+	}
+	if body.Topics != nil {
+		v.Topics = make([]string, len(body.Topics))
+		for i, val := range body.Topics {
+			v.Topics[i] = val
+		}
+	}
+	if body.Published == nil {
+		v.Published = false
+	}
+	if body.Force == nil {
+		v.Force = false
+	}
+	if body.Private == nil {
+		v.Private = false
+	}
+	v.ID = id
+	v.Session = session
+
+	return v
+}
+
 // NewAddGuidePayload builds a notes service add_guide endpoint payload.
 func NewAddGuidePayload(body *AddGuideRequestBody, session *string) *notes.AddGuidePayload {
 	v := &notes.AddGuidePayload{
@@ -8574,6 +9010,20 @@ func ValidateSaveNotebookRequestBody(body *SaveNotebookRequestBody) (err error) 
 func ValidateMoveNotebookRequestBody(body *MoveNotebookRequestBody) (err error) {
 	if body.Parent != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
+	return
+}
+
+// ValidateExportZennRequestBody runs the validations defined on
+// ExportZennRequestBody
+func ValidateExportZennRequestBody(body *ExportZennRequestBody) (err error) {
+	if body.Type != nil {
+		if !(*body.Type == "tech" || *body.Type == "idea") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"tech", "idea"}))
+		}
+	}
+	if len(body.Topics) > 5 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.topics", body.Topics, len(body.Topics), 5, false))
 	}
 	return
 }

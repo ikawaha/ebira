@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/ikawaha/ebira/internal/auth"
 	"github.com/ikawaha/ebira/internal/config"
+	"github.com/ikawaha/ebira/internal/gitsync"
 	"github.com/ikawaha/ebira/internal/service"
 	"github.com/ikawaha/ebira/internal/ui/web"
 )
@@ -39,8 +42,41 @@ func checkSettings(c config.Config) error {
 	if _, err := gitSyncInterval(c.GitSync); err != nil {
 		return err
 	}
+	if c.ZennRepo != "" {
+		if err := gitsync.CheckURL(c.ZennRepo); err != nil {
+			return fmt.Errorf("zenn_repo: %w", err)
+		}
+	}
+	if err := checkBranch(c.ZennBranch); err != nil {
+		return err
+	}
+	if u := c.ZennUser; u != "" && !zennUserRe.MatchString(u) {
+		return fmt.Errorf("invalid zenn_user %q: letters, digits, hyphens and underscores", u)
+	}
 	return nil
 }
+
+// checkBranch tells why b cannot be zenn_branch: it is no name of a branch
+// as git takes it, such as the URL of a repository given in its place.
+func checkBranch(b string) error {
+	if b == "" {
+		return nil
+	}
+	host, _, sub := strings.Cut(b, "/")
+	if strings.Contains(b, "://") || strings.Contains(b, "@") || strings.Contains(b, ":") || strings.HasSuffix(b, ".git") || sub && strings.Contains(host, ".") {
+		return fmt.Errorf("zenn_branch %q looks like the URL of a repository: give the URL as zenn_repo, and leave zenn_branch empty for the default branch", b)
+	}
+	if strings.HasPrefix(b, "-") || strings.HasPrefix(b, "/") || strings.HasSuffix(b, "/") || strings.HasSuffix(b, ".") ||
+		strings.HasSuffix(b, ".lock") || strings.Contains(b, "..") || strings.Contains(b, "//") ||
+		strings.ContainsAny(b, "~^?*[\\") || strings.ContainsFunc(b, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
+		return fmt.Errorf("invalid zenn_branch %q: not the name of a branch", b)
+	}
+	return nil
+}
+
+// zennUserRe matches a user name of Zenn, which goes into the URLs of the
+// articles.
+var zennUserRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
 // settingKeys are the keys of the settings by the flags of serve that replace
 // them: of the settings file, and of the settings synced with the notes.

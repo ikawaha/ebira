@@ -37,6 +37,7 @@ import (
 	"github.com/ikawaha/ebira/internal/store"
 	"github.com/ikawaha/ebira/internal/ui/web"
 	"github.com/ikawaha/ebira/internal/watch"
+	"github.com/ikawaha/ebira/internal/zenn"
 	"goa.design/goa-ai/features/model/anthropic"
 	"goa.design/goa-ai/features/model/vertex"
 	"goa.design/goa-ai/runtime/agent/model"
@@ -227,6 +228,21 @@ func runServe(args []string) error {
 	}
 	svc.SetHistory(hist)
 	svc.SetMarkNames(conf.Marks)
+	// The clone of the repository of the articles of Zenn is ebira's own, in
+	// the state directory; the settings are read at each use, so that a
+	// change of them applies without a restart.
+	svc.SetZenn(filepath.Join(stateDir, "zenn"), func() (zenn.Settings, error) {
+		c, err := config.Load()
+		if err != nil {
+			return zenn.Settings{}, err
+		}
+		d, _, err := config.LoadDefaults(*notesDir)
+		if err != nil {
+			return zenn.Settings{}, err
+		}
+		c = config.Merge(c, d)
+		return zenn.Settings{Repo: c.ZennRepo, Branch: c.ZennBranch, User: c.ZennUser}, nil
+	})
 	r, err := svc.Sync(ctx, nil)
 	if err != nil {
 		return err

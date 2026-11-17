@@ -74,6 +74,8 @@ type Endpoints struct {
 	Events                goa.Endpoint
 	GitStatus             goa.Endpoint
 	GitSync               goa.Endpoint
+	ZennStatus            goa.Endpoint
+	ExportZenn            goa.Endpoint
 	AddGuide              goa.Endpoint
 	PreviewStyle          goa.Endpoint
 	SetPreviewStyle       goa.Endpoint
@@ -190,6 +192,8 @@ func NewEndpoints(s Service) *Endpoints {
 		Events:                NewEventsEndpoint(s, a.APIKeyAuth),
 		GitStatus:             NewGitStatusEndpoint(s, a.APIKeyAuth),
 		GitSync:               NewGitSyncEndpoint(s, a.APIKeyAuth),
+		ZennStatus:            NewZennStatusEndpoint(s, a.APIKeyAuth),
+		ExportZenn:            NewExportZennEndpoint(s, a.APIKeyAuth),
 		AddGuide:              NewAddGuideEndpoint(s, a.APIKeyAuth),
 		PreviewStyle:          NewPreviewStyleEndpoint(s, a.APIKeyAuth),
 		SetPreviewStyle:       NewSetPreviewStyleEndpoint(s, a.APIKeyAuth),
@@ -259,6 +263,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.Events = m(e.Events)
 	e.GitStatus = m(e.GitStatus)
 	e.GitSync = m(e.GitSync)
+	e.ZennStatus = m(e.ZennStatus)
+	e.ExportZenn = m(e.ExportZenn)
 	e.AddGuide = m(e.AddGuide)
 	e.PreviewStyle = m(e.PreviewStyle)
 	e.SetPreviewStyle = m(e.SetPreviewStyle)
@@ -1356,6 +1362,52 @@ func NewGitSyncEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.End
 			return nil, err
 		}
 		return s.GitSync(ctx, p)
+	}
+}
+
+// NewZennStatusEndpoint returns an endpoint function that calls the method
+// "zenn_status" of service "notes".
+func NewZennStatusEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ZennStatusPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.ZennStatus(ctx, p)
+	}
+}
+
+// NewExportZennEndpoint returns an endpoint function that calls the method
+// "export_zenn" of service "notes".
+func NewExportZennEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ExportZennPayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "session",
+			Scopes:         []string{},
+			RequiredScopes: []string{},
+		}
+		var key string
+		if p.Session != nil {
+			key = string(*p.Session)
+		}
+		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return s.ExportZenn(ctx, p)
 	}
 }
 

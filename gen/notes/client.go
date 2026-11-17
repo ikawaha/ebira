@@ -73,6 +73,8 @@ type Client struct {
 	EventsEndpoint                goa.Endpoint
 	GitStatusEndpoint             goa.Endpoint
 	GitSyncEndpoint               goa.Endpoint
+	ZennStatusEndpoint            goa.Endpoint
+	ExportZennEndpoint            goa.Endpoint
 	AddGuideEndpoint              goa.Endpoint
 	PreviewStyleEndpoint          goa.Endpoint
 	SetPreviewStyleEndpoint       goa.Endpoint
@@ -83,7 +85,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, zennStatus, exportZenn, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -142,6 +144,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		EventsEndpoint:                events,
 		GitStatusEndpoint:             gitStatus,
 		GitSyncEndpoint:               gitSync,
+		ZennStatusEndpoint:            zennStatus,
+		ExportZennEndpoint:            exportZenn,
 		AddGuideEndpoint:              addGuide,
 		PreviewStyleEndpoint:          previewStyle,
 		SetPreviewStyleEndpoint:       setPreviewStyle,
@@ -1020,6 +1024,37 @@ func (c *Client) GitSync(ctx context.Context, p *GitSyncPayload) (res *GitSyncRe
 		return
 	}
 	return ires.(*GitSyncResult), nil
+}
+
+// ZennStatus calls the "zenn_status" endpoint of the "notes" service.
+// ZennStatus may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) ZennStatus(ctx context.Context, p *ZennStatusPayload) (res *ZennStatus, err error) {
+	var ires any
+	ires, err = c.ZennStatusEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*ZennStatus), nil
+}
+
+// ExportZenn calls the "export_zenn" endpoint of the "notes" service.
+// ExportZenn may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist
+//   - "bad_request" (type *goa.ServiceError): The repository is not set, the note is in the trash or in a private notebook, it cannot be an article as it is, such as with a title too long or an image Zenn does not take, or a git command failed, such as a push
+//   - "article_changed" (type *goa.ServiceError): The article file was changed in the repository since it was written, as on GitHub; force overwrites it
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) ExportZenn(ctx context.Context, p *ExportZennPayload) (res *ZennExport, err error) {
+	var ires any
+	ires, err = c.ExportZennEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*ZennExport), nil
 }
 
 // AddGuide calls the "add_guide" endpoint of the "notes" service.

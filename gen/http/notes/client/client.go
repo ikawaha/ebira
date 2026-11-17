@@ -178,6 +178,14 @@ type Client struct {
 	// endpoint.
 	GitSyncDoer goahttp.Doer
 
+	// ZennStatus Doer is the HTTP client used to make requests to the zenn_status
+	// endpoint.
+	ZennStatusDoer goahttp.Doer
+
+	// ExportZenn Doer is the HTTP client used to make requests to the export_zenn
+	// endpoint.
+	ExportZennDoer goahttp.Doer
+
 	// AddGuide Doer is the HTTP client used to make requests to the add_guide
 	// endpoint.
 	AddGuideDoer goahttp.Doer
@@ -267,6 +275,8 @@ func NewClient(
 		EventsDoer:                doer,
 		GitStatusDoer:             doer,
 		GitSyncDoer:               doer,
+		ZennStatusDoer:            doer,
+		ExportZennDoer:            doer,
 		AddGuideDoer:              doer,
 		PreviewStyleDoer:          doer,
 		SetPreviewStyleDoer:       doer,
@@ -1309,6 +1319,54 @@ func (c *Client) GitSync() goa.Endpoint {
 		resp, err := c.GitSyncDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("notes", "git_sync", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// ZennStatus returns an endpoint that makes HTTP requests to the notes service
+// zenn_status server.
+func (c *Client) ZennStatus() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeZennStatusRequest(c.encoder)
+		decodeResponse = DecodeZennStatusResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildZennStatusRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.ZennStatusDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "zenn_status", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// ExportZenn returns an endpoint that makes HTTP requests to the notes service
+// export_zenn server.
+func (c *Client) ExportZenn() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeExportZennRequest(c.encoder)
+		decodeResponse = DecodeExportZennResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildExportZennRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.ExportZennDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notes", "export_zenn", err)
 		}
 		return decodeResponse(resp)
 	}

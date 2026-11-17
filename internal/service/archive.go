@@ -54,6 +54,11 @@ func (s *Notes) archive(mode string) (index.Archive, error) {
 // notebook too.
 func (s *Notes) note(n *store.Note) *gennotes.Note {
 	res := toNote(n)
+	if res.Zenn != nil {
+		if u := s.zennSettings().ArticleURL(res.Zenn.Slug); u != "" {
+			res.Zenn.URL = &u
+		}
+	}
 	if res.Archived == nil && n.Notebook != store.Trash {
 		if nbs, err := s.archivedNotebooks(); err == nil && slices.Contains(nbs, n.Notebook) {
 			res.Archived = ptr(true)

@@ -45,6 +45,8 @@ type Notes struct {
 	settings Settings
 	// uploads are the files AI clients are to send (see StartAiUpload).
 	uploads uploads
+	// zenn tells where notes are written as articles of Zenn (see SetZenn).
+	zenn zennConfig
 }
 
 var _ gennotes.Service = (*Notes)(nil)
@@ -1647,6 +1649,9 @@ func toNote(n *store.Note) *gennotes.Note {
 		res.ArchivedAt = ptr(store.FormatTime(*n.ArchivedAt))
 		res.Archived = ptr(true)
 	}
+	if z := n.Zenn; z != nil && z.Slug != "" {
+		res.Zenn = &gennotes.ZennArticle{Slug: z.Slug, Published: z.Published, Changed: n.ZennChanged(), Emoji: &z.Emoji, Type: &z.Type, Topics: tags(z.Topics)}
+	}
 	return res
 }
 
@@ -1676,6 +1681,9 @@ func summaries(ss []*index.Summary, withSnippet bool) []*gennotes.NoteSummary {
 		r.Marks = store.CleanMarks(s.Marks)
 		if s.Archived {
 			r.Archived = ptr(true)
+		}
+		if s.ZennSlug != "" {
+			r.Zenn = &gennotes.ZennArticle{Slug: s.ZennSlug, Published: s.ZennPublished, Changed: s.ZennChanged}
 		}
 		if withSnippet {
 			r.Snippet = &s.Snippet

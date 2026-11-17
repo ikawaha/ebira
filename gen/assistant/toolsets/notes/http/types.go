@@ -48,6 +48,8 @@ type (
 		// notebook: kept, but left out of lists and searches unless they ask for it;
 		// absent when it is not
 		Archived *bool `json:"archived,omitempty"`
+		// The article of Zenn the user wrote the note as; absent when it was not
+		Zenn *ZennArticleTransport `json:"zenn,omitempty"`
 		// Body in Markdown
 		Body *string `json:"body"`
 		// Strong entity tag of the note file. Sent as the ETag header over HTTP
@@ -143,6 +145,8 @@ type (
 		// notebook: kept, but left out of lists and searches unless they ask for it;
 		// absent when it is not
 		Archived *bool `json:"archived,omitempty"`
+		// The article of Zenn the user wrote the note as; absent when it was not
+		Zenn *ZennArticleTransport `json:"zenn,omitempty"`
 		// Excerpt around the matched terms (search only)
 		Snippet *string `json:"snippet,omitempty"`
 		// Ranges of the title matched by the query, sorted and not overlapping (search
@@ -161,5 +165,27 @@ type (
 		Start *int `json:"start"`
 		// Offset just past the last character
 		End *int `json:"end"`
+	}
+	// ZennArticleTransport is the internal JSON transport type for ZennArticleTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ZennArticleTransport struct {
+		// Slug of the article: its file is articles/<slug>.md in the repository
+		Slug *string `json:"slug"`
+		// Whether the article is published, rather than a draft
+		Published *bool `json:"published"`
+		// Whether the title or the body of the note changed since it was written to
+		// Zenn last, so that the article lags behind the note until it is written again
+		Changed *bool `json:"changed"`
+		// URL of the article on Zenn (get only); absent when the user name on Zenn is
+		// not set
+		URL *string `json:"url,omitempty"`
+		// Emoji of the article (get only)
+		Emoji *string `json:"emoji,omitempty"`
+		// Type of the article: tech or idea (get only)
+		Type *string `json:"type,omitempty"`
+		// Topics of the article (get only)
+		Topics []string `json:"topics,omitempty"`
 	}
 )

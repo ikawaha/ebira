@@ -52,6 +52,56 @@
               ],
               "title": "TextRange",
               "type": "object"
+            },
+            "ZennArticle": {
+              "additionalProperties": false,
+              "properties": {
+                "changed": {
+                  "description": "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+                  "type": "boolean"
+                },
+                "emoji": {
+                  "description": "Emoji of the article (get only)",
+                  "example": "📝",
+                  "type": "string"
+                },
+                "published": {
+                  "description": "Whether the article is published, rather than a draft",
+                  "type": "boolean"
+                },
+                "slug": {
+                  "description": "Slug of the article: its file is articles/\u003cslug\u003e.md in the repository",
+                  "example": "5d22fdc56c57a0",
+                  "type": "string"
+                },
+                "topics": {
+                  "description": "Topics of the article (get only)",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": {
+                  "description": "Type of the article: tech or idea (get only)",
+                  "enum": [
+                    "tech",
+                    "idea"
+                  ],
+                  "type": "string"
+                },
+                "url": {
+                  "description": "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+                  "example": "https://zenn.dev/you/articles/5d22fdc56c57a0",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "slug",
+                "published",
+                "changed"
+              ],
+              "title": "ZennArticle",
+              "type": "object"
             }
           },
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -181,6 +231,10 @@
               "description": "Strong entity tag of the note file. Sent as the ETag header over HTTP",
               "example": "\"87ef7c76b82c5b1d299b08b474f6a7bb\"",
               "type": "string"
+            },
+            "zenn": {
+              "$ref": "#/$defs/ZennArticle",
+              "description": "The article of Zenn the user wrote the note as; absent when it was not"
             }
           },
           "required": [
@@ -388,6 +442,10 @@
                   "example": "2026-10-16T09:30:00Z",
                   "format": "date-time",
                   "type": "string"
+                },
+                "zenn": {
+                  "$ref": "#/$defs/ZennArticle",
+                  "description": "The article of Zenn the user wrote the note as; absent when it was not"
                 }
               },
               "required": [
@@ -421,6 +479,56 @@
                 "end"
               ],
               "title": "TextRange",
+              "type": "object"
+            },
+            "ZennArticle": {
+              "additionalProperties": false,
+              "properties": {
+                "changed": {
+                  "description": "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
+                  "type": "boolean"
+                },
+                "emoji": {
+                  "description": "Emoji of the article (get only)",
+                  "example": "📝",
+                  "type": "string"
+                },
+                "published": {
+                  "description": "Whether the article is published, rather than a draft",
+                  "type": "boolean"
+                },
+                "slug": {
+                  "description": "Slug of the article: its file is articles/\u003cslug\u003e.md in the repository",
+                  "example": "5d22fdc56c57a0",
+                  "type": "string"
+                },
+                "topics": {
+                  "description": "Topics of the article (get only)",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": {
+                  "description": "Type of the article: tech or idea (get only)",
+                  "enum": [
+                    "tech",
+                    "idea"
+                  ],
+                  "type": "string"
+                },
+                "url": {
+                  "description": "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
+                  "example": "https://zenn.dev/you/articles/5d22fdc56c57a0",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "slug",
+                "published",
+                "changed"
+              ],
+              "title": "ZennArticle",
               "type": "object"
             }
           },
