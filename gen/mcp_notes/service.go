@@ -123,6 +123,9 @@ type DiscoverResult struct {
 	TTLMs int64
 	// Whether this response may be reused across authorization contexts
 	CacheScope string
+	// Guidance on using this server, which clients may add to the system prompt of
+	// the model
+	Instructions *string
 }
 
 type ElicitationCapabilities struct {
@@ -567,6 +570,9 @@ type jsonDiscoverResultTransport struct {
 	TTLMs *discoverResultInt64Transport `json:"ttlMs"`
 	// Whether this response may be reused across authorization contexts
 	CacheScope *string `json:"cacheScope"`
+	// Guidance on using this server, which clients may add to the system prompt of
+	// the model
+	Instructions *string `json:"instructions,omitempty"`
 }
 
 // validatejsonDiscoverResultTransport checks decoded JSON before it becomes a service value.
@@ -2371,9 +2377,10 @@ func EncodeDiscoverResult(in *DiscoverResult) ([]byte, error) {
 	var body *jsonDiscoverResultTransport
 	{
 		body = &jsonDiscoverResultTransport{
-			Meta:       in.Meta,
-			ResultType: &in.ResultType,
-			CacheScope: &in.CacheScope,
+			Meta:         in.Meta,
+			ResultType:   &in.ResultType,
+			CacheScope:   &in.CacheScope,
+			Instructions: in.Instructions,
 		}
 		ttlMs := discoverResultInt64Transport(in.TTLMs)
 		body.TTLMs = &ttlMs
@@ -2411,9 +2418,10 @@ func ValidateDiscoverResultValue(in *DiscoverResult) error {
 	var body *jsonDiscoverResultTransport
 	{
 		body = &jsonDiscoverResultTransport{
-			Meta:       in.Meta,
-			ResultType: &in.ResultType,
-			CacheScope: &in.CacheScope,
+			Meta:         in.Meta,
+			ResultType:   &in.ResultType,
+			CacheScope:   &in.CacheScope,
+			Instructions: in.Instructions,
 		}
 		ttlMs := discoverResultInt64Transport(in.TTLMs)
 		body.TTLMs = &ttlMs
@@ -2455,10 +2463,11 @@ func DecodeDiscoverResult(data []byte) (out *DiscoverResult, err error) {
 	}
 	{
 		out = &DiscoverResult{
-			Meta:       body.Meta,
-			ResultType: *body.ResultType,
-			TTLMs:      int64(*body.TTLMs),
-			CacheScope: *body.CacheScope,
+			Meta:         body.Meta,
+			ResultType:   *body.ResultType,
+			TTLMs:        int64(*body.TTLMs),
+			CacheScope:   *body.CacheScope,
+			Instructions: body.Instructions,
 		}
 		out.SupportedVersions = make([]string, len(body.SupportedVersions))
 		for i, val := range body.SupportedVersions {
@@ -5716,6 +5725,13 @@ func validateDiscoverResultJSONValue(path string, value any, description string)
 			); err != nil {
 				return err
 			}
+		case "instructions":
+			if err := validateContentAnnotationsJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Guidance on using this server, which clients may add to the system prompt of the model",
+			); err != nil {
+				return err
+			}
 		case "resultType":
 			if err := validateContentAnnotationsJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -5742,6 +5758,7 @@ func validateDiscoverResultJSONValue(path string, value any, description string)
 				"_meta",
 				"cacheScope",
 				"capabilities",
+				"instructions",
 				"resultType",
 				"supportedVersions",
 				"ttlMs",
@@ -7482,6 +7499,11 @@ func checkDiscoverResultDiscoverResultValue(in *DiscoverResult, field string, ac
 		}
 		if !utf8.ValidString(string(in.CacheScope)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "cacheScope", false))
+		}
+		if in.Instructions != nil {
+			if !utf8.ValidString(string(*in.Instructions)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "instructions", false))
+			}
 		}
 	}
 	return nil

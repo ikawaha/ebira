@@ -14,12 +14,17 @@ import mcpruntime "goa.design/goa-ai/runtime/mcp"
 func mcpHTTPBindings() mcpruntime.HTTPBindings {
 	return mcpruntime.HTTPBindings{
 		Tools: map[string]mcpruntime.ToolBinding{
-			"get_note":       {ReadOnly: true},
-			"list_marks":     {ReadOnly: true},
-			"list_notebooks": {ReadOnly: true},
-			"list_notes":     {ReadOnly: true},
-			"list_tags":      {ReadOnly: true},
-			"search_notes":   {ReadOnly: true},
+			"archive_ai_notebook":   {Idempotent: true},
+			"get_note":              {ReadOnly: true},
+			"list_marks":            {ReadOnly: true},
+			"list_notebooks":        {ReadOnly: true},
+			"list_notes":            {ReadOnly: true},
+			"list_tags":             {ReadOnly: true},
+			"make_notebook_private": {Idempotent: true},
+			"move_ai_note":          {Idempotent: true},
+			"move_ai_separator":     {Idempotent: true},
+			"search_notes":          {ReadOnly: true},
+			"update_ai_separator":   {Idempotent: true},
 		},
 	}
 }

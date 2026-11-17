@@ -3,6 +3,8 @@ package design
 import (
 	. "goa.design/goa-ai/dsl"
 	. "goa.design/goa/v3/dsl"
+
+	"github.com/ikawaha/goaaiplugins/mcpinstructions"
 )
 
 // NoteTrait is the attributes that Note and NoteSummary share.
@@ -536,6 +538,16 @@ var archiveFilter = func() {
 	})
 }
 
+// mcpInstructions is what the MCP server tells clients, which may add it to the
+// system prompt of the model. Clients such as Claude Code load the tools of a
+// server only when the model asks for them, so the model decides whether to
+// look at the notes before it reads the descriptions of search_notes and
+// get_note. The instructions say what the notes hold and when to search them,
+// and do not repeat the tool descriptions.
+const mcpInstructions = `ebira holds the user's own notes: work logs, past decisions, procedures and memos.
+When a task or question may depend on something the user has written down (how something was done before, why a decision was made, project context, people, preferences), search with search_notes before answering from general knowledge or asking the user, then read the notes found with get_note. Searching is cheap, and a search that finds nothing is fine.
+When the user asks to write something down as a note or a memo, write it in ebira.`
+
 var _ = Service("notes", func() {
 	Description("CRUD and search for notes.")
 
@@ -562,7 +574,16 @@ var _ = Service("notes", func() {
 	// deleting and checking the files of notes (get_file, delete_file,
 	// check_files), and add_file, are for people. TestMCPTools in
 	// internal/service lists the allowed tools.
-	MCP("ebira", "0.1.0")
+	//
+	// Every tool declares its hints, since MCP takes a tool without them as one
+	// that may destroy data and reach outside: tools that only read say
+	// ReadOnlyHint, and the others DestructiveHint, true when they remove or
+	// replace something even if people can bring it back, and IdempotentHint
+	// when the same arguments again change nothing. No tool reaches outside the
+	// notes, so all say OpenWorldHint(false). TestMCPToolHints checks this.
+	MCP("ebira", "0.1.0", func() {
+		mcpinstructions.Instructions(mcpInstructions)
+	})
 	JSONRPC(func() { POST("/mcp") })
 
 	// The REST API checks the session of people signed in with a passkey; the
@@ -620,6 +641,7 @@ var _ = Service("notes", func() {
 		})
 		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook. q filters the list with a query as search_notes takes it but keeps the list as it is: its order (the order the user gave a notebook by hand, which often tells priority), its pages and its separators, and a notebook without its sub notebooks (list each one by its ID). Use it to narrow a list, as in -tag:name to leave out the notes with a tag and see the rest in the order the user gave them; use search_notes to find notes by relevance anywhere", func() {
 			ReadOnlyHint(true)
+			OpenWorldHint(false)
 		})
 	})
 
@@ -642,6 +664,7 @@ var _ = Service("notes", func() {
 		})
 		Tool("get_note", "Get the full content of a note by ID, as found with search_notes or list_notes; read the notes a search finds before answering from them", func() {
 			ReadOnlyHint(true)
+			OpenWorldHint(false)
 		})
 	})
 
@@ -784,6 +807,7 @@ var _ = Service("notes", func() {
 		})
 		Tool("search_notes", "Search the user's own notes: their memos, records of work and past decisions. When a question may touch what the user has written down, search here first, before answering from general knowledge or asking the user. Full-text search; Japanese terms are supported. Terms are combined with AND; use \"two words\" for a phrase, tag:name to require a tag and mark:<id or name> to require a mark (see list_marks); a minus before any of them, as in -word or -tag:name, leaves out the notes with it; OR in capitals between two, as in pizza OR pasta, asks for either. Notes in the archive (kept but no longer in use) are left out unless archived or in:archive asks for them; archived_total in the result tells how many of them match too, which are worth reading when the rest does not answer. Found notes come best match first, from the notebook and its sub notebooks; to narrow a list and keep the order the user gave it, with its separators, use list_notes with q instead", func() {
 			ReadOnlyHint(true)
+			OpenWorldHint(false)
 		})
 	})
 
@@ -908,6 +932,7 @@ var _ = Service("notes", func() {
 		})
 		Tool("list_notebooks", "List notebooks with their kinds and note counts; other tools take a notebook by its id, and people know it by its name. A notebook with archived is in the archive: lists and searches leave its notes out unless they ask for the archive, and list_notes with it as notebook reads them", func() {
 			ReadOnlyHint(true)
+			OpenWorldHint(false)
 		})
 	})
 
@@ -926,6 +951,7 @@ var _ = Service("notes", func() {
 		})
 		Tool("list_tags", "List tags with their note counts; filter list_notes or search_notes by one of them. The counts leave out the notes in the archive unless archived asks for them", func() {
 			ReadOnlyHint(true)
+			OpenWorldHint(false)
 		})
 	})
 
@@ -938,6 +964,7 @@ var _ = Service("notes", func() {
 		})
 		Tool("list_marks", "List the marks a note can have, with what each means to the user; search_notes finds the notes with one by mark:<id or name>", func() {
 			ReadOnlyHint(true)
+			OpenWorldHint(false)
 		})
 	})
 
@@ -1224,7 +1251,10 @@ var _ = Service("notes", func() {
 		Result(Note)
 		Error("bad_request", ErrorResult, "The notebook is invalid")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
-		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only. The result has the new ID and version, and leaves out the body")
+		Tool("create_ai_note", "Create a note in a notebook shared with AI (kind collab), or add one to a notebook of the drop kind, whose notes you cannot see afterwards. Notes in other notebooks are read-only. The result has the new ID and version, and leaves out the body", func() {
+			DestructiveHint(false)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("import_ai_note", func() {
@@ -1240,7 +1270,10 @@ var _ = Service("notes", func() {
 		Result(ImportResult)
 		Error("bad_request", ErrorResult, "The notebook is invalid, the file is too large, or the images are too many or too large")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab or drop kind")
-		Tool("import_ai_note", "Import a Markdown file, with its front matter and the images it refers to (at most 10, 5 MB each, 20 MB in all), as a new note in a notebook shared with AI (kind collab) or of the drop kind")
+		Tool("import_ai_note", "Import a Markdown file, with its front matter and the images it refers to (at most 10, 5 MB each, 20 MB in all), as a new note in a notebook shared with AI (kind collab) or of the drop kind", func() {
+			DestructiveHint(false)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("add_ai_file", func() {
@@ -1261,7 +1294,10 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
 		Error("too_large", ErrorResult, "The file is larger than 5 MB")
-		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A file of a name taken gets another name, such as name-2.png, unless replace is set to update the file of that name. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is")
+		Tool("add_ai_file", "Add an image or another file, such as a PDF (at most 5 MB), sent base64-encoded, to a note in a notebook shared with AI (kind collab); then refer to it from the body with the returned path, using update_ai_note. A file of a name taken gets another name, such as name-2.png, unless replace is set to update the file of that name. A client that can run commands, such as curl, should use start_ai_upload instead, which sends the file as is", func() {
+			DestructiveHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("start_ai_upload", func() {
@@ -1280,7 +1316,10 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("start_ai_upload", "Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note; set replace to update the file of that name instead of adding one with another name")
+		Tool("start_ai_upload", "Get a URL to add a file (at most 5 MB) to a note in a notebook shared with AI (kind collab) by sending it as is, such as with curl -sS -T <file> <url>, instead of in base64 with add_ai_file; then refer to it from the body with the returned path, using update_ai_note; set replace to update the file of that name instead of adding one with another name", func() {
+			DestructiveHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("upload_ai_file", func() {
@@ -1320,7 +1359,10 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The note or the file does not exist, or the note is hidden from AI clients")
 		Error("bad_request", ErrorResult, "The note ID is used in more than one notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("delete_ai_file", "Delete a file of a note in a notebook shared with AI (kind collab), such as one the body no longer refers to; people can put it back. To update a file, add it again with replace instead")
+		Tool("delete_ai_file", "Delete a file of a note in a notebook shared with AI (kind collab), such as one the body no longer refers to; people can put it back. To update a file, add it again with replace instead", func() {
+			DestructiveHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("update_ai_note", func() {
@@ -1350,7 +1392,10 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The notebook to move the note to is invalid, body is given with append or edits, or the old text of an edit does not appear exactly once")
 		Error("forbidden", ErrorResult, "The note, or the notebook to move it to, is not of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
-		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks or put it in the archive; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result")
+		Tool("update_ai_note", "Update a note in a notebook shared with AI (kind collab), or set its marks or put it in the archive; pass the version from get_note. To change part of a long body, use edits (each old text exactly once) and append instead of sending the whole body, and brief to leave the body out of the result", func() {
+			DestructiveHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("delete_ai_note", func() {
@@ -1364,7 +1409,10 @@ var _ = Service("notes", func() {
 		Error("bad_request", ErrorResult, "The note cannot be deleted")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
 		Error("precondition_failed", ErrorResult, "The version does not match the note's current version")
-		Tool("delete_ai_note", "Move a note in a notebook shared with AI (kind collab) to the trash; pass the version from get_note")
+		Tool("delete_ai_note", "Move a note in a notebook shared with AI (kind collab) to the trash; pass the version from get_note", func() {
+			DestructiveHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("move_ai_note", func() {
@@ -1378,7 +1426,11 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "after is not another note or a separator of the note's notebook")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body")
+		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body", func() {
+			DestructiveHint(false)
+			IdempotentHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("create_ai_separator", func() {
@@ -1393,7 +1445,10 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The notebook does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "after is not a note or a separator of the notebook")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
-		Tool("create_ai_separator", "Put a separator (a bar with a heading, a date and a color, no body) between the notes of a notebook shared with AI (kind collab), after a note or a separator, or first")
+		Tool("create_ai_separator", "Put a separator (a bar with a heading, a date and a color, no body) between the notes of a notebook shared with AI (kind collab), after a note or a separator, or first", func() {
+			DestructiveHint(false)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("update_ai_separator", func() {
@@ -1407,7 +1462,11 @@ var _ = Service("notes", func() {
 		Result(Separator)
 		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
-		Tool("update_ai_separator", "Replace the heading, the date and the color of a separator in a notebook shared with AI (kind collab); an omitted one is taken away")
+		Tool("update_ai_separator", "Replace the heading, the date and the color of a separator in a notebook shared with AI (kind collab); an omitted one is taken away", func() {
+			DestructiveHint(true)
+			IdempotentHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("delete_ai_separator", func() {
@@ -1419,7 +1478,10 @@ var _ = Service("notes", func() {
 		})
 		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
-		Tool("delete_ai_separator", "Remove a separator in a notebook shared with AI (kind collab)")
+		Tool("delete_ai_separator", "Remove a separator in a notebook shared with AI (kind collab)", func() {
+			DestructiveHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("move_ai_separator", func() {
@@ -1434,7 +1496,11 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
 		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
-		Tool("move_ai_separator", "Reorder a separator in a notebook shared with AI (kind collab): put it after a note or another separator, or first")
+		Tool("move_ai_separator", "Reorder a separator in a notebook shared with AI (kind collab): put it after a note or another separator, or first", func() {
+			DestructiveHint(false)
+			IdempotentHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("create_ai_notebook", func() {
@@ -1452,7 +1518,10 @@ var _ = Service("notes", func() {
 		Error("not_found", ErrorResult, "The parent does not exist, or is not in the notebook list of the client")
 		Error("forbidden", ErrorResult, "The parent is not of the collab kind")
 		Error("already_exists", ErrorResult, "A notebook with the name exists (in the parent, for a sub notebook)")
-		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name, with a random suffix; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people")
+		Tool("create_ai_notebook", "Create a new notebook shared with AI (kind collab), where you may write notes, or, with parent, a sub notebook in a notebook shared with AI. Its ID is derived from the name, with a random suffix; a name with characters other than ASCII, such as Japanese, gives an ID that starts with xn-- (Punycode), which is expected: pass the id of the result to other tools as is, and call the notebook by its name to people", func() {
+			DestructiveHint(false)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("make_notebook_private", func() {
@@ -1463,7 +1532,11 @@ var _ = Service("notes", func() {
 		})
 		Error("not_found", ErrorResult, "The notebook does not exist, or is not in the notebook list of the client")
 		Error("bad_request", ErrorResult, "The notebook is the trash")
-		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this")
+		Tool("make_notebook_private", "Make a notebook private so that AI clients can no longer see it; only people can undo this", func() {
+			DestructiveHint(false)
+			IdempotentHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	Method("archive_ai_notebook", func() {
@@ -1476,7 +1549,11 @@ var _ = Service("notes", func() {
 		Result(Notebook)
 		Error("not_found", ErrorResult, "The notebook does not exist, or is hidden from AI clients")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
-		Tool("archive_ai_notebook", "Put a notebook shared with AI (kind collab) in the archive, where lists and searches leave it out unless they ask for it, or take it out")
+		Tool("archive_ai_notebook", "Put a notebook shared with AI (kind collab) in the archive, where lists and searches leave it out unless they ask for it, or take it out", func() {
+			DestructiveHint(false)
+			IdempotentHint(true)
+			OpenWorldHint(false)
+		})
 	})
 
 	// The files of a note, images and other attachments, are kept next to the

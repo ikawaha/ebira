@@ -3,14 +3,73 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
 
+	goahttp "goa.design/goa/v3/http"
+
 	assistantspecs "github.com/ikawaha/ebira/gen/assistant/agents/assistant/specs"
+	mcpnotessvr "github.com/ikawaha/ebira/gen/jsonrpc/mcp_notes/server"
 	mcpnotes "github.com/ikawaha/ebira/gen/mcp_notes"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 )
+
+// TestMCPInstructions guards the instructions that the MCP server returns in
+// both protocol revisions: server/discover of 2026-07-28 and initialize of
+// 2025-11-25. Clients may add them to the system prompt of the model, where the
+// model sees them before it loads the tools (github.com/ikawaha/goaaiplugins/mcpinstructions).
+func TestMCPInstructions(t *testing.T) {
+	mux := goahttp.NewMuxer()
+	endpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(&Notes{}), nil))
+	mcpnotessvr.Mount(mux, mcpnotessvr.New(endpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, func(_ context.Context, _ http.ResponseWriter, err error) {
+		t.Error(err)
+	}))
+	for _, tc := range []struct {
+		name    string
+		headers map[string]string
+		body    string
+		field   string // a field of the result that only this revision has
+	}{
+		{
+			name:    "server/discover",
+			headers: map[string]string{"MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "server/discover"},
+			body:    `{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}`,
+			field:   "supportedVersions",
+		},
+		{
+			name:  "initialize",
+			body:  `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}`,
+			field: "protocolVersion",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest("POST", "/mcp", strings.NewReader(tc.body))
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Accept", "application/json, text/event-stream")
+			for k, v := range tc.headers {
+				r.Header.Set(k, v)
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, r)
+			var res struct {
+				Result map[string]json.RawMessage `json:"result"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+				t.Fatalf("%v: %s", err, w.Body)
+			}
+			if _, ok := res.Result[tc.field]; !ok {
+				t.Errorf("the result has no %s: %s", tc.field, w.Body)
+			}
+			var instructions string
+			if err := json.Unmarshal(res.Result["instructions"], &instructions); err != nil || !strings.Contains(instructions, "search_notes") {
+				t.Errorf("instructions = %q (%v), want ones that mention search_notes: %s", instructions, err, w.Body)
+			}
+		})
+	}
+}
 
 // TestMCPTools guards the access rules for AI clients: they read notes except
 // in private notebooks and the trash, write only notes in notebooks of the collab
@@ -38,6 +97,38 @@ func TestMCPTools(t *testing.T) {
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("MCP tools = %v, want %v", got, want)
+	}
+}
+
+// TestMCPToolHints checks the hints of the MCP tools: MCP takes a tool without
+// them as one that may destroy data and reach outside the notes, which no tool
+// does. Those that remove or replace something are destructive even if people
+// can bring it back.
+func TestMCPToolHints(t *testing.T) {
+	adapter := mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(&Notes{}), nil)
+	res, err := adapter.ToolsList(context.Background(), &mcpnotes.ToolsListPayload{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	destructive := []string{
+		"add_ai_file", "delete_ai_file", "delete_ai_note", "delete_ai_separator",
+		"start_ai_upload", "update_ai_note", "update_ai_separator",
+	}
+	for _, tool := range res.Tools {
+		a := tool.Annotations
+		if a == nil {
+			t.Errorf("%s has no hints", tool.Name)
+			continue
+		}
+		if a.OpenWorldHint == nil || *a.OpenWorldHint {
+			t.Errorf("%s: openWorldHint = %v, want false", tool.Name, a.OpenWorldHint)
+		}
+		if a.ReadOnlyHint != nil && *a.ReadOnlyHint {
+			continue
+		}
+		if want := slices.Contains(destructive, tool.Name); a.DestructiveHint == nil || *a.DestructiveHint != want {
+			t.Errorf("%s: destructiveHint = %v, want %v", tool.Name, a.DestructiveHint, want)
+		}
 	}
 }
 
