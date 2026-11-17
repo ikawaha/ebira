@@ -64,6 +64,9 @@ type ServerDiscoverResponseBody struct {
 	TTLMs *int64 `form:"ttlMs,omitempty" json:"ttlMs,omitempty" xml:"ttlMs,omitempty"`
 	// Whether this response may be reused across authorization contexts
 	CacheScope *string `form:"cacheScope,omitempty" json:"cacheScope,omitempty" xml:"cacheScope,omitempty"`
+	// Guidance on using this server, which clients may add to the system prompt of
+	// the model
+	Instructions *string `form:"instructions,omitempty" json:"instructions,omitempty" xml:"instructions,omitempty"`
 }
 
 // ToolsListResponseBody is the type of the "mcp_notes" service "tools/list"
@@ -829,10 +832,11 @@ func NewToolsCallRequestBody(p *mcpnotes.ToolsCallPayload) *ToolsCallRequestBody
 // endpoint result from a HTTP "OK" response.
 func NewServerDiscoverResultOK(body *ServerDiscoverResponseBody) *mcpnotes.DiscoverResult {
 	v := &mcpnotes.DiscoverResult{
-		Meta:       body.Meta,
-		ResultType: *body.ResultType,
-		TTLMs:      *body.TTLMs,
-		CacheScope: *body.CacheScope,
+		Meta:         body.Meta,
+		ResultType:   *body.ResultType,
+		TTLMs:        *body.TTLMs,
+		CacheScope:   *body.CacheScope,
+		Instructions: body.Instructions,
 	}
 	v.SupportedVersions = make([]string, len(body.SupportedVersions))
 	for i, val := range body.SupportedVersions {
