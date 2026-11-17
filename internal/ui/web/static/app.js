@@ -1008,6 +1008,12 @@ const KIND_SVG = {
   plus: ["M12 5v14", "M5 12h14"],
   minus: ["M5 12h14"],
   close: ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"],
+  // The image viewer: the image before and after, its size, and saving it.
+  back: ["M15 5.5L8.5 12l6.5 6.5"],
+  forward: ["M9 5.5l6.5 6.5L9 18.5"],
+  zoomIn: ["circle:10.5,10.5,6", "M15 15l5 5", "M10.5 8v5", "M8 10.5h5"],
+  zoomOut: ["circle:10.5,10.5,6", "M15 15l5 5", "M8 10.5h5"],
+  save: ["M12 4v11", "M7.5 10.5L12 15l4.5-4.5", "M5 19.5h14"],
   unmark: ["circle:12,12,7.5", "M6.7 17.3 17.3 6.7"],
   // The box of the archive, struck out: the lists leaving the archive out,
   // and taking out of the archive.
@@ -5365,6 +5371,171 @@ function tellApp(type, data = {}) {
   appChannel()?.postMessage("ebira:" + JSON.stringify({ type, ...data }));
 }
 
+// Image viewer
+
+// viewable reports whether img, in a note or the preview of the editor, opens
+// in the viewer: not an image in a link, which opens the link, nor a diagram.
+function viewable(img) {
+  return img.matches(":is(#preview .body, .editor-preview) img") && !img.closest("a, .mermaid") && !!img.currentSrc;
+}
+
+// shrunk reports whether img is drawn smaller than it is.
+function shrunk(img) {
+  const r = img.getBoundingClientRect();
+  return img.naturalWidth > r.width + 1 || img.naturalHeight > r.height + 1;
+}
+
+// The pointer tells which images open: those drawn smaller than they are,
+// found as it comes over them, as the size changes with the window.
+document.addEventListener("mouseover", (e) => {
+  const img = e.target;
+  if (img.tagName === "IMG" && viewable(img)) img.classList.toggle("zoomable", shrunk(img));
+});
+
+document.addEventListener("click", (e) => {
+  const img = e.target;
+  if (img.tagName !== "IMG" || e.button !== 0 || !viewable(img) || !shrunk(img)) return;
+  e.preventDefault();
+  openViewer(img);
+});
+
+const viewer = { images: [], at: 0, actual: false };
+
+// openViewer shows img in the viewer, with the other images of its note to
+// step to.
+function openViewer(img) {
+  const body = img.closest("#preview .body, .editor-preview");
+  viewer.images = [...body.querySelectorAll("img")].filter(viewable).map((i) => i.currentSrc);
+  viewer.at = Math.max(0, viewer.images.indexOf(img.currentSrc));
+  const d = $("image-viewer");
+  d.tabIndex = -1;
+  if (!d.open) d.showModal();
+  showViewerImage();
+}
+
+// showViewerImage shows the image the viewer is at, fit to the window.
+function showViewerImage() {
+  const d = $("image-viewer");
+  const url = viewer.images[viewer.at];
+  const many = viewer.images.length > 1;
+  const img = el("img");
+  img.alt = imageName(url);
+  img.addEventListener("load", () => fitViewer(false));
+  img.addEventListener("click", (e) => fitViewer(!viewer.actual, e));
+  img.src = url;
+  const stage = el("div", "viewer-stage", img);
+  stage.addEventListener("click", (e) => { if (e.target === stage) d.close(); });
+  const prev = iconButton("back", t("imagePrev"), () => stepViewer(-1));
+  const next = iconButton("forward", t("imageNext"), () => stepViewer(1));
+  prev.disabled = viewer.at === 0;
+  next.disabled = viewer.at === viewer.images.length - 1;
+  const size = iconButton("zoomIn", t("imageActual"), () => fitViewer(!viewer.actual));
+  size.classList.add("viewer-size");
+  d.replaceChildren(
+    el("div", "viewer-bar",
+      el("span", "viewer-name", imageName(url)),
+      ...(many ? [el("span", "viewer-count", `${viewer.at + 1} / ${viewer.images.length}`), prev, next] : []),
+      size,
+      ...(sameOrigin(url) ? [iconButton("save", t("imageSave"), () => saveImage(url))] : []),
+      closeButton(() => d.close())),
+    stage);
+  viewer.actual = false;
+  d.classList.remove("actual");
+  size.disabled = true; // until the image is read
+  // The buttons are new: the keys go to the dialog, as its focus was in them.
+  if (!d.contains(document.activeElement)) d.focus();
+}
+
+// fitViewer shows the image of the viewer at its size in the pixels of the
+// screen (actual), or fit to the window. Going to the size, the point at
+// (e) stays under the pointer.
+function fitViewer(actual, e) {
+  const d = $("image-viewer");
+  const stage = d.querySelector(".viewer-stage");
+  const img = stage?.querySelector("img");
+  if (!img?.naturalWidth) return;
+  const w = img.naturalWidth / devicePixelRatio;
+  const h = img.naturalHeight / devicePixelRatio;
+  // The size is worth a button only when it is larger than the window.
+  const larger = w > stage.clientWidth + 1 || h > stage.clientHeight + 1;
+  const size = d.querySelector(".viewer-size");
+  size.disabled = !larger;
+  img.classList.toggle("can-zoom", larger && !actual);
+  if (actual && !larger) return;
+  let at = null;
+  if (actual && e) {
+    const r = img.getBoundingClientRect();
+    const s = stage.getBoundingClientRect();
+    at = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, px: e.clientX - s.left, py: e.clientY - s.top };
+  }
+  viewer.actual = actual;
+  d.classList.toggle("actual", actual);
+  img.style.width = actual ? `${w}px` : "";
+  img.style.height = actual ? `${h}px` : "";
+  const label = t(actual ? "imageFit" : "imageActual");
+  size.replaceChildren(kindSVG(actual ? "zoomOut" : "zoomIn"));
+  size.title = label;
+  size.setAttribute("aria-label", label);
+  if (at) {
+    stage.scrollLeft = at.x * w - at.px;
+    stage.scrollTop = at.y * h - at.py;
+  } else if (actual) {
+    stage.scrollLeft = (w - stage.clientWidth) / 2;
+    stage.scrollTop = (h - stage.clientHeight) / 2;
+  }
+}
+
+// stepViewer goes by step to an image before or after, stopping at the ends.
+function stepViewer(step) {
+  const at = viewer.at + step;
+  if (at < 0 || at >= viewer.images.length) return;
+  viewer.at = at;
+  showViewerImage();
+}
+
+$("image-viewer").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    e.preventDefault();
+    stepViewer(e.key === "ArrowLeft" ? -1 : 1);
+  }
+});
+
+$("image-viewer").addEventListener("close", () => $("image-viewer").replaceChildren());
+
+// imageName returns the file name of the image at url, if it is one of the
+// web.
+function imageName(url) {
+  try {
+    const u = new URL(url);
+    return /^https?:$/.test(u.protocol) ? decodeURIComponent(u.pathname.split("/").pop()) : "";
+  } catch (_) {
+    return "";
+  }
+}
+
+// sameOrigin reports whether url is of this server, as the files of notes
+// are: the others are not saved, as the browser would open them instead.
+function sameOrigin(url) {
+  try {
+    return new URL(url).origin === location.origin;
+  } catch (_) {
+    return false;
+  }
+}
+
+// saveImage saves the image at url: the browser downloads it, the desktop
+// app puts it in the downloads folder.
+function saveImage(url) {
+  if (inApp()) {
+    downloadFile(url);
+    return;
+  }
+  const a = el("a");
+  a.href = url;
+  a.download = imageName(url);
+  a.click();
+}
+
 // inApp reports whether the page is in the desktop app.
 function inApp() {
   return !!appChannel();
@@ -6095,7 +6266,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("server-settings").open) return;
+  if ($("conflict").open || $("image-viewer").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("server-settings").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();
