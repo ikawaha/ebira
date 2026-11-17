@@ -1,8 +1,12 @@
 ---
-title: Zenn に書き出す
+title: Zenn に書き出す（β）
 tags: [guide, zenn]
 ---
 ノートを、[Zenn](https://zenn.dev) の記事として書き出せます。Zenn と連携した GitHub のリポジトリに、記事のファイルと画像を書いて push します。Zenn はそのリポジトリから記事を取り込みます。
+
+> **β です。** 書き出しの形や設定は、これから変わることがあります。
+>
+> **Zenn の GitHub 連携を使っている場合だけ使えます。** ebira が書くのは GitHub のリポジトリで、Zenn の Web のエディタには書きません。Zenn のダッシュボードで GitHub のリポジトリを連携していないと、push しても Zenn に記事は出ません。Zenn の Web のエディタで書いている記事を、ebira から書き直すこともできません。
 
 ## 必要なもの
 
@@ -12,7 +16,7 @@ ebira は Zenn にも GitHub にも直接つながず、サーバーの中から
 - **GitHub への push の認証**: 入力を求めずに通る方法。SSH の鍵（ssh-agent や 1Password の SSH agent）、または HTTPS の credential helper。ebira はパスワードを聞かないので、`git push` が端末で聞いてくるなら書き出せません。
 - **コミットする人の名前とメール**: git の設定の `user.name` と `user.email`。コミットに署名する設定なら、それも入力なしで通ること（1Password の署名なら、書き出すたびに承認の画面が出ます）。
 - **ネットワーク**: サーバーの機械から GitHub に届くこと。git の 1 つのコマンドは 2 分で打ち切ります。
-- **Zenn 側**: Zenn と連携した GitHub のリポジトリ（Zenn の GitHub アプリがそのリポジトリを読めること）と、Zenn が取り込むブランチ。
+- **Zenn の GitHub 連携**: Zenn のダッシュボードで GitHub のリポジトリを連携してあること（Zenn の GitHub アプリがそのリポジトリを読めること）と、Zenn が取り込むブランチ。これが無いと使えません（下の「用意する」）。
 
 ### git を用意する
 
@@ -31,8 +35,8 @@ ebira のサーバーが動いている機械のターミナルで、順に確�
 
 ## 用意する
 
-1. Zenn のダッシュボードで GitHub のリポジトリを連携します（Zenn の「GitHub リポジトリで Zenn のコンテンツを管理する」の手順のとおり）。
-2. 歯車のメニューの「設定…」の「同期」のタブの「Zenn」に、リポジトリの URL（`git@github.com:you/zenn-content.git` など）を書いて保存します。ブランチは、Zenn が取り込むブランチがリポジトリの既定のブランチでなければ書きます。Zenn のユーザー名を書くと、記事へのリンクが使えるようになります。設定ファイルなら `zenn_repo`・`zenn_branch`・`zenn_user` です（[設定](settings.md)）。保存するとすぐに使えます。
+1. Zenn のダッシュボードで GitHub のリポジトリを連携します（Zenn の「GitHub リポジトリで Zenn のコンテンツを管理する」の手順のとおり）。ここで連携したリポジトリとブランチが、ebira の書き出す先です。
+2. 歯車のメニューの「設定…」の「連携」のタブの「Zenn（β）」に、リポジトリの URL（`git@github.com:you/zenn-content.git` など）を書いて保存します。ブランチは、Zenn が取り込むブランチがリポジトリの既定のブランチでなければ書きます。Zenn のユーザー名を書くと、記事へのリンクが使えるようになります。設定ファイルなら `zenn_repo`・`zenn_branch`・`zenn_user` です（[設定](settings.md)）。保存するとすぐに使えます。
 
 ebira は、そのリポジトリを自分用に clone して、この端末の状態の場所（`~/.local/state/ebira/…/zenn/`）に置きます。あなたが手元で使っている作業場所には触れません。git はあなたの設定のまま使うので、認証・SSH の鍵・コミットの署名もそのとおりに動きます。
 

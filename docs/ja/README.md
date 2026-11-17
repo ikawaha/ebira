@@ -39,7 +39,7 @@
 
 - [AI と使う](ai.md): MCP で AI クライアントにつなぐ、ツール、アシスタント
 - [同期](sync.md): Dropbox・iCloud Drive・git でノートを同期する
-- [Zenn に書き出す](zenn.md): ノートを Zenn の記事として、連携した GitHub のリポジトリに書き出す
+- [Zenn に書き出す（β）](zenn.md): ノートを Zenn の記事として、連携した GitHub のリポジトリに書き出す（Zenn の GitHub 連携を使っているとき）
 - [パスキー](passkey.md): パスキーで Web UI を守る、ebira が守れること
 
 ## 見た目と設定

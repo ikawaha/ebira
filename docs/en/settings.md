@@ -23,11 +23,12 @@ Settings… in the gear menu (⌘, in the desktop app) opens it. The column on t
 - Display: the language, the theme (auto, light or dark), the text size of notes (− and +), the style of the preview (Band, Document, Compact or Lined) and the names of the marks.
 - Search: the search mode, and the stop words and stop tags of ja.
 - Sync: how often to sync with git, and watching the files.
+- Integrations: the repository, the branch and the user name for Zenn (beta) ([Writing to Zenn](zenn.md)).
 - Assistant: the provider and the model.
 - TUI: the preview and the search box of the TUI.
 - Server: the notes directory and the address, authentication, and where the settings files are. In the desktop app it shows the notes folder and the address of the server that the app connects to, and Change… opens the settings window of the app ([Desktop App](desktop.md)).
 
-Each setting has one value. The language, the theme and the settings of sync, the assistant and the TUI have a check box, "Share with other machines":
+Each setting has one value. The language, the theme and the settings of sync, integrations, the assistant and the TUI have a check box, "Share with other machines":
 
 - Unchecked, the value is written to the settings file of this machine (see The settings file below), for this machine alone.
 - Checked, it is written to `defaults` in `_ebira.yaml` of the notes directory, as the default of every machine that syncs these notes (see Sharing settings among machines below), and taken out of the settings file of this machine.

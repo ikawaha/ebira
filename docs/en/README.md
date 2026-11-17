@@ -39,7 +39,7 @@ These pages are also the guide that ebira puts in a new notes directory, as a no
 
 - [Using AI](ai.md): connect AI clients over MCP, the tools, and the assistant
 - [Syncing](sync.md): sync the notes with Dropbox, iCloud Drive or git
-- [Writing to Zenn](zenn.md): write notes as articles of Zenn to the GitHub repository it deploys from
+- [Writing to Zenn (beta)](zenn.md): write notes as articles of Zenn to the GitHub repository it deploys from (with Zenn connected to GitHub)
 - [Passkeys](passkey.md): guard the web UI with a passkey, and what ebira guards
 
 ## Look and settings

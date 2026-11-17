@@ -1,8 +1,12 @@
 ---
-title: Writing to Zenn
+title: Writing to Zenn (beta)
 tags: [guide, zenn]
 ---
 A note can go to [Zenn](https://zenn.dev) as an article: ebira writes the article file and its images to the GitHub repository that Zenn deploys from, and pushes. Zenn takes the articles from there.
+
+> **This is a beta.** How it writes and its settings may change.
+>
+> **It works only with Zenn connected to GitHub.** ebira writes to the GitHub repository, not to the web editor of Zenn. Unless a GitHub repository is connected on the dashboard of Zenn, the pushes put no articles on Zenn. Neither can ebira rewrite the articles you write in the web editor of Zenn.
 
 ## What it needs
 
@@ -12,7 +16,7 @@ ebira reaches neither Zenn nor GitHub itself: the server runs the `git` command 
 - **Authentication to push to GitHub** that asks nothing: an SSH key (ssh-agent, or the SSH agent of 1Password) or a credential helper for HTTPS. ebira asks for no password, so when `git push` asks you in a terminal, notes cannot be written.
 - **A name and an email for the commits**: `user.name` and `user.email` of git. When git signs commits, that has to go without typing too (signing with 1Password shows its approval each time a note is written).
 - **The network**: GitHub reached from the machine of the server. Each git command is stopped after 2 minutes.
-- **On Zenn**: a GitHub repository connected to Zenn (the GitHub app of Zenn reads it) and the branch Zenn deploys.
+- **Zenn connected to GitHub**: a GitHub repository connected on the dashboard of Zenn (the GitHub app of Zenn reads it) and the branch Zenn deploys. Without it, this does not work (see Setting it up below).
 
 ### Getting git ready
 
@@ -31,8 +35,8 @@ Then open the dialog again. When the dialog still finds no git after you install
 
 ## Setting it up
 
-1. Connect a GitHub repository on the dashboard of Zenn, as Zenn tells in its guide to managing contents with a GitHub repository.
-2. In *Settings…* of the gear menu, on the *Sync* tab, write the URL of the repository under *Zenn* (such as `git@github.com:you/zenn-content.git`) and save. Write the branch when Zenn deploys another branch than the default one of the repository. With your user name on Zenn, the articles get their links. In the settings file, these are `zenn_repo`, `zenn_branch` and `zenn_user` ([Settings](settings.md)). They apply once saved.
+1. Connect a GitHub repository on the dashboard of Zenn, as Zenn tells in its guide to managing contents with a GitHub repository. The repository and the branch connected there are where ebira writes.
+2. In *Settings…* of the gear menu, on the *Integrations* tab, write the URL of the repository under *Zenn (beta)* (such as `git@github.com:you/zenn-content.git`) and save. Write the branch when Zenn deploys another branch than the default one of the repository. With your user name on Zenn, the articles get their links. In the settings file, these are `zenn_repo`, `zenn_branch` and `zenn_user` ([Settings](settings.md)). They apply once saved.
 
 ebira clones the repository for itself, into the state directory of this machine (`~/.local/state/ebira/…/zenn/`), and leaves the work trees you use alone. It runs git as you set it up, so your credentials, SSH keys and commit signing work as they do.
 
