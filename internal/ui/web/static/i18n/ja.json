@@ -418,6 +418,7 @@
   "bodySizeSmaller": "文字を小さく",
   "bodySizeLarger": "文字を大きく",
   "bodySizeReset": "100% に戻す",
+  "menuTextSize": "文字の大きさ",
   "copySectionTitle": "この節を Markdown でコピー",
   "codeLines": "{n} 行",
   "copiedSection": "節「{title}」をコピーしました。",

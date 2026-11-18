@@ -418,6 +418,7 @@
   "bodySizeSmaller": "Smaller text",
   "bodySizeLarger": "Larger text",
   "bodySizeReset": "Back to 100%",
+  "menuTextSize": "Text size",
   "copySectionTitle": "Copy this section as Markdown",
   "codeLines": "Lines: {n}",
   "copiedSection": "Copied the section {title}.",
