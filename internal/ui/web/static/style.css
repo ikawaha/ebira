@@ -761,6 +761,11 @@ dialog.server-settings { max-width: min(860px, calc(100vw - 32px)); }
 .settings-label { font-size: var(--fs-sm); padding-top: 4px; }
 .settings-control { min-width: 0; font-size: var(--fs-sm); }
 .settings-control code { display: inline-block; padding-top: 4px; }
+.settings-style { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.settings-style > div:first-child { flex: 1 1 200px; min-width: 0; }
+.preview-sample { flex: 1 1 260px; max-height: 260px; overflow: auto; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); }
+.preview-sample .body { zoom: .8; color: var(--fg); }
+.preview-sample a { pointer-events: none; }
 .settings-control select, .settings-control input:not([type]), .settings-control textarea { box-sizing: border-box; max-width: 100%; font: inherit; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); color: var(--fg); }
 .settings-control input:not([type]), .settings-control textarea { width: 100%; }
 .settings-control textarea { font: var(--fs-xs)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; margin-top: 4px; }

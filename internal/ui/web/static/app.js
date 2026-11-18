@@ -3271,6 +3271,44 @@ async function openSettings() {
   const stopWords = stopList(cur.notes.stop_words, "stop-words");
   const stopTags = stopList(cur.notes.stop_tags, "stop-tags");
 
+  // The style of the preview, in preview.css: a built-in style, or "" for
+  // the file as it is, when it is not one of them as it is.
+  const style = { select: el("select"), desc: el("p", "hint"), hint: el("p", "hint"), initial: null };
+  try {
+    style.cur = await api("/preview-style");
+  } catch (e) {
+    style.select.disabled = true;
+    style.hint.textContent = t("previewStyleFailed", { error: e.message });
+  }
+  if (style.cur) {
+    const kept = style.cur.style === "" || style.cur.modified;
+    if (kept) {
+      const o = el("option", "", style.cur.style === "" ? t("previewStyleOwn") : t("previewStyleModified", { style: styleName(style.cur.style) }));
+      o.value = "";
+      style.select.append(o);
+    }
+    for (const s of PREVIEW_STYLES) {
+      const o = el("option", "", styleName(s));
+      o.value = s;
+      style.select.append(o);
+    }
+    style.initial = kept ? "" : style.cur.style;
+    style.select.value = style.initial;
+    const describe = () => {
+      const s = style.select.value;
+      style.desc.textContent = s ? t("style" + s[0].toUpperCase() + s.slice(1) + "Desc") : "";
+      style.desc.hidden = !s;
+      style.hint.textContent = t("settingsPreviewStyleFile");
+      style.hint.title = style.cur.path; // the whole path, when hovered
+    };
+    style.select.addEventListener("change", () => {
+      tryPreviewStyle(style.select.value || null);
+      describe();
+    });
+    describe();
+  }
+  const styleChanged = () => style.initial !== null && style.select.value !== style.initial;
+
   // A row of a setting, with what it is under its controls.
   const row = (label, controls, hint) => {
     const box = el("div", "settings-control", ...controls);
@@ -3328,7 +3366,7 @@ async function openSettings() {
   // The size of the text of notes is tried at once and kept in this browser
   // when saved; closed otherwise, the page goes back to the size kept.
   let size = bodySize();
-  const dirty = () => changed() || size !== bodySize();
+  const dirty = () => changed() || size !== bodySize() || styleChanged();
   // The settings the server reads when it starts: all but those that apply
   // once saved, the language, the theme and those of Zenn.
   const startup = () => {
@@ -3368,13 +3406,30 @@ async function openSettings() {
     saved = true;
     return true;
   };
+  // saveStyle writes the style of the preview chosen, and tells whether it
+  // is written; the backup of the file it replaces, if any, goes to note.
+  let styleNote = "";
+  const saveStyle = async () => {
+    if (!styleChanged()) return true;
+    let res;
+    try {
+      res = await api("/preview-style", { method: "PUT", body: { style: style.select.value } });
+    } catch (e) {
+      fail(t("previewStyleFailed", { error: e.message }));
+      return false;
+    }
+    if (res.backup) styleNote = " " + t("previewStyleBackedUp", { backup: res.backup });
+    return true;
+  };
   const saveButton = button(t("save"), async () => {
     const pending = startup() !== initialStartup;
-    if (await save()) {
+    // A file not a built-in style as it is goes to the backup: say so first.
+    if (styleChanged() && style.initial === "" && !confirm(t("previewStyleConfirm", { path: style.cur.path, backup: style.cur.path + ".bak" }))) return;
+    if (await save() && await saveStyle()) {
       setBodySize(size);
       d.close();
       if (pending) await markRestartPending();
-      showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart"));
+      showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart") + styleNote);
       applyLook(cur);
       loadZenn();
     }
@@ -3394,11 +3449,16 @@ async function openSettings() {
     showSize();
   };
   showSize();
-  const previewStyle = button(t("previewStyle"), () => {
-    if (dirty() && !confirm(t("settingsDiscard"))) return;
-    d.close();
-    openPreviewStyle();
-  }, { title: t("previewStyleTitle") });
+  // The style of the preview is tried on the note open as it is chosen, and
+  // written to preview.css when saved. A file not a built-in style as it is
+  // stays a choice of its own, kept unless another one is chosen.
+  // A sample beside the choice, which the style tried styles as it does the
+  // body of a note.
+  const sample = el("div", "body");
+  renderBody(sample, t("previewStyleSample"));
+  const styleRow = row(t("previewStyleHead"), [el("div", "settings-style",
+    el("div", "", style.select, style.desc, style.hint),
+    el("div", "preview-sample", sample))]);
 
   // The tabs, by what the settings are about. Each row tells where its
   // values are kept: the browser applies at once; the settings file of this
@@ -3430,7 +3490,7 @@ async function openSettings() {
       machineRow("lang", t("settingsLang")),
       machineRow("theme", t("settingsTheme")),
       row(t("bodySize"), [el("div", "body-size", sizeDown, sizeReset, sizeUp)], t("settingsBodySizeHint")),
-      row(t("previewStyleHead"), [previewStyle], t("settingsPreviewStyleHint")),
+      styleRow,
       row(t("markNames"), [button(t("markNamesMenu"), () => openMarkNames(markNamesSaved))], t("settingsSharedHint"))),
     tab("search",
       el("p", "hint", t("settingsSharedHint")),
@@ -3503,7 +3563,10 @@ async function openSettings() {
     e.preventDefault();
     close();
   };
-  d.onclose = () => showBodySize(bodySize());
+  d.onclose = () => {
+    showBodySize(bodySize());
+    if (style.cur) tryPreviewStyle(null); // the file, as saved or as it was
+  };
   d.showModal();
   bar.children[0].focus();
 }
