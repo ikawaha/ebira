@@ -206,7 +206,7 @@
   "settingsShare": "ほかの端末とも共有",
   "settingsShareTitle": "ノートのディレクトリの _ebira.yaml に書き、このノートを同期しているすべての端末の既定にします。外すと、この端末の設定ファイルだけに書き、共有の値より優先します。",
   "settingsSharedValue": "ほかの端末と共有している値: {value}",
-  "settingsBodySizeHint": "このブラウザに覚え、すぐに変わります。",
+  "settingsBodySizeHint": "保存すると、このブラウザに覚えます。大きさは押したときに試せます。",
   "settingsSharedHint": "このノートを同期しているすべての端末で共有します。",
   "settingsMachineFile": "この端末の設定",
   "settingsNotesFile": "すべての端末の設定",

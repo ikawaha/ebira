@@ -206,7 +206,7 @@
   "settingsShare": "Share with other machines",
   "settingsShareTitle": "Saved in _ebira.yaml of the notes directory, as the default of every machine that syncs these notes. Unchecked, it is saved in the settings file of this machine alone, which wins over the shared one.",
   "settingsSharedValue": "Shared with other machines: {value}",
-  "settingsBodySizeHint": "Kept in this browser, and applied at once.",
+  "settingsBodySizeHint": "Kept in this browser when saved. The page shows the size at once.",
   "settingsSharedHint": "Shared with every machine that syncs these notes.",
   "settingsMachineFile": "Settings of this machine",
   "settingsNotesFile": "Settings of all machines",

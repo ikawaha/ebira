@@ -3324,7 +3324,11 @@ async function openSettings() {
     } catch (_) { /* saving tells */ }
   };
   const initial = JSON.stringify([machineValue(), notesValue()]);
-  const dirty = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
+  const changed = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
+  // The size of the text of notes is tried at once and kept in this browser
+  // when saved; closed otherwise, the page goes back to the size kept.
+  let size = bodySize();
+  const dirty = () => changed() || size !== bodySize();
   // The settings the server reads when it starts: all but those that apply
   // once saved, the language, the theme and those of Zenn.
   const startup = () => {
@@ -3354,7 +3358,7 @@ async function openSettings() {
   let saved = false;
   const save = async () => {
     msg.hidden = true;
-    if (!dirty() && !saved) return true;
+    if (!changed() && !saved) return true;
     try {
       cur = await api("/settings", { method: "PUT", body: { machine: machineValue(), notes: notesValue(), version: cur.version } });
     } catch (e) {
@@ -3367,6 +3371,7 @@ async function openSettings() {
   const saveButton = button(t("save"), async () => {
     const pending = startup() !== initialStartup;
     if (await save()) {
+      setBodySize(size);
       d.close();
       if (pending) await markRestartPending();
       showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart"));
@@ -3375,19 +3380,17 @@ async function openSettings() {
     }
   }, { cls: "primary" });
 
-  // The size of the text of notes is kept in this browser, and applies at
-  // once.
   const sizeDown = iconButton("minus", t("bodySizeSmaller"), () => stepSize(-1));
   const sizeReset = button("", () => stepSize(0), { title: t("bodySizeReset") });
   const sizeUp = iconButton("plus", t("bodySizeLarger"), () => stepSize(1));
   const showSize = () => {
-    const size = bodySize();
     sizeReset.textContent = `${size}%`;
     sizeDown.disabled = size === BODY_SIZES[0];
     sizeUp.disabled = size === BODY_SIZES.at(-1);
   };
   const stepSize = (step) => {
-    window.ebira.textSize(step);
+    size = step ? BODY_SIZES[Math.min(Math.max(BODY_SIZES.indexOf(size) + step, 0), BODY_SIZES.length - 1)] : 100;
+    showBodySize(size);
     showSize();
   };
   showSize();
@@ -3500,6 +3503,7 @@ async function openSettings() {
     e.preventDefault();
     close();
   };
+  d.onclose = () => showBodySize(bodySize());
   d.showModal();
   bar.children[0].focus();
 }
@@ -6383,6 +6387,11 @@ function bodySize() {
 
 function setBodySize(size) {
   try { localStorage.setItem("ebira.bodySize", String(size)); } catch (_) { /* this page only */ }
+  showBodySize(size);
+}
+
+// showBodySize draws the text of notes in a size, without keeping it.
+function showBodySize(size) {
   document.documentElement.style.setProperty("--body-scale", String(size / 100));
   // CodeMirror measures its lines, and is not told when their height changes.
   for (const node of document.querySelectorAll(".cm-content")) CM.EditorView.findFromDOM(node)?.requestMeasure();
