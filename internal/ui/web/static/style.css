@@ -229,6 +229,10 @@ body.resizing { cursor: col-resize; user-select: none; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .menu .github-link { color: #fff; }
 }
+.menu .body-size { display: flex; align-items: center; gap: 2px; padding: 2px 8px; }
+.menu .body-size button { flex: 1; padding: 4px 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.menu .body-size button svg { width: 14px; height: 14px; }
+.menu .body-size button:disabled { opacity: 0.35; cursor: default; }
 /* The desktop app has these in its menus. */
 :root[data-app] .menu .app-dup { display: none; }
 .menu button[role="menuitemradio"]::before { content: ""; display: inline-block; width: 1.2em; }

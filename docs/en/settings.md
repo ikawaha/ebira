@@ -33,7 +33,7 @@ Each setting has one value. The language, the theme and the settings of sync, in
 - Unchecked, the value is written to the settings file of this machine (see The settings file below), for this machine alone.
 - Checked, it is written to `defaults` in `_ebira.yaml` of the notes directory, as the default of every machine that syncs these notes (see Sharing settings among machines below), and taken out of the settings file of this machine.
 - When this machine has a value of its own and the other machines share another, the dialog shows this machine's, with the shared one below it. Emptied, this machine's value follows the shared one ("As shared: …").
-- The search settings and the names of the marks are always shared. The text size of notes alone is kept in this browser, and applies at once. The style of the preview is written to `preview.css`, next to the settings file.
+- The search settings and the names of the marks are always shared. The text size of notes alone is kept in this browser, and applies at once (the − and + of the settings menu, the gear at the bottom of the left column, change it too; in the desktop app, so do Larger Text, Smaller Text and Default Text Size in the View menu, ⌘+, ⌘- and ⌘0, or Ctrl+, Ctrl+- and Ctrl+0 on Windows. Only the body of notes changes, not the list or the titles). The style of the preview is written to `preview.css`, next to the settings file.
 
 Save writes the settings file of this machine and `_ebira.yaml` together. The language and the theme apply as soon as they are saved (a new language reloads the page). The server reads the other settings when it starts; after saving, restart the server to apply them (see Restarting the server below).
 

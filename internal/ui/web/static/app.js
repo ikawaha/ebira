@@ -6148,12 +6148,32 @@ $("preview-style").addEventListener("close", () => tryPreviewStyle(null));
 function toggleSettings(open = $("settings-menu").hidden) {
   $("settings-menu").hidden = !open;
   $("settings").setAttribute("aria-expanded", String(open));
-  if (open) $("settings-menu").querySelector("button").focus();
+  if (open) {
+    showMenuSize();
+    $("settings-menu").querySelector("button").focus();
+  }
+}
+
+// The size of the text of notes, as in the settings and the View menu of the
+// desktop app, which change it while the menu is closed.
+function showMenuSize() {
+  const size = bodySize();
+  $("body-size-reset").textContent = `${size}%`;
+  $("body-size-down").disabled = size === BODY_SIZES[0];
+  $("body-size-up").disabled = size === BODY_SIZES.at(-1);
+}
+
+for (const [id, step] of [["body-size-down", -1], ["body-size-reset", 0], ["body-size-up", 1]]) {
+  $(id).addEventListener("click", () => {
+    window.ebira.textSize(step);
+    showMenuSize();
+  });
 }
 
 $("settings").addEventListener("click", () => toggleSettings());
 $("settings-menu").addEventListener("click", (e) => {
-  if (e.target.closest("button, a")) toggleSettings(false);
+  // The size is changed a step at a time, with the menu kept open.
+  if (e.target.closest("button, a") && !e.target.closest(".body-size")) toggleSettings(false);
 });
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
