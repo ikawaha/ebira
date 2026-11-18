@@ -4351,7 +4351,7 @@ paths:
             tags:
                 - notes
             summary: set_preview_style notes
-            description: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.
+            description: Make the CSS file for the preview a built-in style, or remove it with band, the style drawn without the file (default too, as an earlier web UI named it). plain adds nothing to the preview as the web UI draws it. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.
             operationId: notes#set_preview_style
             requestBody:
                 description: Request body for set_preview_style.
@@ -8012,7 +8012,7 @@ components:
                     example: /Users/you/.config/ebira/preview.css
                 style:
                     type: string
-                    description: 'The built-in style the CSS file for the preview is, or was made from: default when there is no file, and empty for CSS of the user''s own'
+                    description: 'The built-in style the CSS file for the preview is, or was made from: band, the default style, when there is no file, and empty for CSS of the user''s own; default only from an earlier server, for no file'
                     example: band
                     enum:
                         - ""
@@ -8021,6 +8021,7 @@ components:
                         - document
                         - compact
                         - lined
+                        - plain
             example:
                 backup: /Users/you/.config/ebira/preview.css.bak
                 modified: true
@@ -8522,7 +8523,7 @@ components:
             properties:
                 style:
                     type: string
-                    description: Built-in style to use, or default for none
+                    description: Built-in style to use; band, or default, for the default style, with no file
                     example: band
                     enum:
                         - default
@@ -8530,6 +8531,7 @@ components:
                         - document
                         - compact
                         - lined
+                        - plain
             description: Request body for set_preview_style.
             example:
                 style: band

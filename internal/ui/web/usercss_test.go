@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ikawaha/ebira/internal/previewstyle"
 )
 
 func TestPreviewCSS(t *testing.T) {
@@ -83,8 +85,9 @@ func TestServePreviewCSS(t *testing.T) {
 		}
 		return res.Header.Get("Content-Type"), string(b)
 	}
-	// Without the file, an empty stylesheet.
-	if ct, body := get(); body != "" || !strings.HasPrefix(ct, "text/css") {
+	// Without the file, the default style.
+	band, _ := previewstyle.CSS(previewstyle.Default)
+	if ct, body := get(); body != PreviewCSS(string(band)) || !strings.HasPrefix(ct, "text/css") {
 		t.Errorf("no file: %q, %q", ct, body)
 	}
 	// The file is read at each request.

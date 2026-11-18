@@ -227,7 +227,7 @@ type AddGuideRequestBody struct {
 // SetPreviewStyleRequestBody is the type of the "notes" service
 // "set_preview_style" endpoint HTTP request body.
 type SetPreviewStyleRequestBody struct {
-	// Built-in style to use, or default for none
+	// Built-in style to use; band, or default, for the default style, with no file
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 }
 
@@ -1007,8 +1007,9 @@ type AddGuideResponseBody struct {
 // PreviewStyleResponseBody is the type of the "notes" service "preview_style"
 // endpoint HTTP response body.
 type PreviewStyleResponseBody struct {
-	// The built-in style the CSS file for the preview is, or was made from:
-	// default when there is no file, and empty for CSS of the user's own
+	// The built-in style the CSS file for the preview is, or was made from: band,
+	// the default style, when there is no file, and empty for CSS of the user's
+	// own; default only from an earlier server, for no file
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 	// Whether the file differs from the built-in style it was made from
 	Modified *bool `form:"modified,omitempty" json:"modified,omitempty" xml:"modified,omitempty"`
@@ -1024,8 +1025,9 @@ type PreviewStyleResponseBody struct {
 // SetPreviewStyleResponseBody is the type of the "notes" service
 // "set_preview_style" endpoint HTTP response body.
 type SetPreviewStyleResponseBody struct {
-	// The built-in style the CSS file for the preview is, or was made from:
-	// default when there is no file, and empty for CSS of the user's own
+	// The built-in style the CSS file for the preview is, or was made from: band,
+	// the default style, when there is no file, and empty for CSS of the user's
+	// own; default only from an earlier server, for no file
 	Style *string `form:"style,omitempty" json:"style,omitempty" xml:"style,omitempty"`
 	// Whether the file differs from the built-in style it was made from
 	Modified *bool `form:"modified,omitempty" json:"modified,omitempty" xml:"modified,omitempty"`
@@ -9662,8 +9664,8 @@ func ValidatePreviewStyleResponseBody(body *PreviewStyleResponseBody) (err error
 		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
 	}
 	if body.Style != nil {
-		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined" || *body.Style == "plain") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined", "plain"}))
 		}
 	}
 	return
@@ -9682,8 +9684,8 @@ func ValidateSetPreviewStyleResponseBody(body *SetPreviewStyleResponseBody) (err
 		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
 	}
 	if body.Style != nil {
-		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+		if !(*body.Style == "" || *body.Style == "default" || *body.Style == "band" || *body.Style == "document" || *body.Style == "compact" || *body.Style == "lined" || *body.Style == "plain") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *body.Style, []any{"", "default", "band", "document", "compact", "lined", "plain"}))
 		}
 	}
 	return

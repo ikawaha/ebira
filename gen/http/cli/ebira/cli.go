@@ -1115,7 +1115,7 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    export-zenn: Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with its images in images/<slug>/, of the GitHub repository Zenn deploys from, committed and pushed. The slug is the ID of the note. Images of the note go with it; a link to another file of a note becomes its text, and so does a link to a note that is no article. The same note goes to the same article again. For people only.`)
 	fmt.Fprintln(os.Stderr, `    add-guide: Add the guide of ebira, notes that tell how to use it, as a new notebook after the others. The notebooks there are left as they are: a guide added before stays, and the new one takes another name, such as with (2). For people only.`)
 	fmt.Fprintln(os.Stderr, `    preview-style: Tell the style of the preview of the web UI: which built-in style the CSS file for the preview, next to the settings file, is or was made from, or that it is CSS of the user's own. For people only.`)
-	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
+	fmt.Fprintln(os.Stderr, `    set-preview-style: Make the CSS file for the preview a built-in style, or remove it with band, the style drawn without the file (default too, as an earlier web UI named it). plain adds nothing to the preview as the web UI draws it. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
 	fmt.Fprintln(os.Stderr, `    settings: Read the settings of the server's machine and user, and those synced with the notes, which the server reads when it starts. For people only.`)
 	fmt.Fprintln(os.Stderr, `    save-settings: Write the settings, which take effect when the server starts again (restart_server). Only the keys the settings have are written, keeping the rest of the files with their comments. Invalid settings are not written. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the settings decide how the server authenticates people.`)
 	fmt.Fprintln(os.Stderr, `    restart-server: Stop the server and start it again with the same executable, flags and environment, so that it reads the settings again. It answers before it stops; the server answers on GET /health with another instance once it runs again. For people only; while passkeys are required, the session must have signed in with a passkey recently, as the server starts with the settings written, which decide how it authenticates people.`)
@@ -2109,7 +2109,7 @@ func notesSetPreviewStyleUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
+	fmt.Fprintln(os.Stderr, `Make the CSS file for the preview a built-in style, or remove it with band, the style drawn without the file (default too, as an earlier web UI named it). plain adds nothing to the preview as the web UI draws it. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)

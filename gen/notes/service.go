@@ -339,9 +339,11 @@ type Service interface {
 	// file for the preview, next to the settings file, is or was made from, or
 	// that it is CSS of the user's own. For people only.
 	PreviewStyle(context.Context, *PreviewStylePayload) (res *PreviewStyle, err error)
-	// Make the CSS file for the preview a built-in style, or remove it with
-	// default. A file that is not a built-in style as it is, changed or of the
-	// user's own, is copied to preview.css.bak first. For people only.
+	// Make the CSS file for the preview a built-in style, or remove it with band,
+	// the style drawn without the file (default too, as an earlier web UI named
+	// it). plain adds nothing to the preview as the web UI draws it. A file that
+	// is not a built-in style as it is, changed or of the user's own, is copied to
+	// preview.css.bak first. For people only.
 	SetPreviewStyle(context.Context, *SetPreviewStylePayload) (res *PreviewStyle, err error)
 	// Read the settings of the server's machine and user, and those synced with
 	// the notes, which the server reads when it starts. For people only.
@@ -1318,8 +1320,9 @@ type NotesSettings struct {
 
 // PreviewStyle is the result type of the notes service preview_style method.
 type PreviewStyle struct {
-	// The built-in style the CSS file for the preview is, or was made from:
-	// default when there is no file, and empty for CSS of the user's own
+	// The built-in style the CSS file for the preview is, or was made from: band,
+	// the default style, when there is no file, and empty for CSS of the user's
+	// own; default only from an earlier server, for no file
 	Style string
 	// Whether the file differs from the built-in style it was made from
 	Modified bool
@@ -1515,7 +1518,7 @@ type SetMarksPayload struct {
 type SetPreviewStylePayload struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
 	Session *string
-	// Built-in style to use, or default for none
+	// Built-in style to use; band, or default, for the default style, with no file
 	Style string
 }
 
@@ -3024,8 +3027,9 @@ func validatejsonNotesSettingsTransport(value *jsonNotesSettingsTransport) (err 
 
 // jsonPreviewStyleTransport stores JSON fields until they have been validated.
 type jsonPreviewStyleTransport struct {
-	// The built-in style the CSS file for the preview is, or was made from:
-	// default when there is no file, and empty for CSS of the user's own
+	// The built-in style the CSS file for the preview is, or was made from: band,
+	// the default style, when there is no file, and empty for CSS of the user's
+	// own; default only from an earlier server, for no file
 	Style *string `json:"style"`
 	// Whether the file differs from the built-in style it was made from
 	Modified *bool `json:"modified"`
@@ -3053,8 +3057,8 @@ func validatejsonPreviewStyleTransport(value *jsonPreviewStyleTransport) (err er
 		err = goa.MergeErrors(err, goa.MissingFieldError("path", "body"))
 	}
 	if value.Style != nil {
-		if !(*value.Style == "" || *value.Style == "default" || *value.Style == "band" || *value.Style == "document" || *value.Style == "compact" || *value.Style == "lined") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *value.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+		if !(*value.Style == "" || *value.Style == "default" || *value.Style == "band" || *value.Style == "document" || *value.Style == "compact" || *value.Style == "lined" || *value.Style == "plain") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.style", *value.Style, []any{"", "default", "band", "document", "compact", "lined", "plain"}))
 		}
 	}
 	return err
@@ -4090,8 +4094,8 @@ func validateStopListOriginal(value *StopList) (err error) {
 
 // validatePreviewStyleOriginal checks the original typed value before JSON conversion.
 func validatePreviewStyleOriginal(value *PreviewStyle) (err error) {
-	if !(value.Style == "" || value.Style == "default" || value.Style == "band" || value.Style == "document" || value.Style == "compact" || value.Style == "lined") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.style", value.Style, []any{"", "default", "band", "document", "compact", "lined"}))
+	if !(value.Style == "" || value.Style == "default" || value.Style == "band" || value.Style == "document" || value.Style == "compact" || value.Style == "lined" || value.Style == "plain") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.style", value.Style, []any{"", "default", "band", "document", "compact", "lined", "plain"}))
 	}
 	return err
 }
@@ -10938,7 +10942,7 @@ func validatePreviewStyleJSONValue(path string, value any, description string) e
 		case "style":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The built-in style the CSS file for the preview is, or was made from: default when there is no file, and empty for CSS of the user's own",
+				typed[key], "The built-in style the CSS file for the preview is, or was made from: band, the default style, when there is no file, and empty for CSS of the user's own; default only from an earlier server, for no file",
 			); err != nil {
 				return err
 			}

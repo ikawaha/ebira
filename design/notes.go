@@ -401,11 +401,12 @@ var GitStatus = Type("GitStatus", func() {
 })
 
 // previewStyleNames are the built-in styles of the preview, as in
-// internal/previewstyle, and default for none.
-var previewStyleNames = []any{"default", "band", "document", "compact", "lined"}
+// internal/previewstyle, and default, the name an earlier web UI gave to no
+// file, which is now band.
+var previewStyleNames = []any{"default", "band", "document", "compact", "lined", "plain"}
 
 var PreviewStyle = Type("PreviewStyle", func() {
-	RequiredAttribute("style", String, "The built-in style the CSS file for the preview is, or was made from: default when there is no file, and empty for CSS of the user's own", func() {
+	RequiredAttribute("style", String, "The built-in style the CSS file for the preview is, or was made from: band, the default style, when there is no file, and empty for CSS of the user's own; default only from an earlier server, for no file", func() {
 		Enum(append([]any{""}, previewStyleNames...)...)
 		Example("band")
 	})
@@ -1852,10 +1853,10 @@ var _ = Service("notes", func() {
 	})
 
 	Method("set_preview_style", func() {
-		Description("Make the CSS file for the preview a built-in style, or remove it with default. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.")
+		Description("Make the CSS file for the preview a built-in style, or remove it with band, the style drawn without the file (default too, as an earlier web UI named it). plain adds nothing to the preview as the web UI draws it. A file that is not a built-in style as it is, changed or of the user's own, is copied to preview.css.bak first. For people only.")
 		Payload(func() {
 			sessionDSL()
-			RequiredAttribute("style", String, "Built-in style to use, or default for none", func() {
+			RequiredAttribute("style", String, "Built-in style to use; band, or default, for the default style, with no file", func() {
 				Enum(previewStyleNames...)
 				Example("band")
 			})

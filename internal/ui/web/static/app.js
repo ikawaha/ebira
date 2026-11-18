@@ -3288,7 +3288,7 @@ async function openSettings() {
       style.select.append(o);
     }
     for (const s of PREVIEW_STYLES) {
-      const o = el("option", "", styleName(s));
+      const o = el("option", "", styleChoice(s));
       o.value = s;
       style.select.append(o);
     }
@@ -6144,18 +6144,23 @@ $("ask-toggle").addEventListener("click", () => toggleAssistant());
 // /preview-style). The dialog tries the style chosen on the note open by
 // swapping the stylesheet of the preview, and puts it back when it closes.
 
-const PREVIEW_STYLES = ["default", "band", "document", "compact", "lined"];
+// band is the default, drawn without preview.css; plain adds nothing to the
+// preview as the web UI draws it.
+const PREVIEW_STYLES = ["band", "document", "compact", "lined", "plain"];
+const DEFAULT_STYLE = "band";
 
 // styleName is the name of a built-in style shown to people.
 const styleName = (s) => t("style" + s[0].toUpperCase() + s.slice(1));
+// styleChoice is the name of a built-in style in a list to choose from,
+// which tells the default.
+const styleChoice = (s) => (s === DEFAULT_STYLE ? t("styleIsDefault", { style: styleName(s) }) : styleName(s));
 
 // tryPreviewStyle shows style in the preview without writing it; null puts
 // back preview.css, read again.
 function tryPreviewStyle(style) {
   const link = $("preview-css");
-  link.disabled = style === "default";
   if (style === null) link.href = `assets/preview.css?v=${Date.now()}`;
-  else if (style !== "default") link.href = `assets/styles/${style}.css`;
+  else link.href = `assets/styles/${style}.css`;
 }
 
 async function openPreviewStyle() {
@@ -6180,7 +6185,7 @@ async function openPreviewStyle() {
     radio.value = s;
     radio.checked = s === cur.style;
     radio.addEventListener("change", () => tryPreviewStyle(s));
-    list.append(el("label", "", radio, el("span", "", el("b", "", styleName(s)), " ", el("span", "desc", t("style" + s[0].toUpperCase() + s.slice(1) + "Desc")))));
+    list.append(el("label", "", radio, el("span", "", el("b", "", styleChoice(s)), " ", el("span", "desc", t("style" + s[0].toUpperCase() + s.slice(1) + "Desc")))));
   }
   const msg = el("p", "error");
   msg.hidden = true;

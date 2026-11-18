@@ -1,0 +1,28 @@
+/* ebira preview style: document
+   A serif face, lines of a readable length and more room between them, as
+   in a printed document. This file is yours to change; the web UI tells it
+   is changed. The colors of the web UI, such as var(--fg-muted), follow its
+   light and dark themes. */
+
+/* The body: serif, about 40 characters of Japanese a line, airy lines. */
+font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
+font-size: 15px;
+line-height: 1.9;
+max-width: 40em;
+
+/* Headings in the same face, centered h1 with a thin rule below. */
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: 0.02em; }
+h1 { text-align: center; font-size: 1.6em; padding-bottom: 0.4em; border-bottom: 1px solid var(--border); margin-bottom: 1.2em; }
+h2 { font-size: 1.3em; margin-top: 2em; }
+h3 { font-size: 1.1em; margin-top: 1.6em; }
+
+/* Paragraphs indented by one character, as in Japanese writing. */
+p { margin: 0.6em 0; }
+p + p { text-indent: 1em; }
+
+/* A short centered rule, and quotes in italics without a bar. */
+hr { border: none; border-top: 1px solid var(--fg-muted); width: 30%; margin: 2em auto; }
+blockquote { border-left: none; padding: 0 2em; font-style: italic; }
+
+/* Code keeps the sans and mono faces of the web UI. */
+pre, code { line-height: 1.5; }

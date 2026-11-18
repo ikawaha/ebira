@@ -8,21 +8,36 @@
 font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
 font-size: 15px;
 line-height: 1.9;
-max-width: 40em;
+letter-spacing: 0.03em;
+max-width: 42em;
 
-/* Headings in the same face, centered h1 with a thin rule below. */
-h1, h2, h3, h4 { font-weight: 600; letter-spacing: 0.02em; }
-h1 { text-align: center; font-size: 1.6em; padding-bottom: 0.4em; border-bottom: 1px solid var(--border); margin-bottom: 1.2em; }
-h2 { font-size: 1.3em; margin-top: 2em; }
-h3 { font-size: 1.1em; margin-top: 1.6em; }
+/* Headings in the same face: h1 centered over a short rule, h2 over a
+   thin line, the others plain. */
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: 0.06em; line-height: 1.5; }
+h1 { font-size: 1.5em; text-align: center; margin: 1em 0 1.4em; }
+h1::after { content: ""; display: block; width: 3em; margin: 0.5em auto 0; border-top: 1px solid var(--fg-muted); }
+h2 { font-size: 1.25em; margin: 2.2em 0 0.8em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.08em; margin: 1.8em 0 0.6em; }
+h4 { font-size: 1em; margin: 1.5em 0 0.5em; }
 
-/* Paragraphs indented by one character, as in Japanese writing. */
-p { margin: 0.6em 0; }
-p + p { text-indent: 1em; }
+/* Paragraphs and lists with room between them. */
+p { margin: 0.8em 0; }
+ul, ol { padding-left: 1.6em; }
+li { margin: 0.15em 0; }
+li::marker { color: var(--fg-muted); }
 
-/* A short centered rule, and quotes in italics without a bar. */
-hr { border: none; border-top: 1px solid var(--fg-muted); width: 30%; margin: 2em auto; }
-blockquote { border-left: none; padding: 0 2em; font-style: italic; }
+/* Quotes set in, upright: Japanese has no italics. */
+blockquote { border-left: 1px solid var(--fg-muted); padding: 0 0 0 1.4em; margin: 1.4em 0 1.4em 0.4em; }
 
-/* Code keeps the sans and mono faces of the web UI. */
-pre, code { line-height: 1.5; }
+/* A short centered rule. */
+hr { border: none; border-top: 1px solid var(--fg-muted); width: 6em; margin: 2.4em auto; }
+
+/* Tables ruled as in print: a line above and below, one under the header,
+   none between the cells. */
+table { margin: 1.4em 0; border-top: 1.5px solid var(--fg); border-bottom: 1.5px solid var(--fg); }
+th, td { border: none; padding: 0.35em 1em; text-align: left; }
+th { border-bottom: 1px solid var(--fg); font-weight: 600; }
+
+/* Code keeps the mono face of the web UI. */
+pre, code { line-height: 1.5; letter-spacing: 0; }
+pre { margin: 1.4em 0; }

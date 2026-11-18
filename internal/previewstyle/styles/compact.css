@@ -3,21 +3,26 @@
    file is yours to change; the web UI tells it is changed. The colors of the
    web UI, such as var(--border), follow its light and dark themes. */
 
-/* The body: a little smaller, with closer lines. */
+/* The body: a little smaller, with lines still apart enough to read. */
 font-size: 13px;
-line-height: 1.45;
+line-height: 1.6;
 
-/* Headings: smaller steps and less room around them. */
-h1 { font-size: 1.4em; margin: 0.6em 0 0.3em; }
-h2 { font-size: 1.2em; margin: 0.6em 0 0.3em; }
-h3, h4 { font-size: 1.05em; margin: 0.5em 0 0.2em; }
+/* Headings: smaller steps, with room above them and little below, so that
+   each stays with what it heads. */
+h1, h2, h3, h4 { line-height: 1.35; margin: 1.1em 0 0.35em; }
+h1 { font-size: 1.35em; }
+h2 { font-size: 1.18em; }
+h3 { font-size: 1.05em; }
+h4 { font-size: 1em; }
 
-/* Paragraphs, lists and blocks closer together. */
-p { margin: 0.35em 0; }
-ul, ol { margin: 0.3em 0; padding-left: 1.3em; }
+/* Paragraphs, lists and blocks closer together, all alike. */
+p { margin: 0.4em 0; }
+ul, ol { margin: 0.4em 0; padding-left: 1.4em; }
+li > ul, li > ol { margin: 0.1em 0; }
 li + li { margin-top: 0.1em; }
-pre { padding: 8px; margin: 0.5em 0; }
-blockquote { margin: 0.4em 0; }
-hr { margin: 0.8em 0; border: none; border-top: 1px solid var(--border); }
-table { font-size: 0.95em; }
-th, td { padding: 2px 6px; }
+blockquote { margin: 0.5em 0; padding-left: 0.8em; }
+pre { padding: 8px 10px; margin: 0.5em 0; }
+.code-fold { margin-top: 0.5em; }
+table { margin: 0.5em 0; font-size: 0.95em; }
+th, td { padding: 2px 8px; text-align: left; }
+hr { margin: 1em 0; border: none; border-top: 1px solid var(--border); }

@@ -1,26 +1,31 @@
 /* ebira preview style: lined
-   Lines under the headings, and tables and code drawn crisply. This file is
-   yours to change; the web UI tells it is changed. The colors of the web UI,
-   such as var(--border), follow its light and dark themes. */
+   Thin lines that order the note: under the headings, between the rows of
+   tables and around code. This file is yours to change; the web UI tells it
+   is changed. The colors of the web UI, such as var(--border), follow its
+   light and dark themes. */
 
 /* Headings: a line under h1 and h2, the others plain. */
-h1 { font-size: 1.8em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
-h2 { font-size: 1.4em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
-h1, h2, h3, h4 { margin-top: 1.4em; margin-bottom: 0.6em; }
-h4 { color: var(--fg-muted); }
+h1, h2, h3, h4 { margin: 1.5em 0 0.6em; }
+h1 { font-size: 1.7em; padding-bottom: 0.25em; border-bottom: 2px solid var(--border); }
+h2 { font-size: 1.35em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.15em; }
+h4 { font-size: 1em; }
 
-/* Links underlined; a plain thick rule. */
+/* Links underlined; a thin rule. */
 a:link, a:visited { text-decoration: underline; text-underline-offset: 2px; }
-hr { height: 3px; border: none; background: var(--border); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
 
-/* Tables with a header row and stripes. */
-table { border-collapse: collapse; margin: 1em 0; }
-th { background: var(--code-bg); font-weight: 600; }
-tr:nth-child(2n) td { background: color-mix(in srgb, var(--code-bg) 50%, transparent); }
+/* Tables with lines between the rows alone, a stronger one under the
+   header. */
+table { margin: 1.2em 0; }
+th, td { border: none; border-bottom: 1px solid var(--border); padding: 6px 14px 6px 4px; text-align: left; }
+th { border-bottom: 2px solid var(--fg-muted); font-weight: 600; }
 
-/* Code: a border around blocks, inline code a little apart. */
+/* Code: blocks in a frame, with the bar above them inside it. */
 pre { border: 1px solid var(--border); }
+.code-fold > summary { border: 1px solid var(--border); }
+.code-fold > pre { border-top: none; }
 :not(pre) > code { padding: 2px 5px; }
 
-/* Quotes with a grey bar. */
-blockquote { border-left: 4px solid var(--border); padding-left: 14px; }
+/* Quotes with a line beside them. */
+blockquote { border-left: 3px solid var(--border); padding: 2px 0 2px 14px; }
