@@ -7,41 +7,78 @@
   body { font: 13px -apple-system, "Segoe UI", sans-serif; margin: 20px; }
   label { display: block; margin-bottom: 4px; font-weight: 600; }
   .row { display: flex; gap: 8px; margin-bottom: 14px; }
-  input { flex: 1; min-width: 0; padding: 4px 6px; font: inherit; }
+  input, select { flex: 1; min-width: 0; padding: 4px 6px; font: inherit; }
   .hint { margin: -10px 0 14px; opacity: .7; }
   #problem { color: #c9302c; white-space: pre-wrap; max-height: 64px; overflow: auto; margin: 0 0 10px; user-select: text; -webkit-user-select: text; }
   #problem:empty { display: none; }
+  #intro { margin: 0 0 14px; }
+  #intro:empty { display: none; }
   .actions { display: flex; justify-content: flex-end; gap: 8px; }
 </style>
 </head>
 <body>
 <form id="form">
-  <label for="notes">{{t "Notes folder"}}</label>
+  <p id="intro" data-t="{{.Intro}}">{{t .Intro}}</p>
+  <label for="notes" data-t="Notes folder">{{t "Notes folder"}}</label>
   <div class="row">
     <input id="notes" value="{{.Notes}}" placeholder="{{.NotesFound}}" spellcheck="false">
-    <button type="button" id="choose">{{t "Choose…"}}</button>
+    <button type="button" id="choose" data-t="Choose…">{{t "Choose…"}}</button>
   </div>
-  <p class="hint">{{t "Folders in it become notebooks."}}</p>
-  <label for="addr">{{t "Server address"}}</label>
+  <p class="hint" data-t="Folders in it become notebooks.">{{t "Folders in it become notebooks."}}</p>
+  {{if .Intro}}
+  <label for="lang" data-t="Language">{{t "Language"}}</label>
+  <div class="row"><select id="lang">
+    <option value="ja" data-t="Japanese">{{t "Japanese"}}</option>
+    <option value="en" selected data-t="English">{{t "English"}}</option>
+  </select></div>
+  <label for="search" data-t="Search mode">{{t "Search mode"}}</label>
+  <div class="row"><select id="search">
+    <option value="ja" data-t="ja (Japanese words, by morphological analysis)">{{t "ja (Japanese words, by morphological analysis)"}}</option>
+    <option value="en" data-t="en (English words and their stems)">{{t "en (English words and their stems)"}}</option>
+    <option value="bigram" selected data-t="bigram (any language, two characters at a time)">{{t "bigram (any language, two characters at a time)"}}</option>
+  </select></div>
+  <p class="hint" data-t="For a new folder: notes kept in it before keep theirs. Both can be changed later in the settings.">{{t "For a new folder: notes kept in it before keep theirs. Both can be changed later in the settings."}}</p>
+  {{end}}
+  <label for="addr" data-t="Server address">{{t "Server address"}}</label>
   <div class="row"><input id="addr" value="{{.Addr}}" spellcheck="false"></div>
   <p id="problem">{{.Problem}}</p>
   <div class="actions">
-    <button type="button" id="cancel">{{t "Cancel"}}</button>
-    <button type="submit">{{t "Apply"}}</button>
+    <button type="button" id="cancel" data-t="Cancel">{{t "Cancel"}}</button>
+    <button type="submit" data-t="Apply">{{t "Apply"}}</button>
   </div>
 </form>
 <script>
   // To the app through WebKit on macOS, WebView2 on Windows (toApp in main.go).
   const post = (m) => (window.webkit?.messageHandlers?.external ?? window.chrome?.webview)?.postMessage("ebira:settings:" + m);
   const byId = (id) => document.getElementById(id);
+  // At the first start the page speaks the language chosen in it, from
+  // English: the app gives it the texts in English, which it translates.
+  const messages = {{.Messages}};
+  const tr = (text) => messages?.[byId("lang")?.value]?.[text] ?? text;
   function setNotes(dir) { byId("notes").value = dir; }
-  function showProblem(text) { byId("problem").textContent = text; }
+  function showProblem(text) { byId("problem").textContent = tr(text); }
+  // askKeep asks whether to keep the notes in dir, which has files but no
+  // notes of ebira, and applies again if so.
+  function askKeep(text, dir) {
+    if (confirm(tr(text).replace("{dir}", dir))) apply(true);
+  }
+  function apply(keep) {
+    showProblem("");
+    post("apply:" + JSON.stringify({ notes: byId("notes").value.trim(), addr: byId("addr").value.trim(), lang: byId("lang")?.value ?? "", search: byId("search")?.value ?? "", keep }));
+  }
   byId("choose").onclick = () => post("choose");
+  // The search mode follows the language until it is chosen.
+  let searchChosen = false;
+  byId("search")?.addEventListener("change", () => { searchChosen = true; });
+  byId("lang")?.addEventListener("change", (e) => {
+    const lang = e.target.value;
+    for (const el of document.querySelectorAll("[data-t]")) el.textContent = tr(el.dataset.t);
+    if (!searchChosen) byId("search").value = lang === "ja" ? "ja" : "bigram";
+  });
   byId("cancel").onclick = () => post("close");
   byId("form").onsubmit = (e) => {
     e.preventDefault();
-    showProblem("");
-    post("apply:" + JSON.stringify({ notes: byId("notes").value.trim(), addr: byId("addr").value.trim() }));
+    apply(false);
   };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") post("close"); });
 </script>

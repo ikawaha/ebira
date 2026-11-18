@@ -40,7 +40,7 @@ The full text of each license is in `internal/ui/web/static/vendor/*.LICENSE` of
 | go-webauthn | BSD-3-Clause |
 | snowball (English stems) | MIT |
 | The Anthropic SDK | MIT |
-| The Google Gen AI SDK, OpenTelemetry | Apache-2.0 |
+| The Google Gen AI SDK, the OpenAI Go SDK, OpenTelemetry | Apache-2.0 |
 
 The other parts, used through these, are in `go.mod` and `go.sum` of the source, each under its own license.
 

@@ -2459,7 +2459,7 @@ function noteRow(n, sort, reorder, list, cls) {
   // Searches in a notebook find the notes of its sub notebooks too.
   // In the cells of the archive, the cell tells it.
   if ((!state.notebook || n.notebook !== state.notebook) && !(state.archive && !searching())) meta.append(el("span", "where", notebookName(n.notebook)));
-  meta.append(...tagList(n.tags));
+  if (n.tags?.length) meta.append(el("span", "tags", ...tagList(n.tags)));
   li.append(meta);
   if (n.snippet) li.append(el("div", "snippet", highlighted(n.snippet, n.snippet_highlights)));
   li.addEventListener("click", (e) => chooseNote(n.id, e));
@@ -3171,7 +3171,7 @@ async function openSettings(focus) {
     lang: [["", t("settingsLangDefault")], ...LANGS.map((l) => [l, langName(l)])],
     theme: [["", t("settingsThemeDefault")], ["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]],
     watch: [["", t("settingsWatchDefault")], ["true", t("settingsWatchOn")], ["false", t("settingsWatchOff")]],
-    provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]],
+    provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"], ["openai", "OpenAI (GPT)"]],
     tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreviewRendered")], ["source", t("settingsTUISource")]],
     tui_search: [["", t("settingsTUISearchDefault")], ["search", t("settingsTUISearchSearch")], ["filter", t("settingsTUISearchFilter")]],
   };

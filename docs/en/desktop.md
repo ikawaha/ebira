@@ -49,6 +49,8 @@ The app uses the server at the address of its settings (`localhost:13579` by def
 
 When it cannot connect, the settings window tells why.
 
+When ebira is not set up yet (no `notes_dir` in the config file), a window opens first to choose the notes folder: ebira in your Documents folder by default, or any other. For a new folder it also asks the language and the search mode (it opens in English, and speaks Japanese once you choose it). "Apply" makes the folder with this guide, and writes it as `notes_dir` in the config file, so that the TUI, the CLI and MCP use the same notes. If the folder has files but no notes of ebira, it asks whether to keep the notes there (its folders become notebooks and its YAML files notes).
+
 ## Settings
 
 "Settings…" in the ebira menu (Cmd+,; the File menu on Windows) opens the settings dialog of the web UI ([Settings](settings.md)). Change… in its Server section opens the settings window of the app, which sets the notes folder and the address of the server; with no server answering, "Settings…" opens this window. With the notes folder empty, it follows `notes_dir` of the config file ([Settings](settings.md)). "Apply" connects again, to the server of those notes.

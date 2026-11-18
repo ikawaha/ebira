@@ -435,7 +435,7 @@ var MachineSettings = Type("MachineSettings", func() {
 	})
 	Attribute("watch", Boolean, "Whether the server watches the notes directory; left out for true")
 	Attribute("provider", String, "Model provider of the assistant; empty for the one whose API key is set", func() {
-		Enum("anthropic", "gemini")
+		Enum("anthropic", "gemini", "openai")
 	})
 	Attribute("model", String, "Model of the assistant; empty for the default of the provider")
 	Attribute("tui_preview", String, "How the preview of the TUI shows a note; empty for rendered", func() {

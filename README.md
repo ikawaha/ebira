@@ -56,7 +56,7 @@ flowchart LR
     N --> A
     N <--> I
   end
-  A <--> L["☁️ Claude / Gemini"]
+  A <--> L["☁️ Claude / Gemini / OpenAI"]
   N <--> F["📄 YAML files"]
   F <-.->|"git · Dropbox"| O["💻 other machines"]
 ```
@@ -78,7 +78,7 @@ The same notes, from the browser (`ebira web`), from a window of their own on ma
 - **Web UI and desktop app** — Markdown with math (KaTeX) and diagrams (Mermaid), an editor with list continuation, code coloring and emoji completion (CodeMirror 6), marks, tags, sub notebooks, separators, an archive, drag and drop, and live updates. In English and Japanese, with light and dark themes.
 - **TUI** — the same notes in the terminal, driven by the keyboard.
 - **MCP server and notebook kinds for AI** — AI clients such as Claude Code can search and read your notes, and write where you allow it: `default` (AI reads), `collab` (AI reads and writes), `drop` (AI only drops notes in) and `private` (invisible to AI).
-- **Assistant** — ask about your notes in the web UI, with Claude or Gemini; it answers with links to the notes it used.
+- **Assistant** — ask about your notes in the web UI, with Claude, Gemini or OpenAI; it answers with links to the notes it used.
 - **Safe edits** — conflicts are detected with ETags, deleted notes go to the trash first, moves can be undone, and earlier versions of a note are kept on each machine.
 - **A guide in your notes** — a new notes directory starts with the guide of ebira, which is also [the documentation](docs/en/README.md).
 - **One binary, no cgo**

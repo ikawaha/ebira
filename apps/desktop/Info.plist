@@ -25,5 +25,7 @@
 	<string>13.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>ebira keeps your notes in the folder you choose, by default ebira in your Documents folder.</string>
 </dict>
 </plist>

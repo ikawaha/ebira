@@ -18,6 +18,10 @@ import (
 
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
+	"github.com/ikawaha/ebira/internal/guide"
+	"github.com/ikawaha/ebira/internal/index"
+	"github.com/ikawaha/ebira/internal/store"
+	"github.com/ikawaha/ebira/internal/ui/web"
 )
 
 // How long to wait for a server to answer after starting, which includes
@@ -56,7 +60,7 @@ func runServer(args []string) error {
 			return stopServer(ctx, dir, os.Stdout)
 		}
 		if *asJSON {
-			return serverStatusJSON(dir, os.Stdout)
+			return serverStatusJSON(dir, flagSet(fs, "notes") || settings.NotesDir != "", os.Stdout)
 		}
 		return serverStatus(ctx, dir, os.Stdout)
 	}
@@ -66,15 +70,36 @@ func runServer(args []string) error {
 // serverStart starts ebira serve in the background with the flags of serve.
 func serverStart(ctx context.Context, args []string) error {
 	fs, o := newServeFlags("server start")
+	saveNotes := fs.Bool("save-notes", false, "save the notes directory of -notes as notes_dir in the settings file when it has none, as the desktop app does at its first start")
+	newSearch := fs.String("new-search", "", "search mode to write in "+store.ConfigFile+" when the notes directory of -notes is new, as the desktop app does at its first start")
+	newLang := fs.String("new-lang", "", "language to write in the defaults of "+store.ConfigFile+" when the notes directory of -notes is new, for the guide and the UI ("+strings.Join(web.Langs, ", ")+")")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
+	for _, name := range []string{"save-notes", "new-search", "new-lang"} {
+		if flagSet(fs, name) && !flagSet(fs, "notes") {
+			return fmt.Errorf("-%s needs -notes", name)
+		}
+	}
+	if err := newNotes(ctx, *o.notesDir, *newSearch, *newLang); err != nil {
+		return err
+	}
 	dir, err := notesDirOf(fs, *o.notesDir, false, nil, nil)
 	if err != nil {
 		return err
+	}
+	// Saved before the server starts, so that the commands and the app
+	// started meanwhile find the notes; a settings file that names a notes
+	// directory already is left as it is.
+	if *saveNotes && machineSettings.NotesDir == "" {
+		p, err := config.Save(config.Config{NotesDir: dir})
+		if err != nil {
+			return fmt.Errorf("save the notes directory: %w", err)
+		}
+		fmt.Printf("Saved the notes directory to %s.\n", p)
 	}
 	if _, running, err := serverDir(dir); err != nil {
 		return err
@@ -83,6 +108,32 @@ func serverStart(ctx context.Context, args []string) error {
 		return serverStatus(ctx, dir, os.Stdout)
 	}
 	return startWithFlags(ctx, dir, setFlags(fs))
+}
+
+// newNotes writes the search mode and the language, if given, to
+// _ebira.yaml of the notes directory dir when it is new, as setup does, before
+// the server reads them and adds the guide in that language. Notes made
+// before keep theirs.
+func newNotes(ctx context.Context, dir, mode, lang string) error {
+	if mode == "" && lang == "" {
+		return nil
+	}
+	if mode != "" {
+		if _, err := index.ParseMode(mode); err != nil {
+			return err
+		}
+	}
+	if lang != "" && !slices.Contains(web.Langs, lang) {
+		return fmt.Errorf("unknown language %q: one of %s", lang, strings.Join(web.Langs, ", "))
+	}
+	abs, err := absDir(dir)
+	if err != nil {
+		return err
+	}
+	if !guide.IsNew(abs) {
+		return nil
+	}
+	return makeNotes(ctx, abs, "", false, mode, config.Config{Lang: lang}, lang, io.Discard)
 }
 
 // serverRestart stops the server of the notes directory, if it runs, and
@@ -270,19 +321,23 @@ type statusJSON struct {
 	// NotesDir is the notes directory: of -notes, or else of notes_dir in the
 	// config file, absolute.
 	NotesDir string `json:"notes_dir"`
-	Running  bool   `json:"running"`
+	// Configured tells whether the notes directory is set, by -notes or
+	// notes_dir in the config file; else it is notes/ of the current
+	// directory, which means nothing to the desktop app, started anywhere.
+	Configured bool `json:"configured"`
+	Running    bool `json:"running"`
 	// State is the state of the server, when it runs and has written it.
 	State *daemon.State `json:"state,omitempty"`
 }
 
-// serverStatusJSON prints the notes directory dir, whether its server runs,
-// and its state, as JSON.
-func serverStatusJSON(dir string, out io.Writer) error {
+// serverStatusJSON prints the notes directory dir, whether it is configured,
+// whether its server runs, and its state, as JSON.
+func serverStatusJSON(dir string, configured bool, out io.Writer) error {
 	sd, running, err := serverDir(dir)
 	if err != nil {
 		return err
 	}
-	st := statusJSON{NotesDir: dir, Running: running}
+	st := statusJSON{NotesDir: dir, Configured: configured, Running: running}
 	if running {
 		if s, err := daemon.ReadState(sd); err == nil {
 			st.State = &s

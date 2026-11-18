@@ -5041,7 +5041,7 @@ paths:
                                     git_sync: 10m
                                     lang: ja
                                     model: Vel sit soluta aut corporis nostrum.
-                                    provider: anthropic
+                                    provider: gemini
                                     theme: auto
                                     tui_preview: rendered
                                     tui_search: search
@@ -5056,7 +5056,7 @@ paths:
                                         git_sync: 10m
                                         lang: ja
                                         model: Vel sit soluta aut corporis nostrum.
-                                        provider: anthropic
+                                        provider: gemini
                                         theme: auto
                                         tui_preview: rendered
                                         tui_search: search
@@ -5134,7 +5134,7 @@ paths:
                                 git_sync: 10m
                                 lang: ja
                                 model: Vel sit soluta aut corporis nostrum.
-                                provider: anthropic
+                                provider: gemini
                                 theme: auto
                                 tui_preview: rendered
                                 tui_search: search
@@ -5148,7 +5148,7 @@ paths:
                                     git_sync: 10m
                                     lang: ja
                                     model: Vel sit soluta aut corporis nostrum.
-                                    provider: anthropic
+                                    provider: gemini
                                     theme: auto
                                     tui_preview: rendered
                                     tui_search: search
@@ -5190,7 +5190,7 @@ paths:
                                     git_sync: 10m
                                     lang: ja
                                     model: Vel sit soluta aut corporis nostrum.
-                                    provider: anthropic
+                                    provider: gemini
                                     theme: auto
                                     tui_preview: rendered
                                     tui_search: search
@@ -5205,7 +5205,7 @@ paths:
                                         git_sync: 10m
                                         lang: ja
                                         model: Vel sit soluta aut corporis nostrum.
-                                        provider: anthropic
+                                        provider: gemini
                                         theme: auto
                                         tui_preview: rendered
                                         tui_search: search
@@ -6730,10 +6730,11 @@ components:
                 provider:
                     type: string
                     description: Model provider of the assistant; empty for the one whose API key is set
-                    example: anthropic
+                    example: gemini
                     enum:
                         - anthropic
                         - gemini
+                        - openai
                 theme:
                     type: string
                     description: Color theme of the UI; empty for auto, the system's
@@ -6778,7 +6779,7 @@ components:
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
-                provider: anthropic
+                provider: gemini
                 theme: auto
                 tui_preview: rendered
                 tui_search: search
@@ -7946,7 +7947,7 @@ components:
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
-                    provider: anthropic
+                    provider: gemini
                     theme: auto
                     tui_preview: rendered
                     tui_search: search
@@ -8121,7 +8122,7 @@ components:
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
-                    provider: anthropic
+                    provider: gemini
                     theme: auto
                     tui_preview: rendered
                     tui_search: search
@@ -8135,7 +8136,7 @@ components:
                         git_sync: 10m
                         lang: ja
                         model: Vel sit soluta aut corporis nostrum.
-                        provider: anthropic
+                        provider: gemini
                         theme: auto
                         tui_preview: rendered
                         tui_search: search
@@ -8604,7 +8605,7 @@ components:
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
-                    provider: anthropic
+                    provider: gemini
                     theme: auto
                     tui_preview: rendered
                     tui_search: search
@@ -8619,7 +8620,7 @@ components:
                         git_sync: 10m
                         lang: ja
                         model: Vel sit soluta aut corporis nostrum.
-                        provider: anthropic
+                        provider: gemini
                         theme: auto
                         tui_preview: rendered
                         tui_search: search

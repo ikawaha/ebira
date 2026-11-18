@@ -2353,8 +2353,8 @@ func validatejsonMachineSettingsTransport(value *jsonMachineSettingsTransport) (
 		}
 	}
 	if value.Provider != nil {
-		if !(*value.Provider == "anthropic" || *value.Provider == "gemini") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.provider", *value.Provider, []any{"anthropic", "gemini"}))
+		if !(*value.Provider == "anthropic" || *value.Provider == "gemini" || *value.Provider == "openai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.provider", *value.Provider, []any{"anthropic", "gemini", "openai"}))
 		}
 	}
 	if value.TuiPreview != nil {
@@ -3888,8 +3888,8 @@ func validateMachineSettingsOriginal(value *MachineSettings) (err error) {
 		}
 	}
 	if value.Provider != nil {
-		if !(*value.Provider == "anthropic" || *value.Provider == "gemini") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.provider", *value.Provider, []any{"anthropic", "gemini"}))
+		if !(*value.Provider == "anthropic" || *value.Provider == "gemini" || *value.Provider == "openai") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.provider", *value.Provider, []any{"anthropic", "gemini", "openai"}))
 		}
 	}
 	if value.TuiPreview != nil {
