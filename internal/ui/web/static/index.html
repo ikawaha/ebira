@@ -72,6 +72,13 @@
         <div class="menu-label" id="auth-state"></div>
         <button type="button" role="menuitem" id="passkeys-open" data-i18n="passkeysOpen" hidden></button>
         <button type="button" role="menuitem" id="logout" data-i18n="logout" hidden></button>
+        <div class="menu-sep app-dup" role="separator"></div>
+        <div class="menu-label app-dup" data-i18n="menuTextSize"></div>
+        <div class="body-size app-dup" role="group" data-i18n-aria-label="menuTextSize">
+          <button type="button" id="body-size-down" data-icon="minus" data-i18n-title="bodySizeSmaller" data-i18n-aria-label="bodySizeSmaller"></button>
+          <button type="button" id="body-size-reset" data-i18n-title="bodySizeReset"></button>
+          <button type="button" id="body-size-up" data-icon="plus" data-i18n-title="bodySizeLarger" data-i18n-aria-label="bodySizeLarger"></button>
+        </div>
         <div class="menu-sep" role="separator" id="version-sep" hidden></div>
         <div class="menu-version-row" id="version-row" hidden>
           <button type="button" role="menuitem" id="version-copy" class="menu-version" data-i18n-title="versionCopyTitle"></button>
@@ -170,7 +177,6 @@
 <dialog id="zenn" class="files-check zenn" data-i18n-aria-label="zennHead"></dialog>
 <dialog id="auth" class="files-check auth" data-i18n-aria-label="authTitle"></dialog>
 <dialog id="passkeys" class="files-check auth" data-i18n-aria-label="passkeysTitle"></dialog>
-<dialog id="preview-style" class="preview-style" data-i18n-aria-label="previewStyleHead"></dialog>
 <dialog id="mark-names" class="files-check mark-names" data-i18n-aria-label="markNames"></dialog>
 <dialog id="mcp" class="files-check auth mcp" data-i18n-aria-label="mcpHead"></dialog>
 <dialog id="image-viewer" class="image-viewer" data-i18n-aria-label="imageViewer"></dialog>

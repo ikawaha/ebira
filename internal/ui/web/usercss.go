@@ -11,8 +11,9 @@ const PreviewCSSFile = "preview.css"
 
 // previewScope is the selector the CSS for the preview is nested in, so that
 // it styles the body of a note, in the preview and in the preview of the
-// editor, and nothing else of the page.
-const previewScope = "#preview .body"
+// editor, and the sample of the settings dialog, and nothing else of the
+// page. :is() keeps the specificity of #preview.
+const previewScope = ":is(#preview, .preview-sample) .body"
 
 // maxPreviewCSS is the size of the CSS for the preview read at most.
 const maxPreviewCSS = 256 << 10

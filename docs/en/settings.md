@@ -20,7 +20,7 @@ In the desktop app, the gear menu leaves out what the menus of the app have ([De
 
 Settings… in the gear menu (⌘, in the desktop app) opens it. The column on the left chooses the settings by what they are about:
 
-- Display: the language, the theme (auto, light or dark), the text size of notes (− and +), the style of the preview (Band, Document, Compact or Lined) and the names of the marks.
+- Display: the language, the theme (auto, light or dark), the text size of notes (− and +), the style of the preview (Band, the default, Document, Compact, Lined or Plain) and the names of the marks.
 - Search: the search mode, and the stop words and stop tags of ja.
 - Sync: how often to sync with git, and watching the files.
 - Integrations: the repository, the branch and the user name for Zenn (beta) ([Writing to Zenn](zenn.md)).
@@ -33,7 +33,7 @@ Each setting has one value. The language, the theme and the settings of sync, in
 - Unchecked, the value is written to the settings file of this machine (see The settings file below), for this machine alone.
 - Checked, it is written to `defaults` in `_ebira.yaml` of the notes directory, as the default of every machine that syncs these notes (see Sharing settings among machines below), and taken out of the settings file of this machine.
 - When this machine has a value of its own and the other machines share another, the dialog shows this machine's, with the shared one below it. Emptied, this machine's value follows the shared one ("As shared: …").
-- The search settings and the names of the marks are always shared. The text size of notes alone is kept in this browser, and applies at once. The style of the preview is written to `preview.css`, next to the settings file.
+- The search settings and the names of the marks are always shared. The text size of notes alone is kept in this browser: − and + try a size at once, Save keeps it and Cancel goes back (the − and + of the settings menu, the gear at the bottom of the left column, change it too, and keep it at once; in the desktop app, so do Larger Text, Smaller Text and Default Text Size in the View menu, ⌘+, ⌘- and ⌘0, or Ctrl+, Ctrl+- and Ctrl+0 on Windows. Only the body of notes changes, not the list or the titles). The style of the preview is tried on the sample beside it and on the note open as soon as it is chosen; Save writes it to `preview.css`, next to the settings file, and Cancel goes back. Without `preview.css`, the preview is drawn in Band (choosing Band removes `preview.css`). For the preview with nothing added, choose Plain.
 
 Save writes the settings file of this machine and `_ebira.yaml` together. The language and the theme apply as soon as they are saved (a new language reloads the page). The server reads the other settings when it starts; after saving, restart the server to apply them (see Restarting the server below).
 
@@ -84,7 +84,7 @@ defaults:
 
 ## CSS of the preview
 
-Put `preview.css` next to the settings file to style the preview with your own CSS.
+Put `preview.css` next to the settings file to style the preview with your own CSS. Your CSS takes the place of Band: to start from the preview with nothing added, choose Plain in the settings and add to the `preview.css` it writes.
 
 The CSS applies to the body of notes only: write `h1 { … }` and the rest of the page is left alone. It is read on each page load. The colors of the web UI, such as `var(--accent)`, `var(--fg)` and `var(--fg-muted)`, follow the light and dark themes:
 

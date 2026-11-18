@@ -168,17 +168,17 @@ func Handler(o Options) http.Handler {
 }
 
 // servePreviewCSS serves the CSS for the preview from path, as PreviewCSS
-// makes it; nothing when there is no such file.
+// makes it; the default style when there is no such file.
 func servePreviewCSS(w http.ResponseWriter, path string) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	if path == "" {
-		return
-	}
 	f, err := os.Open(path)
 	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
+		if path != "" && !errors.Is(err, fs.ErrNotExist) {
 			slog.Warn("reading the CSS for the preview", "error", err)
+			return
 		}
+		css, _ := previewstyle.CSS(previewstyle.Default)
+		io.WriteString(w, PreviewCSS(string(css)))
 		return
 	}
 	defer f.Close()
@@ -187,5 +187,5 @@ func servePreviewCSS(w http.ResponseWriter, path string) {
 		slog.Warn("reading the CSS for the preview", "error", err)
 		return
 	}
-	io.WriteString(w, PreviewCSS(string(b)))
+	io.WriteString(w, PreviewCSS(string(previewstyle.Current(b))))
 }

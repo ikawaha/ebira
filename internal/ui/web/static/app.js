@@ -3126,7 +3126,9 @@ function openMarkNames(saved) {
 // style of the preview, and those synced with the notes. The server writes
 // only those keys, keeping the rest of the files with their comments, and
 // reads them when it starts, so the dialog offers to restart it.
-async function openSettings() {
+// openSettings opens the settings dialog; with focus "previewStyle", on the
+// choice of the style of the preview, as the menu of the desktop app asks.
+async function openSettings(focus) {
   const d = $("server-settings");
   let cur;
   try {
@@ -3271,6 +3273,44 @@ async function openSettings() {
   const stopWords = stopList(cur.notes.stop_words, "stop-words");
   const stopTags = stopList(cur.notes.stop_tags, "stop-tags");
 
+  // The style of the preview, in preview.css: a built-in style, or "" for
+  // the file as it is, when it is not one of them as it is.
+  const style = { select: el("select"), desc: el("p", "hint"), hint: el("p", "hint"), initial: null };
+  try {
+    style.cur = await api("/preview-style");
+  } catch (e) {
+    style.select.disabled = true;
+    style.hint.textContent = t("previewStyleFailed", { error: e.message });
+  }
+  if (style.cur) {
+    const kept = style.cur.style === "" || style.cur.modified;
+    if (kept) {
+      const o = el("option", "", style.cur.style === "" ? t("previewStyleOwn") : t("previewStyleModified", { style: styleName(style.cur.style) }));
+      o.value = "";
+      style.select.append(o);
+    }
+    for (const s of PREVIEW_STYLES) {
+      const o = el("option", "", styleChoice(s));
+      o.value = s;
+      style.select.append(o);
+    }
+    style.initial = kept ? "" : style.cur.style;
+    style.select.value = style.initial;
+    const describe = () => {
+      const s = style.select.value;
+      style.desc.textContent = s ? t("style" + s[0].toUpperCase() + s.slice(1) + "Desc") : "";
+      style.desc.hidden = !s;
+      style.hint.textContent = t("settingsPreviewStyleFile");
+      style.hint.title = style.cur.path; // the whole path, when hovered
+    };
+    style.select.addEventListener("change", () => {
+      tryPreviewStyle(style.select.value || null);
+      describe();
+    });
+    describe();
+  }
+  const styleChanged = () => style.initial !== null && style.select.value !== style.initial;
+
   // A row of a setting, with what it is under its controls.
   const row = (label, controls, hint) => {
     const box = el("div", "settings-control", ...controls);
@@ -3324,7 +3364,11 @@ async function openSettings() {
     } catch (_) { /* saving tells */ }
   };
   const initial = JSON.stringify([machineValue(), notesValue()]);
-  const dirty = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
+  const changed = () => JSON.stringify([machineValue(), notesValue()]) !== initial;
+  // The size of the text of notes is tried at once and kept in this browser
+  // when saved; closed otherwise, the page goes back to the size kept.
+  let size = bodySize();
+  const dirty = () => changed() || size !== bodySize() || styleChanged();
   // The settings the server reads when it starts: all but those that apply
   // once saved, the language, the theme and those of Zenn.
   const startup = () => {
@@ -3354,7 +3398,7 @@ async function openSettings() {
   let saved = false;
   const save = async () => {
     msg.hidden = true;
-    if (!dirty() && !saved) return true;
+    if (!changed() && !saved) return true;
     try {
       cur = await api("/settings", { method: "PUT", body: { machine: machineValue(), notes: notesValue(), version: cur.version } });
     } catch (e) {
@@ -3364,38 +3408,59 @@ async function openSettings() {
     saved = true;
     return true;
   };
+  // saveStyle writes the style of the preview chosen, and tells whether it
+  // is written; the backup of the file it replaces, if any, goes to note.
+  let styleNote = "";
+  const saveStyle = async () => {
+    if (!styleChanged()) return true;
+    let res;
+    try {
+      res = await api("/preview-style", { method: "PUT", body: { style: style.select.value } });
+    } catch (e) {
+      fail(t("previewStyleFailed", { error: e.message }));
+      return false;
+    }
+    if (res.backup) styleNote = " " + t("previewStyleBackedUp", { backup: res.backup });
+    return true;
+  };
   const saveButton = button(t("save"), async () => {
     const pending = startup() !== initialStartup;
-    if (await save()) {
+    // A file not a built-in style as it is goes to the backup: say so first.
+    if (styleChanged() && style.initial === "" && !confirm(t("previewStyleConfirm", { path: style.cur.path, backup: style.cur.path + ".bak" }))) return;
+    if (await save() && await saveStyle()) {
+      setBodySize(size);
       d.close();
       if (pending) await markRestartPending();
-      showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart"));
+      showToast(t(!pending ? "settingsSavedNow" : cur.restart ? "settingsSaved" : "settingsSavedNoRestart") + styleNote);
       applyLook(cur);
       loadZenn();
     }
   }, { cls: "primary" });
 
-  // The size of the text of notes is kept in this browser, and applies at
-  // once.
   const sizeDown = iconButton("minus", t("bodySizeSmaller"), () => stepSize(-1));
   const sizeReset = button("", () => stepSize(0), { title: t("bodySizeReset") });
   const sizeUp = iconButton("plus", t("bodySizeLarger"), () => stepSize(1));
   const showSize = () => {
-    const size = bodySize();
     sizeReset.textContent = `${size}%`;
     sizeDown.disabled = size === BODY_SIZES[0];
     sizeUp.disabled = size === BODY_SIZES.at(-1);
   };
   const stepSize = (step) => {
-    window.ebira.textSize(step);
+    size = step ? BODY_SIZES[Math.min(Math.max(BODY_SIZES.indexOf(size) + step, 0), BODY_SIZES.length - 1)] : 100;
+    showBodySize(size);
     showSize();
   };
   showSize();
-  const previewStyle = button(t("previewStyle"), () => {
-    if (dirty() && !confirm(t("settingsDiscard"))) return;
-    d.close();
-    openPreviewStyle();
-  }, { title: t("previewStyleTitle") });
+  // The style of the preview is tried on the note open as it is chosen, and
+  // written to preview.css when saved. A file not a built-in style as it is
+  // stays a choice of its own, kept unless another one is chosen.
+  // A sample beside the choice, which the style tried styles as it does the
+  // body of a note.
+  const sample = el("div", "body");
+  renderBody(sample, t("previewStyleSample"));
+  const styleRow = row(t("previewStyleHead"), [el("div", "settings-style",
+    el("div", "", style.select, style.desc, style.hint),
+    el("div", "preview-sample", sample))]);
 
   // The tabs, by what the settings are about. Each row tells where its
   // values are kept: the browser applies at once; the settings file of this
@@ -3427,7 +3492,7 @@ async function openSettings() {
       machineRow("lang", t("settingsLang")),
       machineRow("theme", t("settingsTheme")),
       row(t("bodySize"), [el("div", "body-size", sizeDown, sizeReset, sizeUp)], t("settingsBodySizeHint")),
-      row(t("previewStyleHead"), [previewStyle], t("settingsPreviewStyleHint")),
+      styleRow,
       row(t("markNames"), [button(t("markNamesMenu"), () => openMarkNames(markNamesSaved))], t("settingsSharedHint"))),
     tab("search",
       el("p", "hint", t("settingsSharedHint")),
@@ -3500,8 +3565,17 @@ async function openSettings() {
     e.preventDefault();
     close();
   };
+  d.onclose = () => {
+    showBodySize(bodySize());
+    if (style.cur) tryPreviewStyle(null); // the file, as saved or as it was
+  };
   d.showModal();
-  bar.children[0].focus();
+  if (focus === "previewStyle" && !style.select.disabled) {
+    choose(tabs.findIndex(([id]) => id === "display"));
+    style.select.focus();
+  } else {
+    bar.children[0].focus();
+  }
 }
 
 // restartServer asks the server to start again, waits until it answers as
@@ -5604,7 +5678,7 @@ window.ebira = {
   copyLink: (markdown) => { if (state.note && !state.editing) copyLink(markdown); },
   find: () => { if (state.note && !state.editing) openFind(); },
   search: () => { $("q").focus(); $("q").select(); },
-  previewStyle: () => openPreviewStyle(),
+  previewStyle: () => openSettings("previewStyle"),
   // textSize makes the text of the body a size larger (1), smaller (-1), or
   // the default (0), as the minus and plus of the settings.
   textSize: (step) => {
@@ -6074,86 +6148,58 @@ $("ask-toggle").addEventListener("click", () => toggleAssistant());
 
 // The style of the preview: a built-in style written to preview.css, next to
 // the settings file, where the user may change it (see GET and PUT
-// /preview-style). The dialog tries the style chosen on the note open by
-// swapping the stylesheet of the preview, and puts it back when it closes.
+// /preview-style). The settings dialog tries the style chosen on the note
+// open by swapping the stylesheet of the preview, and puts it back when it
+// closes.
 
-const PREVIEW_STYLES = ["default", "band", "document", "compact", "lined"];
+// band is the default, drawn without preview.css; plain adds nothing to the
+// preview as the web UI draws it.
+const PREVIEW_STYLES = ["band", "document", "compact", "lined", "plain"];
+const DEFAULT_STYLE = "band";
 
 // styleName is the name of a built-in style shown to people.
 const styleName = (s) => t("style" + s[0].toUpperCase() + s.slice(1));
+// styleChoice is the name of a built-in style in a list to choose from,
+// which tells the default.
+const styleChoice = (s) => (s === DEFAULT_STYLE ? t("styleIsDefault", { style: styleName(s) }) : styleName(s));
 
 // tryPreviewStyle shows style in the preview without writing it; null puts
 // back preview.css, read again.
 function tryPreviewStyle(style) {
   const link = $("preview-css");
-  link.disabled = style === "default";
   if (style === null) link.href = `assets/preview.css?v=${Date.now()}`;
-  else if (style !== "default") link.href = `assets/styles/${style}.css`;
+  else link.href = `assets/styles/${style}.css`;
 }
-
-async function openPreviewStyle() {
-  const d = $("preview-style");
-  const head = el("div", "files-head", el("h2", "", t("previewStyleHead")), closeButton(() => d.close()));
-  d.replaceChildren(head);
-  if (!d.open) d.showModal();
-  let cur;
-  try {
-    cur = await api("/preview-style");
-  } catch (e) {
-    d.append(el("p", "error", t("previewStyleFailed", { error: e.message })));
-    return;
-  }
-  const now = cur.style === "" ? t("previewStyleOwn")
-    : cur.modified ? t("previewStyleModified", { style: styleName(cur.style) }) : styleName(cur.style);
-  const list = el("fieldset", "styles");
-  for (const s of PREVIEW_STYLES) {
-    const radio = el("input");
-    radio.type = "radio";
-    radio.name = "preview-style";
-    radio.value = s;
-    radio.checked = s === cur.style;
-    radio.addEventListener("change", () => tryPreviewStyle(s));
-    list.append(el("label", "", radio, el("span", "", el("b", "", styleName(s)), " ", el("span", "desc", t("style" + s[0].toUpperCase() + s.slice(1) + "Desc")))));
-  }
-  const msg = el("p", "error");
-  msg.hidden = true;
-  const use = button(t("previewStyleUse"), async () => {
-    const style = list.querySelector("input:checked")?.value;
-    if (!style) return;
-    // A file not a built-in style as it is goes to the backup: say so first.
-    if ((cur.style === "" || cur.modified) && !confirm(t("previewStyleConfirm", { path: cur.path, backup: cur.path + ".bak" }))) return;
-    let res;
-    try {
-      res = await api("/preview-style", { method: "PUT", body: { style } });
-    } catch (e) {
-      msg.textContent = t("previewStyleFailed", { error: e.message });
-      msg.hidden = false;
-      return;
-    }
-    d.close();
-    showToast(t("previewStyleDone", { style: styleName(style) }) + (res.backup ? " " + t("previewStyleBackedUp", { backup: res.backup }) : ""));
-  }, { cls: "primary" });
-  d.replaceChildren(head,
-    el("p", "now", t("previewStyleNow", { style: now })),
-    list,
-    el("p", "hint", t("previewStyleTry")),
-    el("p", "hint", t("previewStyleFile", { path: cur.path })),
-    msg,
-    el("div", "files-actions", button(t("cancel"), () => d.close()), use));
-  (list.querySelector("input:checked") || list.querySelector("input")).focus();
-}
-
-$("preview-style").addEventListener("close", () => tryPreviewStyle(null));
 
 function toggleSettings(open = $("settings-menu").hidden) {
   $("settings-menu").hidden = !open;
   $("settings").setAttribute("aria-expanded", String(open));
-  if (open) $("settings-menu").querySelector("button").focus();
+  if (open) {
+    showMenuSize();
+    $("settings-menu").querySelector("button").focus();
+  }
+}
+
+// The size of the text of notes, as in the settings and the View menu of the
+// desktop app, which change it while the menu is closed.
+function showMenuSize() {
+  const size = bodySize();
+  $("body-size-reset").textContent = `${size}%`;
+  $("body-size-down").disabled = size === BODY_SIZES[0];
+  $("body-size-up").disabled = size === BODY_SIZES.at(-1);
+}
+
+for (const [id, step] of [["body-size-down", -1], ["body-size-reset", 0], ["body-size-up", 1]]) {
+  $(id).addEventListener("click", () => {
+    window.ebira.textSize(step);
+    showMenuSize();
+  });
 }
 
 $("settings").addEventListener("click", () => toggleSettings());
 $("settings-menu").addEventListener("click", (e) => {
-  if (e.target.closest("button, a")) toggleSettings(false);
+  // The size is changed a step at a time, with the menu kept open.
+  if (e.target.closest("button, a") && !e.target.closest(".body-size")) toggleSettings(false);
 });
 document.addEventListener("click", (e) => {
   if (!$("settings-menu").hidden && !e.target.closest(".side-foot")) toggleSettings(false);
@@ -6363,6 +6409,11 @@ function bodySize() {
 
 function setBodySize(size) {
   try { localStorage.setItem("ebira.bodySize", String(size)); } catch (_) { /* this page only */ }
+  showBodySize(size);
+}
+
+// showBodySize draws the text of notes in a size, without keeping it.
+function showBodySize(size) {
   document.documentElement.style.setProperty("--body-scale", String(size / 100));
   // CodeMirror measures its lines, and is not told when their height changes.
   for (const node of document.querySelectorAll(".cm-content")) CM.EditorView.findFromDOM(node)?.requestMeasure();
@@ -6615,7 +6666,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("image-viewer").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("server-settings").open) return;
+  if ($("conflict").open || $("image-viewer").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("mark-names").open || $("server-settings").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

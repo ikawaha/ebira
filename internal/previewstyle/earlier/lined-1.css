@@ -1,0 +1,26 @@
+/* ebira preview style: lined
+   Lines under the headings, and tables and code drawn crisply. This file is
+   yours to change; the web UI tells it is changed. The colors of the web UI,
+   such as var(--border), follow its light and dark themes. */
+
+/* Headings: a line under h1 and h2, the others plain. */
+h1 { font-size: 1.8em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
+h2 { font-size: 1.4em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
+h1, h2, h3, h4 { margin-top: 1.4em; margin-bottom: 0.6em; }
+h4 { color: var(--fg-muted); }
+
+/* Links underlined; a plain thick rule. */
+a:link, a:visited { text-decoration: underline; text-underline-offset: 2px; }
+hr { height: 3px; border: none; background: var(--border); }
+
+/* Tables with a header row and stripes. */
+table { border-collapse: collapse; margin: 1em 0; }
+th { background: var(--code-bg); font-weight: 600; }
+tr:nth-child(2n) td { background: color-mix(in srgb, var(--code-bg) 50%, transparent); }
+
+/* Code: a border around blocks, inline code a little apart. */
+pre { border: 1px solid var(--border); }
+:not(pre) > code { padding: 2px 5px; }
+
+/* Quotes with a grey bar. */
+blockquote { border-left: 4px solid var(--border); padding-left: 14px; }
