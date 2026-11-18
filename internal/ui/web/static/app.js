@@ -3126,7 +3126,9 @@ function openMarkNames(saved) {
 // style of the preview, and those synced with the notes. The server writes
 // only those keys, keeping the rest of the files with their comments, and
 // reads them when it starts, so the dialog offers to restart it.
-async function openSettings() {
+// openSettings opens the settings dialog; with focus "previewStyle", on the
+// choice of the style of the preview, as the menu of the desktop app asks.
+async function openSettings(focus) {
   const d = $("server-settings");
   let cur;
   try {
@@ -3568,7 +3570,12 @@ async function openSettings() {
     if (style.cur) tryPreviewStyle(null); // the file, as saved or as it was
   };
   d.showModal();
-  bar.children[0].focus();
+  if (focus === "previewStyle" && !style.select.disabled) {
+    choose(tabs.findIndex(([id]) => id === "display"));
+    style.select.focus();
+  } else {
+    bar.children[0].focus();
+  }
 }
 
 // restartServer asks the server to start again, waits until it answers as
@@ -5671,7 +5678,7 @@ window.ebira = {
   copyLink: (markdown) => { if (state.note && !state.editing) copyLink(markdown); },
   find: () => { if (state.note && !state.editing) openFind(); },
   search: () => { $("q").focus(); $("q").select(); },
-  previewStyle: () => openPreviewStyle(),
+  previewStyle: () => openSettings("previewStyle"),
   // textSize makes the text of the body a size larger (1), smaller (-1), or
   // the default (0), as the minus and plus of the settings.
   textSize: (step) => {
@@ -6141,8 +6148,9 @@ $("ask-toggle").addEventListener("click", () => toggleAssistant());
 
 // The style of the preview: a built-in style written to preview.css, next to
 // the settings file, where the user may change it (see GET and PUT
-// /preview-style). The dialog tries the style chosen on the note open by
-// swapping the stylesheet of the preview, and puts it back when it closes.
+// /preview-style). The settings dialog tries the style chosen on the note
+// open by swapping the stylesheet of the preview, and puts it back when it
+// closes.
 
 // band is the default, drawn without preview.css; plain adds nothing to the
 // preview as the web UI draws it.
@@ -6162,60 +6170,6 @@ function tryPreviewStyle(style) {
   if (style === null) link.href = `assets/preview.css?v=${Date.now()}`;
   else link.href = `assets/styles/${style}.css`;
 }
-
-async function openPreviewStyle() {
-  const d = $("preview-style");
-  const head = el("div", "files-head", el("h2", "", t("previewStyleHead")), closeButton(() => d.close()));
-  d.replaceChildren(head);
-  if (!d.open) d.showModal();
-  let cur;
-  try {
-    cur = await api("/preview-style");
-  } catch (e) {
-    d.append(el("p", "error", t("previewStyleFailed", { error: e.message })));
-    return;
-  }
-  const now = cur.style === "" ? t("previewStyleOwn")
-    : cur.modified ? t("previewStyleModified", { style: styleName(cur.style) }) : styleName(cur.style);
-  const list = el("fieldset", "styles");
-  for (const s of PREVIEW_STYLES) {
-    const radio = el("input");
-    radio.type = "radio";
-    radio.name = "preview-style";
-    radio.value = s;
-    radio.checked = s === cur.style;
-    radio.addEventListener("change", () => tryPreviewStyle(s));
-    list.append(el("label", "", radio, el("span", "", el("b", "", styleChoice(s)), " ", el("span", "desc", t("style" + s[0].toUpperCase() + s.slice(1) + "Desc")))));
-  }
-  const msg = el("p", "error");
-  msg.hidden = true;
-  const use = button(t("previewStyleUse"), async () => {
-    const style = list.querySelector("input:checked")?.value;
-    if (!style) return;
-    // A file not a built-in style as it is goes to the backup: say so first.
-    if ((cur.style === "" || cur.modified) && !confirm(t("previewStyleConfirm", { path: cur.path, backup: cur.path + ".bak" }))) return;
-    let res;
-    try {
-      res = await api("/preview-style", { method: "PUT", body: { style } });
-    } catch (e) {
-      msg.textContent = t("previewStyleFailed", { error: e.message });
-      msg.hidden = false;
-      return;
-    }
-    d.close();
-    showToast(t("previewStyleDone", { style: styleName(style) }) + (res.backup ? " " + t("previewStyleBackedUp", { backup: res.backup }) : ""));
-  }, { cls: "primary" });
-  d.replaceChildren(head,
-    el("p", "now", t("previewStyleNow", { style: now })),
-    list,
-    el("p", "hint", t("previewStyleTry")),
-    el("p", "hint", t("previewStyleFile", { path: cur.path })),
-    msg,
-    el("div", "files-actions", button(t("cancel"), () => d.close()), use));
-  (list.querySelector("input:checked") || list.querySelector("input")).focus();
-}
-
-$("preview-style").addEventListener("close", () => tryPreviewStyle(null));
 
 function toggleSettings(open = $("settings-menu").hidden) {
   $("settings-menu").hidden = !open;
@@ -6712,7 +6666,7 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 // assistant, Esc leaves the question box and then closes it.
 
 document.addEventListener("keydown", (e) => {
-  if ($("conflict").open || $("image-viewer").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("preview-style").open || $("mark-names").open || $("server-settings").open) return;
+  if ($("conflict").open || $("image-viewer").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("mark-names").open || $("server-settings").open) return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();

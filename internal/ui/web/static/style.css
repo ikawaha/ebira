@@ -790,16 +790,6 @@ dialog.server-settings { max-width: min(860px, calc(100vw - 32px)); }
 }
 /* The dialog of the preview style sits at the bottom left, by the settings
    menu, and leaves the preview visible, where the style chosen is tried. */
-dialog.preview-style { width: min(360px, calc(100vw - 32px)); margin: auto auto 16px 16px; padding: 12px 16px; font-size: var(--fs-sm); }
-dialog.preview-style::backdrop { background: transparent; }
-.preview-style p { margin: 8px 0; }
-.preview-style .now { color: var(--fg-muted); }
-.preview-style .hint { color: var(--fg-muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
-.preview-style .styles { margin: 8px 0 0; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-md); display: flex; flex-direction: column; gap: 4px; }
-.preview-style .styles label { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
-.preview-style .styles .desc { color: var(--fg-muted); font-size: var(--fs-xs); }
-.preview-style .error { color: var(--ng); }
-.preview-style .files-actions { gap: 8px; }
 
 /* Narrow screens: one column, the panes stacked */
 
