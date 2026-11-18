@@ -27,7 +27,7 @@ Directory to keep the notes in [~/notes]:
 
 `ebira web` starts the server in the background and opens the web UI at <http://localhost:13579/>. `ebira` opens the TUI instead. The server keeps running when you close them.
 
-The desktop app takes the same settings, so open it once ebira is set up this way; or choose the notes folder in its Settings… (Cmd+,; the File menu on Windows), as on Windows without the `ebira` command.
+The desktop app takes the same settings. Opened before ebira is set up, it asks for the notes folder, the language and the search mode, and sets ebira up the same way ([Desktop app](desktop.md)).
 
 A new notes directory starts with this guide, in the language you chose. Read it from the top, try things on its notes, and move it to the trash when you are done; it does not come back by itself, but "Add the guide" in the gear menu adds it again.
 

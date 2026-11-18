@@ -57,7 +57,11 @@ type shell struct {
 	next     *target                    // connected, waiting for the page to agree
 	nextAs   target                     // next as the user gave it
 	applies  uint64                     // the Applies of the settings so far: the last counts
+	first    bool                       // the first start, until an Apply saves the folder for ebira
 }
+
+// welcome is the introduction of the settings window at the first start.
+const welcome = "Welcome to ebira. Choose the folder to keep your notes in, or keep this one, and press Apply. A new folder starts with the guide of ebira."
 
 func main() {
 	notes := flag.String("notes", "", "notes directory (default: the one saved in the app, or in the config file of ebira)")
@@ -87,8 +91,13 @@ func main() {
 	s.app.Menu.Set(menu)
 	watchSystemTheme(s.app, s.applyTheme)
 
-	h, err := connect(s.current)
-	if err != nil {
+	if firstStart(s.current) {
+		// Nothing to connect to yet: the settings window offers a folder,
+		// which Apply makes, with the guide, as the server starts on it.
+		s.first = true
+		s.chosen.Notes = defaultNotes()
+		s.openSettingsWith("", welcome)
+	} else if h, err := connect(s.current, nil); err != nil {
 		log.Print(err)
 		s.openSettings(err.Error())
 	} else {

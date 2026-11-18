@@ -128,6 +128,16 @@ func helperCommand(bin string, args ...string) *exec.Cmd {
 // "x,y,width,height".
 const frameKey = "frame"
 
+// documentsDir is the Documents folder of the user, as Windows knows it,
+// which may have been moved, such as into OneDrive, or "".
+func documentsDir() string {
+	dir, err := windows.KnownFolderPath(windows.FOLDERID_Documents, windows.KF_FLAG_DEFAULT)
+	if err != nil {
+		return ""
+	}
+	return dir
+}
+
 // logPath is the log of the app: %LocalAppData%\ebira\desktop.log, on the
 // machine rather than with the roaming settings.
 func logPath() (string, error) {

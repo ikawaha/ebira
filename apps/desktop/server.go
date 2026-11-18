@@ -55,8 +55,10 @@ func readHealth(addr string) (*health, error) {
 // status is what ebira server status -json prints.
 type status struct {
 	NotesDir string `json:"notes_dir"`
-	Running  bool   `json:"running"`
-	State    *struct {
+	// Configured is nil from an earlier ebira, which does not tell.
+	Configured *bool `json:"configured"`
+	Running    bool  `json:"running"`
+	State      *struct {
 		PID int `json:"pid"`
 	} `json:"state"`
 }
@@ -99,6 +101,60 @@ func configuredNotes() (string, error) {
 	return st.NotesDir, nil
 }
 
+// firstStart reports whether ebira has no notes folder yet for t: none chosen
+// in the app, and no notes_dir in the config file of ebira, as when the app
+// is opened before ebira is set up. The default of the commands then, notes/
+// of the current directory, means nothing to the app, which starts anywhere,
+// such as at / from the Finder. An earlier ebira, which does not tell, is
+// taken as set up.
+func firstStart(t target) bool {
+	if t.Notes != "" || !local(t.Addr) {
+		return false
+	}
+	st, err := serverStatus("")
+	return err == nil && st.Configured != nil && !*st.Configured
+}
+
+// defaultNotes is the notes folder offered at the first start: ebira in the
+// Documents folder of the user (documentsDir), or "" without one.
+func defaultNotes() string {
+	docs := documentsDir()
+	if docs == "" {
+		return ""
+	}
+	return filepath.Join(docs, "ebira")
+}
+
+// foreignFolder reports whether dir, where ~ is the home folder, has files
+// but no notes of ebira, the inbox or the settings shared with the notes, as
+// setup of the commands tells: ebira would take the folders in it for
+// notebooks and its YAML files for notes. A folder that cannot be read is
+// left for the server to tell.
+func foreignFolder(dir string) bool {
+	if rest, ok := strings.CutPrefix(dir, "~"); ok && (rest == "" || os.IsPathSeparator(rest[0])) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return false
+		}
+		dir = home + rest
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	files := false
+	for _, e := range entries {
+		switch e.Name() {
+		case "inbox", "_ebira.yaml":
+			return false
+		case ".DS_Store":
+		default:
+			files = true
+		}
+	}
+	return files
+}
+
 // ownServer checks that h, what answers at addr, is the server of the notes
 // folder that this user runs, as st, its status, tells. Anything can answer
 // at a local address, such as a program of another user of the computer
@@ -111,9 +167,20 @@ func ownServer(addr string, st *status, h *health) error {
 	return fmt.Errorf("something other than the server of %s answers at %s; choose another address in the settings", st.NotesDir, addr)
 }
 
+// firstSetup is what the first start asks besides the folder: the language
+// and the search mode of new notes, with ebira's names for them.
+type firstSetup struct {
+	Lang   string `json:"lang"`
+	Search string `json:"search"`
+}
+
 // connect finds the server of t, starting it if nothing answers. The server
-// stays up after the app ends, shared with the TUI and the MCP clients.
-func connect(t target) (*health, error) {
+// stays up after the app ends, shared with the TUI and the MCP clients. With
+// first, at the first start, the ebira of the app also saves the notes folder
+// of t in the config file of ebira, for the commands and the app to follow,
+// and makes a new folder with the language and the search mode of first, so
+// it is asked to start the server even if one answers.
+func connect(t target, first *firstSetup) (*health, error) {
 	notes, addr := t.Notes, t.Addr
 	if !local(addr) {
 		return connectRemote(t)
@@ -127,8 +194,17 @@ func connect(t target) (*health, error) {
 		}
 	}
 	h, err := readHealth(addr)
-	if err != nil {
+	if err != nil || first != nil {
 		args := []string{"server", "start", "-addr", addr, "-notes", notes}
+		if first != nil {
+			args = append(args, "-save-notes")
+			if first.Lang != "" {
+				args = append(args, "-new-lang", first.Lang)
+			}
+			if first.Search != "" {
+				args = append(args, "-new-search", first.Search)
+			}
+		}
 		bin, err := helper()
 		if err != nil {
 			return nil, err

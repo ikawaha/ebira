@@ -160,6 +160,46 @@ func TestOwnServer(t *testing.T) {
 	}
 }
 
+// TestFirstStart checks when the app offers a notes folder instead of
+// connecting: for a local address, with no folder chosen in the app and none
+// configured for ebira, as its ebira tells.
+func TestFirstStart(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the ebira of the test is a shell script")
+	}
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	ebira := func(out string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(bin, "ebira"), []byte("#!/bin/sh\necho '"+out+"'\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	local := target{Addr: "localhost:13579"}
+	ebira(`{"notes_dir":"/notes","configured":false,"running":false}`)
+	if !firstStart(local) {
+		t.Error("not a first start without a configured folder")
+	}
+	if firstStart(target{Notes: "/Users/me/notes", Addr: local.Addr}) {
+		t.Error("a first start with a folder chosen in the app")
+	}
+	if firstStart(target{Addr: "192.168.0.2:13579"}) {
+		t.Error("a first start for a remote server")
+	}
+	ebira(`{"notes_dir":"/Users/me/notes","configured":true,"running":false}`)
+	if firstStart(local) {
+		t.Error("a first start with a configured folder")
+	}
+	// An earlier ebira does not tell: the app connects as before.
+	ebira(`{"notes_dir":"/notes","running":false}`)
+	if firstStart(local) {
+		t.Error("a first start with an earlier ebira")
+	}
+	if d := defaultNotes(); filepath.Base(d) != "ebira" || filepath.Base(filepath.Dir(d)) != "Documents" || !filepath.IsAbs(d) {
+		t.Errorf("defaultNotes = %q, want ebira in the Documents folder", d)
+	}
+}
+
 // TestConnectSquatter checks connect against a program that answers at the
 // address as a server of the user's folder while the user's server is not
 // running, with an ebira that tells the state as the real one does.
@@ -179,16 +219,95 @@ func TestConnectSquatter(t *testing.T) {
 		}
 	}
 	ebira(false, 0)
-	if _, err := connect(target{Notes: notes, Addr: addr}); err == nil {
+	if _, err := connect(target{Notes: notes, Addr: addr}, nil); err == nil {
 		t.Error("connect took the program for the server, which is not running")
 	}
 	ebira(true, 7)
-	if _, err := connect(target{Notes: notes, Addr: addr}); err == nil {
+	if _, err := connect(target{Notes: notes, Addr: addr}, nil); err == nil {
 		t.Error("connect took the program for the server, which is another process")
 	}
 	ebira(true, 4242)
-	if _, err := connect(target{Notes: notes, Addr: addr}); err != nil {
+	if _, err := connect(target{Notes: notes, Addr: addr}, nil); err != nil {
 		t.Errorf("connect to the server: %v", err)
+	}
+}
+
+// TestConnectSavesNotes checks that connect asks the ebira of the app to save
+// the folder, with the language and the search mode of new notes, at the
+// first start, also with a server answering, and only then.
+func TestConnectSavesNotes(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the ebira of the test is a shell script")
+	}
+	notes := t.TempDir()
+	addr := healthServer(t, 200, `{"pid":4242,"addr":"localhost:13579","notes_dir":"`+notes+`","api":1}`)
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	calls := filepath.Join(bin, "calls")
+	st := fmt.Sprintf(`{"notes_dir":%q,"running":true,"state":{"pid":4242}}`, notes)
+	if err := os.WriteFile(filepath.Join(bin, "ebira"), []byte("#!/bin/sh\necho \"$*\" >>"+calls+"\necho '"+st+"'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connect(target{Notes: notes, Addr: addr}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connect(target{Notes: notes, Addr: addr}, &firstSetup{Lang: "ja", Search: "ja"}); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(calls)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var starts []string
+	for _, l := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+		if strings.HasPrefix(l, "server start ") {
+			starts = append(starts, l)
+		}
+	}
+	if want := "server start -addr " + addr + " -notes " + notes + " -save-notes -new-lang ja -new-search ja"; len(starts) != 1 || starts[0] != want {
+		t.Errorf("started %q, want only %q", starts, want)
+	}
+}
+
+// TestForeignFolder checks which folders the app asks about before taking
+// them for notes: those with files but no notes of ebira.
+func TestForeignFolder(t *testing.T) {
+	dir := t.TempDir()
+	mk := func(name string, files ...string) string {
+		t.Helper()
+		d := filepath.Join(dir, name)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range files {
+			if err := os.MkdirAll(filepath.Dir(filepath.Join(d, f)), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(d, f), nil, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return d
+	}
+	for _, tc := range []struct {
+		dir  string
+		want bool
+	}{
+		{filepath.Join(dir, "missing"), false},
+		{mk("empty"), false},
+		{mk("finder", ".DS_Store"), false},
+		{mk("notes", "inbox/a.yaml", "work/b.yaml"), false},
+		{mk("shared", "_ebira.yaml", "memo.txt"), false},
+		{mk("other", "memo.txt"), true},
+		{mk("folders", "photos/a.jpg"), true},
+	} {
+		if got := foreignFolder(tc.dir); got != tc.want {
+			t.Errorf("foreignFolder(%s) = %v, want %v", filepath.Base(tc.dir), got, tc.want)
+		}
+	}
+	t.Setenv("HOME", dir)
+	if !foreignFolder("~/other") {
+		t.Error("foreignFolder(~/other) = false, want the folder in the home")
 	}
 }
 

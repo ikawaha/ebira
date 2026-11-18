@@ -81,7 +81,7 @@ func setFlags(fs *flag.FlagSet) []string {
 	fs.Visit(func(f *flag.Flag) {
 		v := f.Value.String()
 		switch f.Name {
-		case "notes":
+		case "notes", "save-notes", "new-search", "new-lang":
 			return
 		case "stopwords", "stoptags":
 			if v != "" {
