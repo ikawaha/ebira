@@ -104,6 +104,17 @@ func showMain(win *application.WebviewWindow) {
 	win.Show()
 }
 
+// documentsDir is the Documents folder of the user, ~/Documents, or "".
+// macOS asks the user to let the app in on its first use, with
+// NSDocumentsFolderUsageDescription of Info.plist.
+func documentsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, "Documents")
+}
+
 // logPath is the log of the app: ~/Library/Logs/ebira/desktop.log, where
 // Console finds the logs of apps.
 func logPath() (string, error) {

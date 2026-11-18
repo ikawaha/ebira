@@ -158,15 +158,15 @@ func TestServerStatusJSON(t *testing.T) {
 	setStateHome(t)
 	dir := t.TempDir()
 	var out strings.Builder
-	if err := serverStatusJSON(dir, &out); err != nil {
+	if err := serverStatusJSON(dir, true, &out); err != nil {
 		t.Fatal(err)
 	}
 	var got statusJSON
 	if err := json.Unmarshal([]byte(out.String()), &got); err != nil {
 		t.Fatalf("%v in %q", err, out.String())
 	}
-	if got.NotesDir != dir || got.Running || got.State != nil {
-		t.Errorf("serverStatusJSON(%q) = %+v, want the directory, not running, without a state", dir, got)
+	if got.NotesDir != dir || !got.Configured || got.Running || got.State != nil {
+		t.Errorf("serverStatusJSON(%q) = %+v, want the directory, configured, not running, without a state", dir, got)
 	}
 }
 
@@ -188,6 +188,45 @@ func TestServeAddrInUse(t *testing.T) {
 	for _, want := range []string{"-addr", "settings file", "ebira mcp add"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error lacks %q: %v", want, err)
+		}
+	}
+}
+
+// TestNewNotes checks that server start -new-search and -new-lang write
+// _ebira.yaml of a new notes directory only.
+func TestNewNotes(t *testing.T) {
+	ctx := t.Context()
+	dir := filepath.Join(t.TempDir(), "notes")
+	if err := newNotes(ctx, dir, "ja", "ja"); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "_ebira.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(b); !strings.Contains(got, "search: ja") || !strings.Contains(got, "lang: ja") {
+		t.Errorf("_ebira.yaml = %q, want the search mode and the language", got)
+	}
+	d, _, err := config.LoadDefaults(dir)
+	if err != nil || d.Lang != "ja" {
+		t.Errorf("defaults = %+v, %v; want lang ja", d, err)
+	}
+
+	// Notes made before keep their settings.
+	old := t.TempDir()
+	if err := os.Mkdir(filepath.Join(old, "inbox"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := newNotes(ctx, old, "ja", "ja"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(old, "_ebira.yaml")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("_ebira.yaml written in notes made before: %v", err)
+	}
+
+	for _, tc := range [][2]string{{"nosuch", ""}, {"", "xx"}} {
+		if err := newNotes(ctx, filepath.Join(t.TempDir(), "notes"), tc[0], tc[1]); err == nil {
+			t.Errorf("newNotes(%q, %q) took it", tc[0], tc[1])
 		}
 	}
 }
