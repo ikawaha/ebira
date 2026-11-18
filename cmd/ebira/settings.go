@@ -31,7 +31,7 @@ func checkSettings(c config.Config) error {
 		return fmt.Errorf("unknown lang %q (%s)", c.Lang, strings.Join(web.Langs, ", "))
 	}
 	if _, ok := defaultModels[c.Provider]; c.Provider != "" && !ok {
-		return fmt.Errorf("unknown provider %q (%s, %s)", c.Provider, providerAnthropic, providerGemini)
+		return fmt.Errorf("unknown provider %q (%s, %s, %s)", c.Provider, providerAnthropic, providerGemini, providerOpenAI)
 	}
 	if p := c.TUIPreview; p != "" && p != "rendered" && p != "source" {
 		return fmt.Errorf("unknown tui_preview %q (rendered, source)", p)

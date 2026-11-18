@@ -15,6 +15,7 @@ require (
 	github.com/ikawaha/kagome-dict/ipa v1.2.6
 	github.com/ikawaha/kagome/v2 v2.11.1
 	github.com/kljensen/snowball v0.10.0
+	github.com/openai/openai-go/v3 v3.91.0
 	go.opentelemetry.io/otel v1.47.0
 	goa.design/goa-ai v0.90.0
 	goa.design/goa/v3 v3.35.1-0.20261028010903-3d7ec7ca9b4e
@@ -100,7 +101,6 @@ require (
 	github.com/nexus-rpc/nexus-proto-annotations v0.1.0 // indirect
 	github.com/nexus-rpc/sdk-go v0.7.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
-	github.com/openai/openai-go/v3 v3.91.0 // indirect
 	github.com/pb33f/go-yaml v0.1.1 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.2 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect

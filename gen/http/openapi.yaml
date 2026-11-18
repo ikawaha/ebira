@@ -5620,10 +5620,11 @@ definitions:
             provider:
                 type: string
                 description: Model provider of the assistant; empty for the one whose API key is set
-                example: anthropic
+                example: gemini
                 enum:
                     - anthropic
                     - gemini
+                    - openai
             theme:
                 type: string
                 description: Color theme of the UI; empty for auto, the system's
@@ -5668,7 +5669,7 @@ definitions:
             git_sync: 10m
             lang: ja
             model: Vel sit soluta aut corporis nostrum.
-            provider: anthropic
+            provider: gemini
             theme: auto
             tui_preview: rendered
             tui_search: search
@@ -12988,7 +12989,7 @@ definitions:
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
-                provider: anthropic
+                provider: gemini
                 theme: auto
                 tui_preview: rendered
                 tui_search: search
@@ -13002,7 +13003,7 @@ definitions:
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
-                    provider: anthropic
+                    provider: gemini
                     theme: auto
                     tui_preview: rendered
                     tui_search: search
@@ -13536,7 +13537,7 @@ definitions:
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
-                provider: anthropic
+                provider: gemini
                 theme: auto
                 tui_preview: rendered
                 tui_search: search
@@ -15312,7 +15313,7 @@ definitions:
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
-                provider: anthropic
+                provider: gemini
                 theme: auto
                 tui_preview: rendered
                 tui_search: search
@@ -15327,7 +15328,7 @@ definitions:
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
-                    provider: anthropic
+                    provider: gemini
                     theme: auto
                     tui_preview: rendered
                     tui_search: search

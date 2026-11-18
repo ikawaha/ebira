@@ -39,6 +39,7 @@ import (
 	"github.com/ikawaha/ebira/internal/watch"
 	"github.com/ikawaha/ebira/internal/zenn"
 	"goa.design/goa-ai/features/model/anthropic"
+	"goa.design/goa-ai/features/model/openai"
 	"goa.design/goa-ai/features/model/vertex"
 	"goa.design/goa-ai/runtime/agent/model"
 	goahttp "goa.design/goa/v3/http"
@@ -62,10 +63,10 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		watchF   = fs.Bool("watch", settings.Watch == nil || *settings.Watch, "watch the notes directory and update the index on changes")
 		stopW    = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		stopT    = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
-		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY) or gemini (GEMINI_API_KEY or GOOGLE_API_KEY); empty picks the one whose key is set")
+		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY), gemini (GEMINI_API_KEY or GOOGLE_API_KEY) or openai (OPENAI_API_KEY); empty picks the one whose key is set")
 		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+" (default: lang of the settings file, else of the defaults in "+store.ConfigFile+", else the browser's language)")
 		theme    = fs.String("theme", settings.Theme, "color theme of the web UI: auto (the system's light or dark mode), light or dark (default: theme of the settings file, else of the defaults in "+store.ConfigFile+", else auto)")
-		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini)")
+		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini, "+defaultModels[providerOpenAI]+" for openai)")
 		authF    = fs.String("auth", cmp.Or(settings.Auth, auth.ModeNone), "how the REST API authenticates people: none treats every request as from people; passkey serves only requests signed in with a passkey, as from people, and refuses the others; MCP stays open to AI clients (register a passkey with ebira auth passkey) (default: auth of the settings file, else none)")
 		gitSync  = fs.String("git-sync", settings.GitSync, "interval of syncing the notes with their git repository, as ebira sync does, such as 10m, at least "+minGitSync.String()+"; empty or 0 does not sync (default: git_sync of the settings file, else of the defaults in "+store.ConfigFile+")")
 	)
@@ -439,11 +440,13 @@ func serve(args []string) error {
 const (
 	providerAnthropic = "anthropic"
 	providerGemini    = "gemini"
+	providerOpenAI    = "openai"
 )
 
 var defaultModels = map[string]string{
 	providerAnthropic: "claude-sonnet-5-5",
 	providerGemini:    "gemini-3.8-flash",
+	providerOpenAI:    "gpt-6.2-sol",
 }
 
 // newAssistant returns the assistant service: the agent on the model of
@@ -452,19 +455,22 @@ var defaultModels = map[string]string{
 func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, error) {
 	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
 	geminiKey := cmp.Or(os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
+	openaiKey := os.Getenv("OPENAI_API_KEY")
 	if provider == "" {
 		switch {
 		case anthropicKey != "":
 			provider = providerAnthropic
 		case geminiKey != "":
 			provider = providerGemini
+		case openaiKey != "":
+			provider = providerOpenAI
 		default:
-			slog.Info("assistant disabled: set ANTHROPIC_API_KEY or GEMINI_API_KEY to enable POST /ask")
-			return agent.Unavailable{Reason: "the assistant is not configured: start the server with ANTHROPIC_API_KEY or GEMINI_API_KEY set"}, nil
+			slog.Info("assistant disabled: set ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY to enable POST /ask")
+			return agent.Unavailable{Reason: "the assistant is not configured: start the server with ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY set"}, nil
 		}
 	}
 	if _, ok := defaultModels[provider]; !ok {
-		return nil, fmt.Errorf("unknown model provider %q (anthropic, gemini)", provider)
+		return nil, fmt.Errorf("unknown model provider %q (anthropic, gemini, openai)", provider)
 	}
 	modelID = cmp.Or(modelID, defaultModels[provider])
 	var (
@@ -488,6 +494,11 @@ func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID s
 		if err == nil {
 			client, err = vertex.New(gc.Models, vertex.Options{DefaultModel: modelID})
 		}
+	case providerOpenAI:
+		if openaiKey == "" {
+			return nil, errors.New("the openai provider needs OPENAI_API_KEY")
+		}
+		client, err = openai.NewFromAPIKey(openaiKey, modelID)
 	}
 	if err != nil {
 		return nil, err

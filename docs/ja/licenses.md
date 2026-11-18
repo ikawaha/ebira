@@ -40,7 +40,7 @@ Web UI のタブとデスクトップアプリのアイコンは、Pneuma01 に�
 | go-webauthn | BSD-3-Clause |
 | snowball（英語の語幹） | MIT |
 | Anthropic の SDK | MIT |
-| Google の Gen AI SDK・OpenTelemetry | Apache-2.0 |
+| Google の Gen AI SDK・OpenAI の Go SDK・OpenTelemetry | Apache-2.0 |
 
 ほかの部品（間接に使うもの）は、ソースの `go.mod` と `go.sum` にあり、それぞれのライセンスに従います。
 

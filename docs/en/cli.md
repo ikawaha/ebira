@@ -29,7 +29,7 @@ Each command tells its usage with `-h`. One server runs for each notes directory
 | `-search` | `search` of `_ebira.yaml` in the notes directory, else `bigram` | `like`, `bigram`, `trigram`, `en` or `ja` ([How to search](search.md)) |
 | `-watch` | `true` | Watch the notes and update the index |
 | `-lang` | `lang` of the settings file, else the browser's | Language of the web UI: `en` or `ja` (the TUI takes `ebira -lang` or `lang` of the settings file, else `$LANG`) |
-| `-provider`, `-model` | the provider whose API key is set | Model of the assistant: `anthropic` or `gemini` |
+| `-provider`, `-model` | the provider whose API key is set | Model of the assistant: `anthropic`, `gemini` or `openai` |
 | `-git-sync` | `git_sync` of the settings file, else off | Sync with git at the start and at this interval, such as `10m` |
 | `-auth` | `auth` of the settings file, else `none` | `none`, or `passkey` to treat only the web UI signed in with a passkey as you |
 

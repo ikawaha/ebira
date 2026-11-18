@@ -3169,7 +3169,7 @@ async function openSettings() {
     lang: [["", t("settingsLangDefault")], ...LANGS.map((l) => [l, langName(l)])],
     theme: [["", t("settingsThemeDefault")], ["auto", t("themeAuto")], ["light", t("themeLight")], ["dark", t("themeDark")]],
     watch: [["", t("settingsWatchDefault")], ["true", t("settingsWatchOn")], ["false", t("settingsWatchOff")]],
-    provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"]],
+    provider: [["", t("settingsProviderAuto")], ["anthropic", "Anthropic (Claude)"], ["gemini", "Google (Gemini)"], ["openai", "OpenAI (GPT)"]],
     tui_preview: [["", t("settingsTUIRendered")], ["rendered", t("settingsTUIPreviewRendered")], ["source", t("settingsTUISource")]],
     tui_search: [["", t("settingsTUISearchDefault")], ["search", t("settingsTUISearchSearch")], ["filter", t("settingsTUISearchFilter")]],
   };

@@ -11,14 +11,14 @@ import (
 )
 
 func TestCheckSettings(t *testing.T) {
-	if err := checkSettings(config.Config{Theme: "dark", Auth: "passkey", Lang: "ja", Provider: "gemini", TUIPreview: "source", GitSync: "10m"}); err != nil {
+	if err := checkSettings(config.Config{Theme: "dark", Auth: "passkey", Lang: "ja", Provider: "openai", TUIPreview: "source", GitSync: "10m"}); err != nil {
 		t.Errorf("valid settings: %v", err)
 	}
 	for _, c := range []config.Config{
 		{Theme: "pink"},
 		{Auth: "password"},
 		{Lang: "fr"},
-		{Provider: "openai"},
+		{Provider: "mistral"},
 		{TUIPreview: "raw"},
 		{GitSync: "10s"},
 	} {
