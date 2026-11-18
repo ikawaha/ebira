@@ -26,6 +26,7 @@
 #   EBIRA_ANTHROPIC_REF  secret reference of the Anthropic API key (default:
 #                        none). Not exported globally on purpose: Claude Code
 #                        also uses ANTHROPIC_API_KEY when it finds one.
+#   EBIRA_OPENAI_REF     secret reference of the OpenAI API key (default: none)
 #
 # Get the reference of a field with "Copy Secret Reference" in 1Password; the
 # vault name (Private, Personal, ...) depends on the account.
@@ -42,12 +43,16 @@ fi
 
 gemini_ref=${EBIRA_GEMINI_REF-"op://Private/Gemini API/credential"}
 anthropic_ref=${EBIRA_ANTHROPIC_REF-}
+openai_ref=${EBIRA_OPENAI_REF-}
 vars=()
 if [ -n "$gemini_ref" ]; then
 	vars+=("GEMINI_API_KEY=$gemini_ref")
 fi
 if [ -n "$anthropic_ref" ]; then
 	vars+=("ANTHROPIC_API_KEY=$anthropic_ref")
+fi
+if [ -n "$openai_ref" ]; then
+	vars+=("OPENAI_API_KEY=$openai_ref")
 fi
 if [ ${#vars[@]} -eq 0 ]; then
 	echo "serve.sh: no secret reference is set; the assistant will be disabled" >&2

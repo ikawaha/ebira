@@ -169,7 +169,7 @@ Once connected, ask in your own words, for example:
 
 ## The assistant
 
-The column `a` opens answers questions, searching and reading your notes. It works when the server starts with the environment variable `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` or `GOOGLE_API_KEY` (Gemini). Answers link to the notes they used. Pass the key when you start the server, for example from a password manager:
+The column `a` opens answers questions, searching and reading your notes. It works when the server starts with the environment variable `ANTHROPIC_API_KEY` (Claude), `GEMINI_API_KEY` or `GOOGLE_API_KEY` (Gemini), or `OPENAI_API_KEY` (OpenAI). Answers link to the notes they used. Pass the key when you start the server, for example from a password manager:
 
 ```sh
 op run --env-file=.env -- ebira server restart

@@ -169,7 +169,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 
 ## アシスタント
 
-`a` で開く右の欄では、ノートを探して読み、質問に答えます。サーバーを起動するときに、環境変数 `ANTHROPIC_API_KEY`（Claude）か `GEMINI_API_KEY` か `GOOGLE_API_KEY`（Gemini）があると使えます。答えには、使ったノートへのリンクが付きます。キーはサーバーを起動するときに渡します。たとえばパスワードマネージャーから:
+`a` で開く右の欄では、ノートを探して読み、質問に答えます。サーバーを起動するときに、環境変数 `ANTHROPIC_API_KEY`（Claude）、`GEMINI_API_KEY` か `GOOGLE_API_KEY`（Gemini）、`OPENAI_API_KEY`（OpenAI）のどれかがあると使えます。答えには、使ったノートへのリンクが付きます。キーはサーバーを起動するときに渡します。たとえばパスワードマネージャーから:
 
 ```sh
 op run --env-file=.env -- ebira server restart

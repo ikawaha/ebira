@@ -29,7 +29,7 @@ tags: [guide, terminal]
 | `-search` | ノートのディレクトリの `_ebira.yaml` の `search`、無ければ `bigram` | `like`、`bigram`、`trigram`、`en`、`ja`（[検索の書き方](search.md)） |
 | `-watch` | `true` | ノートを監視して索引を更新する |
 | `-lang` | 設定ファイルの `lang`、無ければブラウザの言語 | Web UI の言語: `en` か `ja`（TUI の言語は `ebira -lang` か設定ファイルの `lang`、無ければ `$LANG`） |
-| `-provider`、`-model` | API キーが設定されている提供元 | アシスタントのモデル: `anthropic` か `gemini` |
+| `-provider`、`-model` | API キーが設定されている提供元 | アシスタントのモデル: `anthropic`・`gemini`・`openai` |
 | `-git-sync` | 設定ファイルの `git_sync`、無ければ同期しない | 起動時と、この間隔（`10m` など）で git と同期する |
 | `-auth` | 設定ファイルの `auth`、無ければ `none` | `none` か、パスキーでログインした Web UI だけをあなたとして扱う `passkey` |
 
