@@ -409,16 +409,20 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--sub-bg); white-space: nowrap; }
 .list li.sub-notebook:hover { background-color: var(--bg-hover); }
 .list li.sub-notebook .icon { flex: none; width: 26px; }
-/* An opened sub notebook shows its notes under its row, indented on a tint
-   of its color. */
+/* An opened sub notebook shows its notes under its row, indented; only the
+   row of the notebook has its color, which marks where the next one starts. */
 .list li.sub-notebook .twisty { flex: none; display: flex; margin-right: -4px; color: var(--fg-muted); }
 .list li.sub-notebook .twisty svg { width: 14px; height: 14px; transition: transform .15s; }
 .list li.sub-notebook.open .twisty svg { transform: rotate(90deg); }
-.list li.in-sub { padding-left: 36px; background: color-mix(in srgb, var(--sub-bg) 75%, var(--bg)); }
+.list li.in-sub { padding-left: 36px; }
 /* An opened notebook and what is under it share a rule down the left edge,
    and a notebook opened in it a second one, so that it shows where they end. */
 .list li.sub-notebook.open, .list li.sub-notebook.nested, .list li.in-sub { box-shadow: inset 4px 0 0 var(--sub-line); }
 .list li.sub-notebook.nested.open, .list li.in-sub.deep { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px); }
+/* The last row of an opened notebook ends its rule with a line across the
+   bottom and a gap under it, so that the next opened notebook starts anew. */
+.list li.sub-notebook.cell-end, .list li.in-sub.cell-end { box-shadow: inset 4px 0 0 var(--sub-line), inset 0 -2px 0 var(--sub-line); margin-bottom: 8px; }
+.list li.sub-notebook.nested.deep-end, .list li.in-sub.deep.deep-end { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px), linear-gradient(var(--sub-line), var(--sub-line)); background-size: 100% 100%, calc(100% - 20px) 2px; background-position: 0 0, 20px 100%; background-repeat: no-repeat; }
 .list li.in-sub:hover { background-color: var(--bg-hover); }
 .list li.in-sub.active, .list li.in-sub.chosen { background-color: var(--bg-active); }
 /* In the trash, the sub notebooks of an opened notebook, and their notes,
