@@ -61,6 +61,9 @@ type Server struct {
 	ToolsList func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error
 	// ToolsCall is the native Goa handler for the tools/call protocol method.
 	ToolsCall func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error
+	// SubscriptionsListen is the native Goa handler for the subscriptions/listen
+	// protocol method.
+	SubscriptionsListen func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error
 
 	decoder    func(*http.Request) goahttp.Decoder
 	encoder    func(context.Context, http.ResponseWriter) goahttp.Encoder
@@ -87,13 +90,15 @@ func New(
 			"server/discover",
 			"tools/list",
 			"tools/call",
+			"subscriptions/listen",
 		},
-		ServerDiscover: NewServerDiscoverHandler(endpoints.ServerDiscover, mux, decoder, encoder, errhandler),
-		ToolsList:      NewToolsListHandler(endpoints.ToolsList, mux, decoder, encoder, errhandler),
-		ToolsCall:      NewToolsCallHandler(endpoints.ToolsCall, mux, decoder, encoder, errhandler),
-		decoder:        decoder,
-		encoder:        encoder,
-		errhandler:     errhandler,
+		ServerDiscover:      NewServerDiscoverHandler(endpoints.ServerDiscover, mux, decoder, encoder, errhandler),
+		ToolsList:           NewToolsListHandler(endpoints.ToolsList, mux, decoder, encoder, errhandler),
+		ToolsCall:           NewToolsCallHandler(endpoints.ToolsCall, mux, decoder, encoder, errhandler),
+		SubscriptionsListen: NewSubscriptionsListenHandler(endpoints.SubscriptionsListen, mux, decoder, encoder, errhandler),
+		decoder:             decoder,
+		encoder:             encoder,
+		errhandler:          errhandler,
 	}
 	// The MCP protocol uses one ordinary request decoder. Subscriptions and
 	// progress select their response stream after application HTTP middleware.
@@ -165,9 +170,37 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 			if err := s.ToolsCall(r.Context(), r, &request, w); err != nil {
 				s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "tools/call", err))
 			}
+		case "subscriptions/listen":
+			if err := s.SubscriptionsListen(r.Context(), r, &request, w); err != nil {
+				s.errhandler(r.Context(), w, fmt.Errorf("MCP handler %s: %w", "subscriptions/listen", err))
+			}
 		default:
 			s.encodeJSONRPCError(r.Context(), w, &request, jsonrpc.MethodNotFound, "Method not found", nil)
 		}
+	}
+	if request.Method == "subscriptions/listen" {
+		response := &mcpResponseWriter{ResponseWriter: w}
+		id, err := json.Marshal(request.ID)
+		if err != nil {
+			s.errhandler(r.Context(), response, err)
+			return
+		}
+		if err := mcpruntime.ServeSubscriptions(response, r, id, request.Params, dispatch); err != nil {
+			var failure *mcpruntime.Error
+			if !response.written && errors.As(err, &failure) {
+				encoded, encodeErr := json.Marshal(jsonrpc.Request{JSONRPC: request.JSONRPC, Method: request.Method, Params: request.Params, ID: request.ID})
+				if encodeErr != nil {
+					s.errhandler(r.Context(), response, encodeErr)
+					return
+				}
+				if err := mcpruntime.WriteProtocolError(response, encoded, failure); err != nil {
+					s.errhandler(r.Context(), response, err)
+				}
+			} else {
+				s.errhandler(r.Context(), response, err)
+			}
+		}
+		return
 	}
 	if err := mcpruntime.ServeProgress(w, r, request.Params, dispatch); err != nil {
 		s.errhandler(r.Context(), w, err)
@@ -285,6 +318,7 @@ func withMCPTransport(h *Server, origins []string, next http.HandlerFunc) http.H
 		case "server/discover":
 		case "tools/list":
 		case "tools/call":
+		case "subscriptions/listen":
 		default:
 			failure := &mcpruntime.Error{Code: mcpruntime.JSONRPCMethodNotFound, Message: "Method not found"}
 			if err := mcpruntime.WriteProtocolError(w, body, failure); err != nil {
@@ -499,6 +533,76 @@ func NewToolsCallHandler(
 		// The response repeats the exact request ID.
 		// Build the response body with the fields and JSON names declared by the service.
 		body := NewToolsCallResponseBody(res.(*mcpnotes.ToolsCallResult))
+		response := jsonrpc.MakeSuccessResponse(req.ID, body)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}
+
+// NewSubscriptionsListenHandler creates a JSON-RPC handler which calls the
+// "mcp_notes" service "subscriptions/listen" endpoint.
+func NewSubscriptionsListenHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	decodeParams := DecodeSubscriptionsListenRequest(mux, decoder)
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "subscriptions/listen")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "mcp_notes")
+		params, err := decodeParams(r, req)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		res, err := endpoint(ctx, params)
+		if err != nil {
+			var en goa.GoaErrorNamer
+			if errors.As(err, &en) {
+				switch en.GoaErrorName() {
+				case "invalid_params":
+					var res *goa.ServiceError
+					if !errors.As(err, &res) {
+						panic("JSON-RPC error name does not match its generated service error type")
+					}
+					body := NewSubscriptionsListenInvalidParamsResponseBody(res)
+					data := struct {
+						Name string                                        `json:"name"`
+						Body *SubscriptionsListenInvalidParamsResponseBody `json:"body"`
+					}{
+						Name: "invalid_params",
+						Body: body,
+					}
+					encodeJSONRPCError(ctx, w, req, -32602, err.Error(), data, encoder, errhandler)
+					return nil
+				case "internal_error":
+					var res *goa.ServiceError
+					if !errors.As(err, &res) {
+						panic("JSON-RPC error name does not match its generated service error type")
+					}
+					body := NewSubscriptionsListenInternalErrorResponseBody(res)
+					data := struct {
+						Name string                                        `json:"name"`
+						Body *SubscriptionsListenInternalErrorResponseBody `json:"body"`
+					}{
+						Name: "internal_error",
+						Body: body,
+					}
+					encodeJSONRPCError(ctx, w, req, -32603, err.Error(), data, encoder, errhandler)
+					return nil
+				}
+			}
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+
+		// The response repeats the exact request ID.
+		// Build the response body with the fields and JSON names declared by the service.
+		body := NewSubscriptionsListenResponseBody(res.(*mcpnotes.SubscriptionsListenResult))
 		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))

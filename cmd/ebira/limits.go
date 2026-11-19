@@ -36,10 +36,14 @@ const (
 
 // tooLarge answers a request whose body is past its limit with 413, for the
 // MCP server, which leaves the error of reading the body to its error
-// handler, and only logs the other errors.
+// handler, and only logs the other errors. A client that goes away, as one
+// does when it closes its subscription stream, is not an error.
 func tooLarge(ctx context.Context, w http.ResponseWriter, err error) {
 	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		http.Error(w, "the request body is too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	if errors.Is(err, context.Canceled) {
 		return
 	}
 	slog.ErrorContext(ctx, "request failed", "error", err)

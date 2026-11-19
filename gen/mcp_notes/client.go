@@ -15,17 +15,19 @@ import (
 
 // Client is the "mcp_notes" service client.
 type Client struct {
-	ServerDiscoverEndpoint goa.Endpoint
-	ToolsListEndpoint      goa.Endpoint
-	ToolsCallEndpoint      goa.Endpoint
+	ServerDiscoverEndpoint      goa.Endpoint
+	ToolsListEndpoint           goa.Endpoint
+	ToolsCallEndpoint           goa.Endpoint
+	SubscriptionsListenEndpoint goa.Endpoint
 }
 
 // NewClient initializes a "mcp_notes" service client given the endpoints.
-func NewClient(serverDiscover, toolsList, toolsCall goa.Endpoint) *Client {
+func NewClient(serverDiscover, toolsList, toolsCall, subscriptionsListen goa.Endpoint) *Client {
 	return &Client{
-		ServerDiscoverEndpoint: serverDiscover,
-		ToolsListEndpoint:      toolsList,
-		ToolsCallEndpoint:      toolsCall,
+		ServerDiscoverEndpoint:      serverDiscover,
+		ToolsListEndpoint:           toolsList,
+		ToolsCallEndpoint:           toolsCall,
+		SubscriptionsListenEndpoint: subscriptionsListen,
 	}
 }
 
@@ -66,4 +68,19 @@ func (c *Client) ToolsCall(ctx context.Context, p *ToolsCallPayload) (res *Tools
 		return
 	}
 	return ires.(*ToolsCallResult), nil
+}
+
+// SubscriptionsListen calls the "subscriptions/listen" endpoint of the
+// "mcp_notes" service.
+// SubscriptionsListen may return the following errors:
+//   - "invalid_params" (type *goa.ServiceError): The request parameters do not match the MCP method.
+//   - "internal_error" (type *goa.ServiceError): The MCP service could not complete the request.
+//   - error: internal error
+func (c *Client) SubscriptionsListen(ctx context.Context, p *SubscriptionsListenPayload) (res *SubscriptionsListenResult, err error) {
+	var ires any
+	ires, err = c.SubscriptionsListenEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*SubscriptionsListenResult), nil
 }

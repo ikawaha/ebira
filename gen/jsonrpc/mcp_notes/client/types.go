@@ -49,6 +49,15 @@ type ToolsCallRequestBody struct {
 	InputResponses map[string]json.RawMessage `json:"inputResponses,omitzero"`
 }
 
+// SubscriptionsListenRequestBody is the type of the "mcp_notes" service
+// "subscriptions/listen" endpoint HTTP request body.
+type SubscriptionsListenRequestBody struct {
+	// Notification kinds, resource URIs and task IDs requested by the client
+	Notifications *SubscriptionFilterRequestBody `form:"notifications" json:"notifications" xml:"notifications"`
+	// Namespaced protocol metadata and extension values
+	Meta json.RawMessage `json:"_meta,omitempty"`
+}
+
 // ServerDiscoverResponseBody is the type of the "mcp_notes" service
 // "server/discover" endpoint HTTP response body.
 type ServerDiscoverResponseBody struct {
@@ -84,6 +93,15 @@ type ToolsListResponseBody struct {
 	TTLMs *int64 `form:"ttlMs,omitempty" json:"ttlMs,omitempty" xml:"ttlMs,omitempty"`
 	// Whether this response may be reused across authorization contexts
 	CacheScope *string `form:"cacheScope,omitempty" json:"cacheScope,omitempty" xml:"cacheScope,omitempty"`
+}
+
+// SubscriptionsListenResponseBody is the type of the "mcp_notes" service
+// "subscriptions/listen" endpoint HTTP response body.
+type SubscriptionsListenResponseBody struct {
+	// Namespaced protocol metadata and extension values
+	Meta json.RawMessage `json:"_meta,omitempty"`
+	// This response contains a finished result
+	ResultType *string `form:"resultType,omitempty" json:"resultType,omitempty" xml:"resultType,omitempty"`
 }
 
 // ToolsListInvalidParamsResponseBody is the type of the "mcp_notes" service
@@ -146,6 +164,44 @@ type ToolsCallInternalErrorResponseBody struct {
 type ToolsCallMissingClientCapabilityResponseBody struct {
 	// Capabilities required to fulfill this operation's questions
 	RequiredCapabilities *RequiredClientCapabilitiesResponseBody `form:"requiredCapabilities,omitempty" json:"requiredCapabilities,omitempty" xml:"requiredCapabilities,omitempty"`
+}
+
+// SubscriptionsListenInvalidParamsResponseBody is the type of the "mcp_notes"
+// service "subscriptions/listen" endpoint HTTP response body for the
+// "invalid_params" error.
+type SubscriptionsListenInvalidParamsResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SubscriptionsListenInternalErrorResponseBody is the type of the "mcp_notes"
+// service "subscriptions/listen" endpoint HTTP response body for the
+// "internal_error" error.
+type SubscriptionsListenInternalErrorResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // ServerCapabilitiesResponseBody is used to define fields on response body
@@ -382,6 +438,20 @@ type ElicitationCapabilitiesResponseBody struct {
 // RequiredExtensionResponseBody is used to define fields on response body
 // types.
 type RequiredExtensionResponseBody struct {
+}
+
+// SubscriptionFilterRequestBody is used to define fields on request body types.
+type SubscriptionFilterRequestBody struct {
+	// Request changes to the tool catalog
+	ToolsListChanged *bool `form:"toolsListChanged,omitempty" json:"toolsListChanged,omitempty" xml:"toolsListChanged,omitempty"`
+	// Request changes to the prompt catalog
+	PromptsListChanged *bool `form:"promptsListChanged,omitempty" json:"promptsListChanged,omitempty" xml:"promptsListChanged,omitempty"`
+	// Request changes to the resource catalog
+	ResourcesListChanged *bool `form:"resourcesListChanged,omitempty" json:"resourcesListChanged,omitempty" xml:"resourcesListChanged,omitempty"`
+	// Exact task IDs requested by this listen operation
+	TaskIds []string `form:"taskIds,omitempty" json:"taskIds,omitempty" xml:"taskIds,omitempty"`
+	// Exact resource URIs requested by this listen operation
+	ResourceSubscriptions []string `form:"resourceSubscriptions,omitempty" json:"resourceSubscriptions,omitempty" xml:"resourceSubscriptions,omitempty"`
 }
 
 // ElicitationParamsResponseBody holds exactly one of its branch values.
@@ -828,6 +898,18 @@ func NewToolsCallRequestBody(p *mcpnotes.ToolsCallPayload) *ToolsCallRequestBody
 	return body
 }
 
+// NewSubscriptionsListenRequestBody builds the HTTP request body from the
+// payload of the "subscriptions/listen" endpoint of the "mcp_notes" service.
+func NewSubscriptionsListenRequestBody(p *mcpnotes.SubscriptionsListenPayload) *SubscriptionsListenRequestBody {
+	body := &SubscriptionsListenRequestBody{
+		Meta: p.Meta,
+	}
+	if p.Notifications != nil {
+		body.Notifications = marshalMcpnotesSubscriptionFilterToSubscriptionFilterRequestBody(p.Notifications)
+	}
+	return body
+}
+
 // NewServerDiscoverResultOK builds a "mcp_notes" service "server/discover"
 // endpoint result from a HTTP "OK" response.
 func NewServerDiscoverResultOK(body *ServerDiscoverResponseBody) *mcpnotes.DiscoverResult {
@@ -963,6 +1045,47 @@ func NewToolsCallMissingClientCapability(body *ToolsCallMissingClientCapabilityR
 	return v
 }
 
+// NewSubscriptionsListenResultOK builds a "mcp_notes" service
+// "subscriptions/listen" endpoint result from a HTTP "OK" response.
+func NewSubscriptionsListenResultOK(body *SubscriptionsListenResponseBody) *mcpnotes.SubscriptionsListenResult {
+	v := &mcpnotes.SubscriptionsListenResult{
+		Meta:       body.Meta,
+		ResultType: *body.ResultType,
+	}
+
+	return v
+}
+
+// NewSubscriptionsListenInvalidParams builds a mcp_notes service
+// subscriptions/listen endpoint invalid_params error.
+func NewSubscriptionsListenInvalidParams(body *SubscriptionsListenInvalidParamsResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSubscriptionsListenInternalError builds a mcp_notes service
+// subscriptions/listen endpoint internal_error error.
+func NewSubscriptionsListenInternalError(body *SubscriptionsListenInternalErrorResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // ValidateServerDiscoverResponseBody runs the validations defined on
 // ServerDiscoverResponseBody
 func ValidateServerDiscoverResponseBody(body *ServerDiscoverResponseBody) (err error) {
@@ -1037,6 +1160,20 @@ func ValidateToolsListResponseBody(body *ToolsListResponseBody) (err error) {
 	if body.CacheScope != nil {
 		if !(*body.CacheScope == "public" || *body.CacheScope == "private") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.cacheScope", *body.CacheScope, []any{"public", "private"}))
+		}
+	}
+	return
+}
+
+// ValidateSubscriptionsListenResponseBody runs the validations defined on
+// SubscriptionsListenResponseBody
+func ValidateSubscriptionsListenResponseBody(body *SubscriptionsListenResponseBody) (err error) {
+	if body.ResultType == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resultType", "body"))
+	}
+	if body.ResultType != nil {
+		if !(*body.ResultType == "complete") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.resultType", *body.ResultType, []any{"complete"}))
 		}
 	}
 	return
@@ -1119,6 +1256,54 @@ func ValidateToolsCallInternalErrorResponseBody(body *ToolsCallInternalErrorResp
 func ValidateToolsCallMissingClientCapabilityResponseBody(body *ToolsCallMissingClientCapabilityResponseBody) (err error) {
 	if body.RequiredCapabilities == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("requiredCapabilities", "body"))
+	}
+	return
+}
+
+// ValidateSubscriptionsListenInvalidParamsResponseBody runs the validations
+// defined on SubscriptionsListenInvalidParamsResponseBody
+func ValidateSubscriptionsListenInvalidParamsResponseBody(body *SubscriptionsListenInvalidParamsResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSubscriptionsListenInternalErrorResponseBody runs the validations
+// defined on SubscriptionsListenInternalErrorResponseBody
+func ValidateSubscriptionsListenInternalErrorResponseBody(body *SubscriptionsListenInternalErrorResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -1672,6 +1857,24 @@ func validateTaskCreatedResponse(body *TaskCreatedResponse, path string) (err er
 		if !(*body.Status == "working" || *body.Status == "input_required" || *body.Status == "completed" || *body.Status == "failed" || *body.Status == "cancelled") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".status", *body.Status, []any{"working", "input_required", "completed", "failed", "cancelled"}))
 		}
+	}
+	return
+}
+
+// ValidateSubscriptionFilterRequestBody runs the validations defined on
+// SubscriptionFilter
+func ValidateSubscriptionFilterRequestBody(body *SubscriptionFilterRequestBody) (err error) {
+	for _, e := range body.ResourceSubscriptions {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.resourceSubscriptions[*]", e, goa.FormatURI))
+	}
+	return
+}
+
+// validateSubscriptionFilterRequestBody checks SubscriptionFilter and reports
+// errors using the path supplied by its caller
+func validateSubscriptionFilterRequestBody(body *SubscriptionFilterRequestBody, path string) (err error) {
+	for _, e := range body.ResourceSubscriptions {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".resourceSubscriptions[*]", e, goa.FormatURI))
 	}
 	return
 }

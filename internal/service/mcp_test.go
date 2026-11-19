@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	goahttp "goa.design/goa/v3/http"
 
@@ -174,5 +176,91 @@ func TestMCPIgnoresSession(t *testing.T) {
 		if strings.Contains(string(b), diary.ID) || strings.Contains(string(b), `"secret"`) {
 			t.Errorf("%s with a session reveals the private notebook: %s", c.tool, b)
 		}
+	}
+}
+
+// TestMCPListen checks the subscription to tool list changes: the server
+// advertises it, acknowledges it and holds the stream open until it closes,
+// so that a client lists the tools again after a restart, which may have
+// changed them.
+func TestMCPListen(t *testing.T) {
+	svc, _ := newTestService(t)
+	mux := goahttp.NewMuxer()
+	endpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), nil))
+	mcpnotessvr.Mount(mux, mcpnotessvr.New(endpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, func(_ context.Context, _ http.ResponseWriter, err error) {
+		t.Error(err)
+	}))
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	post := func(method, params string) *http.Response {
+		t.Helper()
+		body := `{"jsonrpc":"2.0","id":1,"method":"` + method + `","params":{` + params + `"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}`
+		r, err := http.NewRequest("POST", srv.URL+"/mcp", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Accept", "application/json, text/event-stream")
+		r.Header.Set("MCP-Protocol-Version", "2026-07-28")
+		r.Header.Set("Mcp-Method", method)
+		res, err := http.DefaultClient.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+
+	res := post("server/discover", "")
+	var discover struct {
+		Result struct {
+			Capabilities struct {
+				Tools struct {
+					ListChanged bool `json:"listChanged"`
+				} `json:"tools"`
+			} `json:"capabilities"`
+		} `json:"result"`
+	}
+	err := json.NewDecoder(res.Body).Decode(&discover)
+	res.Body.Close()
+	if err != nil || !discover.Result.Capabilities.Tools.ListChanged {
+		t.Fatalf("server/discover: tools.listChanged = false (%v), want true", err)
+	}
+
+	res = post("subscriptions/listen", `"notifications":{"toolsListChanged":true},`)
+	defer res.Body.Close()
+	lines := make(chan string)
+	go func() {
+		defer close(lines)
+		sc := bufio.NewScanner(res.Body)
+		for sc.Scan() {
+			if data, ok := strings.CutPrefix(sc.Text(), "data: "); ok {
+				lines <- data
+			}
+		}
+	}()
+	next := func() (string, bool) {
+		select {
+		case line, ok := <-lines:
+			return line, ok
+		case <-time.After(5 * time.Second):
+			t.Fatal("no event in 5 seconds")
+			return "", false
+		}
+	}
+	if line, _ := next(); !strings.Contains(line, "notifications/subscriptions/acknowledged") || !strings.Contains(line, `"toolsListChanged":true`) {
+		t.Fatalf("first event = %s, want the acknowledgment of toolsListChanged", line)
+	}
+	select {
+	case line := <-lines:
+		t.Fatalf("got %s before the server closed, want the stream held open", line)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	svc.Close() // as the server does when it shuts down
+	if line, _ := next(); !strings.Contains(line, `"result"`) {
+		t.Errorf("event after closing = %s, want the final result", line)
+	}
+	if line, ok := next(); ok {
+		t.Errorf("got %s after the final result, want the stream ended", line)
 	}
 }

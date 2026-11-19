@@ -17,10 +17,11 @@ type broker struct {
 	mu     sync.Mutex
 	subs   map[chan *gennotes.NoteEvent]struct{}
 	closed bool
+	done   chan struct{} // closed with the broker
 }
 
 func newBroker() *broker {
-	return &broker{subs: map[chan *gennotes.NoteEvent]struct{}{}}
+	return &broker{subs: map[chan *gennotes.NoteEvent]struct{}{}, done: make(chan struct{})}
 }
 
 // subscribe registers a subscriber. The returned channel is closed when the
@@ -96,6 +97,9 @@ func (b *broker) publishAll(typ string) {
 func (b *broker) close() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if !b.closed {
+		close(b.done)
+	}
 	b.closed = true
 	for c := range b.subs {
 		delete(b.subs, c)
