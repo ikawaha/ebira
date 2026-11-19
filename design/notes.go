@@ -159,6 +159,24 @@ var AIUpload = Type("AIUpload", func() {
 	})
 })
 
+// ListenSelection is the subscriptions accepted on the MCP subscription
+// stream (listen).
+var ListenSelection = Type("ListenSelection", func() {
+	Attribute("toolsListChanged", Boolean, "Tool list changes are accepted")
+})
+
+// ToolsChanged tells that the tool list changed; it has nothing more.
+var ToolsChanged = Type("ToolsChanged", func() {})
+
+// ListenEvent is an event of the MCP subscription stream (listen).
+var ListenEvent = Type("ListenEvent", func() {
+	OneOf("change", "What the event tells", func() {
+		Attribute("acknowledged", ListenSelection, "The subscriptions accepted")
+		Attribute("tools_changed", ToolsChanged, "The tool list changed")
+	})
+	Required("change")
+})
+
 // NoteVersionTrait is the attributes that NoteVersion and
 // NoteVersionSummary share.
 var NoteVersionTrait = func() {
@@ -1555,6 +1573,36 @@ var _ = Service("notes", func() {
 			IdempotentHint(true)
 			OpenWorldHint(false)
 		})
+	})
+
+	// The tools never change while the server runs, but a client keeps the
+	// tools it listed when it connected, output schemas too, and rejects the
+	// results of a newer server against them. A client that listens for tool
+	// list changes keeps a stream open, which ends when the server stops, and
+	// lists the tools again when it opens the stream again: so the server
+	// lists its tools as a changing catalog and accepts the subscription,
+	// without ever sending a change.
+	Method("list_tools", func() {
+		NoSecurity()
+		Description("List the MCP tools, all of them on one page.")
+		Payload(func() {
+			Attribute("cursor", String, "Cursor from the previous page; there is only one page")
+		})
+		Result(func() {
+			Attribute("tools", ArrayOf(String), "Names of the tools")
+			Attribute("nextCursor", String, "Cursor for the next page; never given")
+		})
+		ToolCatalog()
+	})
+
+	Method("listen", func() {
+		NoSecurity()
+		Description("Accept a subscription to tool list changes and keep it open until the client or the server closes it. The tools change only when the server starts again, which ends the stream.")
+		Payload(func() {
+			Attribute("toolsListChanged", Boolean, "Ask for tool list changes")
+		})
+		StreamingResult(ListenEvent)
+		SubscriptionSource()
 	})
 
 	// The files of a note, images and other attachments, are kept next to the

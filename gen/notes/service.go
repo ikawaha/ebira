@@ -8,10 +8,10 @@
 package notes
 
 import (
-	bytes "bytes"
+	"bytes"
 	"context"
-	json "encoding/json"
-	fmt "fmt"
+	"encoding/json"
+	"fmt"
 	"io"
 	sort "sort"
 	strconv "strconv"
@@ -261,6 +261,12 @@ type Service interface {
 	// longer in use, which lists and searches leave out unless they ask for them.
 	// The notes stay in the notebook and keep their content.
 	ArchiveAiNotebook(context.Context, *ArchiveAiNotebookPayload) (res *Notebook, err error)
+	// List the MCP tools, all of them on one page.
+	ListTools(context.Context, *ListToolsPayload) (res *ListToolsResult, err error)
+	// Accept a subscription to tool list changes and keep it open until the client
+	// or the server closes it. The tools change only when the server starts again,
+	// which ends the stream.
+	Listen(context.Context, *ListenPayload, ListenServerStream) (err error)
 	// Add a file to a note. The request body is the file, of any type, at most 50
 	// MB. The name is cleaned up (letters, digits, - and _), keeps its extension
 	// (a PNG, JPEG, GIF or WebP image, told by its content, gets the extension of
@@ -387,7 +393,26 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [66]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "zenn_status", "export_zenn", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+var MethodNames = [68]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "list_tools", "listen", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "zenn_status", "export_zenn", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+
+// ListenServerStream allows streaming instances of *ListenEvent to the client.
+type ListenServerStream interface {
+	// Send streams instances of "ListenEvent".
+	Send(*ListenEvent) error
+	// SendWithContext streams instances of "ListenEvent" with context.
+	SendWithContext(context.Context, *ListenEvent) error
+	// Close closes the stream.
+	Close() error
+}
+
+// ListenClientStream allows streaming instances of *ListenEvent to the client.
+type ListenClientStream interface {
+	// Recv reads instances of "ListenEvent" from the stream.
+	Recv() (*ListenEvent, error)
+	// RecvWithContext reads instances of "ListenEvent" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*ListenEvent, error)
+}
 
 // EventsServerStream allows streaming instances of *NoteEvent to the client.
 type EventsServerStream interface {
@@ -959,6 +984,37 @@ type ListPayload struct {
 	// relevance and takes in the sub notebooks of a notebook, a notebook does not
 	// take in its sub notebooks, and the title highlights alone are given
 	Q *string
+}
+
+// ListToolsPayload is the payload type of the notes service list_tools method.
+type ListToolsPayload struct {
+	// Cursor from the previous page; there is only one page
+	Cursor *string
+}
+
+// ListToolsResult is the result type of the notes service list_tools method.
+type ListToolsResult struct {
+	// Names of the tools
+	Tools []string
+	// Cursor for the next page; never given
+	NextCursor *string
+}
+
+// ListenEvent is the result type of the notes service listen method.
+type ListenEvent struct {
+	// What the event tells
+	Change Change
+}
+
+// ListenPayload is the payload type of the notes service listen method.
+type ListenPayload struct {
+	// Ask for tool list changes
+	ToolsListChanged *bool
+}
+
+type ListenSelection struct {
+	// Tool list changes are accepted
+	ToolsListChanged *bool
 }
 
 // Settings of the server's machine and user, in its settings file, that the
@@ -1628,6 +1684,9 @@ type TextRange struct {
 	Start int
 	// Offset just past the last character
 	End int
+}
+
+type ToolsChanged struct {
 }
 
 // TrashNotesPayload is the payload type of the notes service trash_notes
@@ -2303,6 +2362,45 @@ func validatejsonImportResultTransport(value *jsonImportResultTransport) (err er
 	if value.DuplicateOf != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.duplicate_of", *value.DuplicateOf, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
+	return err
+}
+
+// jsonListenEventTransport stores JSON fields until they have been validated.
+type jsonListenEventTransport struct {
+	// What the event tells
+	Change *jsonChangeTransport `json:"change"`
+}
+
+// validatejsonListenEventTransport checks decoded JSON before it becomes a service value.
+func validatejsonListenEventTransport(value *jsonListenEventTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Change == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("change", "body"))
+	}
+	if value.Change != nil {
+
+		if err2 := value.Change.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+
+	}
+	return err
+}
+
+// jsonListenSelectionTransport stores JSON fields until they have been validated.
+type jsonListenSelectionTransport struct {
+	// Tool list changes are accepted
+	ToolsListChanged *bool `json:"toolsListChanged,omitempty"`
+}
+
+// validatejsonListenSelectionTransport checks decoded JSON before it becomes a service value.
+func validatejsonListenSelectionTransport(value *jsonListenSelectionTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
 	return err
 }
 
@@ -3343,6 +3441,19 @@ func validatejsonTextRangeTransport(value *jsonTextRangeTransport) (err error) {
 	return err
 }
 
+// jsonToolsChangedTransport stores JSON fields until they have been validated.
+type jsonToolsChangedTransport struct {
+}
+
+// validatejsonToolsChangedTransport checks decoded JSON before it becomes a service value.
+func validatejsonToolsChangedTransport(value *jsonToolsChangedTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
 // jsonTrashedNotebookTransport stores JSON fields until they have been validated.
 type jsonTrashedNotebookTransport struct {
 	// ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted
@@ -3875,6 +3986,19 @@ func validateZennArticleOriginal(value *ZennArticle) (err error) {
 	return err
 }
 
+// validateListenEventOriginal checks the original typed value before JSON conversion.
+func validateListenEventOriginal(value *ListenEvent) (err error) {
+	if value.Change.Kind() == "" {
+		err = goa.MergeErrors(err, goa.MissingFieldError("change", "value"))
+	}
+
+	if err2 := value.Change.Validate(); err2 != nil {
+		err = goa.MergeErrors(err, err2)
+	}
+
+	return err
+}
+
 // validateMachineSettingsOriginal checks the original typed value before JSON conversion.
 func validateMachineSettingsOriginal(value *MachineSettings) (err error) {
 	if value.Theme != nil {
@@ -4199,6 +4323,155 @@ func validateZennWarningOriginal(value *ZennWarning) (err error) {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.kind", value.Kind, []any{"file", "note", "tag"}))
 	}
 	return err
+}
+
+// jsonChangeTransport stores exactly one selected Goa OneOf branch.
+type jsonChangeTransport struct {
+	kind         jsonChangeTransportKind
+	Acknowledged *jsonListenSelectionTransport
+	ToolsChanged *jsonToolsChangedTransport
+}
+
+// jsonChangeTransportKind identifies the selected branch of jsonChangeTransport.
+type jsonChangeTransportKind string
+
+const (
+	jsonChangeTransportKindAcknowledged jsonChangeTransportKind = "acknowledged"
+	jsonChangeTransportKindToolsChanged jsonChangeTransportKind = "tools_changed"
+)
+
+// Kind returns the selected branch.
+func (u jsonChangeTransport) Kind() jsonChangeTransportKind {
+	return u.kind
+}
+
+// newjsonChangeTransportAcknowledged creates jsonChangeTransport with its acknowledged branch selected.
+func newjsonChangeTransportAcknowledged(value *jsonListenSelectionTransport) jsonChangeTransport {
+	return jsonChangeTransport{kind: jsonChangeTransportKindAcknowledged, Acknowledged: value}
+}
+
+// AsAcknowledged returns the acknowledged branch when it is selected.
+func (u jsonChangeTransport) AsAcknowledged() (_ *jsonListenSelectionTransport, ok bool) {
+	if u.kind != jsonChangeTransportKindAcknowledged {
+		return
+	}
+	return u.Acknowledged, true
+}
+
+// SetAcknowledged selects the acknowledged branch.
+func (u *jsonChangeTransport) SetAcknowledged(value *jsonListenSelectionTransport) {
+	u.kind = jsonChangeTransportKindAcknowledged
+	u.Acknowledged = value
+}
+
+// newjsonChangeTransportToolsChanged creates jsonChangeTransport with its tools_changed branch selected.
+func newjsonChangeTransportToolsChanged(value *jsonToolsChangedTransport) jsonChangeTransport {
+	return jsonChangeTransport{kind: jsonChangeTransportKindToolsChanged, ToolsChanged: value}
+}
+
+// AsToolsChanged returns the tools_changed branch when it is selected.
+func (u jsonChangeTransport) AsToolsChanged() (_ *jsonToolsChangedTransport, ok bool) {
+	if u.kind != jsonChangeTransportKindToolsChanged {
+		return
+	}
+	return u.ToolsChanged, true
+}
+
+// SetToolsChanged selects the tools_changed branch.
+func (u *jsonChangeTransport) SetToolsChanged(value *jsonToolsChangedTransport) {
+	u.kind = jsonChangeTransportKindToolsChanged
+	u.ToolsChanged = value
+}
+
+// Validate checks that one complete branch is selected.
+func (u jsonChangeTransport) Validate() error {
+	switch u.kind {
+	case jsonChangeTransportKindAcknowledged:
+		if u.Acknowledged == nil {
+			return goa.MissingFieldError("value", "jsonChangeTransport")
+		}
+		return nil
+	case jsonChangeTransportKindToolsChanged:
+		if u.ToolsChanged == nil {
+			return goa.MissingFieldError("value", "jsonChangeTransport")
+		}
+		return nil
+	case "":
+		return goa.MissingFieldError("type", "jsonChangeTransport")
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{string(jsonChangeTransportKindAcknowledged), string(jsonChangeTransportKindToolsChanged)})
+	}
+}
+
+// MarshalJSON writes the selected branch name and value.
+func (u jsonChangeTransport) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var value any
+	switch u.kind {
+	case jsonChangeTransportKindAcknowledged:
+		value = u.Acknowledged
+	case jsonChangeTransportKindToolsChanged:
+		value = u.ToolsChanged
+	default:
+		return nil, fmt.Errorf("unexpected jsonChangeTransport branch %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{Type: string(u.kind), Value: value})
+}
+
+// UnmarshalJSON reads one complete branch name and value.
+func (u *jsonChangeTransport) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&raw); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return fmt.Errorf("decode jsonChangeTransport JSON: multiple JSON values")
+		}
+		return err
+	}
+	if raw.Type == "" {
+		return goa.MissingFieldError("type", "jsonChangeTransport")
+	}
+	if len(raw.Value) == 0 {
+		return goa.MissingFieldError("value", "jsonChangeTransport")
+	}
+	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
+		return goa.InvalidFieldTypeError("value", nil, "non-null JSON value")
+	}
+	switch raw.Type {
+	case string(jsonChangeTransportKindAcknowledged):
+		var value *jsonListenSelectionTransport
+		decoder := json.NewDecoder(bytes.NewReader(raw.Value))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+		u.kind = jsonChangeTransportKindAcknowledged
+		u.Acknowledged = value
+	case string(jsonChangeTransportKindToolsChanged):
+		var value *jsonToolsChangedTransport
+		decoder := json.NewDecoder(bytes.NewReader(raw.Value))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+		u.kind = jsonChangeTransportKindToolsChanged
+		u.ToolsChanged = value
+	default:
+		return goa.InvalidEnumValueError("type", raw.Type, []any{string(jsonChangeTransportKindAcknowledged), string(jsonChangeTransportKindToolsChanged)})
+	}
+	return u.Validate()
 }
 
 // EncodeAIImportFile turns a service value into JSON using the field names in the Goa design.
@@ -5095,6 +5368,224 @@ func DecodeImportResult(data []byte) (out *ImportResult, err error) {
 		out.Warnings = make([]string, len(body.Warnings))
 		for i, val := range body.Warnings {
 			out.Warnings[i] = val
+		}
+	}
+	return out, nil
+}
+
+// EncodeListenEvent turns a service value into JSON using the field names in the Goa design.
+func EncodeListenEvent(in *ListenEvent) ([]byte, error) {
+	if err := checkListenEventValue(in); err != nil {
+		return nil, fmt.Errorf("encode ListenEvent JSON: %w", err)
+	}
+	if err := validateListenEventOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate ListenEvent value: %w", err)
+	}
+	var body *jsonListenEventTransport
+	{
+		body = &jsonListenEventTransport{}
+		var changeValue jsonChangeTransport
+		switch string(in.Change.Kind()) {
+		case "acknowledged":
+			actual, _ := in.Change.AsAcknowledged()
+			var obj *jsonListenSelectionTransport
+			if actual != nil {
+				obj = encodeListenSelectionToListenSelectionTransport(actual)
+			}
+			u := changeValue
+			u.SetAcknowledged((*jsonListenSelectionTransport)(obj))
+			changeValue = u
+		case "tools_changed":
+			actual, _ := in.Change.AsToolsChanged()
+			var obj *jsonToolsChangedTransport
+			if actual != nil {
+				obj = encodeToolsChangedToToolsChangedTransport(actual)
+			}
+			u := changeValue
+			u.SetToolsChanged((*jsonToolsChangedTransport)(obj))
+			changeValue = u
+		}
+		body.Change = &changeValue
+	}
+	if err := validatejsonListenEventTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ListenEvent JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ListenEvent JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateListenEventValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateListenEventValue(in *ListenEvent) error {
+	if err := checkListenEventValue(in); err != nil {
+		return fmt.Errorf("validate ListenEvent value: %w", err)
+	}
+	if err := validateListenEventOriginal(in); err != nil {
+		return fmt.Errorf("validate ListenEvent value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ListenEvent")
+	}
+
+	var body *jsonListenEventTransport
+	{
+		body = &jsonListenEventTransport{}
+		var changeValue jsonChangeTransport
+		switch string(in.Change.Kind()) {
+		case "acknowledged":
+			actual, _ := in.Change.AsAcknowledged()
+			var obj *jsonListenSelectionTransport
+			if actual != nil {
+				obj = encodeListenSelectionToListenSelectionTransport(actual)
+			}
+			u := changeValue
+			u.SetAcknowledged((*jsonListenSelectionTransport)(obj))
+			changeValue = u
+		case "tools_changed":
+			actual, _ := in.Change.AsToolsChanged()
+			var obj *jsonToolsChangedTransport
+			if actual != nil {
+				obj = encodeToolsChangedToToolsChangedTransport(actual)
+			}
+			u := changeValue
+			u.SetToolsChanged((*jsonToolsChangedTransport)(obj))
+			changeValue = u
+		}
+		body.Change = &changeValue
+	}
+	if err := validatejsonListenEventTransport(body); err != nil {
+		return fmt.Errorf("validate ListenEvent value: %w", err)
+	}
+	return nil
+}
+
+// DecodeListenEvent checks JSON field names from the Goa design and returns a service value.
+func DecodeListenEvent(data []byte) (out *ListenEvent, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ListenEvent JSON: %w", err)
+	}
+	if err := validateListenEventJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ListenEvent JSON: %w", err)
+	}
+	var body *jsonListenEventTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ListenEvent JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ListenEvent JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ListenEvent JSON after first value: %w", err)
+	}
+	if err := validatejsonListenEventTransport(body); err != nil {
+		return out, fmt.Errorf("validate ListenEvent JSON: %w", err)
+	}
+	{
+		out = &ListenEvent{}
+		switch string(body.Change.Kind()) {
+		case "acknowledged":
+			actual, _ := body.Change.AsAcknowledged()
+			var obj *ListenSelection
+			if actual != nil {
+				obj = decodeListenSelectionTransportToListenSelection(actual)
+			}
+			u := out.Change
+			u.SetAcknowledged((*ListenSelection)(obj))
+			out.Change = u
+		case "tools_changed":
+			actual, _ := body.Change.AsToolsChanged()
+			var obj *ToolsChanged
+			if actual != nil {
+				obj = decodeToolsChangedTransportToToolsChanged(actual)
+			}
+			u := out.Change
+			u.SetToolsChanged((*ToolsChanged)(obj))
+			out.Change = u
+		}
+	}
+	return out, nil
+}
+
+// EncodeListenSelection turns a service value into JSON using the field names in the Goa design.
+func EncodeListenSelection(in *ListenSelection) ([]byte, error) {
+	if err := checkListenSelectionValue(in); err != nil {
+		return nil, fmt.Errorf("encode ListenSelection JSON: %w", err)
+	}
+	var body *jsonListenSelectionTransport
+	{
+		body = &jsonListenSelectionTransport{
+			ToolsListChanged: in.ToolsListChanged,
+		}
+	}
+	if err := validatejsonListenSelectionTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ListenSelection JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ListenSelection JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateListenSelectionValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateListenSelectionValue(in *ListenSelection) error {
+	if err := checkListenSelectionValue(in); err != nil {
+		return fmt.Errorf("validate ListenSelection value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ListenSelection")
+	}
+
+	var body *jsonListenSelectionTransport
+	{
+		body = &jsonListenSelectionTransport{
+			ToolsListChanged: in.ToolsListChanged,
+		}
+	}
+	if err := validatejsonListenSelectionTransport(body); err != nil {
+		return fmt.Errorf("validate ListenSelection value: %w", err)
+	}
+	return nil
+}
+
+// DecodeListenSelection checks JSON field names from the Goa design and returns a service value.
+func DecodeListenSelection(data []byte) (out *ListenSelection, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ListenSelection JSON: %w", err)
+	}
+	if err := validateListenEventJSONValue3("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ListenSelection JSON: %w", err)
+	}
+	var body *jsonListenSelectionTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ListenSelection JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ListenSelection JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ListenSelection JSON after first value: %w", err)
+	}
+	if err := validatejsonListenSelectionTransport(body); err != nil {
+		return out, fmt.Errorf("validate ListenSelection JSON: %w", err)
+	}
+	{
+		out = &ListenSelection{
+			ToolsListChanged: body.ToolsListChanged,
 		}
 	}
 	return out, nil
@@ -7364,6 +7855,77 @@ func DecodeTextRange(data []byte) (out *TextRange, err error) {
 	return out, nil
 }
 
+// EncodeToolsChanged turns a service value into JSON using the field names in the Goa design.
+func EncodeToolsChanged(in *ToolsChanged) ([]byte, error) {
+	if err := checkToolsChangedValue(in); err != nil {
+		return nil, fmt.Errorf("encode ToolsChanged JSON: %w", err)
+	}
+	var body *jsonToolsChangedTransport
+	{
+		body = &jsonToolsChangedTransport{}
+	}
+	if err := validatejsonToolsChangedTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ToolsChanged JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ToolsChanged JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateToolsChangedValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateToolsChangedValue(in *ToolsChanged) error {
+	if err := checkToolsChangedValue(in); err != nil {
+		return fmt.Errorf("validate ToolsChanged value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ToolsChanged")
+	}
+
+	var body *jsonToolsChangedTransport
+	{
+		body = &jsonToolsChangedTransport{}
+	}
+	if err := validatejsonToolsChangedTransport(body); err != nil {
+		return fmt.Errorf("validate ToolsChanged value: %w", err)
+	}
+	return nil
+}
+
+// DecodeToolsChanged checks JSON field names from the Goa design and returns a service value.
+func DecodeToolsChanged(data []byte) (out *ToolsChanged, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode ToolsChanged JSON: %w", err)
+	}
+	if err := validateListenEventJSONValue4("", root, ""); err != nil {
+		return out, fmt.Errorf("decode ToolsChanged JSON: %w", err)
+	}
+	var body *jsonToolsChangedTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode ToolsChanged JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode ToolsChanged JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode ToolsChanged JSON after first value: %w", err)
+	}
+	if err := validatejsonToolsChangedTransport(body); err != nil {
+		return out, fmt.Errorf("validate ToolsChanged JSON: %w", err)
+	}
+	{
+		out = &ToolsChanged{}
+	}
+	return out, nil
+}
+
 // EncodeTrashedNotebook turns a service value into JSON using the field names in the Goa design.
 func EncodeTrashedNotebook(in *TrashedNotebook) ([]byte, error) {
 	if err := checkTrashedNotebookValue(in); err != nil {
@@ -7988,6 +8550,14 @@ func decodeGitConflictTransportToGitConflict(v *jsonGitConflictTransport) *GitCo
 	return res
 }
 
+func decodeListenSelectionTransportToListenSelection(v *jsonListenSelectionTransport) *ListenSelection {
+	res := &ListenSelection{
+		ToolsListChanged: v.ToolsListChanged,
+	}
+
+	return res
+}
+
 func decodeMachineSettingsTransportToMachineSettings(v *jsonMachineSettingsTransport) *MachineSettings {
 	res := &MachineSettings{
 		Lang:       v.Lang,
@@ -8157,6 +8727,12 @@ func decodeTextRangeTransportToTextRange(v *jsonTextRangeTransport) *TextRange {
 	return res
 }
 
+func decodeToolsChangedTransportToToolsChanged(v *jsonToolsChangedTransport) *ToolsChanged {
+	res := &ToolsChanged{}
+
+	return res
+}
+
 func decodeUnusedFileTransportToUnusedFile(v *jsonUnusedFileTransport) *UnusedFile {
 	res := &UnusedFile{
 		NoteID:    *v.NoteID,
@@ -8215,6 +8791,14 @@ func encodeGitConflictToGitConflictTransport(v *GitConflict) *jsonGitConflictTra
 		Path:   &v.Path,
 		NoteID: v.NoteID,
 		CopyID: v.CopyID,
+	}
+
+	return res
+}
+
+func encodeListenSelectionToListenSelectionTransport(v *ListenSelection) *jsonListenSelectionTransport {
+	res := &jsonListenSelectionTransport{
+		ToolsListChanged: v.ToolsListChanged,
 	}
 
 	return res
@@ -8471,6 +9055,12 @@ func encodeTextRangeToTextRangeTransport(v *TextRange) *jsonTextRangeTransport {
 	res.Start = &start
 	end := importResultIntTransport(v.End)
 	res.End = &end
+
+	return res
+}
+
+func encodeToolsChangedToToolsChangedTransport(v *ToolsChanged) *jsonToolsChangedTransport {
+	res := &jsonToolsChangedTransport{}
 
 	return res
 }
@@ -9733,6 +10323,141 @@ func validateImportResultJSONValue10(path string, value any, description string)
 			item, description,
 		); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateListenEventJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListenEventJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "change":
+			if err := validateListenEventJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "What the event tells",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"change",
+			})
+		}
+	}
+	return nil
+}
+
+// validateListenEventJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListenEventJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	for key := range typed {
+		if key != "type" && key != "value" {
+			return unknownJSONFieldError(path, key, []string{"type", "value"})
+		}
+	}
+	discriminator, ok := typed["type"].(string)
+	if !ok {
+		return fmt.Errorf("%s: missing or invalid union discriminator", field)
+	}
+	branch, exists := typed["value"]
+	if !exists {
+		return fmt.Errorf("%s: missing union value", field)
+	}
+	switch discriminator {
+	case "acknowledged":
+		return validateListenEventJSONValue3(generatedJSONChildPath(path, "value", false), branch, "The subscriptions accepted")
+	case "tools_changed":
+		return validateListenEventJSONValue4(generatedJSONChildPath(path, "value", false), branch, "The tool list changed")
+	default:
+		return fmt.Errorf("%s: unknown union discriminator %q", field, discriminator)
+	}
+}
+
+// validateListenEventJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListenEventJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "toolsListChanged":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Tool list changes are accepted",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"toolsListChanged",
+			})
+		}
+	}
+	return nil
+}
+
+// validateListenEventJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateListenEventJSONValue4(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		default:
+			return unknownJSONFieldError(path, key, []string{})
 		}
 	}
 	return nil
@@ -12280,6 +13005,87 @@ func checkImportResultTextRangeValue(in *TextRange, field string, active map[any
 	return nil
 }
 
+// checkListenEventValue checks text and cycles before conversion.
+func checkListenEventValue(in *ListenEvent) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkListenEventListenEventValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkListenEventListenEventValue checks one generated value on the active path.
+func checkListenEventListenEventValue(in *ListenEvent, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if branch1, ok := in.Change.AsAcknowledged(); ok {
+			_ = branch1
+			if err := checkListenEventListenSelectionValue(branch1, generatedJSONChildPath(generatedJSONChildPath(field, "change", false), "value", false), active); err != nil {
+				return err
+			}
+		}
+		if branch1, ok := in.Change.AsToolsChanged(); ok {
+			_ = branch1
+			if err := checkListenEventToolsChangedValue(branch1, generatedJSONChildPath(generatedJSONChildPath(field, "change", false), "value", false), active); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkListenEventListenSelectionValue checks one generated value on the active path.
+func checkListenEventListenSelectionValue(in *ListenSelection, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+	}
+	return nil
+}
+
+// checkListenEventToolsChangedValue checks one generated value on the active path.
+func checkListenEventToolsChangedValue(in *ToolsChanged, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+	}
+	return nil
+}
+
+// checkListenSelectionValue checks text and cycles before conversion.
+func checkListenSelectionValue(in *ListenSelection) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkListenEventListenSelectionValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
 // checkMachineSettingsValue checks text and cycles before conversion.
 func checkMachineSettingsValue(in *MachineSettings) error {
 	if in == nil {
@@ -13135,6 +13941,18 @@ func checkTextRangeValue(in *TextRange) error {
 	}
 	active := make(map[any]bool)
 	if err := checkImportResultTextRangeValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkToolsChangedValue checks text and cycles before conversion.
+func checkToolsChangedValue(in *ToolsChanged) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkListenEventToolsChangedValue(in, "$", active); err != nil {
 		return err
 	}
 	return nil

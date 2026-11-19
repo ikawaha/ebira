@@ -114,3 +114,41 @@ func BuildToolsCallPayload(mcpNotesToolsCallBody *string, mcpNotesToolsCallHTTPC
 
 	return v, nil
 }
+
+// BuildSubscriptionsListenPayload builds the payload for the mcp_notes
+// subscriptions/listen endpoint from CLI flags.
+func BuildSubscriptionsListenPayload(mcpNotesSubscriptionsListenBody *string) (*mcpnotes.SubscriptionsListenPayload, error) {
+	var err error
+	var body SubscriptionsListenRequestBody
+	{
+		if mcpNotesSubscriptionsListenBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*mcpNotesSubscriptionsListenBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"_meta\": \"Deleniti soluta.\",\n      \"notifications\": {\n         \"promptsListChanged\": true,\n         \"resourceSubscriptions\": [\n            \"http://reichel.org/nova\",\n            \"http://windlerbeer.com/marilyne.mills\"\n         ],\n         \"resourcesListChanged\": true,\n         \"taskIds\": [\n            \"Nam culpa.\",\n            \"Est et corporis quas repellat ratione.\"\n         ],\n         \"toolsListChanged\": false\n      }\n   }'")
+		}
+		if body.Notifications == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("notifications", "body"))
+		}
+		if body.Meta == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("_meta", "body"))
+		}
+		if body.Notifications != nil {
+			if err2 := validateSubscriptionFilterRequestBody(body.Notifications, "body.notifications"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	v := &mcpnotes.SubscriptionsListenPayload{
+		Meta: body.Meta,
+	}
+	if body.Notifications != nil {
+		v.Notifications = marshalSubscriptionFilterRequestBodyToMcpnotesSubscriptionFilter(body.Notifications)
+	}
+
+	return v, nil
+}

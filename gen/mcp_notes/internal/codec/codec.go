@@ -1769,6 +1769,105 @@ func ValidateListResultZennArticleTransport(value *ListResultZennArticleTranspor
 	return err
 }
 
+// ListToolsPayloadTransport stores JSON fields until they have been validated.
+type ListToolsPayloadTransport struct {
+	// Cursor from the previous page; there is only one page
+	Cursor *string `json:"cursor,omitempty"`
+}
+
+// ValidateListToolsPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateListToolsPayloadTransport(value *ListToolsPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// ListToolsResultTransport stores JSON fields until they have been validated.
+type ListToolsResultTransport struct {
+	// Names of the tools
+	Tools []string `json:"tools,omitempty"`
+	// Cursor for the next page; never given
+	NextCursor *string `json:"nextCursor,omitempty"`
+}
+
+// ValidateListToolsResultTransport checks decoded JSON before it becomes a service value.
+func ValidateListToolsResultTransport(value *ListToolsResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// ListenPayloadTransport stores JSON fields until they have been validated.
+type ListenPayloadTransport struct {
+	// Ask for tool list changes
+	ToolsListChanged *bool `json:"toolsListChanged,omitempty"`
+}
+
+// ValidateListenPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateListenPayloadTransport(value *ListenPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// ListenResultListenSelectionTransport stores JSON fields until they have been validated.
+type ListenResultListenSelectionTransport struct {
+	// Tool list changes are accepted
+	ToolsListChanged *bool `json:"toolsListChanged,omitempty"`
+}
+
+// ValidateListenResultListenSelectionTransport checks decoded JSON before it becomes a service value.
+func ValidateListenResultListenSelectionTransport(value *ListenResultListenSelectionTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// ListenResultToolsChangedTransport stores JSON fields until they have been validated.
+type ListenResultToolsChangedTransport struct {
+}
+
+// ValidateListenResultToolsChangedTransport checks decoded JSON before it becomes a service value.
+func ValidateListenResultToolsChangedTransport(value *ListenResultToolsChangedTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+
+	return err
+}
+
+// ListenResultTransport stores JSON fields until they have been validated.
+type ListenResultTransport struct {
+	// What the event tells
+	Change *ListenResultchangeTransport `json:"change"`
+}
+
+// ValidateListenResultTransport checks decoded JSON before it becomes a service value.
+func ValidateListenResultTransport(value *ListenResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Change == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("change", "body"))
+	}
+	if value.Change != nil {
+
+		if err2 := value.Change.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+
+	}
+	return err
+}
+
 // MakeNotebookPrivatePayloadTransport stores JSON fields until they have been validated.
 type MakeNotebookPrivatePayloadTransport struct {
 	// Notebook ID
@@ -3254,6 +3353,84 @@ func ValidateUpdateAiSeparatorResultTransport(value *UpdateAiSeparatorResultTran
 	return err
 }
 
+// ListenResultchangeTransport stores exactly one selected Goa OneOf branch.
+type ListenResultchangeTransport struct {
+	kind         ListenResultchangeTransportKind
+	Acknowledged *ListenResultListenSelectionTransport
+	ToolsChanged *ListenResultToolsChangedTransport
+}
+
+// ListenResultchangeTransportKind identifies the selected branch of ListenResultchangeTransport.
+type ListenResultchangeTransportKind string
+
+const (
+	ListenResultchangeTransportKindAcknowledged ListenResultchangeTransportKind = "acknowledged"
+	ListenResultchangeTransportKindToolsChanged ListenResultchangeTransportKind = "tools_changed"
+)
+
+// Kind returns the selected branch.
+func (u ListenResultchangeTransport) Kind() ListenResultchangeTransportKind {
+	return u.kind
+}
+
+// NewListenResultchangeTransportAcknowledged creates ListenResultchangeTransport with its acknowledged branch selected.
+func NewListenResultchangeTransportAcknowledged(value *ListenResultListenSelectionTransport) ListenResultchangeTransport {
+	return ListenResultchangeTransport{kind: ListenResultchangeTransportKindAcknowledged, Acknowledged: value}
+}
+
+// AsAcknowledged returns the acknowledged branch when it is selected.
+func (u ListenResultchangeTransport) AsAcknowledged() (_ *ListenResultListenSelectionTransport, ok bool) {
+	if u.kind != ListenResultchangeTransportKindAcknowledged {
+		return
+	}
+	return u.Acknowledged, true
+}
+
+// SetAcknowledged selects the acknowledged branch.
+func (u *ListenResultchangeTransport) SetAcknowledged(value *ListenResultListenSelectionTransport) {
+	u.kind = ListenResultchangeTransportKindAcknowledged
+	u.Acknowledged = value
+}
+
+// NewListenResultchangeTransportToolsChanged creates ListenResultchangeTransport with its tools_changed branch selected.
+func NewListenResultchangeTransportToolsChanged(value *ListenResultToolsChangedTransport) ListenResultchangeTransport {
+	return ListenResultchangeTransport{kind: ListenResultchangeTransportKindToolsChanged, ToolsChanged: value}
+}
+
+// AsToolsChanged returns the tools_changed branch when it is selected.
+func (u ListenResultchangeTransport) AsToolsChanged() (_ *ListenResultToolsChangedTransport, ok bool) {
+	if u.kind != ListenResultchangeTransportKindToolsChanged {
+		return
+	}
+	return u.ToolsChanged, true
+}
+
+// SetToolsChanged selects the tools_changed branch.
+func (u *ListenResultchangeTransport) SetToolsChanged(value *ListenResultToolsChangedTransport) {
+	u.kind = ListenResultchangeTransportKindToolsChanged
+	u.ToolsChanged = value
+}
+
+// Validate checks that one complete branch is selected.
+func (u ListenResultchangeTransport) Validate() error {
+	switch u.kind {
+	case ListenResultchangeTransportKindAcknowledged:
+		if u.Acknowledged == nil {
+			return goa.MissingFieldError("value", "ListenResultchangeTransport")
+		}
+		return nil
+	case ListenResultchangeTransportKindToolsChanged:
+		if u.ToolsChanged == nil {
+			return goa.MissingFieldError("value", "ListenResultchangeTransport")
+		}
+		return nil
+	case "":
+		return goa.MissingFieldError("type", "ListenResultchangeTransport")
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{string(ListenResultchangeTransportKindAcknowledged), string(ListenResultchangeTransportKindToolsChanged)})
+	}
+}
+
 // DecodeAddAiFilePayload checks JSON field names from the Goa design and returns a service value.
 func DecodeAddAiFilePayload(data []byte) (out *notes.AddAiFilePayload, err error) {
 	var body *AddAiFilePayloadTransport
@@ -3919,6 +4096,98 @@ func EncodeListResult(in *notes.NoteList) ([]byte, error) {
 		return nil, fmt.Errorf("encode ListResult JSON: %w", err)
 	}
 	return data, nil
+}
+
+// NewListToolsPayload validates a decoded transport value and returns the service value.
+func NewListToolsPayload(body *ListToolsPayloadTransport) (out *notes.ListToolsPayload, err error) {
+	if err := ValidateListToolsPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate ListToolsPayload JSON: %w", err)
+	}
+	{
+		out = &notes.ListToolsPayload{
+			Cursor: body.Cursor,
+		}
+	}
+	return out, nil
+}
+
+// ValidateListToolsResultValue checks a service value against its declared field validation.
+
+func ValidateListToolsResultValue(in *notes.ListToolsResult) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ListToolsResult")
+	}
+
+	var body *ListToolsResultTransport
+	{
+		body = &ListToolsResultTransport{
+			NextCursor: in.NextCursor,
+		}
+		if in.Tools != nil {
+			body.Tools = make([]string, len(in.Tools))
+			for i, val := range in.Tools {
+				body.Tools[i] = val
+			}
+		}
+	}
+	if err := ValidateListToolsResultTransport(body); err != nil {
+		return fmt.Errorf("validate ListToolsResult value: %w", err)
+	}
+	return nil
+}
+
+// NewListenPayload validates a decoded transport value and returns the service value.
+func NewListenPayload(body *ListenPayloadTransport) (out *notes.ListenPayload, err error) {
+	if err := ValidateListenPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate ListenPayload JSON: %w", err)
+	}
+	{
+		out = &notes.ListenPayload{
+			ToolsListChanged: body.ToolsListChanged,
+		}
+	}
+	return out, nil
+}
+
+// ValidateListenResultValue checks a service value against its declared field validation.
+
+func ValidateListenResultValue(in *notes.ListenEvent) error {
+
+	if in == nil {
+		return goa.MissingFieldError("result", "ListenResult")
+	}
+
+	var body *ListenResultTransport
+	{
+		body = &ListenResultTransport{}
+		var changeValue ListenResultchangeTransport
+		switch string(in.Change.Kind()) {
+		case "acknowledged":
+			actual, _ := in.Change.AsAcknowledged()
+			var obj *ListenResultListenSelectionTransport
+			if actual != nil {
+				obj = encodeListenSelectionToListenResultListenSelectionTransport(actual)
+			}
+			u := changeValue
+			u.SetAcknowledged((*ListenResultListenSelectionTransport)(obj))
+			changeValue = u
+		case "tools_changed":
+			actual, _ := in.Change.AsToolsChanged()
+			var obj *ListenResultToolsChangedTransport
+			if actual != nil {
+				obj = encodeToolsChangedToListenResultToolsChangedTransport(actual)
+			}
+			u := changeValue
+			u.SetToolsChanged((*ListenResultToolsChangedTransport)(obj))
+			changeValue = u
+		}
+		body.Change = &changeValue
+	}
+	if err := ValidateListenResultTransport(body); err != nil {
+		return fmt.Errorf("validate ListenResult value: %w", err)
+	}
+	return nil
 }
 
 // DecodeMakeNotebookPrivatePayload checks JSON field names from the Goa design and returns a service value.
@@ -4618,6 +4887,14 @@ func decodeUpdateAiNotePayloadNoteEditTransportToNoteEdit(v *UpdateAiNotePayload
 	return res
 }
 
+func encodeListenSelectionToListenResultListenSelectionTransport(v *notes.ListenSelection) *ListenResultListenSelectionTransport {
+	res := &ListenResultListenSelectionTransport{
+		ToolsListChanged: v.ToolsListChanged,
+	}
+
+	return res
+}
+
 func encodeMarkInfoToMarksResultMarkInfoTransport(v *notes.MarkInfo) *MarksResultMarkInfoTransport {
 	res := &MarksResultMarkInfoTransport{
 		ID:   &v.ID,
@@ -4941,6 +5218,12 @@ func encodeTextRangeToUpdateAiNoteResultTextRangeTransport2(v *notes.TextRange) 
 		Start: &v.Start,
 		End:   &v.End,
 	}
+
+	return res
+}
+
+func encodeToolsChangedToListenResultToolsChangedTransport(v *notes.ToolsChanged) *ListenResultToolsChangedTransport {
+	res := &ListenResultToolsChangedTransport{}
 
 	return res
 }

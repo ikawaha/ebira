@@ -62,6 +62,8 @@ type Client struct {
 	CreateAiNotebookEndpoint      goa.Endpoint
 	MakeNotebookPrivateEndpoint   goa.Endpoint
 	ArchiveAiNotebookEndpoint     goa.Endpoint
+	ListToolsEndpoint             goa.Endpoint
+	ListenEndpoint                goa.Endpoint
 	AddFileEndpoint               goa.Endpoint
 	GetFileEndpoint               goa.Endpoint
 	DeleteFileEndpoint            goa.Endpoint
@@ -85,7 +87,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, zennStatus, exportZenn, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, listTools, listen, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, zennStatus, exportZenn, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -133,6 +135,8 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		CreateAiNotebookEndpoint:      createAiNotebook,
 		MakeNotebookPrivateEndpoint:   makeNotebookPrivate,
 		ArchiveAiNotebookEndpoint:     archiveAiNotebook,
+		ListToolsEndpoint:             listTools,
+		ListenEndpoint:                listen,
 		AddFileEndpoint:               addFile,
 		GetFileEndpoint:               getFile,
 		DeleteFileEndpoint:            deleteFile,
@@ -856,6 +860,34 @@ func (c *Client) ArchiveAiNotebook(ctx context.Context, p *ArchiveAiNotebookPayl
 		return
 	}
 	return ires.(*Notebook), nil
+}
+
+// ListTools calls the "list_tools" endpoint of the "notes" service.
+// ListTools may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) ListTools(ctx context.Context, p *ListToolsPayload) (res *ListToolsResult, err error) {
+	var ires any
+	ires, err = c.ListToolsEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*ListToolsResult), nil
+}
+
+// Listen calls the "listen" endpoint of the "notes" service.
+// Listen may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) Listen(ctx context.Context, p *ListenPayload) (res ListenClientStream, err error) {
+	var ires any
+	ires, err = c.ListenEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(ListenClientStream), nil
 }
 
 // AddFile calls the "add_file" endpoint of the "notes" service.

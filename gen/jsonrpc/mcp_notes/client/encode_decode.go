@@ -455,6 +455,155 @@ func DecodeToolsCallResponse(decoder func(*http.Response) goahttp.Decoder, resto
 	}
 }
 
+// BuildSubscriptionsListenRequest instantiates a HTTP request object with
+// method and path set to call the "mcp_notes" service "subscriptions/listen"
+// endpoint
+func (c *Client) BuildSubscriptionsListenRequest(ctx context.Context, v any) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: SubscriptionsListenMcpNotesPath()}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("mcp_notes", "subscriptions/listen", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeSubscriptionsListenRequest returns an encoder for requests sent to the
+// mcp_notes service subscriptions/listen JSON-RPC method. The encoder returns
+// the request ID written into the JSON-RPC message.
+func EncodeSubscriptionsListenRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*mcpnotes.SubscriptionsListenPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("mcp_notes", "subscriptions/listen", "*mcpnotes.SubscriptionsListenPayload", v)
+		}
+		b := NewSubscriptionsListenRequestBody(p)
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "subscriptions/listen",
+			Params:  b,
+		}
+		requestID := uuid.New().String()
+		body.ID = requestID
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("mcp_notes", "subscriptions/listen", err)
+		}
+		return requestID, nil
+	}
+}
+
+// DecodeSubscriptionsListenResponse returns a decoder for responses returned
+// by the mcp_notes service subscriptions/listen JSON-RPC method. The decoder
+// rejects responses that do not repeat requestID. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeSubscriptionsListenResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err))
+				}
+			}()
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("mcp_notes", "subscriptions/listen", resp.StatusCode, string(body))
+		}
+
+		var jresp jsonrpc.RawResponse
+		if err := decoder(resp).Decode(&jresp); err != nil {
+			return nil, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err)
+		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("mcp_notes", "subscriptions/listen", resp.StatusCode, err.Error())
+		}
+
+		if jresp.Error != nil {
+			serviceErrorName, serviceErrorBody, ok := jsonrpc.DecodeServiceErrorData(jresp.Error.Data)
+			if !ok {
+				return nil, jresp.Error
+			}
+			switch jresp.Error.Code {
+			case -32602:
+				switch serviceErrorName {
+				case "invalid_params":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body SubscriptionsListenInvalidParamsResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err)
+					}
+					err = ValidateSubscriptionsListenInvalidParamsResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("mcp_notes", "subscriptions/listen", err)
+					}
+					return nil, NewSubscriptionsListenInvalidParams(&body)
+				default:
+					return nil, jresp.Error
+				}
+			case -32603:
+				switch serviceErrorName {
+				case "internal_error":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body SubscriptionsListenInternalErrorResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err)
+					}
+					err = ValidateSubscriptionsListenInternalErrorResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("mcp_notes", "subscriptions/listen", err)
+					}
+					return nil, NewSubscriptionsListenInternalError(&body)
+				default:
+					return nil, jresp.Error
+				}
+			default:
+				return nil, jresp.Error
+			}
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
+		var (
+			body SubscriptionsListenResponseBody
+			err  error
+		)
+		err = decoder(resp).Decode(&body)
+		if err != nil {
+			return nil, goahttp.ErrDecodingError("mcp_notes", "subscriptions/listen", err)
+		}
+		err = ValidateSubscriptionsListenResponseBody(&body)
+		if err != nil {
+			return nil, goahttp.ErrValidationError("mcp_notes", "subscriptions/listen", err)
+		}
+		res := NewSubscriptionsListenResultOK(&body)
+		return res, nil
+	}
+}
+
 // unmarshalServerCapabilitiesResponseBodyToMcpnotesServerCapabilities builds a
 // value of type *mcpnotes.ServerCapabilities from a value of type
 // *ServerCapabilitiesResponseBody.
@@ -814,6 +963,56 @@ func unmarshalElicitationCapabilitiesResponseBodyToMcpnotesElicitationCapabiliti
 // *RequiredExtensionResponseBody.
 func unmarshalRequiredExtensionResponseBodyToMcpnotesRequiredExtension(v *RequiredExtensionResponseBody) *mcpnotes.RequiredExtension {
 	res := &mcpnotes.RequiredExtension{}
+
+	return res
+}
+
+// marshalMcpnotesSubscriptionFilterToSubscriptionFilterRequestBody builds a
+// value of type *SubscriptionFilterRequestBody from a value of type
+// *mcpnotes.SubscriptionFilter.
+func marshalMcpnotesSubscriptionFilterToSubscriptionFilterRequestBody(v *mcpnotes.SubscriptionFilter) *SubscriptionFilterRequestBody {
+	res := &SubscriptionFilterRequestBody{
+		ToolsListChanged:     v.ToolsListChanged,
+		PromptsListChanged:   v.PromptsListChanged,
+		ResourcesListChanged: v.ResourcesListChanged,
+	}
+	if v.TaskIds != nil {
+		res.TaskIds = make([]string, len(v.TaskIds))
+		for i, val := range v.TaskIds {
+			res.TaskIds[i] = val
+		}
+	}
+	if v.ResourceSubscriptions != nil {
+		res.ResourceSubscriptions = make([]string, len(v.ResourceSubscriptions))
+		for i, val := range v.ResourceSubscriptions {
+			res.ResourceSubscriptions[i] = val
+		}
+	}
+
+	return res
+}
+
+// marshalSubscriptionFilterRequestBodyToMcpnotesSubscriptionFilter builds a
+// value of type *mcpnotes.SubscriptionFilter from a value of type
+// *SubscriptionFilterRequestBody.
+func marshalSubscriptionFilterRequestBodyToMcpnotesSubscriptionFilter(v *SubscriptionFilterRequestBody) *mcpnotes.SubscriptionFilter {
+	res := &mcpnotes.SubscriptionFilter{
+		ToolsListChanged:     v.ToolsListChanged,
+		PromptsListChanged:   v.PromptsListChanged,
+		ResourcesListChanged: v.ResourcesListChanged,
+	}
+	if v.TaskIds != nil {
+		res.TaskIds = make([]string, len(v.TaskIds))
+		for i, val := range v.TaskIds {
+			res.TaskIds[i] = val
+		}
+	}
+	if v.ResourceSubscriptions != nil {
+		res.ResourceSubscriptions = make([]string, len(v.ResourceSubscriptions))
+		for i, val := range v.ResourceSubscriptions {
+			res.ResourceSubscriptions[i] = val
+		}
+	}
 
 	return res
 }

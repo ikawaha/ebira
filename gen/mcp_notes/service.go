@@ -30,6 +30,9 @@ type Service interface {
 	ToolsList(context.Context, *ToolsListPayload) (res *ToolsListResult, err error)
 	// Call a tool
 	ToolsCall(context.Context, *ToolsCallPayload) (res *ToolsCallResult, err error)
+	// Authorize requested resource and job selections and send changes until this
+	// request ends
+	SubscriptionsListen(context.Context, *SubscriptionsListenPayload) (res *SubscriptionsListenResult, err error)
 }
 
 // APIName is the name of the API as defined in the design.
@@ -46,7 +49,7 @@ const ServiceName = "mcp_notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [3]string{"server/discover", "tools/list", "tools/call"}
+var MethodNames = [4]string{"server/discover", "tools/list", "tools/call", "subscriptions/listen"}
 
 // Argument suggestions
 type CompletionsCapability struct {
@@ -225,6 +228,37 @@ type ServerCapabilities struct {
 	Resources *ResourcesCapability
 	// Prompt capabilities
 	Prompts *PromptsCapability
+}
+
+type SubscriptionFilter struct {
+	// Request changes to the tool catalog
+	ToolsListChanged *bool
+	// Request changes to the prompt catalog
+	PromptsListChanged *bool
+	// Request changes to the resource catalog
+	ResourcesListChanged *bool
+	// Exact task IDs requested by this listen operation
+	TaskIds []string
+	// Exact resource URIs requested by this listen operation
+	ResourceSubscriptions []string
+}
+
+// SubscriptionsListenPayload is the payload type of the mcp_notes service
+// subscriptions/listen method.
+type SubscriptionsListenPayload struct {
+	// Notification kinds, resource URIs and task IDs requested by the client
+	Notifications *SubscriptionFilter
+	// Namespaced protocol metadata and extension values
+	Meta json.RawMessage `json:"_meta,omitempty"`
+}
+
+// SubscriptionsListenResult is the result type of the mcp_notes service
+// subscriptions/listen method.
+type SubscriptionsListenResult struct {
+	// Namespaced protocol metadata and extension values
+	Meta json.RawMessage `json:"_meta,omitempty"`
+	// This response contains a finished result
+	ResultType string
 }
 
 type TaskCreated struct {
@@ -889,6 +923,82 @@ func validatejsonServerCapabilitiesTransport(value *jsonServerCapabilitiesTransp
 	return err
 }
 
+// jsonSubscriptionFilterTransport stores JSON fields until they have been validated.
+type jsonSubscriptionFilterTransport struct {
+	// Request changes to the tool catalog
+	ToolsListChanged *bool `json:"toolsListChanged,omitempty"`
+	// Request changes to the prompt catalog
+	PromptsListChanged *bool `json:"promptsListChanged,omitempty"`
+	// Request changes to the resource catalog
+	ResourcesListChanged *bool `json:"resourcesListChanged,omitempty"`
+	// Exact task IDs requested by this listen operation
+	TaskIds []string `json:"taskIds,omitempty"`
+	// Exact resource URIs requested by this listen operation
+	ResourceSubscriptions []string `json:"resourceSubscriptions,omitempty"`
+}
+
+// validatejsonSubscriptionFilterTransport checks decoded JSON before it becomes a service value.
+func validatejsonSubscriptionFilterTransport(value *jsonSubscriptionFilterTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	for _, e := range value.ResourceSubscriptions {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.resourceSubscriptions[*]", e, goa.FormatURI))
+	}
+	return err
+}
+
+// jsonSubscriptionsListenPayloadTransport stores JSON fields until they have been validated.
+type jsonSubscriptionsListenPayloadTransport struct {
+	// Notification kinds, resource URIs and task IDs requested by the client
+	Notifications *jsonSubscriptionFilterTransport `json:"notifications"`
+	// Namespaced protocol metadata and extension values
+	Meta json.RawMessage `json:"_meta,omitempty"`
+}
+
+// validatejsonSubscriptionsListenPayloadTransport checks decoded JSON before it becomes a service value.
+func validatejsonSubscriptionsListenPayloadTransport(value *jsonSubscriptionsListenPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Notifications == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notifications", "body"))
+	}
+	if value.Meta == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("_meta", "body"))
+	}
+	if value.Notifications != nil {
+		if err2 := validatejsonSubscriptionFilterTransport(value.Notifications); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return err
+}
+
+// jsonSubscriptionsListenResultTransport stores JSON fields until they have been validated.
+type jsonSubscriptionsListenResultTransport struct {
+	// Namespaced protocol metadata and extension values
+	Meta json.RawMessage `json:"_meta,omitempty"`
+	// This response contains a finished result
+	ResultType *string `json:"resultType"`
+}
+
+// validatejsonSubscriptionsListenResultTransport checks decoded JSON before it becomes a service value.
+func validatejsonSubscriptionsListenResultTransport(value *jsonSubscriptionsListenResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ResultType == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resultType", "body"))
+	}
+	if value.ResultType != nil {
+		if !(*value.ResultType == "complete") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.resultType", *value.ResultType, []any{"complete"}))
+		}
+	}
+	return err
+}
+
 // jsonTaskCreatedTransport stores JSON fields until they have been validated.
 type jsonTaskCreatedTransport struct {
 	// Opaque identifier used for later requests to this task
@@ -1366,6 +1476,38 @@ func validateInputRequiredResultOriginal(value *InputRequiredResult) (err error)
 func validateMissingClientCapabilityErrorOriginal(value *MissingClientCapabilityError) (err error) {
 	if value.RequiredCapabilities == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("requiredCapabilities", "value"))
+	}
+	return err
+}
+
+// validateSubscriptionFilterOriginal checks the original typed value before JSON conversion.
+func validateSubscriptionFilterOriginal(value *SubscriptionFilter) (err error) {
+	for _, e := range value.ResourceSubscriptions {
+		err = goa.MergeErrors(err, goa.ValidateFormat("value.resourceSubscriptions[*]", e, goa.FormatURI))
+	}
+	return err
+}
+
+// validateSubscriptionsListenPayloadOriginal checks the original typed value before JSON conversion.
+func validateSubscriptionsListenPayloadOriginal(value *SubscriptionsListenPayload) (err error) {
+	if value.Notifications == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("notifications", "value"))
+	}
+	if value.Meta == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("_meta", "value"))
+	}
+	if value.Notifications != nil {
+		if err2 := validateSubscriptionFilterOriginal(value.Notifications); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return err
+}
+
+// validateSubscriptionsListenResultOriginal checks the original typed value before JSON conversion.
+func validateSubscriptionsListenResultOriginal(value *SubscriptionsListenResult) (err error) {
+	if !(value.ResultType == "complete") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.resultType", value.ResultType, []any{"complete"}))
 	}
 	return err
 }
@@ -3688,6 +3830,303 @@ func DecodeServerCapabilities(data []byte) (out *ServerCapabilities, err error) 
 	return out, nil
 }
 
+// EncodeSubscriptionFilter turns a service value into JSON using the field names in the Goa design.
+func EncodeSubscriptionFilter(in *SubscriptionFilter) ([]byte, error) {
+	if err := checkSubscriptionFilterValue(in); err != nil {
+		return nil, fmt.Errorf("encode SubscriptionFilter JSON: %w", err)
+	}
+	if err := validateSubscriptionFilterOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate SubscriptionFilter value: %w", err)
+	}
+	var body *jsonSubscriptionFilterTransport
+	{
+		body = &jsonSubscriptionFilterTransport{
+			ToolsListChanged:     in.ToolsListChanged,
+			PromptsListChanged:   in.PromptsListChanged,
+			ResourcesListChanged: in.ResourcesListChanged,
+		}
+		if in.TaskIds != nil {
+			body.TaskIds = make([]string, len(in.TaskIds))
+			for i, val := range in.TaskIds {
+				body.TaskIds[i] = val
+			}
+		}
+		if in.ResourceSubscriptions != nil {
+			body.ResourceSubscriptions = make([]string, len(in.ResourceSubscriptions))
+			for i, val := range in.ResourceSubscriptions {
+				body.ResourceSubscriptions[i] = val
+			}
+		}
+	}
+	if err := validatejsonSubscriptionFilterTransport(body); err != nil {
+		return nil, fmt.Errorf("validate SubscriptionFilter JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode SubscriptionFilter JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateSubscriptionFilterValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSubscriptionFilterValue(in *SubscriptionFilter) error {
+	if err := checkSubscriptionFilterValue(in); err != nil {
+		return fmt.Errorf("validate SubscriptionFilter value: %w", err)
+	}
+	if err := validateSubscriptionFilterOriginal(in); err != nil {
+		return fmt.Errorf("validate SubscriptionFilter value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "SubscriptionFilter")
+	}
+
+	var body *jsonSubscriptionFilterTransport
+	{
+		body = &jsonSubscriptionFilterTransport{
+			ToolsListChanged:     in.ToolsListChanged,
+			PromptsListChanged:   in.PromptsListChanged,
+			ResourcesListChanged: in.ResourcesListChanged,
+		}
+		if in.TaskIds != nil {
+			body.TaskIds = make([]string, len(in.TaskIds))
+			for i, val := range in.TaskIds {
+				body.TaskIds[i] = val
+			}
+		}
+		if in.ResourceSubscriptions != nil {
+			body.ResourceSubscriptions = make([]string, len(in.ResourceSubscriptions))
+			for i, val := range in.ResourceSubscriptions {
+				body.ResourceSubscriptions[i] = val
+			}
+		}
+	}
+	if err := validatejsonSubscriptionFilterTransport(body); err != nil {
+		return fmt.Errorf("validate SubscriptionFilter value: %w", err)
+	}
+	return nil
+}
+
+// DecodeSubscriptionFilter checks JSON field names from the Goa design and returns a service value.
+func DecodeSubscriptionFilter(data []byte) (out *SubscriptionFilter, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode SubscriptionFilter JSON: %w", err)
+	}
+	if err := validateSubscriptionFilterJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode SubscriptionFilter JSON: %w", err)
+	}
+	var body *jsonSubscriptionFilterTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode SubscriptionFilter JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode SubscriptionFilter JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode SubscriptionFilter JSON after first value: %w", err)
+	}
+	if err := validatejsonSubscriptionFilterTransport(body); err != nil {
+		return out, fmt.Errorf("validate SubscriptionFilter JSON: %w", err)
+	}
+	{
+		out = &SubscriptionFilter{
+			ToolsListChanged:     body.ToolsListChanged,
+			PromptsListChanged:   body.PromptsListChanged,
+			ResourcesListChanged: body.ResourcesListChanged,
+		}
+		if body.TaskIds != nil {
+			out.TaskIds = make([]string, len(body.TaskIds))
+			for i, val := range body.TaskIds {
+				out.TaskIds[i] = val
+			}
+		}
+		if body.ResourceSubscriptions != nil {
+			out.ResourceSubscriptions = make([]string, len(body.ResourceSubscriptions))
+			for i, val := range body.ResourceSubscriptions {
+				out.ResourceSubscriptions[i] = val
+			}
+		}
+	}
+	return out, nil
+}
+
+// EncodeSubscriptionsListenPayload turns a service value into JSON using the field names in the Goa design.
+func EncodeSubscriptionsListenPayload(in *SubscriptionsListenPayload) ([]byte, error) {
+	if err := checkSubscriptionsListenPayloadValue(in); err != nil {
+		return nil, fmt.Errorf("encode SubscriptionsListenPayload JSON: %w", err)
+	}
+	if err := validateSubscriptionsListenPayloadOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate SubscriptionsListenPayload value: %w", err)
+	}
+	var body *jsonSubscriptionsListenPayloadTransport
+	{
+		body = &jsonSubscriptionsListenPayloadTransport{
+			Meta: in.Meta,
+		}
+		body.Notifications = encodeSubscriptionFilterToSubscriptionFilterTransport(in.Notifications)
+	}
+	if err := validatejsonSubscriptionsListenPayloadTransport(body); err != nil {
+		return nil, fmt.Errorf("validate SubscriptionsListenPayload JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode SubscriptionsListenPayload JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateSubscriptionsListenPayloadValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSubscriptionsListenPayloadValue(in *SubscriptionsListenPayload) error {
+	if err := checkSubscriptionsListenPayloadValue(in); err != nil {
+		return fmt.Errorf("validate SubscriptionsListenPayload value: %w", err)
+	}
+	if err := validateSubscriptionsListenPayloadOriginal(in); err != nil {
+		return fmt.Errorf("validate SubscriptionsListenPayload value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "SubscriptionsListenPayload")
+	}
+
+	var body *jsonSubscriptionsListenPayloadTransport
+	{
+		body = &jsonSubscriptionsListenPayloadTransport{
+			Meta: in.Meta,
+		}
+		body.Notifications = encodeSubscriptionFilterToSubscriptionFilterTransport(in.Notifications)
+	}
+	if err := validatejsonSubscriptionsListenPayloadTransport(body); err != nil {
+		return fmt.Errorf("validate SubscriptionsListenPayload value: %w", err)
+	}
+	return nil
+}
+
+// DecodeSubscriptionsListenPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeSubscriptionsListenPayload(data []byte) (out *SubscriptionsListenPayload, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode SubscriptionsListenPayload JSON: %w", err)
+	}
+	if err := validateSubscriptionsListenPayloadJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode SubscriptionsListenPayload JSON: %w", err)
+	}
+	var body *jsonSubscriptionsListenPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode SubscriptionsListenPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode SubscriptionsListenPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode SubscriptionsListenPayload JSON after first value: %w", err)
+	}
+	if err := validatejsonSubscriptionsListenPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate SubscriptionsListenPayload JSON: %w", err)
+	}
+	{
+		out = &SubscriptionsListenPayload{
+			Meta: body.Meta,
+		}
+		out.Notifications = decodeSubscriptionFilterTransportToSubscriptionFilter(body.Notifications)
+	}
+	return out, nil
+}
+
+// EncodeSubscriptionsListenResult turns a service value into JSON using the field names in the Goa design.
+func EncodeSubscriptionsListenResult(in *SubscriptionsListenResult) ([]byte, error) {
+	if err := checkSubscriptionsListenResultValue(in); err != nil {
+		return nil, fmt.Errorf("encode SubscriptionsListenResult JSON: %w", err)
+	}
+	if err := validateSubscriptionsListenResultOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate SubscriptionsListenResult value: %w", err)
+	}
+	var body *jsonSubscriptionsListenResultTransport
+	{
+		body = &jsonSubscriptionsListenResultTransport{
+			Meta:       in.Meta,
+			ResultType: &in.ResultType,
+		}
+	}
+	if err := validatejsonSubscriptionsListenResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate SubscriptionsListenResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode SubscriptionsListenResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateSubscriptionsListenResultValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateSubscriptionsListenResultValue(in *SubscriptionsListenResult) error {
+	if err := checkSubscriptionsListenResultValue(in); err != nil {
+		return fmt.Errorf("validate SubscriptionsListenResult value: %w", err)
+	}
+	if err := validateSubscriptionsListenResultOriginal(in); err != nil {
+		return fmt.Errorf("validate SubscriptionsListenResult value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "SubscriptionsListenResult")
+	}
+
+	var body *jsonSubscriptionsListenResultTransport
+	{
+		body = &jsonSubscriptionsListenResultTransport{
+			Meta:       in.Meta,
+			ResultType: &in.ResultType,
+		}
+	}
+	if err := validatejsonSubscriptionsListenResultTransport(body); err != nil {
+		return fmt.Errorf("validate SubscriptionsListenResult value: %w", err)
+	}
+	return nil
+}
+
+// DecodeSubscriptionsListenResult checks JSON field names from the Goa design and returns a service value.
+func DecodeSubscriptionsListenResult(data []byte) (out *SubscriptionsListenResult, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode SubscriptionsListenResult JSON: %w", err)
+	}
+	if err := validateSubscriptionsListenResultJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode SubscriptionsListenResult JSON: %w", err)
+	}
+	var body *jsonSubscriptionsListenResultTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode SubscriptionsListenResult JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode SubscriptionsListenResult JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode SubscriptionsListenResult JSON after first value: %w", err)
+	}
+	if err := validatejsonSubscriptionsListenResultTransport(body); err != nil {
+		return out, fmt.Errorf("validate SubscriptionsListenResult JSON: %w", err)
+	}
+	{
+		out = &SubscriptionsListenResult{
+			Meta:       body.Meta,
+			ResultType: *body.ResultType,
+		}
+	}
+	return out, nil
+}
+
 // EncodeTaskCreated turns a service value into JSON using the field names in the Goa design.
 func EncodeTaskCreated(in *TaskCreated) ([]byte, error) {
 	if err := checkTaskCreatedValue(in); err != nil {
@@ -4809,6 +5248,28 @@ func decodeServerCapabilitiesTransportToServerCapabilities(v *jsonServerCapabili
 	return res
 }
 
+func decodeSubscriptionFilterTransportToSubscriptionFilter(v *jsonSubscriptionFilterTransport) *SubscriptionFilter {
+	res := &SubscriptionFilter{
+		ToolsListChanged:     v.ToolsListChanged,
+		PromptsListChanged:   v.PromptsListChanged,
+		ResourcesListChanged: v.ResourcesListChanged,
+	}
+	if v.TaskIds != nil {
+		res.TaskIds = make([]string, len(v.TaskIds))
+		for i, val := range v.TaskIds {
+			res.TaskIds[i] = val
+		}
+	}
+	if v.ResourceSubscriptions != nil {
+		res.ResourceSubscriptions = make([]string, len(v.ResourceSubscriptions))
+		for i, val := range v.ResourceSubscriptions {
+			res.ResourceSubscriptions[i] = val
+		}
+	}
+
+	return res
+}
+
 func decodeTaskCreatedTransportToTaskCreated(v *jsonTaskCreatedTransport) *TaskCreated {
 	res := &TaskCreated{
 		TaskID:        *v.TaskID,
@@ -5121,6 +5582,28 @@ func encodeServerCapabilitiesToServerCapabilitiesTransport(v *ServerCapabilities
 	}
 	if v.Prompts != nil {
 		res.Prompts = encodePromptsCapabilityToPromptsCapabilityTransport(v.Prompts)
+	}
+
+	return res
+}
+
+func encodeSubscriptionFilterToSubscriptionFilterTransport(v *SubscriptionFilter) *jsonSubscriptionFilterTransport {
+	res := &jsonSubscriptionFilterTransport{
+		ToolsListChanged:     v.ToolsListChanged,
+		PromptsListChanged:   v.PromptsListChanged,
+		ResourcesListChanged: v.ResourcesListChanged,
+	}
+	if v.TaskIds != nil {
+		res.TaskIds = make([]string, len(v.TaskIds))
+		for i, val := range v.TaskIds {
+			res.TaskIds[i] = val
+		}
+	}
+	if v.ResourceSubscriptions != nil {
+		res.ResourceSubscriptions = make([]string, len(v.ResourceSubscriptions))
+		for i, val := range v.ResourceSubscriptions {
+			res.ResourceSubscriptions[i] = val
+		}
 	}
 
 	return res
@@ -6493,6 +6976,210 @@ func validateMissingClientCapabilityErrorJSONValue4(path string, value any, desc
 		switch key {
 		default:
 			return unknownJSONFieldError(path, key, []string{})
+		}
+	}
+	return nil
+}
+
+// validateSubscriptionFilterJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSubscriptionFilterJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "promptsListChanged":
+			if err := validateDiscoverResultJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Request changes to the prompt catalog",
+			); err != nil {
+				return err
+			}
+		case "resourceSubscriptions":
+			if err := validateSubscriptionFilterJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Exact resource URIs requested by this listen operation",
+			); err != nil {
+				return err
+			}
+		case "resourcesListChanged":
+			if err := validateDiscoverResultJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Request changes to the resource catalog",
+			); err != nil {
+				return err
+			}
+		case "taskIds":
+			if err := validateSubscriptionFilterJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Exact task IDs requested by this listen operation",
+			); err != nil {
+				return err
+			}
+		case "toolsListChanged":
+			if err := validateDiscoverResultJSONValue4(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Request changes to the tool catalog",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"promptsListChanged",
+				"resourceSubscriptions",
+				"resourcesListChanged",
+				"taskIds",
+				"toolsListChanged",
+			})
+		}
+	}
+	return nil
+}
+
+// validateSubscriptionFilterJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSubscriptionFilterJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateContentAnnotationsJSONValue3(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateSubscriptionFilterJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSubscriptionFilterJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateContentAnnotationsJSONValue3(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateSubscriptionsListenPayloadJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSubscriptionsListenPayloadJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "_meta":
+			if err := validateContentItemJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Namespaced protocol metadata and extension values",
+			); err != nil {
+				return err
+			}
+		case "notifications":
+			if err := validateSubscriptionFilterJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Notification kinds, resource URIs and task IDs requested by the client",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"_meta",
+				"notifications",
+			})
+		}
+	}
+	return nil
+}
+
+// validateSubscriptionsListenResultJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSubscriptionsListenResultJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "_meta":
+			if err := validateContentItemJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Namespaced protocol metadata and extension values",
+			); err != nil {
+				return err
+			}
+		case "resultType":
+			if err := validateContentAnnotationsJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "This response contains a finished result",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"_meta",
+				"resultType",
+			})
 		}
 	}
 	return nil
@@ -7957,6 +8644,117 @@ func checkServerCapabilitiesValue(in *ServerCapabilities) error {
 	active := make(map[any]bool)
 	if err := checkDiscoverResultServerCapabilitiesValue(in, "$", active); err != nil {
 		return err
+	}
+	return nil
+}
+
+// checkSubscriptionFilterValue checks text and cycles before conversion.
+func checkSubscriptionFilterValue(in *SubscriptionFilter) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkSubscriptionFilterSubscriptionFilterValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkSubscriptionFilterSubscriptionFilterValue checks one generated value on the active path.
+func checkSubscriptionFilterSubscriptionFilterValue(in *SubscriptionFilter, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		for index1, item1 := range in.TaskIds {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "taskIds", false), strconv.Itoa(index1), true))
+			}
+		}
+		for index1, item1 := range in.ResourceSubscriptions {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "resourceSubscriptions", false), strconv.Itoa(index1), true))
+			}
+		}
+	}
+	return nil
+}
+
+// checkSubscriptionsListenPayloadValue checks text and cycles before conversion.
+func checkSubscriptionsListenPayloadValue(in *SubscriptionsListenPayload) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkSubscriptionsListenPayloadSubscriptionsListenPayloadValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkSubscriptionsListenPayloadSubscriptionsListenPayloadValue checks one generated value on the active path.
+func checkSubscriptionsListenPayloadSubscriptionsListenPayloadValue(in *SubscriptionsListenPayload, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if err := checkSubscriptionFilterSubscriptionFilterValue(in.Notifications, generatedJSONChildPath(field, "notifications", false), active); err != nil {
+			return err
+		}
+		if len(in.Meta) != 0 {
+			if _, err := readStrictJSON(in.Meta); err != nil {
+				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
+			}
+		}
+	}
+	return nil
+}
+
+// checkSubscriptionsListenResultValue checks text and cycles before conversion.
+func checkSubscriptionsListenResultValue(in *SubscriptionsListenResult) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkSubscriptionsListenResultSubscriptionsListenResultValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkSubscriptionsListenResultSubscriptionsListenResultValue checks one generated value on the active path.
+func checkSubscriptionsListenResultSubscriptionsListenResultValue(in *SubscriptionsListenResult, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if len(in.Meta) != 0 {
+			if _, err := readStrictJSON(in.Meta); err != nil {
+				return fmt.Errorf("%s: invalid raw JSON: %w", generatedJSONChildPath(field, "_meta", false), err)
+			}
+		}
+		if !utf8.ValidString(string(in.ResultType)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "resultType", false))
+		}
 	}
 	return nil
 }

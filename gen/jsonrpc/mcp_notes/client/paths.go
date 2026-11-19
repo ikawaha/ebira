@@ -21,3 +21,8 @@ func ToolsListMcpNotesPath() string {
 func ToolsCallMcpNotesPath() string {
 	return "/mcp"
 }
+
+// SubscriptionsListenMcpNotesPath returns the URL path to the mcp_notes service subscriptions/listen HTTP endpoint.
+func SubscriptionsListenMcpNotesPath() string {
+	return "/mcp"
+}

@@ -126,6 +126,37 @@ func DecodeToolsCallRequest(mux goahttp.Muxer, decoder func(*http.Request) goaht
 	}
 }
 
+// DecodeSubscriptionsListenRequest returns a decoder for requests sent to the
+// mcp_notes subscriptions/listen endpoint.
+func DecodeSubscriptionsListenRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*mcpnotes.SubscriptionsListenPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*mcpnotes.SubscriptionsListenPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *mcpnotes.SubscriptionsListenPayload
+		var (
+			body SubscriptionsListenRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateSubscriptionsListenRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewSubscriptionsListenPayload(&body)
+
+		return payload, nil
+	}
+}
+
 // marshalMcpnotesServerCapabilitiesToServerCapabilitiesResponseBody builds a
 // value of type *ServerCapabilitiesResponseBody from a value of type
 // *mcpnotes.ServerCapabilities.
@@ -491,6 +522,31 @@ func marshalMcpnotesElicitationCapabilitiesToElicitationCapabilitiesResponseBody
 // *mcpnotes.RequiredExtension.
 func marshalMcpnotesRequiredExtensionToRequiredExtensionResponseBody(v *mcpnotes.RequiredExtension) *RequiredExtensionResponseBody {
 	res := &RequiredExtensionResponseBody{}
+
+	return res
+}
+
+// unmarshalSubscriptionFilterRequestBodyToMcpnotesSubscriptionFilter builds a
+// value of type *mcpnotes.SubscriptionFilter from a value of type
+// *SubscriptionFilterRequestBody.
+func unmarshalSubscriptionFilterRequestBodyToMcpnotesSubscriptionFilter(v *SubscriptionFilterRequestBody) *mcpnotes.SubscriptionFilter {
+	res := &mcpnotes.SubscriptionFilter{
+		ToolsListChanged:     v.ToolsListChanged,
+		PromptsListChanged:   v.PromptsListChanged,
+		ResourcesListChanged: v.ResourcesListChanged,
+	}
+	if v.TaskIds != nil {
+		res.TaskIds = make([]string, len(v.TaskIds))
+		for i, val := range v.TaskIds {
+			res.TaskIds[i] = val
+		}
+	}
+	if v.ResourceSubscriptions != nil {
+		res.ResourceSubscriptions = make([]string, len(v.ResourceSubscriptions))
+		for i, val := range v.ResourceSubscriptions {
+			res.ResourceSubscriptions[i] = val
+		}
+	}
 
 	return res
 }

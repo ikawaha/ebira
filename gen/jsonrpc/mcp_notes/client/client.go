@@ -129,3 +129,27 @@ func (c *Client) ToolsCall() goa.Endpoint {
 		return decodeResponse(resp, requestID)
 	}
 }
+
+// SubscriptionsListen returns an endpoint that makes JSON-RPC requests to the
+// mcp_notes service subscriptions/listen method.
+func (c *Client) SubscriptionsListen() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSubscriptionsListenRequest(c.encoder)
+		decodeResponse = DecodeSubscriptionsListenResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildSubscriptionsListenRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("mcp_notes", "subscriptions/listen", err)
+		}
+		return decodeResponse(resp, requestID)
+	}
+}

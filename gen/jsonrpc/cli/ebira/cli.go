@@ -23,7 +23,7 @@ import (
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
 	return []string{
-		"mcp-notes (server-discover|tools-list|tools-call)",
+		"mcp-notes (server-discover|tools-list|tools-call|subscriptions-listen)",
 	}
 }
 
@@ -73,16 +73,21 @@ func ParseEndpoint(
 		mcpNotesToolsCallFlags               = flag.NewFlagSet("tools-call", flag.ExitOnError)
 		mcpNotesToolsCallBodyFlag            = new(cliStringFlag)
 		mcpNotesToolsCallHTTPCredential0Flag = new(cliStringFlag)
+
+		mcpNotesSubscriptionsListenFlags    = flag.NewFlagSet("subscriptions-listen", flag.ExitOnError)
+		mcpNotesSubscriptionsListenBodyFlag = new(cliStringFlag)
 	)
 	mcpNotesServerDiscoverFlags.Var(mcpNotesServerDiscoverBodyFlag, "body", "")
 	mcpNotesToolsListFlags.Var(mcpNotesToolsListBodyFlag, "body", "")
 	mcpNotesToolsCallFlags.Var(mcpNotesToolsCallBodyFlag, "body", "")
 	mcpNotesToolsCallFlags.Var(mcpNotesToolsCallHTTPCredential0Flag, "http-credential0", "")
+	mcpNotesSubscriptionsListenFlags.Var(mcpNotesSubscriptionsListenBodyFlag, "body", "")
 
 	mcpNotesFlags.Usage = mcpNotesUsage
 	mcpNotesServerDiscoverFlags.Usage = mcpNotesServerDiscoverUsage
 	mcpNotesToolsListFlags.Usage = mcpNotesToolsListUsage
 	mcpNotesToolsCallFlags.Usage = mcpNotesToolsCallUsage
+	mcpNotesSubscriptionsListenFlags.Usage = mcpNotesSubscriptionsListenUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return nil, nil, err
@@ -127,6 +132,9 @@ func ParseEndpoint(
 			case "tools-call":
 				epf = mcpNotesToolsCallFlags
 
+			case "subscriptions-listen":
+				epf = mcpNotesSubscriptionsListenFlags
+
 			}
 
 		}
@@ -161,6 +169,9 @@ func ParseEndpoint(
 			case "tools-call":
 				endpoint = c.ToolsCall()
 				data, err = mcpnotesc.BuildToolsCallPayload(mcpNotesToolsCallBodyFlag.value, mcpNotesToolsCallHTTPCredential0Flag.value)
+			case "subscriptions-listen":
+				endpoint = c.SubscriptionsListen()
+				data, err = mcpnotesc.BuildSubscriptionsListenPayload(mcpNotesSubscriptionsListenBodyFlag.value)
 			}
 		}
 	}
@@ -180,6 +191,7 @@ func mcpNotesUsage() {
 	fmt.Fprintln(os.Stderr, `    server-discover: Describe this server's protocol revision and declared tools, resources, and prompts`)
 	fmt.Fprintln(os.Stderr, `    tools-list: List available tools`)
 	fmt.Fprintln(os.Stderr, `    tools-call: Call a tool`)
+	fmt.Fprintln(os.Stderr, `    subscriptions-listen: Authorize requested resource and job selections and send changes until this request ends`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
 	fmt.Fprintf(os.Stderr, "    %s mcp-notes COMMAND --help\n", os.Args[0])
@@ -238,4 +250,22 @@ func mcpNotesToolsCallUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mcp-notes tools-call --body '{\n      \"_meta\": \"Voluptatem aliquid laborum autem nesciunt.\",\n      \"arguments\": \"Eligendi illum.\",\n      \"inputResponses\": {\n         \"Et nemo consequatur quia animi.\": \"Rerum illo ea in.\",\n         \"Ipsa aspernatur.\": \"Commodi error consectetur aliquid eveniet.\"\n      },\n      \"name\": \"Quo sit nemo dolor.\",\n      \"requestState\": \"Aut quasi asperiores et tempora minima.\"\n   }' --http-credential0 \"Saepe mollitia voluptatem sequi.\"")
+}
+
+func mcpNotesSubscriptionsListenUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] mcp-notes subscriptions-listen", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Authorize requested resource and job selections and send changes until this request ends`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mcp-notes subscriptions-listen --body '{\n      \"_meta\": \"Deleniti soluta.\",\n      \"notifications\": {\n         \"promptsListChanged\": true,\n         \"resourceSubscriptions\": [\n            \"http://reichel.org/nova\",\n            \"http://windlerbeer.com/marilyne.mills\"\n         ],\n         \"resourcesListChanged\": true,\n         \"taskIds\": [\n            \"Nam culpa.\",\n            \"Est et corporis quas repellat ratione.\"\n         ],\n         \"toolsListChanged\": false\n      }\n   }'")
 }

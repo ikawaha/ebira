@@ -15,17 +15,19 @@ import (
 
 // Endpoints wraps the "mcp_notes" service endpoints.
 type Endpoints struct {
-	ServerDiscover goa.Endpoint
-	ToolsList      goa.Endpoint
-	ToolsCall      goa.Endpoint
+	ServerDiscover      goa.Endpoint
+	ToolsList           goa.Endpoint
+	ToolsCall           goa.Endpoint
+	SubscriptionsListen goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "mcp_notes" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		ServerDiscover: NewServerDiscoverEndpoint(s),
-		ToolsList:      NewToolsListEndpoint(s),
-		ToolsCall:      NewToolsCallEndpoint(s),
+		ServerDiscover:      NewServerDiscoverEndpoint(s),
+		ToolsList:           NewToolsListEndpoint(s),
+		ToolsCall:           NewToolsCallEndpoint(s),
+		SubscriptionsListen: NewSubscriptionsListenEndpoint(s),
 	}
 }
 
@@ -34,6 +36,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.ServerDiscover = m(e.ServerDiscover)
 	e.ToolsList = m(e.ToolsList)
 	e.ToolsCall = m(e.ToolsCall)
+	e.SubscriptionsListen = m(e.SubscriptionsListen)
 }
 
 // NewServerDiscoverEndpoint returns an endpoint function that calls the method
@@ -60,5 +63,14 @@ func NewToolsCallEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*ToolsCallPayload)
 		return s.ToolsCall(ctx, p)
+	}
+}
+
+// NewSubscriptionsListenEndpoint returns an endpoint function that calls the
+// method "subscriptions/listen" of service "mcp_notes".
+func NewSubscriptionsListenEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SubscriptionsListenPayload)
+		return s.SubscriptionsListen(ctx, p)
 	}
 }

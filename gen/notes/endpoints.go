@@ -63,6 +63,8 @@ type Endpoints struct {
 	CreateAiNotebook      goa.Endpoint
 	MakeNotebookPrivate   goa.Endpoint
 	ArchiveAiNotebook     goa.Endpoint
+	ListTools             goa.Endpoint
+	Listen                goa.Endpoint
 	AddFile               goa.Endpoint
 	GetFile               goa.Endpoint
 	DeleteFile            goa.Endpoint
@@ -101,6 +103,15 @@ type UploadAiFileRequestData struct {
 	Payload *UploadAiFilePayload
 	// Body streams the HTTP request body.
 	Body io.ReadCloser
+}
+
+// ListenEndpointInput holds both the payload and the server stream of the
+// "listen" method.
+type ListenEndpointInput struct {
+	// Payload is the method payload.
+	Payload *ListenPayload
+	// Stream is the server stream used by the "listen" method to send data.
+	Stream ListenServerStream
 }
 
 // AddFileRequestData holds both the payload and the HTTP request body reader
@@ -181,6 +192,8 @@ func NewEndpoints(s Service) *Endpoints {
 		CreateAiNotebook:      NewCreateAiNotebookEndpoint(s),
 		MakeNotebookPrivate:   NewMakeNotebookPrivateEndpoint(s),
 		ArchiveAiNotebook:     NewArchiveAiNotebookEndpoint(s),
+		ListTools:             NewListToolsEndpoint(s),
+		Listen:                NewListenEndpoint(s),
 		AddFile:               NewAddFileEndpoint(s, a.APIKeyAuth),
 		GetFile:               NewGetFileEndpoint(s, a.APIKeyAuth),
 		DeleteFile:            NewDeleteFileEndpoint(s, a.APIKeyAuth),
@@ -252,6 +265,8 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.CreateAiNotebook = m(e.CreateAiNotebook)
 	e.MakeNotebookPrivate = m(e.MakeNotebookPrivate)
 	e.ArchiveAiNotebook = m(e.ArchiveAiNotebook)
+	e.ListTools = m(e.ListTools)
+	e.Listen = m(e.Listen)
 	e.AddFile = m(e.AddFile)
 	e.GetFile = m(e.GetFile)
 	e.DeleteFile = m(e.DeleteFile)
@@ -1105,6 +1120,24 @@ func NewArchiveAiNotebookEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*ArchiveAiNotebookPayload)
 		return s.ArchiveAiNotebook(ctx, p)
+	}
+}
+
+// NewListToolsEndpoint returns an endpoint function that calls the method
+// "list_tools" of service "notes".
+func NewListToolsEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*ListToolsPayload)
+		return s.ListTools(ctx, p)
+	}
+}
+
+// NewListenEndpoint returns an endpoint function that calls the method
+// "listen" of service "notes".
+func NewListenEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*ListenEndpointInput)
+		return nil, s.Listen(ctx, ep.Payload, ep.Stream)
 	}
 }
 
