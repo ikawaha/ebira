@@ -2408,7 +2408,11 @@ function subNotebookRows() {
       }, { cls: "more" });
       rows.push(el("li", "more-row " + cls, more));
     }
-    return [li, ...nested, ...rows];
+    // The last row closes the rule down the cell, so that a cell opened
+    // right after it does not seem to go on from it.
+    const all = [li, ...nested, ...rows];
+    all.at(-1).classList.add(depth ? "deep-end" : "cell-end");
+    return all;
   }
 }
 
