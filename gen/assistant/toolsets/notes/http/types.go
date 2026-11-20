@@ -112,6 +112,10 @@ type (
 		// (archived=exclude, the default); search again with archived=include or only,
 		// or in:archive, to read them. Absent when the search took the archive in
 		ArchivedTotal *int `json:"archived_total,omitempty"`
+		// Number of the notes that match in all notebooks, as the same search finds
+		// them with no notebook or tag; search again without them to read those.
+		// Present only when notebook or tag narrowed the search
+		EverywhereTotal *int `json:"everywhere_total,omitempty"`
 	}
 	// NoteSummaryTransport is the internal JSON transport type for NoteSummaryTransport.
 	// It lives in the toolset-local http package and is used only for JSON

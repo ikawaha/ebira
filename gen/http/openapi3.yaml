@@ -4477,6 +4477,7 @@ paths:
                                 $ref: '#/components/schemas/SearchResult'
                             example:
                                 archived_total: 2535513955843724734
+                                everywhere_total: 2024946687604394674
                                 mode: ja
                                 notes:
                                     - archived: true
@@ -8168,6 +8169,11 @@ components:
                     description: Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in
                     example: 2535513955843724734
                     format: int64
+                everywhere_total:
+                    type: integer
+                    description: Number of the notes that match in all notebooks, as the same search finds them with no notebook or tag; search again without them to read those. Present only when notebook or tag narrowed the search
+                    example: 2024946687604394674
+                    format: int64
                 mode:
                     type: string
                     description: Search mode used
@@ -8308,6 +8314,7 @@ components:
                     format: int64
             example:
                 archived_total: 2535513955843724734
+                everywhere_total: 2024946687604394674
                 mode: ja
                 notes:
                     - archived: true

@@ -18,6 +18,8 @@ Combine them: `tag:guide search -mark:red`
 
 Searches leave out the trash and the archive. Choose the Trash or the archive in the side column and search to search there ([Notes and notebooks](notes.md)).
 
+The search stays when you choose a notebook or a tag in the side column, and searches there. When the line above the list says "Notes with \"…\" in <notebook>: N", the list is narrowed by the search. If it finds nothing there but finds notes in other notebooks, the line says "N in all notes", which searches all notes when clicked. "Clear the search" (as the × of the search box and Esc do) stops the search and shows all the notes of the notebook.
+
 ## Filter
 
 The funnel at the right of the search box (struck out while it searches) turns it into a filter, which takes the same query and narrows the list shown, kept in its order (the box then says "Filter"). How it differs from a search:

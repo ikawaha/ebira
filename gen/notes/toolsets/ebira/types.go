@@ -519,6 +519,10 @@ type (
 		// (archived=exclude, the default); search again with archived=include or only,
 		// or in:archive, to read them. Absent when the search took the archive in
 		ArchivedTotal *int
+		// Number of the notes that match in all notebooks, as the same search finds
+		// them with no notebook or tag; search again without them to read those.
+		// Present only when notebook or tag narrowed the search
+		EverywhereTotal *int
 	}
 	// StartAiUploadPayload defines the JSON payload for the ebira.start_ai_upload tool.
 	StartAiUploadPayload = struct {

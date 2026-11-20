@@ -339,6 +339,7 @@ var SearchResult = Type("SearchResult", func() {
 	RequiredAttribute("total", Int, "Number of matched notes")
 	RequiredAttribute("notes", ArrayOf(NoteSummary), "Matched notes")
 	Attribute("archived_total", Int, "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in")
+	Attribute("everywhere_total", Int, "Number of the notes that match in all notebooks, as the same search finds them with no notebook or tag; search again without them to read those. Present only when notebook or tag narrowed the search")
 })
 
 // NoteEvent notifies that a note was changed by the API, a file edit or a git pull.

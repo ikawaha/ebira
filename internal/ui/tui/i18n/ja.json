@@ -260,5 +260,6 @@
   "status.archivedWithParent": "このノートブックは親ごとアーカイブにあります。親を戻してください",
   "status.archiveReserved": "inbox と trash はアーカイブへ移せません",
   "list.archiveHits": "アーカイブにも {n} 件",
-  "list.noMatchesArchive": "見つかりませんでした。アーカイブには {n} 件あります。左の列のアーカイブで、同じ検索で探せます。"
+  "list.noMatchesArchive": "見つかりませんでした。アーカイブには {n} 件あります。左の列のアーカイブで、同じ検索で探せます。",
+  "list.noMatchesEverywhere": "見つかりませんでした。すべてのノートでは {n} 件あります。左の列の「すべて」で、同じ検索で探せます。Esc で検索を消せます。"
 }
