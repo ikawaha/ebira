@@ -506,6 +506,9 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .find-bar .find-q::-webkit-search-cancel-button { display: none; }
 .find-bar .find-count { min-width: 3.5em; color: var(--fg-muted); font-size: var(--fs-xs); }
 .find-bar button { padding: 0 8px; }
+.editor .find-bar { margin-top: 0; }
+.editor-body .cm-find { background: var(--mark-bg); color: var(--mark-fg); border-radius: var(--r-sm); }
+.editor-body .cm-find.current { background: var(--mark-current); }
 .ai-mark + .matches { margin-left: 0; }
 .zenn-mark { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; text-decoration: none; }
 .zenn-mark svg { width: 15px; height: 15px; }

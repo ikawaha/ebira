@@ -81,6 +81,7 @@ func shown(p pageState) bool        { return p.Note && !p.Editing }
 func shownOutside(p pageState) bool { return shown(p) && !p.Trash }
 func shownInTrash(p pageState) bool { return shown(p) && p.Trash }
 func editing(p pageState) bool      { return p.Editing }
+func findable(p pageState) bool     { return p.Note || p.Editing }
 func notEditing(p pageState) bool   { return !p.Editing }
 func always(pageState) bool         { return true }
 func renamable(p pageState) bool    { return p.Notebook && !p.Editing }
@@ -307,7 +308,7 @@ func (s *shell) appMenu() *application.Menu {
 	n.add(key(note.Add("Edit Note"), "cmd+e", "ctrl+e").OnClick(on(func() { s.call("edit") })), shownOutside)
 	n.add(key(note.Add("Save"), "cmd+s", "ctrl+s").OnClick(on(func() { s.call("save") })), editing)
 	note.AddSeparator()
-	n.add(key(note.Add("Find in Note"), "cmd+f", "ctrl+f").OnClick(on(func() { s.call("find") })), shown)
+	n.add(key(note.Add("Find in Note"), "cmd+f", "ctrl+f").OnClick(on(func() { s.call("find") })), findable)
 	// Ctrl+Alt is AltGr on many keyboards of Windows.
 	n.add(key(note.Add("Search Notes"), "cmd+alt+f", "ctrl+shift+f").OnClick(on(func() { s.call("search") })), always)
 	note.AddSeparator()

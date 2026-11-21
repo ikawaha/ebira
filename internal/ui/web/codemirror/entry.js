@@ -13,8 +13,8 @@ import { sql } from "@codemirror/lang-sql";
 import { yaml } from "@codemirror/lang-yaml";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
 
-export { EditorView, keymap, placeholder } from "@codemirror/view";
-export { EditorState, EditorSelection } from "@codemirror/state";
+export { Decoration, EditorView, keymap, placeholder } from "@codemirror/view";
+export { EditorState, EditorSelection, StateEffect, StateField } from "@codemirror/state";
 export { defaultKeymap, history, historyField, historyKeymap, indentWithTab } from "@codemirror/commands";
 export { indentUnit, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 export { autocompletion, acceptCompletion } from "@codemirror/autocomplete";
