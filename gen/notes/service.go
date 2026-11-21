@@ -331,10 +331,10 @@ type Service interface {
 	ZennStatus(context.Context, *ZennStatusPayload) (res *ZennStatus, err error)
 	// Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with
 	// its images in images/<slug>/, of the GitHub repository Zenn deploys from,
-	// committed and pushed. The slug is the ID of the note. Images of the note go
-	// with it; a link to another file of a note becomes its text, and so does a
-	// link to a note that is no article. The same note goes to the same article
-	// again. For people only.
+	// committed and pushed. The slug is the one given, or the ID of the note, and
+	// it does not change once written. Images of the note go with it; a link to
+	// another file of a note becomes its text, and so does a link to a note that
+	// is no article. The same note goes to the same article again. For people only.
 	ExportZenn(context.Context, *ExportZennPayload) (res *ZennExport, err error)
 	// Add the guide of ebira, notes that tell how to use it, as a new notebook
 	// after the others. The notebooks there are left as they are: a guide added
@@ -748,6 +748,11 @@ type ExportZennPayload struct {
 	// http://localhost:13579/#note/be4c1193735ee1, names the note by the ID after
 	// #note/
 	ID string
+	// Slug of the article, 12 to 50 of lower case letters, digits, hyphens and
+	// underscores; the ID of the note by default, which a note whose ID cannot be
+	// one needs. It is kept with the note, and an article written before keeps its
+	// slug
+	Slug *string
 	// Emoji of the article, one; the one used last, or one chosen at random, by
 	// default
 	Emoji *string

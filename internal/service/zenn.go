@@ -86,7 +86,7 @@ func (s *Notes) ExportZenn(ctx context.Context, p *gennotes.ExportZennPayload) (
 	if !st.Configured() || s.zenn.dir == "" {
 		return nil, gennotes.MakeBadRequest(errors.New("the repository of Zenn is not set: set zenn_repo in the settings"))
 	}
-	a, last, warnings, err := s.zennArticle(p, st)
+	a, last, warnings, err := s.zennArticle(ctx, p, st)
 	if err != nil {
 		slog.Warn("cannot write the note to Zenn", "note", p.ID, "error", err)
 		return nil, err
@@ -101,6 +101,9 @@ func (s *Notes) ExportZenn(ctx context.Context, p *gennotes.ExportZennPayload) (
 	}
 	if errors.Is(err, zenn.ErrChanged) {
 		return nil, gennotes.MakeArticleChanged(err)
+	}
+	if errors.Is(err, zenn.ErrExists) {
+		return nil, gennotes.MakeBadRequest(fmt.Errorf("an article with the slug %s is in the repository: choose another slug", a.Slug))
 	}
 	if err != nil {
 		return nil, gennotes.MakeBadRequest(err)
@@ -125,7 +128,7 @@ func (s *Notes) ExportZenn(ctx context.Context, p *gennotes.ExportZennPayload) (
 
 // zennArticle makes the article of the note of p, and returns it with the
 // hash of the article file written last and what was left out of it.
-func (s *Notes) zennArticle(p *gennotes.ExportZennPayload, st zenn.Settings) (*zenn.Article, string, []zenn.Warning, error) {
+func (s *Notes) zennArticle(ctx context.Context, p *gennotes.ExportZennPayload, st zenn.Settings) (*zenn.Article, string, []zenn.Warning, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	n, err := s.load(p.ID, nil)
@@ -144,16 +147,17 @@ func (s *Notes) zennArticle(p *gennotes.ExportZennPayload, st zenn.Settings) (*z
 	if old == nil {
 		old = &store.Zenn{}
 	}
+	slug, err := s.zennSlug(ctx, n.ID, old.Slug, deref(p.Slug))
+	if err != nil {
+		return nil, "", nil, err
+	}
 	a := &zenn.Article{
-		Slug:      cmp.Or(old.Slug, n.ID),
+		Slug:      slug,
 		Title:     n.Title,
 		Emoji:     cmp.Or(deref(p.Emoji), old.Emoji, zenn.RandomEmoji()),
 		Type:      cmp.Or(deref(p.Type), old.Type, zenn.DefaultType),
 		Published: p.Published,
 		Source:    store.ZennSource(n.Title, n.Body),
-	}
-	if !zenn.ValidSlug(a.Slug) {
-		return nil, "", nil, gennotes.MakeBadRequest(fmt.Errorf("the ID of the note, %s, cannot be the slug of an article: it must be 12 to 50 of lower case letters, digits, hyphens and underscores", a.Slug))
 	}
 	var warnings []zenn.Warning
 	switch {
@@ -203,6 +207,42 @@ func (s *Notes) zennArticle(p *gennotes.ExportZennPayload, st zenn.Settings) (*z
 		last = old.Hash
 	}
 	return a, last, warnings, nil
+}
+
+// zennSlug returns the slug of the article of note id, written before as the
+// article with slug last (empty for none), given slug asked (empty for
+// none). The slug asked is taken the first time; without it, the slug is the
+// ID of the note, if it can be one. The slug of an article never changes, as
+// Zenn takes another slug for another article, and no two notes share one.
+// The caller holds s.mu.
+func (s *Notes) zennSlug(ctx context.Context, id, last, asked string) (string, error) {
+	if last != "" {
+		if asked != "" && asked != last {
+			return "", gennotes.MakeBadRequest(fmt.Errorf("the note was written to Zenn as %s, and the slug of an article does not change", last))
+		}
+		return last, nil
+	}
+	slug := cmp.Or(asked, id)
+	if !zenn.ValidSlug(slug) {
+		if asked == "" {
+			return "", gennotes.MakeBadRequest(fmt.Errorf("the ID of the note, %s, cannot be the slug of an article, which is 12 to 50 of lower case letters, digits, hyphens and underscores: give a slug", id))
+		}
+		return "", gennotes.MakeBadRequest(fmt.Errorf("slug %q is not 12 to 50 of lower case letters, digits, hyphens and underscores", asked))
+	}
+	// Another note would take its ID as the slug.
+	if slug != id {
+		if _, err := s.store.Load(slug); err == nil {
+			return "", gennotes.MakeBadRequest(fmt.Errorf("slug %s is the ID of another note", slug))
+		}
+	}
+	other, ok, err := s.index.ZennNote(ctx, slug, id)
+	if err != nil {
+		return "", err
+	}
+	if ok {
+		return "", gennotes.MakeBadRequest(fmt.Errorf("note %s was written to Zenn as %s", other, slug))
+	}
+	return slug, nil
 }
 
 // imageName reports whether name is that of an image as notes keep them,

@@ -199,6 +199,11 @@ type GitSyncRequestBody struct {
 // ExportZennRequestBody is the type of the "notes" service "export_zenn"
 // endpoint HTTP request body.
 type ExportZennRequestBody struct {
+	// Slug of the article, 12 to 50 of lower case letters, digits, hyphens and
+	// underscores; the ID of the note by default, which a note whose ID cannot be
+	// one needs. It is kept with the note, and an article written before keeps its
+	// slug
+	Slug *string `form:"slug,omitempty" json:"slug,omitempty" xml:"slug,omitempty"`
 	// Emoji of the article, one; the one used last, or one chosen at random, by
 	// default
 	Emoji *string `form:"emoji,omitempty" json:"emoji,omitempty" xml:"emoji,omitempty"`
@@ -4909,6 +4914,7 @@ func NewGitSyncRequestBody(p *notes.GitSyncPayload) *GitSyncRequestBody {
 // the "export_zenn" endpoint of the "notes" service.
 func NewExportZennRequestBody(p *notes.ExportZennPayload) *ExportZennRequestBody {
 	body := &ExportZennRequestBody{
+		Slug:      p.Slug,
 		Emoji:     p.Emoji,
 		Type:      p.Type,
 		Published: p.Published,

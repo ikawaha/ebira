@@ -87,12 +87,43 @@ func TestExportZenn(t *testing.T) {
 	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short"}); errorName(err) != "bad_request" {
 		t.Errorf("short ID: err = %v", err)
 	}
+	// It takes a slug given instead, but not one another note would take.
+	for _, slug := range []string{"bad slug here", "article12345"} {
+		if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short", Slug: ptr(slug)}); errorName(err) != "bad_request" {
+			t.Errorf("slug %q: err = %v", slug, err)
+		}
+	}
+	res, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short", Slug: ptr("short-article")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Note.Zenn.Slug != "short-article" {
+		t.Errorf("slug = %q", res.Note.Zenn.Slug)
+	}
+	git(remote, "show", "main:articles/short-article.md")
+	// The slug stays, given or not.
+	if res, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short"}); err != nil || res.Note.Zenn.Slug != "short-article" {
+		t.Errorf("again: %v", err)
+	}
+	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short", Slug: ptr("short-article-2")}); errorName(err) != "bad_request" {
+		t.Errorf("new slug: err = %v", err)
+	}
+	// No other note takes it.
+	mk("short-article", "work", "同じ名前", "x")
+	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short-article"}); errorName(err) != "bad_request" {
+		t.Errorf("taken: err = %v", err)
+	}
+	// A note whose ID can be a slug may take another.
+	mk("fits-as-a-slug", "work", "ID の合うノート", "x")
+	if res, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "fits-as-a-slug", Slug: ptr("20261121-another")}); err != nil || res.Note.Zenn.Slug != "20261121-another" {
+		t.Errorf("another slug for a fit ID: %v", err)
+	}
 
 	// The other note is published first, so that the link goes to it.
 	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "other1234567", Published: true}); err != nil {
 		t.Fatal(err)
 	}
-	res, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "article12345"})
+	res, err = svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "article12345"})
 	if err != nil {
 		t.Fatal(err)
 	}

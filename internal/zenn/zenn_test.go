@@ -237,6 +237,35 @@ func TestWrite(t *testing.T) {
 		t.Errorf("article = %q", got)
 	}
 
+	// A new article cannot take the slug of an article ebira did not write,
+	// nor of the images of one, even forced; the same file is no change.
+	made := &Article{Slug: "made-by-hand-1", Title: "手で作った記事", Emoji: "📝", Type: "tech", Body: "x"}
+	git(t, other, "pull", "-q")
+	if err := os.MkdirAll(filepath.Join(other, "articles"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(other, "articles", "made-by-hand-1.md"), []byte("by hand"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(other, "images", "made-by-hand-2"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(other, "images", "made-by-hand-2", "fig.png"), []byte("png"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, other, "add", "-A")
+	git(t, other, "commit", "-q", "-m", "by hand")
+	git(t, other, "push", "-q", "origin", "main")
+	for _, slug := range []string{"made-by-hand-1", "made-by-hand-2"} {
+		made.Slug = slug
+		if _, err := r.Write(ctx, made, "", true); !errors.Is(err, ErrExists) {
+			t.Errorf("%s: err = %v, want ErrExists", slug, err)
+		}
+	}
+	if got := show(t, remote, "images/made-by-hand-2/fig.png"); got != "png" {
+		t.Errorf("image = %q", got)
+	}
+
 	// Another repository: cloned anew.
 	remote2 := filepath.Join(tmp, "remote2.git")
 	git(t, tmp, "init", "-q", "--bare", "-b", "main", remote2)

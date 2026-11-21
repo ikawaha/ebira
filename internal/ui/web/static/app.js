@@ -5634,6 +5634,17 @@ function oneEmoji(v) {
 }
 
 // openZenn asks how to write note n to Zenn, and writes it.
+// ZENN_SLUG is what Zenn takes as the slug of an article.
+const ZENN_SLUG = /^[0-9a-z_-]{12,50}$/;
+
+// randomSlug returns a random slug for the article of note id: 14 random
+// hexadecimal digits, as the command line tool of Zenn gives, after the ID
+// when it is short, so that the slug tells the note.
+function randomSlug(id) {
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(7)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return id.length < 12 ? `${id}-${hex}` : hex;
+}
+
 function openZenn(n) {
   const d = $("zenn");
   const a = n.zenn;
@@ -5662,12 +5673,26 @@ function openZenn(n) {
   const publish = el("input");
   publish.type = "checkbox";
   publish.checked = !!a?.published;
+  // A note whose ID cannot be a slug needs another one.
+  const asks = !a && !ZENN_SLUG.test(n.id);
+  const slug = el("input");
+  slug.autocomplete = "off";
+  slug.spellcheck = false;
+  // The slug may be chosen the first time: the ID of the note when it can be
+  // one, random digits after it otherwise. It never changes once written.
+  slug.value = a?.slug || (asks ? randomSlug(n.id) : n.id);
+  slug.readOnly = !!a;
+  const reslug = iconButton("shuffle", t("zennSlugShuffle"), () => {
+    slug.value = randomSlug(n.id);
+  });
+  reslug.type = "button";
   const msg = el("div", "zenn-result");
   const go = el("button", "primary", t("zennWrite"));
   go.type = "submit";
   const cancel = button(t("cancel"), () => d.close());
   const form = el("form", "zenn-form",
-    el("p", "", t(a ? "zennUpdateText" : "zennNewText", { slug: a?.slug || n.id, repo: zenn.repo })),
+    el("p", "", t(a ? "zennUpdateText" : "zennNewText", { repo: zenn.repo })),
+    el("div", "field", el("span", "", t("zennSlug")), el("div", "zenn-slug-row", slug, ...(a ? [] : [reslug]))),
     el("div", "zenn-row",
       el("div", "field", el("span", "", t("zennEmoji")), el("div", "zenn-emoji-row", emoji, shuffle)),
       field(t("zennType"), type)),
@@ -5684,6 +5709,11 @@ function openZenn(n) {
       emoji.focus();
       return;
     }
+    if (!a && !ZENN_SLUG.test(slug.value.trim())) {
+      msg.replaceChildren(el("p", "error", t("zennSlugInvalid")));
+      slug.focus();
+      return;
+    }
     const nb = state.notebooks.find((x) => x.id === n.notebook);
     const priv = nb?.kind === "private";
     if (priv && !confirm(t("zennPrivateConfirm"))) return;
@@ -5694,6 +5724,7 @@ function openZenn(n) {
       published: publish.checked,
       private: priv,
     };
+    if (!a) body.slug = slug.value.trim();
     go.disabled = true;
     msg.replaceChildren(el("p", "msg", t("zennWriting")));
     let res;
@@ -5725,6 +5756,8 @@ function openZenn(n) {
     msg.replaceChildren(...done);
     cancel.textContent = t("zennClose");
     go.hidden = true;
+    slug.disabled = true;
+    reslug.disabled = true;
     if (state.note?.id === n.id && !state.editing) loadNote();
   });
   d.replaceChildren(el("div", "files-head", el("h2", "", t("zennHead")), closeButton(() => d.close())), form);
