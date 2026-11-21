@@ -11,6 +11,8 @@ The search field at the top finds notes. To find words in the open note, use the
 
 Case and full or half width do not matter. The field stays open when you go to another note.
 
+While editing, press ⌘F (Ctrl+F on Windows and Linux) in the editor to open the same field and find in the text you are writing. Typing goes to the first match after the cursor, and the marks follow as you change the text. Esc closes it and takes you back to the editor with the match you were at selected, ready to change.
+
 ---
 
 Try finding "match" in this note: match, match, match.

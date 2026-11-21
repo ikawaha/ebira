@@ -3687,11 +3687,14 @@ function setRestartPending(on) {
 // asking the server or changing the list, as the search box does. Enter and
 // Shift+Enter, or n and N, go through the matches; Esc closes it. Text is
 // compared in NFKC and lower case, so that full-width and half-width forms,
-// and upper and lower case, match. The bar stays open from note to note.
+// and upper and lower case, match. The bar stays open from note to note, and
+// on the edit of a note, where Cmd+F or Ctrl+F opens it and it finds in the
+// text being edited.
 
 const find = { open: false, q: "", marks: [], index: -1 };
 
-// findBar returns the bar for the head of the preview, hidden unless open.
+// findBar returns the bar for the head of the preview or of the editor,
+// hidden unless open.
 function findBar() {
   const input = el("input", "find-q");
   input.id = "find-q";
@@ -3706,6 +3709,7 @@ function findBar() {
     runFind(true);
   });
   input.addEventListener("keydown", (e) => {
+    if (state.editing && (e.metaKey || e.ctrlKey) && e.key === "s") return; // saves the note being edited
     e.stopPropagation(); // the keys of the page do not apply here
     if (e.isComposing || e.keyCode === 229) return; // Safari ends an IME conversion with keyCode 229
     if (e.key === "Enter") {
@@ -3730,6 +3734,7 @@ function findBar() {
 function openFind() {
   const bar = $("find-bar");
   if (!bar) return; // no note shown
+  if (state.editing?.preview) togglePreview(); // the find is in the source
   find.open = true;
   bar.hidden = false;
   $("find-q").focus();
@@ -3742,6 +3747,7 @@ function closeFind() {
   clearFind();
   const bar = $("find-bar");
   if (bar) bar.hidden = true;
+  if (state.editing) closeEditorFind(state.editing.view);
 }
 
 // clearFind takes the marks of the find away, putting the text back.
@@ -3776,6 +3782,10 @@ function foldText(s) {
 // as when the text to find changes, it goes to the first one, and without,
 // as when the note is drawn again, it stays at the match it was at.
 function runFind(scroll) {
+  if (state.editing) {
+    runEditorFind(state.editing.view, scroll);
+    return;
+  }
   const prev = find.index;
   clearFind();
   const body = $("preview").querySelector(".body");
@@ -3813,6 +3823,10 @@ function runFind(scroll) {
 }
 
 function jumpFind(delta) {
+  if (state.editing) {
+    jumpEditorFind(state.editing.view, delta);
+    return;
+  }
   if (!find.marks.length) return;
   find.marks[find.index]?.classList.remove("current");
   find.index = (find.index + delta + find.marks.length) % find.marks.length;
@@ -3826,7 +3840,112 @@ function jumpFind(delta) {
 function updateFindCount() {
   const c = $("find-count");
   if (!c) return;
-  c.textContent = !find.q.trim() ? "" : find.marks.length ? `${find.index < 0 ? "-" : find.index + 1} / ${find.marks.length}` : t("findNone");
+  let index = find.index, count = find.marks.length;
+  if (state.editing) {
+    const f = state.editing.view.state.field(findField);
+    index = f.index;
+    count = f.ranges.length;
+  }
+  c.textContent = !find.q.trim() ? "" : count ? `${index < 0 ? "-" : index + 1} / ${count}` : t("findNone");
+}
+
+// The find in the editor of the body uses the same bar, but marks its matches
+// with decorations of CodeMirror rather than elements put in the text, as the
+// editor draws its lines itself, and only those near the view: the matches are
+// found in the whole document, and found again as it changes.
+
+let findEffect = null;
+let findField = null;
+
+// findRanges returns the ranges in s of the matches of q, which is folded.
+function findRanges(s, q) {
+  if (!q) return [];
+  const { text, at } = foldText(s);
+  const ranges = [];
+  for (let i = text.indexOf(q); i >= 0; i = text.indexOf(q, i + q.length)) {
+    // A match may end inside what one character folds into: it marks that
+    // character, so that no range is empty.
+    const from = at[i];
+    let to = at[i + q.length];
+    if (to <= from) to = at.find((x) => x > from) ?? s.length;
+    ranges.push([from, to]);
+  }
+  return ranges;
+}
+
+// findExtension returns the extension of the editor for the find: the state
+// of the find (the text to find, the matches and the one it is at), set by
+// findEffect, and their decorations.
+function findExtension() {
+  if (!findField) {
+    const match = CM.Decoration.mark({ class: "cm-find" });
+    const current = CM.Decoration.mark({ class: "cm-find current" });
+    findEffect = CM.StateEffect.define();
+    findField = CM.StateField.define({
+      create: () => ({ q: "", index: -1, ranges: [], deco: CM.Decoration.none }),
+      update(v, tr) {
+        let { q, index } = v;
+        let set = false;
+        for (const e of tr.effects) if (e.is(findEffect)) ({ q, index } = e.value), set = true;
+        if (q === v.q && index === v.index && !tr.docChanged) return v;
+        const ranges = q === v.q && !tr.docChanged ? v.ranges : findRanges(tr.state.doc.toString(), q);
+        // On a change of the text, it stays at the match it was at, or at the
+        // next one if that one is gone.
+        if (!set && tr.docChanged && v.ranges[index]) {
+          const pos = tr.changes.mapPos(v.ranges[index][0]);
+          index = ranges.findIndex(([from]) => from >= pos);
+          if (index < 0) index = ranges.length - 1;
+        }
+        index = Math.min(index, ranges.length - 1);
+        const deco = CM.Decoration.set(ranges.map(([from, to], i) => (i === index ? current : match).range(from, to)));
+        return { q, index, ranges, deco };
+      },
+      provide: (f) => CM.EditorView.decorations.from(f, (v) => v.deco),
+    });
+  }
+  return [
+    findField,
+    CM.EditorView.updateListener.of((u) => { if (u.docChanged && find.open) updateFindCount(); }),
+  ];
+}
+
+// runEditorFind finds the text of the find bar in the editor view; with
+// scroll, as when the text changes, it goes to the first match from the
+// cursor on.
+function runEditorFind(view, scroll) {
+  const q = find.open ? find.q.normalize("NFKC").toLowerCase().trim() : "";
+  const ranges = findRanges(view.state.doc.toString(), q);
+  let index = view.state.field(findField).index;
+  if (scroll) {
+    const head = view.state.selection.main.from;
+    index = ranges.findIndex(([from]) => from >= head);
+    if (index < 0) index = ranges.length ? 0 : -1;
+  }
+  setEditorFind(view, q, index, scroll);
+}
+
+function jumpEditorFind(view, delta) {
+  const f = view.state.field(findField);
+  const n = f.ranges.length;
+  if (!n) return;
+  const index = f.index < 0 ? (delta > 0 ? 0 : n - 1) : (f.index + delta + n) % n;
+  setEditorFind(view, f.q, index, true);
+}
+
+function setEditorFind(view, q, index, scroll) {
+  view.dispatch({ effects: findEffect.of({ q, index }) });
+  const r = view.state.field(findField).ranges[index];
+  if (scroll && r) view.dispatch({ effects: CM.EditorView.scrollIntoView(r[0], { y: "center" }) });
+  updateFindCount();
+}
+
+// closeEditorFind takes the marks away and goes back to the editor with the
+// match it was at selected, to be edited.
+function closeEditorFind(view) {
+  const f = view.state.field(findField);
+  const r = f.ranges[f.index];
+  view.dispatch({ effects: findEffect.of({ q: "", index: -1 }), ...(r && { selection: { anchor: r[0], head: r[1] } }) });
+  view.focus();
 }
 
 // noteMarkdown returns note n as Markdown to copy: its title as a heading,
@@ -4143,7 +4262,8 @@ function yank(view) {
 
 // bodyExtensions returns the extensions of the editor of the body: Markdown
 // with its code blocks colored, Tab and Shift+Tab to indent, Enter to continue
-// a list or a quote, undo history, and images pasted or dropped.
+// a list or a quote, undo history, Cmd+F or Ctrl+F to find, and images pasted
+// or dropped.
 function bodyExtensions() {
   const markup = CM.tagHighlighter([
     { tag: CM.tags.monospace, class: "tok-monospace" },
@@ -4152,10 +4272,12 @@ function bodyExtensions() {
   ]);
   return [
     CM.history(),
+    findExtension(),
     CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.codeLanguages }),
     // Tab takes the completion offered, before it indents.
     CM.keymap.of([
       { key: "Tab", run: CM.acceptCompletion },
+      { key: "Mod-f", run: () => { openFind(); return true; } },
       // On other systems these keys mean something else: Ctrl+Y is redo.
       { mac: "Ctrl-k", run: killLine },
       { mac: "Ctrl-y", run: yank },
@@ -4330,6 +4452,7 @@ function startEdit(note, nb = null) {
   f.rendered.hidden = true;
   f.banner = el("div", "banner");
   f.banner.hidden = true;
+  f.find = findBar();
   f.msg = el("span", "msg");
   f.toggle = button(t("preview"), togglePreview, { title: t("previewTitle") });
 
@@ -4351,7 +4474,7 @@ function startEdit(note, nb = null) {
       el("div", "editor-actions", f.msg, f.toggle,
         button(t("cancel"), cancelEdit, { title: t("cancelTitle") }),
         el("button", "primary", t("save")))),
-    f.banner, f.body, f.rendered);
+    f.find, f.banner, f.body, f.rendered);
   form.querySelector("button.primary").type = "submit";
   form.querySelector("button.primary").title = t("saveTitle");
   form.addEventListener("submit", (e) => { e.preventDefault(); saveNote(); });
@@ -4372,6 +4495,7 @@ function startEdit(note, nb = null) {
   delete pv.dataset.id;
   showNoteHash(note?.id);
   ed.loaded = formValues();
+  if (find.open) runFind(false); // open on the note, it stays open on its edit
   if (!note) {
     f.title.focus();
     return;
@@ -5691,7 +5815,7 @@ window.ebira = {
   history: () => { if (state.note && !state.editing) openHistory(); },
   copy: () => { if (state.note && !state.editing) copyNote(); },
   copyLink: (markdown) => { if (state.note && !state.editing) copyLink(markdown); },
-  find: () => { if (state.note && !state.editing) openFind(); },
+  find: () => { if (state.note || state.editing) openFind(); },
   search: () => { $("q").focus(); $("q").select(); },
   previewStyle: () => openSettings("previewStyle"),
   // textSize makes the text of the body a size larger (1), smaller (-1), or
