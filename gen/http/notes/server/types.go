@@ -201,6 +201,10 @@ type GitSyncRequestBody struct {
 // ExportZennRequestBody is the type of the "notes" service "export_zenn"
 // endpoint HTTP request body.
 type ExportZennRequestBody struct {
+	// Slug of the article, 12 to 50 of lower case letters, digits, hyphens and
+	// underscores, for a note whose ID cannot be one; it is kept with the note,
+	// and an article written before keeps its slug
+	Slug *string `form:"slug,omitempty" json:"slug,omitempty" xml:"slug,omitempty"`
 	// Emoji of the article, one; the one used last, or one chosen at random, by
 	// default
 	Emoji *string `form:"emoji,omitempty" json:"emoji,omitempty" xml:"emoji,omitempty"`
@@ -8664,6 +8668,7 @@ func NewZennStatusPayload(session *string) *notes.ZennStatusPayload {
 // NewExportZennPayload builds a notes service export_zenn endpoint payload.
 func NewExportZennPayload(body *ExportZennRequestBody, id string, session *string) *notes.ExportZennPayload {
 	v := &notes.ExportZennPayload{
+		Slug:  body.Slug,
 		Emoji: body.Emoji,
 		Type:  body.Type,
 	}
@@ -9024,6 +9029,9 @@ func ValidateMoveNotebookRequestBody(body *MoveNotebookRequestBody) (err error) 
 // ValidateExportZennRequestBody runs the validations defined on
 // ExportZennRequestBody
 func ValidateExportZennRequestBody(body *ExportZennRequestBody) (err error) {
+	if body.Slug != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.slug", *body.Slug, "^[0-9a-z_-]{12,50}$"))
+	}
 	if body.Type != nil {
 		if !(*body.Type == "tech" || *body.Type == "idea") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"tech", "idea"}))

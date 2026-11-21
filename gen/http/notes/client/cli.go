@@ -1758,7 +1758,7 @@ func BuildExportZennPayload(notesExportZennBody *string, notesExportZennID *stri
 		}
 		err = json.Unmarshal([]byte(*notesExportZennBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"emoji\": \"📝\",\n      \"force\": true,\n      \"private\": true,\n      \"published\": false,\n      \"topics\": [\n         \"At facilis voluptatem facere.\",\n         \"Voluptas minima aperiam.\",\n         \"Temporibus expedita pariatur.\"\n      ],\n      \"type\": \"idea\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"emoji\": \"📝\",\n      \"force\": true,\n      \"private\": true,\n      \"published\": false,\n      \"slug\": \"my-first-article\",\n      \"topics\": [\n         \"At facilis voluptatem facere.\",\n         \"Voluptas minima aperiam.\",\n         \"Temporibus expedita pariatur.\"\n      ],\n      \"type\": \"idea\"\n   }'")
 		}
 	}
 	var id string
@@ -1779,6 +1779,7 @@ func BuildExportZennPayload(notesExportZennBody *string, notesExportZennID *stri
 		}
 	}
 	v := &notes.ExportZennPayload{
+		Slug:      body.Slug,
 		Emoji:     body.Emoji,
 		Type:      body.Type,
 		Published: body.Published,

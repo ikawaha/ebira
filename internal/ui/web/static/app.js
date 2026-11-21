@@ -5634,6 +5634,9 @@ function oneEmoji(v) {
 }
 
 // openZenn asks how to write note n to Zenn, and writes it.
+// ZENN_SLUG is what Zenn takes as the slug of an article.
+const ZENN_SLUG = /^[0-9a-z_-]{12,50}$/;
+
 function openZenn(n) {
   const d = $("zenn");
   const a = n.zenn;
@@ -5662,12 +5665,20 @@ function openZenn(n) {
   const publish = el("input");
   publish.type = "checkbox";
   publish.checked = !!a?.published;
+  // A note whose ID cannot be a slug is asked for one the first time; the
+  // server keeps it with the note, and it never changes.
+  const asks = !a && !ZENN_SLUG.test(n.id);
+  const slug = el("input");
+  slug.autocomplete = "off";
+  slug.spellcheck = false;
+  slug.placeholder = "my-first-article";
   const msg = el("div", "zenn-result");
   const go = el("button", "primary", t("zennWrite"));
   go.type = "submit";
   const cancel = button(t("cancel"), () => d.close());
   const form = el("form", "zenn-form",
-    el("p", "", t(a ? "zennUpdateText" : "zennNewText", { slug: a?.slug || n.id, repo: zenn.repo })),
+    el("p", "", asks ? t("zennSlugText", { id: n.id, repo: zenn.repo }) : t(a ? "zennUpdateText" : "zennNewText", { slug: a?.slug || n.id, repo: zenn.repo })),
+    ...(asks ? [field(t("zennSlug"), slug), el("p", "note", t("zennSlugHint"))] : []),
     el("div", "zenn-row",
       el("div", "field", el("span", "", t("zennEmoji")), el("div", "zenn-emoji-row", emoji, shuffle)),
       field(t("zennType"), type)),
@@ -5684,6 +5695,11 @@ function openZenn(n) {
       emoji.focus();
       return;
     }
+    if (asks && !ZENN_SLUG.test(slug.value.trim())) {
+      msg.replaceChildren(el("p", "error", t("zennSlugInvalid")));
+      slug.focus();
+      return;
+    }
     const nb = state.notebooks.find((x) => x.id === n.notebook);
     const priv = nb?.kind === "private";
     if (priv && !confirm(t("zennPrivateConfirm"))) return;
@@ -5694,6 +5710,7 @@ function openZenn(n) {
       published: publish.checked,
       private: priv,
     };
+    if (asks) body.slug = slug.value.trim();
     go.disabled = true;
     msg.replaceChildren(el("p", "msg", t("zennWriting")));
     let res;
@@ -5725,11 +5742,12 @@ function openZenn(n) {
     msg.replaceChildren(...done);
     cancel.textContent = t("zennClose");
     go.hidden = true;
+    slug.disabled = true;
     if (state.note?.id === n.id && !state.editing) loadNote();
   });
   d.replaceChildren(el("div", "files-head", el("h2", "", t("zennHead")), closeButton(() => d.close())), form);
   d.showModal();
-  go.focus();
+  (asks ? slug : go).focus();
   // Writing runs git on the server: without it, tell why at once. It is
   // asked again, as git may have been put there meanwhile.
   const noGit = () => {

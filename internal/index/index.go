@@ -573,6 +573,17 @@ func (ix *Index) ImportedNote(ctx context.Context, hash string, exclude ...strin
 	return id, err == nil, err
 }
 
+// ZennNote returns the ID of a note other than id written to Zenn as the
+// article with slug, including in the trash, and whether there is one.
+func (ix *Index) ZennNote(ctx context.Context, slug, id string) (string, bool, error) {
+	var other string
+	err := ix.db.QueryRowContext(ctx, `SELECT id FROM notes WHERE zenn_slug = ? AND id <> ? ORDER BY id LIMIT 1`, slug, id).Scan(&other)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	return other, err == nil, err
+}
+
 // Bodies calls fn with the ID, title and body of every note, including those
 // in the trash, in no particular order.
 func (ix *Index) Bodies(ctx context.Context, fn func(id, title, body string) error) error {

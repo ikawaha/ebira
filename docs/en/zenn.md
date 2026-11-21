@@ -51,6 +51,8 @@ The button of the letter Z with an arrow out to the top right, at the top right 
 
 *Write* writes the note to `articles/<ID of the note>.md` and its images to `images/<ID of the note>/`, commits and pushes; Zenn shows it in a moment. The title is that of the note (Zenn takes up to 70 characters).
 
+The name of the article file, its slug, is the ID of the note. When the ID does not fit the rule of Zenn (12 to 50 of lower case letters, digits, `-` and `_`), as with a short ID given by hand, you are asked for a slug the first time you write the note. The random IDs ebira gives fit. The slug becomes the URL of the article, so it cannot be changed once written; nor can it be the ID of another note or the slug of the article of another note.
+
 Writing the note again writes the same article again, with the emoji, the type and the topics chosen last.
 
 ## What changes in the body
@@ -71,6 +73,5 @@ When you change the title or the body of a note after writing it, its article st
 - Zenn has no unlisted articles from GitHub: anyone can read a published article. It can go back to a draft, but deleting it is done on the dashboard of Zenn (deleting its file from the repository leaves the article on Zenn).
 - When the article file was changed in the repository since ebira wrote it, such as on GitHub, ebira asks before overwriting it.
 - A note of a private notebook is confirmed before it is written.
-- A note whose ID does not fit the rule of Zenn (12 to 50 of lower case letters, digits, `-` and `_`) cannot be written yet. The random IDs ebira gives fit.
 - Only people write to Zenn; it is no tool of AI clients.
 - The note keeps its article in `zenn:` of its file, which syncs with the notes, so another machine writes the same article again. Writing it does not change the update time of the note.
