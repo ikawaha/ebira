@@ -403,6 +403,10 @@ type SearchResponseBody struct {
 	// (archived=exclude, the default); search again with archived=include or only,
 	// or in:archive, to read them. Absent when the search took the archive in
 	ArchivedTotal *int `form:"archived_total,omitempty" json:"archived_total,omitempty" xml:"archived_total,omitempty"`
+	// Number of the notes that match in all notebooks, as the same search finds
+	// them with no notebook or tag; search again without them to read those.
+	// Present only when notebook or tag narrowed the search
+	EverywhereTotal *int `form:"everywhere_total,omitempty" json:"everywhere_total,omitempty" xml:"everywhere_total,omitempty"`
 }
 
 // RestoreResponseBody is the type of the "notes" service "restore" endpoint
@@ -5590,9 +5594,10 @@ func NewTrashNotesVerificationRequired(body *TrashNotesVerificationRequiredRespo
 // HTTP "OK" response.
 func NewSearchResultOK(body *SearchResponseBody) *notes.SearchResult {
 	v := &notes.SearchResult{
-		Mode:          *body.Mode,
-		Total:         *body.Total,
-		ArchivedTotal: body.ArchivedTotal,
+		Mode:            *body.Mode,
+		Total:           *body.Total,
+		ArchivedTotal:   body.ArchivedTotal,
+		EverywhereTotal: body.EverywhereTotal,
 	}
 	v.Notes = make([]*notes.NoteSummary, len(body.Notes))
 	for i, val := range body.Notes {

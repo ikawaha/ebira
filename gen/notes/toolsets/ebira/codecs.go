@@ -2615,6 +2615,11 @@ var searchNotesResultFields = []tools.FieldMetadata{
 		JSONType:    "integer",
 		Description: "Number of the notes in the archive that match too, which the search left out (archived=exclude, the default); search again with archived=include or only, or in:archive, to read them. Absent when the search took the archive in",
 	},
+	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("everywhere_total")},
+		JSONType:    "integer",
+		Description: "Number of the notes that match in all notebooks, as the same search finds them with no notebook or tag; search again without them to read those. Present only when notebook or tag narrowed the search",
+	},
 }
 var startAiUploadPayloadFields = []tools.FieldMetadata{
 	{
@@ -6567,9 +6572,10 @@ func MarshalSearchNotesResult(v *SearchNotesResult) ([]byte, error) {
 	_ = in
 	var out *toolhttp.SearchNotesResultTransport
 	out = &toolhttp.SearchNotesResultTransport{
-		Mode:          &in.Mode,
-		Total:         &in.Total,
-		ArchivedTotal: in.ArchivedTotal,
+		Mode:            &in.Mode,
+		Total:           &in.Total,
+		ArchivedTotal:   in.ArchivedTotal,
+		EverywhereTotal: in.EverywhereTotal,
 	}
 	out.Notes = make([]*toolhttp.NoteSummaryTransport, len(in.Notes))
 	for i, val := range in.Notes {
@@ -6603,9 +6609,10 @@ func UnmarshalSearchNotesResult(data []byte) (*SearchNotesResult, error) {
 	_ = in
 	var out *SearchNotesResult
 	out = &SearchNotesResult{
-		Mode:          *in.Mode,
-		Total:         *in.Total,
-		ArchivedTotal: in.ArchivedTotal,
+		Mode:            *in.Mode,
+		Total:           *in.Total,
+		ArchivedTotal:   in.ArchivedTotal,
+		EverywhereTotal: in.EverywhereTotal,
 	}
 	out.Notes = make([]*NoteSummary, len(in.Notes))
 	for i, val := range in.Notes {
@@ -8400,6 +8407,13 @@ func validateSearchNotesResultJSONValue(path string, value any, description stri
 			); err != nil {
 				return err
 			}
+		case "everywhere_total":
+			if err := validateIntJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of the notes that match in all notebooks, as the same search finds them with no notebook or tag; search again without them to read those. Present only when notebook or tag narrowed the search",
+			); err != nil {
+				return err
+			}
 		case "mode":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -8424,6 +8438,7 @@ func validateSearchNotesResultJSONValue(path string, value any, description stri
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"archived_total",
+				"everywhere_total",
 				"mode",
 				"notes",
 				"total",

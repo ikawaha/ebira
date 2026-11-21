@@ -2714,6 +2714,10 @@ type SearchResultTransport struct {
 	// (archived=exclude, the default); search again with archived=include or only,
 	// or in:archive, to read them. Absent when the search took the archive in
 	ArchivedTotal *int `json:"archived_total,omitempty"`
+	// Number of the notes that match in all notebooks, as the same search finds
+	// them with no notebook or tag; search again without them to read those.
+	// Present only when notebook or tag narrowed the search
+	EverywhereTotal *int `json:"everywhere_total,omitempty"`
 }
 
 // ValidateSearchResultTransport checks decoded JSON before it becomes a service value.
@@ -4554,9 +4558,10 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 	var body *SearchResultTransport
 	{
 		body = &SearchResultTransport{
-			Mode:          &in.Mode,
-			Total:         &in.Total,
-			ArchivedTotal: in.ArchivedTotal,
+			Mode:            &in.Mode,
+			Total:           &in.Total,
+			ArchivedTotal:   in.ArchivedTotal,
+			EverywhereTotal: in.EverywhereTotal,
 		}
 		body.Notes = make([]*SearchResultNoteSummaryTransport, len(in.Notes))
 		for i, val := range in.Notes {

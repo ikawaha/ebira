@@ -1217,3 +1217,59 @@ func TestVerification(t *testing.T) {
 		t.Errorf("empty_trash without passkeys: %v", err)
 	}
 }
+
+// A search narrowed by a notebook or a tag tells how many notes match in all
+// notebooks, so that one finding nothing there knows to look elsewhere; AI
+// clients are told of none they cannot see.
+func TestSearchEverywhere(t *testing.T) {
+	person := AsPerson(context.Background())
+	svc, _ := newTestService(t)
+	for _, n := range []struct {
+		id, nb string
+		tags   []string
+	}{{"a", "work", []string{"fruit"}}, {"b", "home", nil}, {"c", "home/old", nil}} {
+		if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr(n.id), Notebook: ptr(n.nb), Title: "apple", Tags: n.tags}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "diary", Kind: "private"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("d"), Notebook: ptr("diary"), Title: "apple"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name      string
+		ctx       context.Context
+		q, nb, tg string
+		total     int
+		want      *int
+	}{
+		{"all notebooks", person, "apple", "", "", 4, nil},
+		{"a notebook", person, "apple", "work", "", 1, ptr(4)},
+		{"a notebook with its sub notebook", person, "apple", "home", "", 2, ptr(4)},
+		{"a notebook without matches", person, "banana", "work", "", 0, ptr(0)},
+		{"a tag", person, "apple", "", "fruit", 1, ptr(4)},
+		{"AI", context.Background(), "apple", "work", "", 1, ptr(3)},
+	} {
+		// The archive left out, as by default over HTTP, which the count
+		// of the matches there must not change.
+		p := &gennotes.SearchPayload{Q: tt.q, Archived: "exclude", Limit: 20}
+		if tt.nb != "" {
+			p.Notebook = &tt.nb
+		}
+		if tt.tg != "" {
+			p.Tag = &tt.tg
+		}
+		res, err := svc.Search(tt.ctx, p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Total != tt.total {
+			t.Errorf("%s: total = %d, want %d", tt.name, res.Total, tt.total)
+		}
+		if got := res.EverywhereTotal; (got == nil) != (tt.want == nil) || got != nil && *got != *tt.want {
+			t.Errorf("%s: everywhere_total = %v, want %v", tt.name, intOf(got), intOf(tt.want))
+		}
+	}
+}

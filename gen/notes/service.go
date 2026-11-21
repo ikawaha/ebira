@@ -1538,6 +1538,10 @@ type SearchResult struct {
 	// (archived=exclude, the default); search again with archived=include or only,
 	// or in:archive, to read them. Absent when the search took the archive in
 	ArchivedTotal *int
+	// Number of the notes that match in all notebooks, as the same search finds
+	// them with no notebook or tag; search again without them to read those.
+	// Present only when notebook or tag narrowed the search
+	EverywhereTotal *int
 }
 
 // Separator is the result type of the notes service create_separator method.
@@ -3174,6 +3178,10 @@ type jsonSearchResultTransport struct {
 	// (archived=exclude, the default); search again with archived=include or only,
 	// or in:archive, to read them. Absent when the search took the archive in
 	ArchivedTotal *searchResultIntTransport `json:"archived_total,omitempty"`
+	// Number of the notes that match in all notebooks, as the same search finds
+	// them with no notebook or tag; search again without them to read those.
+	// Present only when notebook or tag narrowed the search
+	EverywhereTotal *searchResultIntTransport `json:"everywhere_total,omitempty"`
 }
 
 // validatejsonSearchResultTransport checks decoded JSON before it becomes a service value.
@@ -7142,6 +7150,10 @@ func EncodeSearchResult(in *SearchResult) ([]byte, error) {
 			archivedTotal := searchResultIntTransport(*in.ArchivedTotal)
 			body.ArchivedTotal = &archivedTotal
 		}
+		if in.EverywhereTotal != nil {
+			everywhereTotal := searchResultIntTransport(*in.EverywhereTotal)
+			body.EverywhereTotal = &everywhereTotal
+		}
 		body.Notes = make([]*jsonNoteSummaryTransport, len(in.Notes))
 		for i, val := range in.Notes {
 			if val == nil {
@@ -7186,6 +7198,10 @@ func ValidateSearchResultValue(in *SearchResult) error {
 		if in.ArchivedTotal != nil {
 			archivedTotal := searchResultIntTransport(*in.ArchivedTotal)
 			body.ArchivedTotal = &archivedTotal
+		}
+		if in.EverywhereTotal != nil {
+			everywhereTotal := searchResultIntTransport(*in.EverywhereTotal)
+			body.EverywhereTotal = &everywhereTotal
 		}
 		body.Notes = make([]*jsonNoteSummaryTransport, len(in.Notes))
 		for i, val := range in.Notes {
@@ -7234,6 +7250,10 @@ func DecodeSearchResult(data []byte) (out *SearchResult, err error) {
 		if body.ArchivedTotal != nil {
 			archivedTotal := int(*body.ArchivedTotal)
 			out.ArchivedTotal = &archivedTotal
+		}
+		if body.EverywhereTotal != nil {
+			everywhereTotal := int(*body.EverywhereTotal)
+			out.EverywhereTotal = &everywhereTotal
 		}
 		out.Notes = make([]*NoteSummary, len(body.Notes))
 		for i, val := range body.Notes {
@@ -11710,6 +11730,13 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 			); err != nil {
 				return err
 			}
+		case "everywhere_total":
+			if err := validateGitSyncResultJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Number of the notes that match in all notebooks, as the same search finds them with no notebook or tag; search again without them to read those. Present only when notebook or tag narrowed the search",
+			); err != nil {
+				return err
+			}
 		case "mode":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
@@ -11734,6 +11761,7 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"archived_total",
+				"everywhere_total",
 				"mode",
 				"notes",
 				"total",

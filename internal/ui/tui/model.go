@@ -102,6 +102,11 @@ type Model struct {
 	trashed   []*gennotes.TrashedNotebook // notebooks in the trash
 	archived  []*gennotes.Notebook        // notebooks in the archive, left out of notebooks
 	order     []string                    // IDs of all the notebooks, in their order
+
+	// everywhereHits is the number of notes that the search shown, narrowed
+	// by a notebook or a tag, finds in all notebooks.
+	everywhereHits int
+
 	// archivedHits is the number of notes in the archive that the search
 	// shown left out but matches too.
 	archivedHits int
@@ -224,7 +229,10 @@ type (
 		// archived is the number of notes in the archive that a search left
 		// out but matches too.
 		archived int
-		err      error
+		// everywhere is the number of notes that a search in a notebook or
+		// a tag finds in all notebooks.
+		everywhere int
+		err        error
 	}
 	answerMsg struct {
 		seq  int
@@ -567,11 +575,14 @@ func (m *Model) loadList() tea.Cmd {
 		if err != nil {
 			return listMsg{seq: seq, err: err}
 		}
-		archived := 0
+		archived, everywhere := 0, 0
 		if res.ArchivedTotal != nil {
 			archived = *res.ArchivedTotal
 		}
-		return listMsg{seq: seq, items: res.Notes, total: res.Total, mode: res.Mode, archived: archived}
+		if res.EverywhereTotal != nil {
+			everywhere = *res.EverywhereTotal
+		}
+		return listMsg{seq: seq, items: res.Notes, total: res.Total, mode: res.Mode, archived: archived, everywhere: everywhere}
 	}
 }
 
@@ -1360,6 +1371,7 @@ func (m *Model) applyList(msg listMsg) tea.Cmd {
 		prev, m.pending = m.pending, ""
 	}
 	m.items, m.seps, m.total, m.mode, m.archivedHits = msg.items, msg.seps, msg.total, msg.mode, msg.archived
+	m.everywhereHits = msg.everywhere
 	if len(m.items) == 0 {
 		m.sel, m.top, m.note = 0, 0, nil
 		m.renderPreview(false)

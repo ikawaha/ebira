@@ -1948,6 +1948,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
     let notes, total;
     let separators = [];
     let archived = 0; // matches in the archive, which the search left out
+    let everywhere = 0; // matches in all notebooks, which the notebook or the tag left out
     if (state.archive && !searching()) {
       // The archive itself holds cells of notebooks alone.
       notes = [];
@@ -1957,6 +1958,7 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       notes = r.notes;
       total = r.total;
       archived = r.archived_total ?? 0;
+      everywhere = r.everywhere_total ?? 0;
     } else {
       // A notebook's list comes in its own sort, which the server knows.
       // Pages are read until the notes shown so far, so that a reload keeps
@@ -1999,8 +2001,17 @@ async function loadNotes({ chosen = false, first = false } = {}) {
       : state.archive ? t("listInfo", { where, total: archiveCount() })
       : t(total > notes.length ? "listInfoPart" : "listInfo", { where, total, shown: notes.length });
     info.classList.remove("error");
+    // A search in a notebook or a tag that finds nothing there tells how
+    // many notes it finds in all of them, which one click shows.
+    if (searching() && !total && everywhere) {
+      info.append(" ", button(t("everywhereResults", { n: everywhere }), () => selectNotebook(null), { cls: "link" }));
+    }
     if (searching() && !state.archive && archived) {
       info.append(" ", button(t("archiveResults", { n: archived }), selectArchive, { cls: "link" }));
+    }
+    // The list narrowed by the search box says so, with a way out of it.
+    if (state.query) {
+      info.append(" ", button(t(filtered() ? "clearFilter" : "clearSearch"), () => $("q-clear").click(), { cls: "link" }));
     }
     renderSort();
     renderShowArchived();

@@ -508,6 +508,9 @@ func (m Model) renderList(w, h int) string {
 			if m.archivedHits > 0 {
 				msg = m.tr.t("list.noMatchesArchive", "n", m.archivedHits)
 			}
+			if m.everywhereHits > 0 {
+				msg = m.tr.t("list.noMatchesEverywhere", "n", m.everywhereHits)
+			}
 		}
 		if _, ok := trashedID(m.notebook); ok {
 			msg = m.tr.t("list.trashedNotebook")

@@ -540,6 +540,11 @@
               "format": "int64",
               "type": "integer"
             },
+            "everywhere_total": {
+              "description": "Number of the notes that match in all notebooks, as the same search finds them with no notebook or tag; search again without them to read those. Present only when notebook or tag narrowed the search",
+              "format": "int64",
+              "type": "integer"
+            },
             "mode": {
               "description": "Search mode used",
               "enum": [

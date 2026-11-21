@@ -1515,12 +1515,22 @@ func (s *Notes) Search(ctx context.Context, p *gennotes.SearchPayload) (*gennote
 	// What the search left out in the archive, so that the caller knows it
 	// is there: people see a link to it, and AI clients that it may answer.
 	if a.Mode == index.ArchiveExclude && !index.ParseQuery(p.Q).InArchive {
-		a.Mode = index.ArchiveOnly
-		_, n, err := s.index.Search(ctx, p.Q, deref(p.Notebook), deref(p.Tag), a, 0, hidden...)
+		only := a
+		only.Mode = index.ArchiveOnly
+		_, n, err := s.index.Search(ctx, p.Q, deref(p.Notebook), deref(p.Tag), only, 0, hidden...)
 		if err != nil {
 			return nil, err
 		}
 		r.ArchivedTotal = &n
+	}
+	// What the notebook or the tag left out, so that a search finding
+	// nothing there tells that it finds notes elsewhere.
+	if deref(p.Notebook) != "" || deref(p.Tag) != "" {
+		_, n, err := s.index.Search(ctx, p.Q, "", "", a, 0, hidden...)
+		if err != nil {
+			return nil, err
+		}
+		r.EverywhereTotal = &n
 	}
 	return r, nil
 }
