@@ -200,8 +200,9 @@ type GitSyncRequestBody struct {
 // endpoint HTTP request body.
 type ExportZennRequestBody struct {
 	// Slug of the article, 12 to 50 of lower case letters, digits, hyphens and
-	// underscores, for a note whose ID cannot be one; it is kept with the note,
-	// and an article written before keeps its slug
+	// underscores; the ID of the note by default, which a note whose ID cannot be
+	// one needs. It is kept with the note, and an article written before keeps its
+	// slug
 	Slug *string `form:"slug,omitempty" json:"slug,omitempty" xml:"slug,omitempty"`
 	// Emoji of the article, one; the one used last, or one chosen at random, by
 	// default

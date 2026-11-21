@@ -20,6 +20,11 @@ import (
 // lose that change.
 var ErrChanged = errors.New("the article was changed in the repository since ebira wrote it")
 
+// ErrExists is returned when a new article would take the slug of an article
+// in the repository ebira did not write, as one made with the command line
+// tool of Zenn: writing it would lose that article and its images.
+var ErrExists = errors.New("an article with the slug is in the repository")
+
 // defaultBranch is the branch of a repository that has none yet.
 const defaultBranch = "main"
 
@@ -46,7 +51,9 @@ type Result struct {
 // Write writes the article a and its images to the repository, commits and
 // pushes. last is the hash of the article file ebira wrote last, empty for a
 // new article: when the file in the repository differs from it, Write fails
-// with ErrChanged unless force is set. When the push is refused, as when
+// with ErrChanged unless force is set. A new article fails with ErrExists,
+// even with force, when its slug is taken by an article or the images of
+// one in the repository. When the push is refused, as when
 // another push came in meanwhile, it starts over once.
 func (r *Repo) Write(ctx context.Context, a *Article, last string, force bool) (*Result, error) {
 	if err := a.Check(); err != nil {
@@ -74,12 +81,19 @@ func (r *Repo) write(ctx context.Context, a *Article, file []byte, last string, 
 		return nil, err
 	}
 	p := filepath.Join(r.dir, "articles", a.Slug+".md")
+	imgDir := filepath.Join(r.dir, "images", a.Slug)
 	old, err := os.ReadFile(p)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
+		if _, err := os.Stat(imgDir); last == "" && err == nil {
+			return nil, ErrExists
+		}
 	case err != nil:
 		return nil, err
-	case Hash(old) != last && !bytes.Equal(old, file) && !force:
+	case bytes.Equal(old, file):
+	case last == "":
+		return nil, ErrExists
+	case Hash(old) != last && !force:
 		return nil, ErrChanged
 	}
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
@@ -88,7 +102,6 @@ func (r *Repo) write(ctx context.Context, a *Article, file []byte, last string, 
 	if err := os.WriteFile(p, file, 0o644); err != nil {
 		return nil, err
 	}
-	imgDir := filepath.Join(r.dir, "images", a.Slug)
 	if err := os.RemoveAll(imgDir); err != nil {
 		return nil, err
 	}

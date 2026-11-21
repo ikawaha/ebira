@@ -51,7 +51,7 @@ The button of the letter Z with an arrow out to the top right, at the top right 
 
 *Write* writes the note to `articles/<ID of the note>.md` and its images to `images/<ID of the note>/`, commits and pushes; Zenn shows it in a moment. The title is that of the note (Zenn takes up to 70 characters).
 
-The name of the article file, its slug, is the ID of the note. When the ID does not fit the rule of Zenn (12 to 50 of lower case letters, digits, `-` and `_`), as with a short ID given by hand, the dialog shows a field for the slug the first time you write the note. It holds random digits after the ID of the note (`short-3f9a0c1d2e4b5a`; the random digits alone when the ID is too long), which you may change or choose again with the button beside it. The random IDs ebira gives fit. The slug becomes the URL of the article, so it cannot be changed once written; nor can it be the ID of another note or the slug of the article of another note.
+The name of the article file, its slug, is set in a field the first time you write the note. It starts as the ID of the note (with random digits after it, when the ID does not fit the rule of Zenn: 12 to 50 lower case letters, digits, `-` and `_`); you may change it, or choose one at random with the button beside it. The slug cannot be changed later.
 
 Writing the note again writes the same article again, with the emoji, the type and the topics chosen last.
 
@@ -72,6 +72,7 @@ When you change the title or the body of a note after writing it, its article st
 
 - Zenn has no unlisted articles from GitHub: anyone can read a published article. It can go back to a draft, but deleting it is done on the dashboard of Zenn (deleting its file from the repository leaves the article on Zenn).
 - When the article file was changed in the repository since ebira wrote it, such as on GitHub, ebira asks before overwriting it.
+- A note cannot be written with the slug of an article ebira did not write, such as one made with the command line tool of Zenn. An article written in the web editor of Zenn is not in the repository, so ebira cannot tell when its slug is the same.
 - A note of a private notebook is confirmed before it is written.
 - Only people write to Zenn; it is no tool of AI clients.
 - The note keeps its article in `zenn:` of its file, which syncs with the notes, so another machine writes the same article again. Writing it does not change the update time of the note.

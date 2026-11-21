@@ -102,6 +102,9 @@ func (s *Notes) ExportZenn(ctx context.Context, p *gennotes.ExportZennPayload) (
 	if errors.Is(err, zenn.ErrChanged) {
 		return nil, gennotes.MakeArticleChanged(err)
 	}
+	if errors.Is(err, zenn.ErrExists) {
+		return nil, gennotes.MakeBadRequest(fmt.Errorf("an article with the slug %s is in the repository: choose another slug", a.Slug))
+	}
 	if err != nil {
 		return nil, gennotes.MakeBadRequest(err)
 	}
@@ -208,10 +211,10 @@ func (s *Notes) zennArticle(ctx context.Context, p *gennotes.ExportZennPayload, 
 
 // zennSlug returns the slug of the article of note id, written before as the
 // article with slug last (empty for none), given slug asked (empty for
-// none). The slug is the ID of the note; one that cannot be a slug takes the
-// slug asked instead. The slug of an article never changes, as Zenn takes
-// another slug for another article, and no two notes share one. The caller
-// holds s.mu.
+// none). The slug asked is taken the first time; without it, the slug is the
+// ID of the note, if it can be one. The slug of an article never changes, as
+// Zenn takes another slug for another article, and no two notes share one.
+// The caller holds s.mu.
 func (s *Notes) zennSlug(ctx context.Context, id, last, asked string) (string, error) {
 	if last != "" {
 		if asked != "" && asked != last {
@@ -219,22 +222,18 @@ func (s *Notes) zennSlug(ctx context.Context, id, last, asked string) (string, e
 		}
 		return last, nil
 	}
-	slug := id
-	switch {
-	case zenn.ValidSlug(id):
-		if asked != "" && asked != id {
-			return "", gennotes.MakeBadRequest(fmt.Errorf("the slug of the article is the ID of the note, %s", id))
+	slug := cmp.Or(asked, id)
+	if !zenn.ValidSlug(slug) {
+		if asked == "" {
+			return "", gennotes.MakeBadRequest(fmt.Errorf("the ID of the note, %s, cannot be the slug of an article, which is 12 to 50 of lower case letters, digits, hyphens and underscores: give a slug", id))
 		}
-	case asked == "":
-		return "", gennotes.MakeBadRequest(fmt.Errorf("the ID of the note, %s, cannot be the slug of an article, which is 12 to 50 of lower case letters, digits, hyphens and underscores: give a slug", id))
-	case !zenn.ValidSlug(asked):
 		return "", gennotes.MakeBadRequest(fmt.Errorf("slug %q is not 12 to 50 of lower case letters, digits, hyphens and underscores", asked))
-	default:
-		// Another note would take its ID as the slug.
-		if _, err := s.store.Load(asked); err == nil {
-			return "", gennotes.MakeBadRequest(fmt.Errorf("slug %s is the ID of another note", asked))
+	}
+	// Another note would take its ID as the slug.
+	if slug != id {
+		if _, err := s.store.Load(slug); err == nil {
+			return "", gennotes.MakeBadRequest(fmt.Errorf("slug %s is the ID of another note", slug))
 		}
-		slug = asked
 	}
 	other, ok, err := s.index.ZennNote(ctx, slug, id)
 	if err != nil {

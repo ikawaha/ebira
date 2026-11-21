@@ -1826,11 +1826,11 @@ var _ = Service("notes", func() {
 	})
 
 	Method("export_zenn", func() {
-		Description("Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with its images in images/<slug>/, of the GitHub repository Zenn deploys from, committed and pushed. The slug is the ID of the note, or the slug given when the ID cannot be one, and it does not change once written. Images of the note go with it; a link to another file of a note becomes its text, and so does a link to a note that is no article. The same note goes to the same article again. For people only.")
+		Description("Write a note to Zenn (zenn.dev) as an article: to articles/<slug>.md, with its images in images/<slug>/, of the GitHub repository Zenn deploys from, committed and pushed. The slug is the one given, or the ID of the note, and it does not change once written. Images of the note go with it; a link to another file of a note becomes its text, and so does a link to a note that is no article. The same note goes to the same article again. For people only.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
-			Attribute("slug", String, "Slug of the article, 12 to 50 of lower case letters, digits, hyphens and underscores, for a note whose ID cannot be one; it is kept with the note, and an article written before keeps its slug", func() {
+			Attribute("slug", String, "Slug of the article, 12 to 50 of lower case letters, digits, hyphens and underscores; the ID of the note by default, which a note whose ID cannot be one needs. It is kept with the note, and an article written before keeps its slug", func() {
 				Pattern("^[0-9a-z_-]{12,50}$")
 				Example("my-first-article")
 			})
@@ -1855,7 +1855,7 @@ var _ = Service("notes", func() {
 		})
 		Result(ZennExport)
 		Error("not_found", ErrorResult, "The note does not exist")
-		Error("bad_request", ErrorResult, "The repository is not set, the note is in the trash or in a private notebook, its ID cannot be a slug and none is given, the slug differs from the one written before or is taken by another note, it cannot be an article as it is, such as with a title too long or an image Zenn does not take, or a git command failed, such as a push")
+		Error("bad_request", ErrorResult, "The repository is not set, the note is in the trash or in a private notebook, its ID cannot be a slug and none is given, the slug differs from the one written before or is taken by another note or by an article in the repository ebira did not write, it cannot be an article as it is, such as with a title too long or an image Zenn does not take, or a git command failed, such as a push")
 		Error("article_changed", ErrorResult, "The article file was changed in the repository since it was written, as on GitHub; force overwrites it")
 		HTTP(func() {
 			POST("/notes/{id}/zenn")

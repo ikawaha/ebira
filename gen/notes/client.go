@@ -1075,7 +1075,7 @@ func (c *Client) ZennStatus(ctx context.Context, p *ZennStatusPayload) (res *Zen
 // ExportZenn calls the "export_zenn" endpoint of the "notes" service.
 // ExportZenn may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist
-//   - "bad_request" (type *goa.ServiceError): The repository is not set, the note is in the trash or in a private notebook, its ID cannot be a slug and none is given, the slug differs from the one written before or is taken by another note, it cannot be an article as it is, such as with a title too long or an image Zenn does not take, or a git command failed, such as a push
+//   - "bad_request" (type *goa.ServiceError): The repository is not set, the note is in the trash or in a private notebook, its ID cannot be a slug and none is given, the slug differs from the one written before or is taken by another note or by an article in the repository ebira did not write, it cannot be an article as it is, such as with a title too long or an image Zenn does not take, or a git command failed, such as a push
 //   - "article_changed" (type *goa.ServiceError): The article file was changed in the repository since it was written, as on GitHub; force overwrites it
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again

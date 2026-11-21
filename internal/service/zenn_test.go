@@ -108,13 +108,15 @@ func TestExportZenn(t *testing.T) {
 	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short", Slug: ptr("short-article-2")}); errorName(err) != "bad_request" {
 		t.Errorf("new slug: err = %v", err)
 	}
-	// No other note takes it, nor another slug for a note whose ID is one.
+	// No other note takes it.
 	mk("short-article", "work", "同じ名前", "x")
 	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "short-article"}); errorName(err) != "bad_request" {
 		t.Errorf("taken: err = %v", err)
 	}
-	if _, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "other1234567", Slug: ptr("another-slug")}); errorName(err) != "bad_request" {
-		t.Errorf("slug for a fit ID: err = %v", err)
+	// A note whose ID can be a slug may take another.
+	mk("fits-as-a-slug", "work", "ID の合うノート", "x")
+	if res, err := svc.ExportZenn(person, &gennotes.ExportZennPayload{ID: "fits-as-a-slug", Slug: ptr("20261121-another")}); err != nil || res.Note.Zenn.Slug != "20261121-another" {
+		t.Errorf("another slug for a fit ID: %v", err)
 	}
 
 	// The other note is published first, so that the link goes to it.
