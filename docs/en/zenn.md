@@ -51,7 +51,7 @@ The button of the letter Z with an arrow out to the top right, at the top right 
 
 *Write* writes the note to `articles/<ID of the note>.md` and its images to `images/<ID of the note>/`, commits and pushes; Zenn shows it in a moment. The title is that of the note (Zenn takes up to 70 characters).
 
-The name of the article file, its slug, is the ID of the note. When the ID does not fit the rule of Zenn (12 to 50 of lower case letters, digits, `-` and `_`), as with a short ID given by hand, you are asked for a slug the first time you write the note. The random IDs ebira gives fit. The slug becomes the URL of the article, so it cannot be changed once written; nor can it be the ID of another note or the slug of the article of another note.
+The name of the article file, its slug, is the ID of the note. When the ID does not fit the rule of Zenn (12 to 50 of lower case letters, digits, `-` and `_`), as with a short ID given by hand, the dialog shows a field for the slug the first time you write the note. It holds random digits after the ID of the note (`short-3f9a0c1d2e4b5a`; the random digits alone when the ID is too long), which you may change or choose again with the button beside it. The random IDs ebira gives fit. The slug becomes the URL of the article, so it cannot be changed once written; nor can it be the ID of another note or the slug of the article of another note.
 
 Writing the note again writes the same article again, with the emoji, the type and the topics chosen last.
 

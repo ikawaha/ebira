@@ -527,6 +527,8 @@ a.zenn-article:hover { color: var(--accent); }
 .zenn-row { display: flex; gap: 12px; align-items: flex-start; }
 .zenn-row > .field:last-child { flex: 1; }
 .zenn-emoji-row { display: flex; align-items: center; gap: 4px; }
+.zenn-slug-row { display: flex; align-items: center; gap: 4px; }
+.zenn-slug-row input { flex: 1; min-width: 0; }
 .zenn-form .field input.zenn-emoji { width: 3.5em; text-align: center; font-size: var(--fs-lg); padding: 0 4px; }
 .zenn-form .check { display: flex; align-items: center; gap: 8px; }
 .zenn-form p { margin: 0; }

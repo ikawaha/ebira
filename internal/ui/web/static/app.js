@@ -5637,6 +5637,14 @@ function oneEmoji(v) {
 // ZENN_SLUG is what Zenn takes as the slug of an article.
 const ZENN_SLUG = /^[0-9a-z_-]{12,50}$/;
 
+// randomSlug returns a slug for the article of note id, whose ID cannot be
+// one: 14 random hexadecimal digits, as the command line tool of Zenn gives,
+// after the ID when it is short, so that the slug tells the note.
+function randomSlug(id) {
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(7)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return id.length < 12 ? `${id}-${hex}` : hex;
+}
+
 function openZenn(n) {
   const d = $("zenn");
   const a = n.zenn;
@@ -5671,14 +5679,18 @@ function openZenn(n) {
   const slug = el("input");
   slug.autocomplete = "off";
   slug.spellcheck = false;
-  slug.placeholder = "my-first-article";
+  slug.value = asks ? randomSlug(n.id) : "";
+  const reslug = iconButton("shuffle", t("zennSlugShuffle"), () => {
+    slug.value = randomSlug(n.id);
+  });
+  reslug.type = "button";
   const msg = el("div", "zenn-result");
   const go = el("button", "primary", t("zennWrite"));
   go.type = "submit";
   const cancel = button(t("cancel"), () => d.close());
   const form = el("form", "zenn-form",
     el("p", "", asks ? t("zennSlugText", { id: n.id, repo: zenn.repo }) : t(a ? "zennUpdateText" : "zennNewText", { slug: a?.slug || n.id, repo: zenn.repo })),
-    ...(asks ? [field(t("zennSlug"), slug), el("p", "note", t("zennSlugHint"))] : []),
+    ...(asks ? [el("div", "field", el("span", "", t("zennSlug")), el("div", "zenn-slug-row", slug, reslug)), el("p", "note", t("zennSlugHint"))] : []),
     el("div", "zenn-row",
       el("div", "field", el("span", "", t("zennEmoji")), el("div", "zenn-emoji-row", emoji, shuffle)),
       field(t("zennType"), type)),
@@ -5743,11 +5755,12 @@ function openZenn(n) {
     cancel.textContent = t("zennClose");
     go.hidden = true;
     slug.disabled = true;
+    reslug.disabled = true;
     if (state.note?.id === n.id && !state.editing) loadNote();
   });
   d.replaceChildren(el("div", "files-head", el("h2", "", t("zennHead")), closeButton(() => d.close())), form);
   d.showModal();
-  (asks ? slug : go).focus();
+  go.focus();
   // Writing runs git on the server: without it, tell why at once. It is
   // asked again, as git may have been put there meanwhile.
   const noGit = () => {
