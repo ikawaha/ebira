@@ -38,7 +38,7 @@
 ## つなぐ
 
 - [AI と使う](ai.md): MCP で AI クライアントにつなぐ、ツール、アシスタント
-- [ホワイトボードで読み解く（β）](whiteboard.md): AI が書いた文や差分を、付箋で質問しながら読み、分かったことをセッションに返す
+- [ホワイトボードで読み解く（β）](whiteboard.md): AI が書いた文や差分を、付箋で質問しながら読み、次の論点を AI に渡す
 - [同期](sync.md): Dropbox・iCloud Drive・git でノートを同期する
 - [Zenn に書き出す（β）](zenn.md): ノートを Zenn の記事として、連携した GitHub のリポジトリに書き出す（Zenn の GitHub 連携を使っているとき）
 - [パスキー](passkey.md): パスキーで Web UI を守る、ebira が守れること
