@@ -295,12 +295,11 @@ func TestBoardStickies(t *testing.T) {
 			t.Errorf("draft from %v = %v", ids, err)
 		}
 	}
-	asker.answers <- result{text: "- bigrams are pairs"}
-	draft, err := boardsOf(svc).Draft(person, &genboards.DraftPayload{ID: b.ID, Stickies: []string{q.ID}})
-	if err != nil || draft.Text != "- bigrams are pairs" {
-		t.Fatalf("draft = %+v, %v", draft, err)
+	// Claude drafts, not the assistant: without claude, no draft.
+	if _, err := boardsOf(svc).Draft(person, &genboards.DraftPayload{ID: b.ID, Stickies: []string{q.ID}}); errorName(err) != "unavailable" {
+		t.Errorf("draft without claude = %v", err)
 	}
-	if qs := asker.last(); !strings.Contains(qs, "To match any part.") || strings.Contains(qs, "checked") {
+	if qs := board.DraftQuestion(mustBoard(t, svc, b.ID), []string{q.ID}); !strings.Contains(qs, "To match any part.") || strings.Contains(qs, "checked") {
 		t.Errorf("draft question:\n%s", qs)
 	}
 
@@ -439,4 +438,14 @@ func TestBoardInterrupted(t *testing.T) {
 	if s := b.Stickies[0]; s.ID != q.ID || s.State != "error" || s.Error == nil {
 		t.Errorf("sticky note after a restart = %+v", s)
 	}
+}
+
+// mustBoard returns board id as the store has it.
+func mustBoard(t *testing.T, svc *Notes, id string) *board.Board {
+	t.Helper()
+	b, err := svc.boards.store.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

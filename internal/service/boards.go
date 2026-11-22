@@ -168,8 +168,9 @@ func (s *Notes) SweepBoards() error {
 		return nil
 	}
 	gone, err := s.boards.store.Sweep()
-	for _, b := range gone {
-		s.boards.forget(b.ID, b.Stickies)
+	for i := range gone {
+		b := &gone[i]
+		s.boards.forgetBoard(b)
 		s.events.publish(eventBoard, b.ID)
 	}
 	return err
@@ -480,13 +481,13 @@ func (s *Notes) forkState(ctx context.Context, b *board.Board) *genboards.BoardF
 	switch {
 	case b.Status != board.Open:
 		reason = "done"
-	case b.Origin.SessionID == "" || b.Origin.Cwd == "":
-		reason = "no_session"
 	case !signedIn(ctx) && !fromThisMachine(ctx):
 		reason = "auth_none"
 	case s.boards == nil || s.boards.forker() == nil:
 		reason = "not_found"
-	case !s.boards.forker().Has(b.Origin.SessionID):
+	// A board without a session, or with one ebira made and lost, gets a
+	// new one (seed); the session of Claude Code cannot be made again.
+	case b.Origin.SessionID != "" && !b.Origin.Seeded && !s.boards.forker().Has(b.Origin.SessionID):
 		reason = "session_missing"
 	}
 	res := &genboards.BoardFork{Available: reason == "", Cwd: optional(b.Origin.Cwd)}
@@ -500,7 +501,6 @@ func (s *Notes) forkState(ctx context.Context, b *board.Board) *genboards.BoardF
 // forkState.
 var forkErrors = map[string]string{
 	"done":            "the board is finished",
-	"no_session":      "no Claude Code session opened the board",
 	"auth_none":       "from another machine, forks need passkeys: sign in with a passkey (ebira auth passkey)",
 	"not_found":       "claude (Claude Code) is not found on the machine of the server",
 	"session_missing": "Claude Code no longer has the session that opened the board",
@@ -556,6 +556,10 @@ func (r Boards) Open(ctx context.Context, p *genboards.OpenPayload) (*genboards.
 	if err != nil {
 		return nil, err
 	}
+	// Claude Code reads the note now, to answer the sticky notes in forks.
+	if s.forkState(ctx, nb).Available {
+		s.seedLater(nb.ID)
+	}
 	return s.fullBoard(ctx, s.boards.store, nb)
 }
 
@@ -607,7 +611,7 @@ func (r Boards) Delete(ctx context.Context, p *genboards.DeletePayload) error {
 		return boardErr(err)
 	}
 	if b != nil {
-		s.boards.forget(b.ID, b.Stickies)
+		s.boards.forgetBoard(b)
 	} else {
 		s.boards.cancel(p.ID, nil)
 	}
@@ -846,7 +850,13 @@ func (s *Notes) answer(id, sid, kind string) {
 		actx, acancel := context.WithTimeout(ctx, limit)
 		var reply string
 		if kind == board.Fork {
-			reply, err = bs.askFork(actx, b, source, st)
+			if b, err = s.seed(actx, id); err == nil {
+				if st = b.Find(sid); st == nil {
+					err = errGone
+				} else {
+					reply, err = bs.askFork(actx, b, source, st)
+				}
+			}
 		} else {
 			reply, err = bs.ask(actx, board.Question(b, source, st))
 		}
@@ -858,7 +868,7 @@ func (s *Notes) answer(id, sid, kind string) {
 		if ctx.Err() != nil {
 			// The sticky note or the board was deleted: a fork may have made
 			// its session meanwhile.
-			if kind == board.Fork {
+			if kind == board.Fork && st != nil {
 				bs.forget(id, []board.Sticky{*st})
 			}
 			return
@@ -890,6 +900,91 @@ func (s *Notes) answer(id, sid, kind string) {
 }
 
 var errGone = errors.New("the sticky note is gone")
+
+// seed returns board id with a Claude Code session to fork: the one it has,
+// or a new one that ebira makes to read its source, in a directory of the
+// board, when it has none or lost one ebira made. The caller holds a turn of
+// the forks.
+func (s *Notes) seed(ctx context.Context, id string) (*board.Board, error) {
+	bs := s.boards
+	f := bs.forker()
+	if f == nil {
+		return nil, errors.New(forkErrors["not_found"])
+	}
+	b, err := bs.store.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if o := b.Origin; o.SessionID != "" && (!o.Seeded || f.Has(o.SessionID)) {
+		return b, nil
+	}
+	source, err := bs.store.Source(id)
+	if err != nil {
+		return nil, err
+	}
+	work, err := bs.store.WorkDir(id)
+	if err != nil {
+		return nil, err
+	}
+	session := uuid.NewString()
+	if _, err := f.Ask(ctx, ForkAsk{Cwd: work, Session: session, Question: board.SeedQuestion(b, source)}); err != nil {
+		_ = f.Remove(session)
+		return nil, fmt.Errorf("reading the topic: %w", err)
+	}
+	b, err = bs.store.Update(id, func(b *board.Board) error {
+		b.Origin.SessionID, b.Origin.Cwd, b.Origin.Seeded = session, work, true
+		return nil
+	})
+	if err != nil {
+		_ = f.Remove(session)
+		return nil, err
+	}
+	s.events.publish(eventBoard, id)
+	return b, nil
+}
+
+// seedLater makes the session of board id in the background, as when a
+// person opens it on a note, so that the first question need not wait for
+// it. Deleting the board stops it.
+func (s *Notes) seedLater(id string) {
+	bs := s.boards
+	ctx, cancel := context.WithCancel(bs.ctx)
+	key := runKey(id, "seed")
+	bs.mu.Lock()
+	bs.running[key] = cancel
+	bs.mu.Unlock()
+	go func() {
+		defer func() {
+			bs.mu.Lock()
+			delete(bs.running, key)
+			bs.mu.Unlock()
+			cancel()
+		}()
+		select {
+		case bs.forks <- struct{}{}:
+			defer func() { <-bs.forks }()
+		case <-ctx.Done():
+			return
+		}
+		sctx, scancel := context.WithTimeout(ctx, boardForkTime)
+		defer scancel()
+		if _, err := s.seed(sctx, id); err != nil && ctx.Err() == nil {
+			log.Printf("whiteboard %s: %v", id, err)
+		}
+	}()
+}
+
+// forgetBoard stops what runs for board b, deleted, and deletes the Claude
+// Code sessions ebira made for it.
+func (bs *boards) forgetBoard(b *board.Board) {
+	bs.cancel(b.ID, nil)
+	bs.forget(b.ID, b.Stickies)
+	if f := bs.forker(); f != nil && b.Origin.Seeded && b.Origin.SessionID != "" {
+		if err := f.Remove(b.Origin.SessionID); err != nil {
+			log.Printf("whiteboard %s: removing session %s: %v", b.ID, b.Origin.SessionID, err)
+		}
+	}
+}
 
 // appendToNote adds text at the end of note id, after a blank line. A note
 // changed meanwhile is read again, so nothing written in it is lost.
@@ -974,15 +1069,28 @@ func (r Boards) Draft(ctx context.Context, p *genboards.DraftPayload) (*genboard
 			return nil, gennotes.MakeBadRequest(fmt.Errorf("no sticky note %q", id))
 		}
 	}
-	if err := s.requireAsker(); err != nil {
+	if err := s.requireFork(ctx, b); err != nil {
 		return nil, err
 	}
-	actx, cancel := context.WithTimeout(ctx, boardAnswerTime)
+	// A fork of the session of the board drafts, and goes: it only drafts.
+	bs := s.boards
+	actx, cancel := context.WithTimeout(ctx, boardForkTime)
 	defer cancel()
-	text, err := s.boards.ask(actx, board.DraftQuestion(b, p.Stickies))
+	select {
+	case bs.forks <- struct{}{}:
+		defer func() { <-bs.forks }()
+	case <-actx.Done():
+		return nil, gennotes.MakeUnavailable(errors.New("Claude is busy: try again later"))
+	}
+	if b, err = s.seed(actx, p.ID); err != nil {
+		return nil, gennotes.MakeUnavailable(err)
+	}
+	session := uuid.NewString()
+	text, err := bs.forker().Ask(actx, ForkAsk{Cwd: b.Origin.Cwd, Resume: b.Origin.SessionID, Session: session, Question: board.DraftQuestion(b, p.Stickies)})
+	_ = bs.forker().Remove(session)
 	if err != nil {
 		log.Printf("whiteboard %s: draft: %v", p.ID, err)
-		return nil, gennotes.MakeUnavailable(fmt.Errorf("the assistant did not draft: %w", err))
+		return nil, gennotes.MakeUnavailable(fmt.Errorf("Claude did not draft: %w", err))
 	}
 	return &genboards.DraftResult{Text: text}, nil
 }

@@ -35,10 +35,11 @@ type Fork struct {
 type ForkAsk struct {
 	// Cwd is the working directory of the session.
 	Cwd string
-	// Resume is the session to resume.
+	// Resume is the session to resume; empty to start a new session.
 	Resume string
-	// Session, when set, forks Resume into a new session of that ID; else
-	// the question goes on in Resume.
+	// Session, when set, forks Resume into a new session of that ID, or
+	// starts the new session with that ID; else the question goes on in
+	// Resume.
 	Session string
 	// Question is the prompt.
 	Question string
@@ -62,9 +63,14 @@ func mcpTools(names []string) string {
 // Args returns the arguments of claude for a; the question goes on its
 // standard input. The flags hold for one run only, so every run has them all.
 func (f Fork) Args(a ForkAsk) []string {
-	args := []string{"-p", "--resume", a.Resume}
-	if a.Session != "" {
-		args = append(args, "--fork-session", "--session-id", a.Session)
+	args := []string{"-p"}
+	switch {
+	case a.Resume == "":
+		args = append(args, "--session-id", a.Session)
+	case a.Session != "":
+		args = append(args, "--resume", a.Resume, "--fork-session", "--session-id", a.Session)
+	default:
+		args = append(args, "--resume", a.Resume)
 	}
 	config, _ := json.Marshal(map[string]any{"mcpServers": map[string]any{Name: map[string]string{"type": "http", "url": f.MCPURL}}})
 	args = append(args,
@@ -85,7 +91,7 @@ func (f Fork) Args(a ForkAsk) []string {
 // Ask asks a fork the question of a, and returns its answer. ctx bounds the
 // run: claude is killed when it ends.
 func (f Fork) Ask(ctx context.Context, a ForkAsk) (string, error) {
-	if !sessionID.MatchString(a.Resume) || a.Session != "" && !sessionID.MatchString(a.Session) {
+	if a.Resume == "" && a.Session == "" || a.Resume != "" && !sessionID.MatchString(a.Resume) || a.Session != "" && !sessionID.MatchString(a.Session) {
 		return "", errors.New("not a session of Claude Code")
 	}
 	if !filepath.IsAbs(a.Cwd) {
@@ -171,6 +177,10 @@ func (f Fork) Remove(id string) error {
 		if fi, err := os.Lstat(dir); err == nil && fi.IsDir() {
 			errs = append(errs, os.RemoveAll(dir))
 		}
+		// The directory of a project ebira made, such as that of a
+		// whiteboard, goes when its last session does; it fails, as it
+		// should, while the directory has other files.
+		_ = os.Remove(filepath.Dir(p))
 	}
 	return errors.Join(errs...)
 }

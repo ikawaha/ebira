@@ -155,12 +155,13 @@ type BoardAnchor struct {
 }
 
 type BoardFork struct {
-	// Whether forks of the session that opened the board can answer sticky notes
+	// Whether Claude can answer sticky notes: forks of the Claude Code session
+	// that opened the board, or of one ebira makes to read the topic
 	Available bool
 	// Why not: auth_none (a request from another machine without passkeys: forks
-	// need passkeys there), no_session (no Claude Code session opened the board),
-	// session_missing (Claude Code no longer has it), not_found (claude is not
-	// found on the machine of the server) or done (the board is finished)
+	// need passkeys there), session_missing (Claude Code no longer has the session
+	// that opened the board), not_found (claude is not found on the machine of the
+	// server) or done (the board is finished)
 	Reason *string
 	// The working directory of the session, where claude --resume goes on with the
 	// session of a sticky note
@@ -445,12 +446,13 @@ func validatejsonBoardAnchorTransport(value *jsonBoardAnchorTransport) (err erro
 
 // jsonBoardForkTransport stores JSON fields until they have been validated.
 type jsonBoardForkTransport struct {
-	// Whether forks of the session that opened the board can answer sticky notes
+	// Whether Claude can answer sticky notes: forks of the Claude Code session
+	// that opened the board, or of one ebira makes to read the topic
 	Available *bool `json:"available"`
 	// Why not: auth_none (a request from another machine without passkeys: forks
-	// need passkeys there), no_session (no Claude Code session opened the board),
-	// session_missing (Claude Code no longer has it), not_found (claude is not
-	// found on the machine of the server) or done (the board is finished)
+	// need passkeys there), session_missing (Claude Code no longer has the session
+	// that opened the board), not_found (claude is not found on the machine of the
+	// server) or done (the board is finished)
 	Reason *string `json:"reason,omitempty"`
 	// The working directory of the session, where claude --resume goes on with the
 	// session of a sticky note
@@ -466,8 +468,8 @@ func validatejsonBoardForkTransport(value *jsonBoardForkTransport) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("available", "body"))
 	}
 	if value.Reason != nil {
-		if !(*value.Reason == "auth_none" || *value.Reason == "no_session" || *value.Reason == "session_missing" || *value.Reason == "not_found" || *value.Reason == "done") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.reason", *value.Reason, []any{"auth_none", "no_session", "session_missing", "not_found", "done"}))
+		if !(*value.Reason == "auth_none" || *value.Reason == "session_missing" || *value.Reason == "not_found" || *value.Reason == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.reason", *value.Reason, []any{"auth_none", "session_missing", "not_found", "done"}))
 		}
 	}
 	return err
@@ -1005,8 +1007,8 @@ func validateBoardResultOriginal(value *BoardResult) (err error) {
 // validateBoardForkOriginal checks the original typed value before JSON conversion.
 func validateBoardForkOriginal(value *BoardFork) (err error) {
 	if value.Reason != nil {
-		if !(*value.Reason == "auth_none" || *value.Reason == "no_session" || *value.Reason == "session_missing" || *value.Reason == "not_found" || *value.Reason == "done") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.reason", *value.Reason, []any{"auth_none", "no_session", "session_missing", "not_found", "done"}))
+		if !(*value.Reason == "auth_none" || *value.Reason == "session_missing" || *value.Reason == "not_found" || *value.Reason == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.reason", *value.Reason, []any{"auth_none", "session_missing", "not_found", "done"}))
 		}
 	}
 	return err
@@ -2201,7 +2203,7 @@ func validateBoardJSONValue6(path string, value any, description string) error {
 		case "available":
 			if err := validateBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether forks of the session that opened the board can answer sticky notes",
+				typed[key], "Whether Claude can answer sticky notes: forks of the Claude Code session that opened the board, or of one ebira makes to read the topic",
 			); err != nil {
 				return err
 			}
@@ -2215,7 +2217,7 @@ func validateBoardJSONValue6(path string, value any, description string) error {
 		case "reason":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)",
+				typed[key], "Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), session_missing (Claude Code no longer has the session that opened the board), not_found (claude is not found on the machine of the server) or done (the board is finished)",
 			); err != nil {
 				return err
 			}

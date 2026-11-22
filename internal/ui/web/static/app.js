@@ -7420,9 +7420,6 @@ function showBoardView(id) {
   document.querySelector(".panes").classList.add("board-open");
   $("board").hidden = false;
   renderNotebooks();
-  if (!board.assistant) {
-    api("/ask").then((s) => { board.assistant = s; }, () => { board.assistant = { available: false, reason: "" }; });
-  }
   if (id) loadBoard();
   else renderBoardList();
 }
@@ -7494,6 +7491,10 @@ async function loadBoard() {
 
 // openBoardFromNote opens a board on the body of note n.
 async function openBoardFromNote(n) {
+  // Claude reads the note to answer the sticky notes: a note kept from AI
+  // is opened only when the person agrees.
+  const nb = state.notebooks.find((x) => x.id === n.notebook);
+  if (nb?.kind === "private" && !confirm(t("boardOpenPrivateConfirm"))) return;
   let b;
   try {
     b = await api("/boards", { method: "POST", body: { note_id: n.id } });
@@ -7818,19 +7819,13 @@ function openBoardCompose(anchor, parent, rect) {
   const box = el("textarea");
   box.rows = 3;
   box.placeholder = t("boardComposePlaceholder");
-  const ask = board.assistant?.available !== false;
-  const askButton = button(t("boardAsk"), () => addSticky("assistant", box.value), { cls: "primary", title: ask ? t("boardAskTitle") : (board.assistant?.reason || t("boardNoAssistant")) });
-  askButton.disabled = !ask;
-  const buttons = el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }));
-  // A fork of the Claude Code session that opened the board answers knowing
-  // its conversation; boards opened otherwise do not show the button.
+  // Claude answers in a fork of the session of the board: that of Claude
+  // Code when it opened the board, or one that read the topic.
   const fork = board.data?.fork;
-  if (fork && !["no_session", "done"].includes(fork.reason)) {
-    const forkButton = button(t("boardFork"), () => addSticky("fork", box.value), { title: fork.available ? t("boardForkTitle") : t(forkReasons[fork.reason] || "boardForkUnavailable") });
-    forkButton.disabled = !fork.available;
-    buttons.append(forkButton);
-  }
-  buttons.append(askButton);
+  const ask = !!fork?.available;
+  const askButton = button(t("boardAsk"), () => addSticky("fork", box.value), { cls: "primary", title: ask ? t("boardAskTitle") : t(forkReasons[fork?.reason] || "boardForkUnavailable") });
+  askButton.disabled = !ask;
+  const buttons = el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }), askButton);
   const pop = el("div", "board-compose",
     el("blockquote", "sticky-quote", anchor.exact.replace(/\s+/g, " ").slice(0, 120)),
     box,
@@ -7840,7 +7835,7 @@ function openBoardCompose(anchor, parent, rect) {
     if (e.key === "Escape") closeBoardCompose();
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.isComposing) {
       e.preventDefault();
-      if (ask && box.value.trim()) addSticky("assistant", box.value);
+      if (ask && box.value.trim()) addSticky("fork", box.value);
       else addSticky("memo", box.value);
     }
   });
@@ -8012,7 +8007,7 @@ function openBoardFinish() {
     }
     draft.textContent = t("boardDraft");
     update();
-  }, { title: board.assistant?.available === false ? (board.assistant.reason || t("boardNoAssistant")) : t("boardDraftTitle") });
+  }, { title: board.data?.fork?.available ? t("boardDraftTitle") : t(forkReasons[board.data?.fork?.reason] || "boardForkUnavailable") });
 
   const save = el("input");
   save.type = "checkbox";
@@ -8060,7 +8055,7 @@ function openBoardFinish() {
   }, { cls: "primary" });
 
   function update() {
-    if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || board.assistant?.available === false;
+    if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || !board.data?.fork?.available;
   }
   update();
 

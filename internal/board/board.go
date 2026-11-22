@@ -135,11 +135,14 @@ type Source struct {
 }
 
 // Origin tells who opened the board: an AI client, waiting for what is given
-// back, and, from Claude Code, its session, kept for asking forks of it later.
+// back, and the Claude Code session the sticky notes fork: that of Claude
+// Code when it opened the board, or one ebira made to read the source
+// (Seeded), which goes with the board.
 type Origin struct {
 	AI        bool   `json:"ai,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
 	Cwd       string `json:"cwd,omitempty"`
+	Seeded    bool   `json:"seeded,omitempty"`
 }
 
 // Sticky is a sticky note on a passage of the source, or of the answer of
@@ -539,6 +542,18 @@ func (s *Store) Update(id string, change func(*Board) error) (*Board, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+// WorkDir returns the working directory of the Claude Code session ebira
+// makes for board id, which it creates if needed: an empty directory of the
+// board, deleted with it.
+func (s *Store) WorkDir(id string) (string, error) {
+	dir, err := s.boardDir(id)
+	if err != nil {
+		return "", err
+	}
+	work := filepath.Join(dir, "work")
+	return work, os.MkdirAll(work, 0o700)
 }
 
 // Delete deletes board id, and returns it as it was: nil when its file

@@ -108,9 +108,9 @@ var Board = Type("Board", func() {
 })
 
 var BoardFork = Type("BoardFork", func() {
-	RequiredAttribute("available", Boolean, "Whether forks of the session that opened the board can answer sticky notes")
-	Attribute("reason", String, "Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)", func() {
-		Enum("auth_none", "no_session", "session_missing", "not_found", "done")
+	RequiredAttribute("available", Boolean, "Whether Claude can answer sticky notes: forks of the Claude Code session that opened the board, or of one ebira makes to read the topic")
+	Attribute("reason", String, "Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), session_missing (Claude Code no longer has the session that opened the board), not_found (claude is not found on the machine of the server) or done (the board is finished)", func() {
+		Enum("auth_none", "session_missing", "not_found", "done")
 	})
 	Attribute("cwd", String, "The working directory of the session, where claude --resume goes on with the session of a sticky note")
 })

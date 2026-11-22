@@ -1133,7 +1133,7 @@ paths:
                                 fork:
                                     available: false
                                     cwd: Eveniet sed qui autem quaerat.
-                                    reason: auth_none
+                                    reason: done
                                 from_session: false
                                 id: 3f9c2a7b1d4e6f
                                 result:
@@ -1342,7 +1342,7 @@ paths:
                                 fork:
                                     available: false
                                     cwd: Eveniet sed qui autem quaerat.
-                                    reason: auth_none
+                                    reason: done
                                 from_session: false
                                 id: 3f9c2a7b1d4e6f
                                 result:
@@ -1520,7 +1520,7 @@ paths:
                                 fork:
                                     available: false
                                     cwd: Eveniet sed qui autem quaerat.
-                                    reason: auth_none
+                                    reason: done
                                 from_session: false
                                 id: 3f9c2a7b1d4e6f
                                 result:
@@ -1766,7 +1766,7 @@ paths:
                                 fork:
                                     available: false
                                     cwd: Eveniet sed qui autem quaerat.
-                                    reason: auth_none
+                                    reason: done
                                 from_session: true
                                 id: 3f9c2a7b1d4e6f
                                 result:
@@ -7616,7 +7616,7 @@ components:
                 fork:
                     available: false
                     cwd: Eveniet sed qui autem quaerat.
-                    reason: auth_none
+                    reason: done
                 from_session: false
                 id: 3f9c2a7b1d4e6f
                 result:
@@ -7767,7 +7767,7 @@ components:
             properties:
                 available:
                     type: boolean
-                    description: Whether forks of the session that opened the board can answer sticky notes
+                    description: 'Whether Claude can answer sticky notes: forks of the Claude Code session that opened the board, or of one ebira makes to read the topic'
                     example: false
                 cwd:
                     type: string
@@ -7775,18 +7775,17 @@ components:
                     example: Eveniet sed qui autem quaerat.
                 reason:
                     type: string
-                    description: 'Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)'
-                    example: auth_none
+                    description: 'Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), session_missing (Claude Code no longer has the session that opened the board), not_found (claude is not found on the machine of the server) or done (the board is finished)'
+                    example: done
                     enum:
                         - auth_none
-                        - no_session
                         - session_missing
                         - not_found
                         - done
             example:
                 available: false
                 cwd: Eveniet sed qui autem quaerat.
-                reason: auth_none
+                reason: done
             required:
                 - available
         BoardMessage:

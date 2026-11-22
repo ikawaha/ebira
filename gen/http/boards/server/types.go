@@ -962,12 +962,13 @@ type BoardResultResponseBody struct {
 
 // BoardForkResponseBody is used to define fields on response body types.
 type BoardForkResponseBody struct {
-	// Whether forks of the session that opened the board can answer sticky notes
+	// Whether Claude can answer sticky notes: forks of the Claude Code session
+	// that opened the board, or of one ebira makes to read the topic
 	Available bool `form:"available" json:"available" xml:"available"`
 	// Why not: auth_none (a request from another machine without passkeys: forks
-	// need passkeys there), no_session (no Claude Code session opened the board),
-	// session_missing (Claude Code no longer has it), not_found (claude is not
-	// found on the machine of the server) or done (the board is finished)
+	// need passkeys there), session_missing (Claude Code no longer has the session
+	// that opened the board), not_found (claude is not found on the machine of the
+	// server) or done (the board is finished)
 	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
 	// The working directory of the session, where claude --resume goes on with the
 	// session of a sticky note

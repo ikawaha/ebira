@@ -100,6 +100,16 @@ func TestForkAsk(t *testing.T) {
 		t.Errorf("going on:\n%s", last)
 	}
 
+	// A new session, not resumed.
+	const fresh = "cccccccc-dddd-4eee-8fff-000000000000"
+	if _, err := f.Ask(context.Background(), ForkAsk{Cwd: work, Session: fresh, Question: "read this"}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ = os.ReadFile(log)
+	if !strings.Contains(string(data), "args: -p --session-id "+fresh+" --restricted") || !f.Has(fresh) {
+		t.Errorf("new session:\n%s", data)
+	}
+
 	// Removing it leaves the session it was forked from.
 	if err := f.Remove(forkSession); err != nil || f.Has(forkSession) || !f.Has(parentSession) {
 		t.Errorf("Remove = %v; fork there %v, parent there %v", err, f.Has(forkSession), f.Has(parentSession))
@@ -114,6 +124,7 @@ func TestForkAskFails(t *testing.T) {
 	}
 	for name, a := range map[string]ForkAsk{
 		"session":  {Cwd: work, Resume: "../../etc/passwd", Question: "?"},
+		"neither":  {Cwd: work, Question: "?"},
 		"new":      {Cwd: work, Resume: parentSession, Session: "x", Question: "?"},
 		"relative": {Cwd: "work", Resume: parentSession, Question: "?"},
 	} {
