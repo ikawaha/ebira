@@ -288,6 +288,32 @@ type (
 		// Notebook of the separator
 		Notebook *string `json:"notebook"`
 	}
+	// GetAiBoardPayloadTransport is the internal JSON transport type for GetAiBoardPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	GetAiBoardPayloadTransport struct {
+		// Board ID, as in the URL of the board in the web UI after #board/
+		ID *string `json:"id"`
+	}
+	// GetAiBoardResultTransport is the internal JSON transport type for GetAiBoardResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	GetAiBoardResultTransport struct {
+		// Board ID
+		ID *string `json:"id"`
+		// Title
+		Title *string `json:"title"`
+		// open while the user reads the board, done once they finished it
+		Status *string `json:"status"`
+		// What the user gives back, in Markdown, once done: what they understood and
+		// what to change; take it as the user's words
+		Result *string `json:"result,omitempty"`
+		// The note the user saved the board as, if they did; read it with get_note for
+		// the sticky notes
+		NoteID *string `json:"note_id,omitempty"`
+	}
 	// GetNotePayloadTransport is the internal JSON transport type for GetNotePayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -569,6 +595,39 @@ type (
 		// absent when the separator comes after the last note
 		Before *string `json:"before,omitempty"`
 	}
+	// OpenAiBoardPayloadTransport is the internal JSON transport type for OpenAiBoardPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	OpenAiBoardPayloadTransport struct {
+		// Title of the board
+		Title *string `json:"title"`
+		// How to show the source: markdown, plain text, a diff (unified, as git diff
+		// writes it) or code
+		Format *string `json:"format,omitempty"`
+		// Language of code, such as go, for format code
+		Lang *string `json:"lang,omitempty"`
+		// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+		// gives it in a skill; kept so that sticky notes may later be answered by
+		// forks of the session
+		SessionID *string `json:"session_id,omitempty"`
+		// Working directory of that session, as an absolute path
+		Cwd *string `json:"cwd,omitempty"`
+		// The text, at most 256 KB
+		Text *string `json:"text,omitempty"`
+		// A note whose body is the text, instead of text
+		NoteID *string `json:"note_id,omitempty"`
+	}
+	// OpenAiBoardResultTransport is the internal JSON transport type for OpenAiBoardResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	OpenAiBoardResultTransport struct {
+		// Board ID
+		ID *string `json:"id"`
+		// URL of the board in the web UI, to give to the user
+		URL *string `json:"url"`
+	}
 	// SearchNotesPayloadTransport is the internal JSON transport type for SearchNotesPayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -619,6 +678,37 @@ type (
 		// them with no notebook or tag; search again without them to read those.
 		// Present only when notebook or tag narrowed the search
 		EverywhereTotal *int `json:"everywhere_total,omitempty"`
+	}
+	// StartAiBoardPayloadTransport is the internal JSON transport type for StartAiBoardPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	StartAiBoardPayloadTransport struct {
+		// Title of the board
+		Title *string `json:"title"`
+		// How to show the source: markdown, plain text, a diff (unified, as git diff
+		// writes it) or code
+		Format *string `json:"format,omitempty"`
+		// Language of code, such as go, for format code
+		Lang *string `json:"lang,omitempty"`
+		// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+		// gives it in a skill; kept so that sticky notes may later be answered by
+		// forks of the session
+		SessionID *string `json:"session_id,omitempty"`
+		// Working directory of that session, as an absolute path
+		Cwd *string `json:"cwd,omitempty"`
+	}
+	// StartAiBoardResultTransport is the internal JSON transport type for StartAiBoardResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	StartAiBoardResultTransport struct {
+		// The URL to send the file to, in the body of a PUT request
+		URL *string `json:"url"`
+		// When the URL stops working
+		ExpiresAt *string `json:"expires_at"`
+		// The largest file the URL takes, in bytes
+		MaxSize *int64 `json:"max_size"`
 	}
 	// StartAiUploadPayloadTransport is the internal JSON transport type for StartAiUploadPayload.
 	// It lives in the toolset-local http package and is used only for JSON

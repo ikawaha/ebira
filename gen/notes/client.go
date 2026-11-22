@@ -51,6 +51,10 @@ type Client struct {
 	AddAiFileEndpoint             goa.Endpoint
 	StartAiUploadEndpoint         goa.Endpoint
 	UploadAiFileEndpoint          goa.Endpoint
+	OpenAiBoardEndpoint           goa.Endpoint
+	StartAiBoardEndpoint          goa.Endpoint
+	UploadAiBoardEndpoint         goa.Endpoint
+	GetAiBoardEndpoint            goa.Endpoint
 	DeleteAiFileEndpoint          goa.Endpoint
 	UpdateAiNoteEndpoint          goa.Endpoint
 	DeleteAiNoteEndpoint          goa.Endpoint
@@ -87,7 +91,7 @@ type Client struct {
 }
 
 // NewClient initializes a "notes" service client given the endpoints.
-func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, listTools, listen, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, zennStatus, exportZenn, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
+func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search, restore, move, createSeparator, updateSeparator, deleteSeparator, moveSeparator, notebooks, tags, marks, setMarks, archiveNotes, archiveCandidates, saveMarkNames, createNotebook, saveNotebook, moveNotebook, deleteNotebook, trashedNotebooks, restoreNotebook, deleteTrashedNotebook, emptyTrash, import_, createAiNote, importAiNote, addAiFile, startAiUpload, uploadAiFile, openAiBoard, startAiBoard, uploadAiBoard, getAiBoard, deleteAiFile, updateAiNote, deleteAiNote, moveAiNote, createAiSeparator, updateAiSeparator, deleteAiSeparator, moveAiSeparator, createAiNotebook, makeNotebookPrivate, archiveAiNotebook, listTools, listen, addFile, getFile, deleteFile, history, historyVersion, fileHistory, restoreFile, checkFiles, events, gitStatus, gitSync, zennStatus, exportZenn, addGuide, previewStyle, setPreviewStyle, settings, saveSettings, restartServer, sync goa.Endpoint) *Client {
 	return &Client{
 		ListEndpoint:                  list,
 		GetEndpoint:                   get,
@@ -124,6 +128,10 @@ func NewClient(list, get, create, update, delete_, moveNotes, trashNotes, search
 		AddAiFileEndpoint:             addAiFile,
 		StartAiUploadEndpoint:         startAiUpload,
 		UploadAiFileEndpoint:          uploadAiFile,
+		OpenAiBoardEndpoint:           openAiBoard,
+		StartAiBoardEndpoint:          startAiBoard,
+		UploadAiBoardEndpoint:         uploadAiBoard,
+		GetAiBoardEndpoint:            getAiBoard,
 		DeleteAiFileEndpoint:          deleteAiFile,
 		UpdateAiNoteEndpoint:          updateAiNote,
 		DeleteAiNoteEndpoint:          deleteAiNote,
@@ -683,6 +691,68 @@ func (c *Client) UploadAiFile(ctx context.Context, p *UploadAiFilePayload, req i
 		return
 	}
 	return ires.(*NoteFile), nil
+}
+
+// OpenAiBoard calls the "open_ai_board" endpoint of the "notes" service.
+// OpenAiBoard may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
+//   - "bad_request" (type *goa.ServiceError): Neither text nor note_id is given, or both, or the text is empty, or too many boards are open
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) OpenAiBoard(ctx context.Context, p *OpenAiBoardPayload) (res *BoardOpened, err error) {
+	var ires any
+	ires, err = c.OpenAiBoardEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*BoardOpened), nil
+}
+
+// StartAiBoard calls the "start_ai_board" endpoint of the "notes" service.
+// StartAiBoard may return the following errors:
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) StartAiBoard(ctx context.Context, p *StartAiBoardPayload) (res *AIUpload, err error) {
+	var ires any
+	ires, err = c.StartAiBoardEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*AIUpload), nil
+}
+
+// UploadAiBoard calls the "upload_ai_board" endpoint of the "notes" service.
+// UploadAiBoard may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The URL is unknown, used or expired
+//   - "bad_request" (type *goa.ServiceError): The text is empty or not UTF-8, or too many boards are open
+//   - "too_large" (type *goa.ServiceError): The text is larger than 2 MB
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) UploadAiBoard(ctx context.Context, p *UploadAiBoardPayload, req io.ReadCloser) (res *BoardOpened, err error) {
+	var ires any
+	ires, err = c.UploadAiBoardEndpoint(ctx, &UploadAiBoardRequestData{Payload: p, Body: req})
+	if err != nil {
+		return
+	}
+	return ires.(*BoardOpened), nil
+}
+
+// GetAiBoard calls the "get_ai_board" endpoint of the "notes" service.
+// GetAiBoard may return the following errors:
+//   - "not_found" (type *goa.ServiceError): The board does not exist, or was deleted
+//   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
+//   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
+//   - error: internal error
+func (c *Client) GetAiBoard(ctx context.Context, p *GetAiBoardPayload) (res *AIBoard, err error) {
+	var ires any
+	ires, err = c.GetAiBoardEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*AIBoard), nil
 }
 
 // DeleteAiFile calls the "delete_ai_file" endpoint of the "notes" service.

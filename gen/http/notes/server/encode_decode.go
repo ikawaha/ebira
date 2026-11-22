@@ -3718,6 +3718,126 @@ func EncodeUploadAiFileError(encoder func(context.Context, http.ResponseWriter) 
 	}
 }
 
+// EncodeUploadAiBoardResponse returns an encoder for responses returned by the
+// notes upload_ai_board endpoint.
+func EncodeUploadAiBoardResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*notes.BoardOpened)
+		enc := encoder(ctx, w)
+		body := NewUploadAiBoardResponseBody(res)
+		w.WriteHeader(http.StatusCreated)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeUploadAiBoardRequest returns a decoder for requests sent to the notes
+// upload_ai_board endpoint.
+func DecodeUploadAiBoardRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*notes.UploadAiBoardPayload, error) {
+	return func(r *http.Request) (*notes.UploadAiBoardPayload, error) {
+		var payload *notes.UploadAiBoardPayload
+		var (
+			token   string
+			session *string
+			c       *http.Cookie
+
+			params = mux.Vars(r)
+		)
+		token = params["token"]
+		c, _ = r.Cookie("ebira_session")
+		var sessionRaw string
+		if c != nil {
+			sessionRaw = c.Value
+		}
+		if sessionRaw != "" {
+			session = &sessionRaw
+		}
+		payload = NewUploadAiBoardPayload(token, session)
+
+		return payload, nil
+	}
+}
+
+// EncodeUploadAiBoardError returns an encoder for errors returned by the
+// upload_ai_board notes endpoint.
+func EncodeUploadAiBoardError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "not_found":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUploadAiBoardNotFoundResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return enc.Encode(body)
+		case "bad_request":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUploadAiBoardBadRequestResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		case "too_large":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUploadAiBoardTooLargeResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUploadAiBoardUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
+			return enc.Encode(body)
+		case "verification_required":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewUploadAiBoardVerificationRequiredResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}
+
 // EncodeAddFileResponse returns an encoder for responses returned by the notes
 // add_file endpoint.
 func EncodeAddFileResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {

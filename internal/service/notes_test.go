@@ -13,6 +13,7 @@ import (
 
 	goa "goa.design/goa/v3/pkg"
 
+	genboards "github.com/ikawaha/ebira/gen/boards"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/index"
 	"github.com/ikawaha/ebira/internal/store"
@@ -1102,6 +1103,48 @@ func TestPeopleOnly(t *testing.T) {
 		},
 		"export_zenn": func(ctx context.Context) error {
 			_, err := svc.ExportZenn(ctx, &gennotes.ExportZennPayload{ID: n.ID, Private: true})
+			return err
+		},
+		"list_boards": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.List(ctx, &genboards.ListPayload{})
+			return err
+		},
+		"get_board": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.Get(ctx, &genboards.GetPayload{ID: "b"})
+			return err
+		},
+		"open_board": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.Open(ctx, &genboards.OpenPayload{NoteID: n.ID})
+			return err
+		},
+		"save_board": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.Save(ctx, &genboards.SavePayload{ID: "b", Title: "x"})
+			return err
+		},
+		"delete_board": func(ctx context.Context) error {
+			return Boards{REST{Notes: svc}}.Delete(ctx, &genboards.DeletePayload{ID: "b"})
+		},
+		"add_sticky": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.AddSticky(ctx, &genboards.AddStickyPayload{ID: "b", Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "x"}})
+			return err
+		},
+		"save_sticky": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.SaveSticky(ctx, &genboards.SaveStickyPayload{ID: "b", Sticky: "s00000000"})
+			return err
+		},
+		"delete_sticky": func(ctx context.Context) error {
+			return Boards{REST{Notes: svc}}.DeleteSticky(ctx, &genboards.DeleteStickyPayload{ID: "b", Sticky: "s00000000"})
+		},
+		"ask_sticky": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.AskSticky(ctx, &genboards.AskStickyPayload{ID: "b", Sticky: "s00000000", Text: ptr("x")})
+			return err
+		},
+		"draft_board": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.Draft(ctx, &genboards.DraftPayload{ID: "b"})
+			return err
+		},
+		"finish_board": func(ctx context.Context) error {
+			_, err := Boards{REST{Notes: svc}}.Finish(ctx, &genboards.FinishPayload{ID: "b"})
 			return err
 		},
 	}

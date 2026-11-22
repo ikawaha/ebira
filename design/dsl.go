@@ -85,3 +85,12 @@ var sessionCookieDSL = func() {
 
 // sessionMaxAge is the lifetime of a session in seconds: 30 days.
 const sessionMaxAge = 30 * 24 * 60 * 60
+
+// boardIDDSL is the ID of a whiteboard, which the notes service (for AI
+// clients) and the boards service (for people) take.
+var boardIDDSL = func() {
+	Pattern(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+	Example("3f9c2a7b1d4e6f")
+}
+
+const boardIDDesc = "Board ID, as in the URL of the board in the web UI after #board/"

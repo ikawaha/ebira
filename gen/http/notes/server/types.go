@@ -861,6 +861,15 @@ type UploadAiFileResponseBody struct {
 	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
+// UploadAiBoardResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body.
+type UploadAiBoardResponseBody struct {
+	// Board ID
+	ID string `form:"id" json:"id" xml:"id"`
+	// URL of the board in the web UI, to give to the user
+	URL string `form:"url" json:"url" xml:"url"`
+}
+
 // AddFileResponseBody is the type of the "notes" service "add_file" endpoint
 // HTTP response body.
 type AddFileResponseBody struct {
@@ -927,11 +936,13 @@ type CheckFilesResponseBody struct {
 type EventsResponseBody struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook. private_lost means that a
-	// notebook was private and is no longer, as files changed outside the API,
-	// such as by a sync, so that AI clients may now see it
+	// order changed, or the separators of a notebook. board means a whiteboard
+	// changed, such as when an answer came to a sticky note. private_lost means
+	// that a notebook was private and is no longer, as files changed outside the
+	// API, such as by a sync, so that AI clients may now see it
 	Type string `form:"type" json:"type" xml:"type"`
-	// Note ID (absent for ready, notebooks and private_lost)
+	// Note ID, or the board ID for board (absent for ready, notebooks and
+	// private_lost)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Notebook ID, for private_lost
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
@@ -3178,6 +3189,97 @@ type UploadAiFileUnauthorizedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
+// UploadAiBoardNotFoundResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "not_found" error.
+type UploadAiBoardNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiBoardBadRequestResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "bad_request" error.
+type UploadAiBoardBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiBoardTooLargeResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "too_large" error.
+type UploadAiBoardTooLargeResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiBoardUnauthorizedResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "unauthorized" error.
+type UploadAiBoardUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// UploadAiBoardVerificationRequiredResponseBody is the type of the "notes"
+// service "upload_ai_board" endpoint HTTP response body for the
+// "verification_required" error.
+type UploadAiBoardVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
 // AddFileNotFoundResponseBody is the type of the "notes" service "add_file"
 // endpoint HTTP response body for the "not_found" error.
 type AddFileNotFoundResponseBody struct {
@@ -5389,6 +5491,16 @@ func NewUploadAiFileResponseBody(res *notes.NoteFile) *UploadAiFileResponseBody 
 	return body
 }
 
+// NewUploadAiBoardResponseBody builds the HTTP response body from the result
+// of the "upload_ai_board" endpoint of the "notes" service.
+func NewUploadAiBoardResponseBody(res *notes.BoardOpened) *UploadAiBoardResponseBody {
+	body := &UploadAiBoardResponseBody{
+		ID:  res.ID,
+		URL: res.URL,
+	}
+	return body
+}
+
 // NewAddFileResponseBody builds the HTTP response body from the result of the
 // "add_file" endpoint of the "notes" service.
 func NewAddFileResponseBody(res *notes.NoteFile) *AddFileResponseBody {
@@ -7287,6 +7399,77 @@ func NewUploadAiFileUnauthorizedResponseBody(res *goa.ServiceError) *UploadAiFil
 	return body
 }
 
+// NewUploadAiBoardNotFoundResponseBody builds the HTTP response body from the
+// result of the "upload_ai_board" endpoint of the "notes" service.
+func NewUploadAiBoardNotFoundResponseBody(res *goa.ServiceError) *UploadAiBoardNotFoundResponseBody {
+	body := &UploadAiBoardNotFoundResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiBoardBadRequestResponseBody builds the HTTP response body from
+// the result of the "upload_ai_board" endpoint of the "notes" service.
+func NewUploadAiBoardBadRequestResponseBody(res *goa.ServiceError) *UploadAiBoardBadRequestResponseBody {
+	body := &UploadAiBoardBadRequestResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiBoardTooLargeResponseBody builds the HTTP response body from the
+// result of the "upload_ai_board" endpoint of the "notes" service.
+func NewUploadAiBoardTooLargeResponseBody(res *goa.ServiceError) *UploadAiBoardTooLargeResponseBody {
+	body := &UploadAiBoardTooLargeResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiBoardUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "upload_ai_board" endpoint of the "notes" service.
+func NewUploadAiBoardUnauthorizedResponseBody(res *goa.ServiceError) *UploadAiBoardUnauthorizedResponseBody {
+	body := &UploadAiBoardUnauthorizedResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewUploadAiBoardVerificationRequiredResponseBody builds the HTTP response
+// body from the result of the "upload_ai_board" endpoint of the "notes"
+// service.
+func NewUploadAiBoardVerificationRequiredResponseBody(res *goa.ServiceError) *UploadAiBoardVerificationRequiredResponseBody {
+	body := &UploadAiBoardVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
 // NewAddFileNotFoundResponseBody builds the HTTP response body from the result
 // of the "add_file" endpoint of the "notes" service.
 func NewAddFileNotFoundResponseBody(res *goa.ServiceError) *AddFileNotFoundResponseBody {
@@ -8549,6 +8732,16 @@ func NewImportPayload(notebook *string, force *bool, contentType *string, sessio
 // payload.
 func NewUploadAiFilePayload(token string, session *string) *notes.UploadAiFilePayload {
 	v := &notes.UploadAiFilePayload{}
+	v.Token = token
+	v.Session = session
+
+	return v
+}
+
+// NewUploadAiBoardPayload builds a notes service upload_ai_board endpoint
+// payload.
+func NewUploadAiBoardPayload(token string, session *string) *notes.UploadAiBoardPayload {
+	v := &notes.UploadAiBoardPayload{}
 	v.Token = token
 	v.Session = session
 

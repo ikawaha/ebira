@@ -34,6 +34,7 @@ items:
   - separator: つなぐ
     color: gray
   - note: ai.md
+  - note: whiteboard.md
   - note: sync.md
   - note: zenn.md
   - note: passkey.md

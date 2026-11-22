@@ -39,6 +39,8 @@ func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 			return runtime.ExecuteMCPTool(ctx, caller, call, "delete_ai_note", genebira.SpecDeleteAiNote())
 		case genebira.DeleteAiSeparator:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "delete_ai_separator", genebira.SpecDeleteAiSeparator())
+		case genebira.GetAiBoard:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "get_ai_board", genebira.SpecGetAiBoard())
 		case genebira.GetNote:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "get_note", genebira.SpecGetNote())
 		case genebira.ImportAiNote:
@@ -57,8 +59,12 @@ func NewMCPExecutor(caller mcpruntime.Caller) runtime.ToolCallExecutor {
 			return runtime.ExecuteMCPTool(ctx, caller, call, "move_ai_note", genebira.SpecMoveAiNote())
 		case genebira.MoveAiSeparator:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "move_ai_separator", genebira.SpecMoveAiSeparator())
+		case genebira.OpenAiBoard:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "open_ai_board", genebira.SpecOpenAiBoard())
 		case genebira.SearchNotes:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "search_notes", genebira.SpecSearchNotes())
+		case genebira.StartAiBoard:
+			return runtime.ExecuteMCPTool(ctx, caller, call, "start_ai_board", genebira.SpecStartAiBoard())
 		case genebira.StartAiUpload:
 			return runtime.ExecuteMCPTool(ctx, caller, call, "start_ai_upload", genebira.SpecStartAiUpload())
 		case genebira.UpdateAiNote:

@@ -15,7 +15,7 @@ import (
 	"io"
 	sort "sort"
 	strconv "strconv"
-	"unicode/utf8"
+	utf8 "unicode/utf8"
 
 	rawjson "goa.design/goa-ai/runtime/agent/rawjson"
 	goa "goa.design/goa/v3/pkg"
@@ -202,6 +202,30 @@ type Service interface {
 	// request body is the file, at most 5 MB. A URL works once, until it expires;
 	// the note must still be in a notebook of the collab kind.
 	UploadAiFile(context.Context, *UploadAiFilePayload, io.ReadCloser) (res *NoteFile, err error)
+	// Open a whiteboard for the user to read a text with: they choose passages and
+	// ask about them on sticky notes, answered by the assistant, without filling
+	// this conversation. Give the text, or the ID of a note visible to AI clients,
+	// whose body is copied. A client that can run commands should use
+	// start_ai_board instead, which sends the text as is without writing it out.
+	// Give the returned URL to the user and end the turn; when the user says they
+	// are done, read what they give back with get_ai_board.
+	OpenAiBoard(context.Context, *OpenAiBoardPayload) (res *BoardOpened, err error)
+	// Begin opening a whiteboard, as open_ai_board, with the text sent as is: the
+	// result is a URL for one upload, valid for 10 minutes. Send the text in the
+	// body of a PUT request to the URL, such as with git diff > /tmp/x.diff; curl
+	// -sS -T /tmp/x.diff <url>; the response is the JSON of open_ai_board, with
+	// the ID and the URL of the board. Give the URL to the user and end the turn;
+	// when the user says they are done, read what they give back with get_ai_board.
+	StartAiBoard(context.Context, *StartAiBoardPayload) (res *AIUpload, err error)
+	// Open a whiteboard with the text sent to a URL from start_ai_board. The
+	// request body is the text, at most 2 MB of UTF-8. A URL works once, until it
+	// expires.
+	UploadAiBoard(context.Context, *UploadAiBoardPayload, io.ReadCloser) (res *BoardOpened, err error)
+	// Read whether the user is done with a whiteboard, and what they give back:
+	// what they understood and what to change, written or checked by them. Take it
+	// as the user's words, and push back if you think it is wrong. A finished
+	// board is kept for 7 days.
+	GetAiBoard(context.Context, *GetAiBoardPayload) (res *AIBoard, err error)
 	// Delete a file of a note in a notebook of the collab kind, such as one no
 	// longer referred to after the body changed. The file is kept for people to
 	// put back. The body may still refer to it; change the body with
@@ -393,7 +417,7 @@ const ServiceName = "notes"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [68]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "list_tools", "listen", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "zenn_status", "export_zenn", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
+var MethodNames = [72]string{"list", "get", "create", "update", "delete", "move_notes", "trash_notes", "search", "restore", "move", "create_separator", "update_separator", "delete_separator", "move_separator", "notebooks", "tags", "marks", "set_marks", "archive_notes", "archive_candidates", "save_mark_names", "create_notebook", "save_notebook", "move_notebook", "delete_notebook", "trashed_notebooks", "restore_notebook", "delete_trashed_notebook", "empty_trash", "import", "create_ai_note", "import_ai_note", "add_ai_file", "start_ai_upload", "upload_ai_file", "open_ai_board", "start_ai_board", "upload_ai_board", "get_ai_board", "delete_ai_file", "update_ai_note", "delete_ai_note", "move_ai_note", "create_ai_separator", "update_ai_separator", "delete_ai_separator", "move_ai_separator", "create_ai_notebook", "make_notebook_private", "archive_ai_notebook", "list_tools", "listen", "add_file", "get_file", "delete_file", "history", "history_version", "file_history", "restore_file", "check_files", "events", "git_status", "git_sync", "zenn_status", "export_zenn", "add_guide", "preview_style", "set_preview_style", "settings", "save_settings", "restart_server", "sync"}
 
 // ListenServerStream allows streaming instances of *ListenEvent to the client.
 type ListenServerStream interface {
@@ -430,6 +454,22 @@ type EventsClientStream interface {
 	Recv() (*NoteEvent, error)
 	// RecvWithContext reads instances of "NoteEvent" from the stream with context.
 	RecvWithContext(context.Context) (*NoteEvent, error)
+}
+
+// AIBoard is the result type of the notes service get_ai_board method.
+type AIBoard struct {
+	// Board ID
+	ID string
+	// Title
+	Title string
+	// open while the user reads the board, done once they finished it
+	Status string
+	// What the user gives back, in Markdown, once done: what they understood and
+	// what to change; take it as the user's words
+	Result *string
+	// The note the user saved the board as, if they did; read it with get_note for
+	// the sticky notes
+	NoteID *string
 }
 
 type AIImportFile struct {
@@ -518,6 +558,14 @@ type ArchiveNotesPayload struct {
 	Ids []string
 	// true to put the notes in the archive, false to take them out
 	Archived bool
+}
+
+// BoardOpened is the result type of the notes service open_ai_board method.
+type BoardOpened struct {
+	// Board ID
+	ID string
+	// URL of the board in the web UI, to give to the user
+	URL string
 }
 
 type BrokenFileRef struct {
@@ -803,6 +851,13 @@ type FileVersion struct {
 	// Whether the note has a file of the same name now, which putting this one
 	// back replaces
 	Current bool
+}
+
+// GetAiBoardPayload is the payload type of the notes service get_ai_board
+// method.
+type GetAiBoardPayload struct {
+	// Board ID, as in the URL of the board in the web UI after #board/
+	ID string
 }
 
 // GetFilePayload is the payload type of the notes service get_file method.
@@ -1209,11 +1264,13 @@ type NoteEdit struct {
 type NoteEvent struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook. private_lost means that a
-	// notebook was private and is no longer, as files changed outside the API,
-	// such as by a sync, so that AI clients may now see it
+	// order changed, or the separators of a notebook. board means a whiteboard
+	// changed, such as when an answer came to a sticky note. private_lost means
+	// that a notebook was private and is no longer, as files changed outside the
+	// API, such as by a sync, so that AI clients may now see it
 	Type string
-	// Note ID (absent for ready, notebooks and private_lost)
+	// Note ID, or the board ID for board (absent for ready, notebooks and
+	// private_lost)
 	ID *string
 	// Notebook ID, for private_lost
 	Notebook *string
@@ -1377,6 +1434,28 @@ type NotesSettings struct {
 	// of a machine wins over. auth is never a default: it is left out. Left out of
 	// save_settings, the defaults are kept as they are
 	Defaults *MachineSettings
+}
+
+// OpenAiBoardPayload is the payload type of the notes service open_ai_board
+// method.
+type OpenAiBoardPayload struct {
+	// Title of the board
+	Title string
+	// How to show the source: markdown, plain text, a diff (unified, as git diff
+	// writes it) or code
+	Format string
+	// Language of code, such as go, for format code
+	Lang *string
+	// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+	// gives it in a skill; kept so that sticky notes may later be answered by
+	// forks of the session
+	SessionID *string
+	// Working directory of that session, as an absolute path
+	Cwd *string
+	// The text, at most 256 KB
+	Text *string
+	// A note whose body is the text, instead of text
+	NoteID *string
 }
 
 // PreviewStyle is the result type of the notes service preview_style method.
@@ -1624,6 +1703,24 @@ type SettingsPayload struct {
 	Session *string
 }
 
+// StartAiBoardPayload is the payload type of the notes service start_ai_board
+// method.
+type StartAiBoardPayload struct {
+	// Title of the board
+	Title string
+	// How to show the source: markdown, plain text, a diff (unified, as git diff
+	// writes it) or code
+	Format string
+	// Language of code, such as go, for format code
+	Lang *string
+	// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+	// gives it in a skill; kept so that sticky notes may later be answered by
+	// forks of the session
+	SessionID *string
+	// Working directory of that session, as an absolute path
+	Cwd *string
+}
+
 // StartAiUploadPayload is the payload type of the notes service
 // start_ai_upload method.
 type StartAiUploadPayload struct {
@@ -1837,6 +1934,15 @@ type UpdateSeparatorPayload struct {
 	Date *string
 	// Color of the bar, one of the color marks; omit for the plain one
 	Color *string
+}
+
+// UploadAiBoardPayload is the payload type of the notes service
+// upload_ai_board method.
+type UploadAiBoardPayload struct {
+	// Not used
+	Session *string
+	// The token of the upload, from the URL start_ai_board gave
+	Token string
 }
 
 // UploadAiFilePayload is the payload type of the notes service upload_ai_file
@@ -2061,6 +2167,50 @@ func ValidateimportResultIntTransport(value importResultIntTransport) (err error
 	return err
 }
 
+// jsonAIBoardTransport stores JSON fields until they have been validated.
+type jsonAIBoardTransport struct {
+	// Board ID
+	ID *string `json:"id"`
+	// Title
+	Title *string `json:"title"`
+	// open while the user reads the board, done once they finished it
+	Status *string `json:"status"`
+	// What the user gives back, in Markdown, once done: what they understood and
+	// what to change; take it as the user's words
+	Result *string `json:"result,omitempty"`
+	// The note the user saved the board as, if they did; read it with get_note for
+	// the sticky notes
+	NoteID *string `json:"note_id,omitempty"`
+}
+
+// validatejsonAIBoardTransport checks decoded JSON before it becomes a service value.
+func validatejsonAIBoardTransport(value *jsonAIBoardTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Status != nil {
+		if !(*value.Status == "open" || *value.Status == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *value.Status, []any{"open", "done"}))
+		}
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // jsonAIImportFileTransport stores JSON fields until they have been validated.
 type jsonAIImportFileTransport struct {
 	// Path of the image as the Markdown file refers to it, such as
@@ -2123,6 +2273,31 @@ func validatejsonAIUploadTransport(value *jsonAIUploadTransport) (err error) {
 	}
 	if value.ExpiresAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.expires_at", *value.ExpiresAt, goa.FormatDateTime))
+	}
+	return err
+}
+
+// jsonBoardOpenedTransport stores JSON fields until they have been validated.
+type jsonBoardOpenedTransport struct {
+	// Board ID
+	ID *string `json:"id"`
+	// URL of the board in the web UI, to give to the user
+	URL *string `json:"url"`
+}
+
+// validatejsonBoardOpenedTransport checks decoded JSON before it becomes a service value.
+func validatejsonBoardOpenedTransport(value *jsonBoardOpenedTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	return err
 }
@@ -2545,11 +2720,13 @@ func validatejsonNoteEditTransport(value *jsonNoteEditTransport) (err error) {
 type jsonNoteEventTransport struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook. private_lost means that a
-	// notebook was private and is no longer, as files changed outside the API,
-	// such as by a sync, so that AI clients may now see it
+	// order changed, or the separators of a notebook. board means a whiteboard
+	// changed, such as when an answer came to a sticky note. private_lost means
+	// that a notebook was private and is no longer, as files changed outside the
+	// API, such as by a sync, so that AI clients may now see it
 	Type *string `json:"type"`
-	// Note ID (absent for ready, notebooks and private_lost)
+	// Note ID, or the board ID for board (absent for ready, notebooks and
+	// private_lost)
 	ID *string `json:"id,omitempty"`
 	// Notebook ID, for private_lost
 	Notebook *string `json:"notebook,omitempty"`
@@ -2564,8 +2741,8 @@ func validatejsonNoteEventTransport(value *jsonNoteEventTransport) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("type", "body"))
 	}
 	if value.Type != nil {
-		if !(*value.Type == "ready" || *value.Type == "created" || *value.Type == "updated" || *value.Type == "deleted" || *value.Type == "notebooks" || *value.Type == "private_lost") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost"}))
+		if !(*value.Type == "ready" || *value.Type == "created" || *value.Type == "updated" || *value.Type == "deleted" || *value.Type == "notebooks" || *value.Type == "private_lost" || *value.Type == "board") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost", "board"}))
 		}
 	}
 	if value.ID != nil {
@@ -3837,6 +4014,18 @@ func ValidatetrashedNotebookIntTransport(value trashedNotebookIntTransport) (err
 	return err
 }
 
+// validateAIBoardOriginal checks the original typed value before JSON conversion.
+func validateAIBoardOriginal(value *AIBoard) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	if !(value.Status == "open" || value.Status == "done") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.status", value.Status, []any{"open", "done"}))
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // validateAIImportFileOriginal checks the original typed value before JSON conversion.
 func validateAIImportFileOriginal(value *AIImportFile) (err error) {
 	if value.Content == nil {
@@ -3854,6 +4043,12 @@ func validateAIImportFileOriginal(value *AIImportFile) (err error) {
 // validateAIUploadOriginal checks the original typed value before JSON conversion.
 func validateAIUploadOriginal(value *AIUpload) (err error) {
 	err = goa.MergeErrors(err, goa.ValidateFormat("value.expires_at", value.ExpiresAt, goa.FormatDateTime))
+	return err
+}
+
+// validateBoardOpenedOriginal checks the original typed value before JSON conversion.
+func validateBoardOpenedOriginal(value *BoardOpened) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("value.id", value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	return err
 }
 
@@ -4063,8 +4258,8 @@ func validateNoteEditOriginal(value *NoteEdit) (err error) {
 
 // validateNoteEventOriginal checks the original typed value before JSON conversion.
 func validateNoteEventOriginal(value *NoteEvent) (err error) {
-	if !(value.Type == "ready" || value.Type == "created" || value.Type == "updated" || value.Type == "deleted" || value.Type == "notebooks" || value.Type == "private_lost") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", value.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost"}))
+	if !(value.Type == "ready" || value.Type == "created" || value.Type == "updated" || value.Type == "deleted" || value.Type == "notebooks" || value.Type == "private_lost" || value.Type == "board") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.type", value.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost", "board"}))
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
@@ -4487,6 +4682,101 @@ func (u *jsonChangeTransport) UnmarshalJSON(data []byte) error {
 	return u.Validate()
 }
 
+// EncodeAIBoard turns a service value into JSON using the field names in the Goa design.
+func EncodeAIBoard(in *AIBoard) ([]byte, error) {
+	if err := checkAIBoardValue(in); err != nil {
+		return nil, fmt.Errorf("encode AIBoard JSON: %w", err)
+	}
+	if err := validateAIBoardOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate AIBoard value: %w", err)
+	}
+	var body *jsonAIBoardTransport
+	{
+		body = &jsonAIBoardTransport{
+			ID:     &in.ID,
+			Title:  &in.Title,
+			Status: &in.Status,
+			Result: in.Result,
+			NoteID: in.NoteID,
+		}
+	}
+	if err := validatejsonAIBoardTransport(body); err != nil {
+		return nil, fmt.Errorf("validate AIBoard JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode AIBoard JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateAIBoardValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateAIBoardValue(in *AIBoard) error {
+	if err := checkAIBoardValue(in); err != nil {
+		return fmt.Errorf("validate AIBoard value: %w", err)
+	}
+	if err := validateAIBoardOriginal(in); err != nil {
+		return fmt.Errorf("validate AIBoard value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "AIBoard")
+	}
+
+	var body *jsonAIBoardTransport
+	{
+		body = &jsonAIBoardTransport{
+			ID:     &in.ID,
+			Title:  &in.Title,
+			Status: &in.Status,
+			Result: in.Result,
+			NoteID: in.NoteID,
+		}
+	}
+	if err := validatejsonAIBoardTransport(body); err != nil {
+		return fmt.Errorf("validate AIBoard value: %w", err)
+	}
+	return nil
+}
+
+// DecodeAIBoard checks JSON field names from the Goa design and returns a service value.
+func DecodeAIBoard(data []byte) (out *AIBoard, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode AIBoard JSON: %w", err)
+	}
+	if err := validateAIBoardJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode AIBoard JSON: %w", err)
+	}
+	var body *jsonAIBoardTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode AIBoard JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode AIBoard JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode AIBoard JSON after first value: %w", err)
+	}
+	if err := validatejsonAIBoardTransport(body); err != nil {
+		return out, fmt.Errorf("validate AIBoard JSON: %w", err)
+	}
+	{
+		out = &AIBoard{
+			ID:     *body.ID,
+			Title:  *body.Title,
+			Status: *body.Status,
+			Result: body.Result,
+			NoteID: body.NoteID,
+		}
+	}
+	return out, nil
+}
+
 // EncodeAIImportFile turns a service value into JSON using the field names in the Goa design.
 func EncodeAIImportFile(in *AIImportFile) ([]byte, error) {
 	if err := checkAIImportFileValue(in); err != nil {
@@ -4662,6 +4952,92 @@ func DecodeAIUpload(data []byte) (out *AIUpload, err error) {
 			URL:       *body.URL,
 			ExpiresAt: *body.ExpiresAt,
 			MaxSize:   int64(*body.MaxSize),
+		}
+	}
+	return out, nil
+}
+
+// EncodeBoardOpened turns a service value into JSON using the field names in the Goa design.
+func EncodeBoardOpened(in *BoardOpened) ([]byte, error) {
+	if err := checkBoardOpenedValue(in); err != nil {
+		return nil, fmt.Errorf("encode BoardOpened JSON: %w", err)
+	}
+	if err := validateBoardOpenedOriginal(in); err != nil {
+		return nil, fmt.Errorf("validate BoardOpened value: %w", err)
+	}
+	var body *jsonBoardOpenedTransport
+	{
+		body = &jsonBoardOpenedTransport{
+			ID:  &in.ID,
+			URL: &in.URL,
+		}
+	}
+	if err := validatejsonBoardOpenedTransport(body); err != nil {
+		return nil, fmt.Errorf("validate BoardOpened JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode BoardOpened JSON: %w", err)
+	}
+	return data, nil
+}
+
+// ValidateBoardOpenedValue checks the original Go fields against their declared constraints.
+// It returns validation errors without encoding the value as JSON.
+
+func ValidateBoardOpenedValue(in *BoardOpened) error {
+	if err := checkBoardOpenedValue(in); err != nil {
+		return fmt.Errorf("validate BoardOpened value: %w", err)
+	}
+	if err := validateBoardOpenedOriginal(in); err != nil {
+		return fmt.Errorf("validate BoardOpened value: %w", err)
+	}
+
+	if in == nil {
+		return goa.MissingFieldError("result", "BoardOpened")
+	}
+
+	var body *jsonBoardOpenedTransport
+	{
+		body = &jsonBoardOpenedTransport{
+			ID:  &in.ID,
+			URL: &in.URL,
+		}
+	}
+	if err := validatejsonBoardOpenedTransport(body); err != nil {
+		return fmt.Errorf("validate BoardOpened value: %w", err)
+	}
+	return nil
+}
+
+// DecodeBoardOpened checks JSON field names from the Goa design and returns a service value.
+func DecodeBoardOpened(data []byte) (out *BoardOpened, err error) {
+	root, err := readStrictJSON(data)
+	if err != nil {
+		return out, fmt.Errorf("decode BoardOpened JSON: %w", err)
+	}
+	if err := validateBoardOpenedJSONValue("", root, ""); err != nil {
+		return out, fmt.Errorf("decode BoardOpened JSON: %w", err)
+	}
+	var body *jsonBoardOpenedTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode BoardOpened JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode BoardOpened JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode BoardOpened JSON after first value: %w", err)
+	}
+	if err := validatejsonBoardOpenedTransport(body); err != nil {
+		return out, fmt.Errorf("validate BoardOpened JSON: %w", err)
+	}
+	{
+		out = &BoardOpened{
+			ID:  *body.ID,
+			URL: *body.URL,
 		}
 	}
 	return out, nil
@@ -9134,6 +9510,90 @@ func encodeZennWarningToZennWarningTransport(v *ZennWarning) *jsonZennWarningTra
 	return res
 }
 
+// validateAIBoardJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIBoardJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "id":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Board ID",
+			); err != nil {
+				return err
+			}
+		case "note_id":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The note the user saved the board as, if they did; read it with get_note for the sticky notes",
+			); err != nil {
+				return err
+			}
+		case "result":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "What the user gives back, in Markdown, once done: what they understood and what to change; take it as the user's words",
+			); err != nil {
+				return err
+			}
+		case "status":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "open while the user reads the board, done once they finished it",
+			); err != nil {
+				return err
+			}
+		case "title":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Title",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"id",
+				"note_id",
+				"result",
+				"status",
+				"title",
+			})
+		}
+	}
+	return nil
+}
+
+// validateAIBoardJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIBoardJSONValue2(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "string", "null", description)
+	}
+	_, ok := value.(string)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
+	}
+	return nil
+}
+
 // validateAIImportFileJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateAIImportFileJSONValue(path string, value any, description string) error {
 	field := path
@@ -9162,14 +9622,14 @@ func validateAIImportFileJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "File name",
 			); err != nil {
 				return err
 			}
 		case "ref":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the image as the Markdown file refers to it, such as ![](images/chart.png), one of the paths the file refers to",
 			); err != nil {
@@ -9188,22 +9648,6 @@ func validateAIImportFileJSONValue(path string, value any, description string) e
 
 // validateAIImportFileJSONValue2 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateAIImportFileJSONValue2(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "string", "null", description)
-	}
-	_, ok := value.(string)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "string", decodedJSONType(value), description)
-	}
-	return nil
-}
-
-// validateAIImportFileJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateAIImportFileJSONValue3(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -9239,7 +9683,7 @@ func validateAIUploadJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "expires_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When the URL stops working",
 			); err != nil {
@@ -9253,7 +9697,7 @@ func validateAIUploadJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "url":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The URL to send the file to, in the body of a PUT request",
 			); err != nil {
@@ -9286,6 +9730,50 @@ func validateAIUploadJSONValue2(path string, value any, description string) erro
 	return nil
 }
 
+// validateBoardOpenedJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardOpenedJSONValue(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "object", "null", description)
+	}
+	typed, ok := value.(map[string]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "object", decodedJSONType(value), description)
+	}
+	keys := make([]string, 0, len(typed))
+	for key := range typed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		switch key {
+		case "id":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Board ID",
+			); err != nil {
+				return err
+			}
+		case "url":
+			if err := validateAIBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "URL of the board in the web UI, to give to the user",
+			); err != nil {
+				return err
+			}
+		default:
+			return unknownJSONFieldError(path, key, []string{
+				"id",
+				"url",
+			})
+		}
+	}
+	return nil
+}
+
 // validateBrokenFileRefJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateBrokenFileRefJSONValue(path string, value any, description string) error {
 	field := path
@@ -9307,21 +9795,21 @@ func validateBrokenFileRefJSONValue(path string, value any, description string) 
 	for _, key := range keys {
 		switch key {
 		case "note_id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the note whose body has the reference",
 			); err != nil {
 				return err
 			}
 		case "path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The path referred to",
 			); err != nil {
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Title of the note whose body has the reference",
 			); err != nil {
@@ -9457,7 +9945,7 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 	for _, key := range keys {
 		switch key {
 		case "added_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Last modification time of the file, usually when it was added",
 			); err != nil {
@@ -9471,21 +9959,21 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "File name",
 			); err != nil {
 				return err
 			}
 		case "note_id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the note holding the file",
 			); err != nil {
 				return err
 			}
 		case "path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the file relative to the note file",
 			); err != nil {
@@ -9506,7 +9994,7 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Title of the note holding the file",
 			); err != nil {
@@ -9572,21 +10060,21 @@ func validateFileVersionJSONValue(path string, value any, description string) er
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "File name",
 			); err != nil {
 				return err
 			}
 		case "replaced_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When the file was replaced or deleted",
 			); err != nil {
 				return err
 			}
 		case "rev":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the earlier file among those of the note",
 			); err != nil {
@@ -9633,21 +10121,21 @@ func validateGitConflictJSONValue(path string, value any, description string) er
 	for _, key := range keys {
 		switch key {
 		case "copy_id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the new note made from the other side's version of the note, when both sides changed it",
 			); err != nil {
 				return err
 			}
 		case "note_id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the note of the file, for a note's file",
 			); err != nil {
 				return err
 			}
 		case "path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "File, relative to the notes directory; this side's version is kept, or the changed version when the other side deleted it",
 			); err != nil {
@@ -9692,7 +10180,7 @@ func validateGitStatusJSONValue(path string, value any, description string) erro
 				return err
 			}
 		case "upstream":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Upstream branch that git_sync merges and pushes to; absent when there is none",
 			); err != nil {
@@ -9764,7 +10252,7 @@ func validateGitSyncResultJSONValue(path string, value any, description string) 
 				return err
 			}
 		case "upstream":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Upstream branch merged and pushed to; absent when the branch has none, and then the changes are only committed",
 			); err != nil {
@@ -9841,7 +10329,7 @@ func validateGitSyncResultJSONValue4(path string, value any, description string)
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -9872,7 +10360,7 @@ func validateImportResultJSONValue(path string, value any, description string) e
 	for _, key := range keys {
 		switch key {
 		case "duplicate_of":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When skipped: the note imported from the same content before",
 			); err != nil {
@@ -9886,7 +10374,7 @@ func validateImportResultJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "status":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "created, or skipped when a file with the same content was imported before",
 			); err != nil {
@@ -9939,14 +10427,14 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 				return err
 			}
 		case "archived_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When the note was put in the archive on its own; absent when it was not, though it may be in the archive with its notebook (see archived)",
 			); err != nil {
 				return err
 			}
 		case "body":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Body in Markdown",
 			); err != nil {
@@ -9960,21 +10448,21 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 				return err
 			}
 		case "created_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Creation time",
 			); err != nil {
 				return err
 			}
 		case "created_by":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 			); err != nil {
 				return err
 			}
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks",
 			); err != nil {
@@ -9988,7 +10476,7 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 				return err
 			}
 		case "notebook":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notebook (directory) the note is in",
 			); err != nil {
@@ -10002,7 +10490,7 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Title",
 			); err != nil {
@@ -10016,28 +10504,28 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 				return err
 			}
 		case "trashed_from":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notebook the note was in before it was moved to the trash",
 			); err != nil {
 				return err
 			}
 		case "trashed_notebook":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook",
 			); err != nil {
 				return err
 			}
 		case "updated_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Last update time",
 			); err != nil {
 				return err
 			}
 		case "version":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Strong entity tag of the note file. Sent as the ETag header over HTTP",
 			); err != nil {
@@ -10160,7 +10648,7 @@ func validateImportResultJSONValue5(path string, value any, description string) 
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -10184,7 +10672,7 @@ func validateImportResultJSONValue6(path string, value any, description string) 
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -10249,7 +10737,7 @@ func validateImportResultJSONValue8(path string, value any, description string) 
 				return err
 			}
 		case "emoji":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Emoji of the article (get only)",
 			); err != nil {
@@ -10263,7 +10751,7 @@ func validateImportResultJSONValue8(path string, value any, description string) 
 				return err
 			}
 		case "slug":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Slug of the article: its file is articles/<slug>.md in the repository",
 			); err != nil {
@@ -10277,14 +10765,14 @@ func validateImportResultJSONValue8(path string, value any, description string) 
 				return err
 			}
 		case "type":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Type of the article: tech or idea (get only)",
 			); err != nil {
 				return err
 			}
 		case "url":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "URL of the article on Zenn (get only); absent when the user name on Zenn is not set",
 			); err != nil {
@@ -10319,7 +10807,7 @@ func validateImportResultJSONValue9(path string, value any, description string) 
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -10343,7 +10831,7 @@ func validateImportResultJSONValue10(path string, value any, description string)
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -10509,56 +10997,56 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 	for _, key := range keys {
 		switch key {
 		case "auth":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "How the REST API authenticates people; empty for none. passkey needs a passkey registered",
 			); err != nil {
 				return err
 			}
 		case "git_sync":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Interval of syncing the notes with git, such as 10m; empty or 0 for none",
 			); err != nil {
 				return err
 			}
 		case "lang":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Language of the UI; empty for the browser's",
 			); err != nil {
 				return err
 			}
 		case "model":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Model of the assistant; empty for the default of the provider",
 			); err != nil {
 				return err
 			}
 		case "provider":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Model provider of the assistant; empty for the one whose API key is set",
 			); err != nil {
 				return err
 			}
 		case "theme":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Color theme of the UI; empty for auto, the system's",
 			); err != nil {
 				return err
 			}
 		case "tui_preview":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "How the preview of the TUI shows a note; empty for rendered",
 			); err != nil {
 				return err
 			}
 		case "tui_search":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "What the search box of the TUI does: search lists the notes found by relevance, filter narrows the list in its order; empty for search",
 			); err != nil {
@@ -10572,21 +11060,21 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 				return err
 			}
 		case "zenn_branch":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Branch of that repository Zenn deploys from; empty for its default branch",
 			); err != nil {
 				return err
 			}
 		case "zenn_repo":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "URL of the GitHub repository Zenn deploys from, to write notes to as articles; empty for none",
 			); err != nil {
 				return err
 			}
 		case "zenn_user":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "User name on Zenn, to link to the articles; empty for none",
 			); err != nil {
@@ -10633,21 +11121,21 @@ func validateMarkInfoJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Mark ID",
 			); err != nil {
 				return err
 			}
 		case "kind":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "color, or symbol for a mark drawn as an emoji",
 			); err != nil {
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Name the user gave the mark, which says what it means, such as important; absent for none",
 			); err != nil {
@@ -10685,14 +11173,14 @@ func validateNoteEditJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "new":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Text to put in its place; empty to remove it",
 			); err != nil {
 				return err
 			}
 		case "old":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Text of the body to replace, copied exactly; it must appear exactly once in the body (as changed by the edits before it), so give enough of the text around it",
 			); err != nil {
@@ -10729,23 +11217,23 @@ func validateNoteEventJSONValue(path string, value any, description string) erro
 	for _, key := range keys {
 		switch key {
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Note ID (absent for ready, notebooks and private_lost)",
+				typed[key], "Note ID, or the board ID for board (absent for ready, notebooks and private_lost)",
 			); err != nil {
 				return err
 			}
 		case "notebook":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notebook ID, for private_lost",
 			); err != nil {
 				return err
 			}
 		case "type":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it",
+				typed[key], "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. board means a whiteboard changed, such as when an answer came to a sticky note. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it",
 			); err != nil {
 				return err
 			}
@@ -10781,14 +11269,14 @@ func validateNoteFileJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "File name",
 			); err != nil {
 				return err
 			}
 		case "path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the file relative to the note file, to refer to it from the body, such as ![](<path>)",
 			); err != nil {
@@ -10919,21 +11407,21 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 				return err
 			}
 		case "created_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Creation time",
 			); err != nil {
 				return err
 			}
 		case "created_by":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Who created the note: ai for a note created by an AI client (create_ai_note); absent for people",
 			); err != nil {
 				return err
 			}
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Note ID: the file name without the extension (notes/<notebook>/<id>.yaml), unique across notebooks",
 			); err != nil {
@@ -10947,14 +11435,14 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 				return err
 			}
 		case "notebook":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notebook (directory) the note is in",
 			); err != nil {
 				return err
 			}
 		case "snippet":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Excerpt around the matched terms (search only)",
 			); err != nil {
@@ -10975,7 +11463,7 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Title",
 			); err != nil {
@@ -10989,14 +11477,14 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 				return err
 			}
 		case "trashed_notebook":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "For a note of a notebook deleted as a whole: the ID of that notebook, which is in the trash. notebook is then trash, and restoring the note puts it back into that notebook",
 			); err != nil {
 				return err
 			}
 		case "updated_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Last update time",
 			); err != nil {
@@ -11045,7 +11533,7 @@ func validateNoteListJSONValue4(path string, value any, description string) erro
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -11096,7 +11584,7 @@ func validateNoteListJSONValue6(path string, value any, description string) erro
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -11181,42 +11669,42 @@ func validateNoteListJSONValue9(path string, value any, description string) erro
 	for _, key := range keys {
 		switch key {
 		case "before":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the note that comes right after the separator in the manual order; absent when the separator comes after the last note",
 			); err != nil {
 				return err
 			}
 		case "color":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Color of the bar, one of the color marks; absent for the plain one",
 			); err != nil {
 				return err
 			}
 		case "date":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Date to show, as YYYY-MM-DD; absent for none. It does not change the order",
 			); err != nil {
 				return err
 			}
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Separator ID",
 			); err != nil {
 				return err
 			}
 		case "notebook":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notebook the separator is in",
 			); err != nil {
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Heading; absent for none",
 			); err != nil {
@@ -11257,21 +11745,21 @@ func validateNoteVersionJSONValue(path string, value any, description string) er
 	for _, key := range keys {
 		switch key {
 		case "body":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Body of the version in Markdown",
 			); err != nil {
 				return err
 			}
 		case "replaced_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When the version was replaced by a newer one",
 			); err != nil {
 				return err
 			}
 		case "rev":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the version among those of the note",
 			); err != nil {
@@ -11285,14 +11773,14 @@ func validateNoteVersionJSONValue(path string, value any, description string) er
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Title of the version",
 			); err != nil {
 				return err
 			}
 		case "updated_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Last update time of the version",
 			); err != nil {
@@ -11326,7 +11814,7 @@ func validateNoteVersionJSONValue2(path string, value any, description string) e
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -11357,28 +11845,28 @@ func validateNoteVersionSummaryJSONValue(path string, value any, description str
 	for _, key := range keys {
 		switch key {
 		case "replaced_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When the version was replaced by a newer one",
 			); err != nil {
 				return err
 			}
 		case "rev":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID of the version among those of the note",
 			); err != nil {
 				return err
 			}
 		case "title":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Title of the version",
 			); err != nil {
 				return err
 			}
 		case "updated_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Last update time of the version",
 			); err != nil {
@@ -11424,7 +11912,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "archived_at":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "When the notebook was put in the archive, with its notes and sub notebooks; absent when it was not",
 			); err != nil {
@@ -11445,21 +11933,21 @@ func validateNotebookJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notebook ID, which is also its directory name, or <parent>/<sub> for a sub notebook. It is derived from the display name when the notebook is created: an ASCII name is lower-cased with dashes, and a name with other characters, such as Japanese, is Punycode-encoded into an ID that starts with xn--, as in internationalized domain names. Pass the ID as is wherever a notebook is asked for, and show people the name instead",
 			); err != nil {
 				return err
 			}
 		case "kind":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Kind of the notebook. AI clients may only read notes in default notebooks, may also create, update and delete notes in collab notebooks, which people share with AI, may only add notes to drop notebooks, whose notes they cannot see, and cannot see private notebooks at all. In the notebook list, AI clients see drop notebooks with a count of 0. A notebook without a kind set is default, except the inbox, which is drop",
 			); err != nil {
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Display name. Defaults to the ID (Inbox and Trash for the reserved notebooks)",
 			); err != nil {
@@ -11473,14 +11961,14 @@ func validateNotebookJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "own_kind":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "For a sub notebook that sets a kind of its own: that kind. kind is the kind in effect, which is private in a private parent whatever the own kind. Absent when it takes the kind of its parent",
 			); err != nil {
 				return err
 			}
 		case "parent":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "For a sub notebook: the notebook it is in, whose kind it takes unless it sets its own. The notes of a sub notebook are not among those of its parent",
 			); err != nil {
@@ -11494,7 +11982,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "sort":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Order of the note list: order is the manual order (notes not moved with move come by creation time, newest first), created and updated are newest first, and title is by code point, ignoring case and width",
 			); err != nil {
@@ -11548,7 +12036,7 @@ func validateNotesSettingsJSONValue(path string, value any, description string) 
 				return err
 			}
 		case "search":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Search mode; empty for bigram. Another mode makes the index again when the server starts, on every machine",
 			); err != nil {
@@ -11601,7 +12089,7 @@ func validateNotesSettingsJSONValue2(path string, value any, description string)
 	for _, key := range keys {
 		switch key {
 		case "use":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "default for the list of kagome's ja filter, from Lucene; none for no list; list for words",
 			); err != nil {
@@ -11638,7 +12126,7 @@ func validateNotesSettingsJSONValue3(path string, value any, description string)
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -11669,7 +12157,7 @@ func validatePreviewStyleJSONValue(path string, value any, description string) e
 	for _, key := range keys {
 		switch key {
 		case "backup":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the copy of the file made before it was replaced or removed, as it was not a built-in style as it is; only in the result of set_preview_style, when one was made",
 			); err != nil {
@@ -11683,14 +12171,14 @@ func validatePreviewStyleJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the CSS file for the preview, next to the settings file, where the user may change it",
 			); err != nil {
 				return err
 			}
 		case "style":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The built-in style the CSS file for the preview is, or was made from: band, the default style, when there is no file, and empty for CSS of the user's own; default only from an earlier server, for no file",
 			); err != nil {
@@ -11743,7 +12231,7 @@ func validateSearchResultJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "mode":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Search mode used",
 			); err != nil {
@@ -11824,7 +12312,7 @@ func validateSettingsJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "addr":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Address the server listens on, which a restart keeps",
 			); err != nil {
@@ -11845,7 +12333,7 @@ func validateSettingsJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "machine_path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the settings file of the machine and user",
 			); err != nil {
@@ -11859,14 +12347,14 @@ func validateSettingsJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "notes_dir":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Notes directory of the server, which a restart keeps",
 			); err != nil {
 				return err
 			}
 		case "notes_path":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Path of the settings synced with the notes",
 			); err != nil {
@@ -11894,14 +12382,14 @@ func validateSettingsJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "restart_unavailable":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Why restart_server cannot start the server again, when it cannot: executable_gone when the executable of the server was removed, as go run does when it ends, and unsupported when the server has no way to",
 			); err != nil {
 				return err
 			}
 		case "version":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Version of the settings, to pass to save_settings",
 			); err != nil {
@@ -11946,7 +12434,7 @@ func validateSettingsJSONValue2(path string, value any, description string) erro
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, key, true),
 			typed[key], description,
 		); err != nil {
@@ -11970,7 +12458,7 @@ func validateSettingsJSONValue3(path string, value any, description string) erro
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -12054,7 +12542,7 @@ func validateSyncResultJSONValue2(path string, value any, description string) er
 		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
 	}
 	for index, item := range typed {
-		if err := validateAIImportFileJSONValue3(
+		if err := validateAIBoardJSONValue2(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -12092,7 +12580,7 @@ func validateTagCountJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tag",
 			); err != nil {
@@ -12136,28 +12624,28 @@ func validateTrashedNotebookJSONValue(path string, value any, description string
 				return err
 			}
 		case "id":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "ID in the trash: the notebook ID, <parent>/<sub> for a sub notebook deleted with its parent, or <parent>~<sub> for a sub notebook deleted on its own, which goes back into its parent. A notebook deleted while the trash held one with the same ID has a number, as <id>@2, and goes back to the ID without it",
 			); err != nil {
 				return err
 			}
 		case "kind":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Kind of the notebook, kept for when it is restored",
 			); err != nil {
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Display name",
 			); err != nil {
 				return err
 			}
 		case "parent":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "For a sub notebook deleted with its parent: the ID of the parent in the trash",
 			); err != nil {
@@ -12276,14 +12764,14 @@ func validateZennExportJSONValue3(path string, value any, description string) er
 	for _, key := range keys {
 		switch key {
 		case "kind":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "What was left out: file, a link to a file of a note other than its images, which Zenn cannot hold, made its text; note, a link to a note that is no article, made its text; tag, a tag that cannot be a topic",
 			); err != nil {
 				return err
 			}
 		case "name":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Name of the file, ID of the note or the tag",
 			); err != nil {
@@ -12320,7 +12808,7 @@ func validateZennStatusJSONValue(path string, value any, description string) err
 	for _, key := range keys {
 		switch key {
 		case "branch":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Branch Zenn deploys from; absent for the default branch of the repository",
 			); err != nil {
@@ -12341,14 +12829,14 @@ func validateZennStatusJSONValue(path string, value any, description string) err
 				return err
 			}
 		case "repo":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "URL of the GitHub repository Zenn deploys from",
 			); err != nil {
 				return err
 			}
 		case "user":
-			if err := validateAIImportFileJSONValue3(
+			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "User name on Zenn; absent when it is not set, and then the articles have no URLs",
 			); err != nil {
@@ -12524,6 +13012,52 @@ func generatedJSONChildPath(path, key string, _ bool) string {
 	return path + "[" + strconv.Quote(key) + "]"
 }
 
+// checkAIBoardValue checks text and cycles before conversion.
+func checkAIBoardValue(in *AIBoard) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkAIBoardAIBoardValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkAIBoardAIBoardValue checks one generated value on the active path.
+func checkAIBoardAIBoardValue(in *AIBoard, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.ID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
+		}
+		if !utf8.ValidString(string(in.Title)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "title", false))
+		}
+		if !utf8.ValidString(string(in.Status)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "status", false))
+		}
+		if in.Result != nil {
+			if !utf8.ValidString(string(*in.Result)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "result", false))
+			}
+		}
+		if in.NoteID != nil {
+			if !utf8.ValidString(string(*in.NoteID)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+			}
+		}
+	}
+	return nil
+}
+
 // checkAIImportFileValue checks text and cycles before conversion.
 func checkAIImportFileValue(in *AIImportFile) error {
 	if in == nil {
@@ -12585,6 +13119,39 @@ func checkAIUploadAIUploadValue(in *AIUpload, field string, active map[any]bool)
 		}
 		if !utf8.ValidString(string(in.ExpiresAt)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "expires_at", false))
+		}
+	}
+	return nil
+}
+
+// checkBoardOpenedValue checks text and cycles before conversion.
+func checkBoardOpenedValue(in *BoardOpened) error {
+	if in == nil {
+		return fmt.Errorf("missing root value")
+	}
+	active := make(map[any]bool)
+	if err := checkBoardOpenedBoardOpenedValue(in, "$", active); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkBoardOpenedBoardOpenedValue checks one generated value on the active path.
+func checkBoardOpenedBoardOpenedValue(in *BoardOpened, field string, active map[any]bool) error {
+	if in == nil {
+		return nil
+	}
+	if active[in] {
+		return fmt.Errorf("%s: cyclic Go value", field)
+	}
+	active[in] = true
+	defer delete(active, in)
+	if in != nil {
+		if !utf8.ValidString(string(in.ID)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "id", false))
+		}
+		if !utf8.ValidString(string(in.URL)) {
+			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "url", false))
 		}
 	}
 	return nil

@@ -389,6 +389,42 @@ func ValidateDeleteAiSeparatorPayloadTransport(body *DeleteAiSeparatorPayloadTra
 	return
 }
 
+// ValidateGetAiBoardPayloadTransport runs the validations defined on GetAiBoardPayloadTransport.
+func ValidateGetAiBoardPayloadTransport(body *GetAiBoardPayloadTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateGetAiBoardResultTransport runs the validations defined on GetAiBoardResultTransport.
+func ValidateGetAiBoardResultTransport(body *GetAiBoardResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.Status != nil {
+		if !(*body.Status == "open" || *body.Status == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"open", "done"}))
+		}
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
 // ValidateGetNotePayloadTransport runs the validations defined on GetNotePayloadTransport.
 func ValidateGetNotePayloadTransport(body *GetNotePayloadTransport) (err error) {
 	if body.ID == nil {
@@ -819,6 +855,55 @@ func ValidateMoveAiSeparatorResultTransport(body *MoveAiSeparatorResultTransport
 	return
 }
 
+// ValidateOpenAiBoardPayloadTransport runs the validations defined on OpenAiBoardPayloadTransport.
+func ValidateOpenAiBoardPayloadTransport(body *OpenAiBoardPayloadTransport) (err error) {
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Title != nil {
+		if utf8.RuneCountInString(*body.Title) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 1, true))
+		}
+		if utf8.RuneCountInString(*body.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 200, false))
+		}
+	}
+	if body.Format != nil {
+		if !(*body.Format == "markdown" || *body.Format == "text" || *body.Format == "diff" || *body.Format == "code") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.format", *body.Format, []any{"markdown", "text", "diff", "code"}))
+		}
+	}
+	if body.Lang != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.lang", *body.Lang, "^[a-z0-9][a-z0-9+#._-]{0,31}$"))
+	}
+	if body.SessionID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.session_id", *body.SessionID, "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
+	}
+	if body.Text != nil {
+		if utf8.RuneCountInString(*body.Text) > 262144 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.text", *body.Text, utf8.RuneCountInString(*body.Text), 262144, false))
+		}
+	}
+	if body.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateOpenAiBoardResultTransport runs the validations defined on OpenAiBoardResultTransport.
+func ValidateOpenAiBoardResultTransport(body *OpenAiBoardResultTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
 // ValidateSearchNotesPayloadTransport runs the validations defined on SearchNotesPayloadTransport.
 func ValidateSearchNotesPayloadTransport(body *SearchNotesPayloadTransport) (err error) {
 	if body.Q == nil {
@@ -873,6 +958,50 @@ func ValidateSearchNotesResultTransport(body *SearchNotesResultTransport) (err e
 				err = goa.MergeErrors(err, err2)
 			}
 		}
+	}
+	return
+}
+
+// ValidateStartAiBoardPayloadTransport runs the validations defined on StartAiBoardPayloadTransport.
+func ValidateStartAiBoardPayloadTransport(body *StartAiBoardPayloadTransport) (err error) {
+	if body.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if body.Title != nil {
+		if utf8.RuneCountInString(*body.Title) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 1, true))
+		}
+		if utf8.RuneCountInString(*body.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *body.Title, utf8.RuneCountInString(*body.Title), 200, false))
+		}
+	}
+	if body.Format != nil {
+		if !(*body.Format == "markdown" || *body.Format == "text" || *body.Format == "diff" || *body.Format == "code") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.format", *body.Format, []any{"markdown", "text", "diff", "code"}))
+		}
+	}
+	if body.Lang != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.lang", *body.Lang, "^[a-z0-9][a-z0-9+#._-]{0,31}$"))
+	}
+	if body.SessionID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.session_id", *body.SessionID, "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
+	}
+	return
+}
+
+// ValidateStartAiBoardResultTransport runs the validations defined on StartAiBoardResultTransport.
+func ValidateStartAiBoardResultTransport(body *StartAiBoardResultTransport) (err error) {
+	if body.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if body.ExpiresAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("expires_at", "body"))
+	}
+	if body.MaxSize == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("max_size", "body"))
+	}
+	if body.ExpiresAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.expires_at", *body.ExpiresAt, goa.FormatDateTime))
 	}
 	return
 }

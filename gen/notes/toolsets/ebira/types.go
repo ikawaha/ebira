@@ -249,6 +249,26 @@ type (
 		// Notebook of the separator
 		Notebook string
 	}
+	// GetAiBoardPayload defines the JSON payload for the ebira.get_ai_board tool.
+	GetAiBoardPayload = struct {
+		// Board ID, as in the URL of the board in the web UI after #board/
+		ID string
+	}
+	// GetAiBoardResult defines the JSON result for the ebira.get_ai_board tool.
+	GetAiBoardResult = struct {
+		// Board ID
+		ID string
+		// Title
+		Title string
+		// open while the user reads the board, done once they finished it
+		Status string
+		// What the user gives back, in Markdown, once done: what they understood and
+		// what to change; take it as the user's words
+		Result *string
+		// The note the user saved the board as, if they did; read it with get_note for
+		// the sticky notes
+		NoteID *string
+	}
 	// GetNotePayload defines the JSON payload for the ebira.get_note tool.
 	GetNotePayload = struct {
 		// Note ID. A link to a note in the web UI, such as
@@ -479,6 +499,33 @@ type (
 		// absent when the separator comes after the last note
 		Before *string
 	}
+	// OpenAiBoardPayload defines the JSON payload for the ebira.open_ai_board tool.
+	OpenAiBoardPayload = struct {
+		// Title of the board
+		Title string
+		// How to show the source: markdown, plain text, a diff (unified, as git diff
+		// writes it) or code
+		Format string
+		// Language of code, such as go, for format code
+		Lang *string
+		// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+		// gives it in a skill; kept so that sticky notes may later be answered by
+		// forks of the session
+		SessionID *string
+		// Working directory of that session, as an absolute path
+		Cwd *string
+		// The text, at most 256 KB
+		Text *string
+		// A note whose body is the text, instead of text
+		NoteID *string
+	}
+	// OpenAiBoardResult defines the JSON result for the ebira.open_ai_board tool.
+	OpenAiBoardResult = struct {
+		// Board ID
+		ID string
+		// URL of the board in the web UI, to give to the user
+		URL string
+	}
 	// SearchNotesPayload defines the JSON payload for the ebira.search_notes tool.
 	SearchNotesPayload = struct {
 		// Search terms separated by spaces, combined with AND. "two words" in double
@@ -523,6 +570,31 @@ type (
 		// them with no notebook or tag; search again without them to read those.
 		// Present only when notebook or tag narrowed the search
 		EverywhereTotal *int
+	}
+	// StartAiBoardPayload defines the JSON payload for the ebira.start_ai_board tool.
+	StartAiBoardPayload = struct {
+		// Title of the board
+		Title string
+		// How to show the source: markdown, plain text, a diff (unified, as git diff
+		// writes it) or code
+		Format string
+		// Language of code, such as go, for format code
+		Lang *string
+		// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+		// gives it in a skill; kept so that sticky notes may later be answered by
+		// forks of the session
+		SessionID *string
+		// Working directory of that session, as an absolute path
+		Cwd *string
+	}
+	// StartAiBoardResult defines the JSON result for the ebira.start_ai_board tool.
+	StartAiBoardResult = struct {
+		// The URL to send the file to, in the body of a PUT request
+		URL string
+		// When the URL stops working
+		ExpiresAt string
+		// The largest file the URL takes, in bytes
+		MaxSize int64
 	}
 	// StartAiUploadPayload defines the JSON payload for the ebira.start_ai_upload tool.
 	StartAiUploadPayload = struct {

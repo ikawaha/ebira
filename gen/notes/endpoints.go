@@ -52,6 +52,10 @@ type Endpoints struct {
 	AddAiFile             goa.Endpoint
 	StartAiUpload         goa.Endpoint
 	UploadAiFile          goa.Endpoint
+	OpenAiBoard           goa.Endpoint
+	StartAiBoard          goa.Endpoint
+	UploadAiBoard         goa.Endpoint
+	GetAiBoard            goa.Endpoint
 	DeleteAiFile          goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
@@ -101,6 +105,15 @@ type ImportRequestData struct {
 type UploadAiFileRequestData struct {
 	// Payload is the method payload.
 	Payload *UploadAiFilePayload
+	// Body streams the HTTP request body.
+	Body io.ReadCloser
+}
+
+// UploadAiBoardRequestData holds both the payload and the HTTP request body
+// reader of the "upload_ai_board" method.
+type UploadAiBoardRequestData struct {
+	// Payload is the method payload.
+	Payload *UploadAiBoardPayload
 	// Body streams the HTTP request body.
 	Body io.ReadCloser
 }
@@ -181,6 +194,10 @@ func NewEndpoints(s Service) *Endpoints {
 		AddAiFile:             NewAddAiFileEndpoint(s),
 		StartAiUpload:         NewStartAiUploadEndpoint(s),
 		UploadAiFile:          NewUploadAiFileEndpoint(s),
+		OpenAiBoard:           NewOpenAiBoardEndpoint(s),
+		StartAiBoard:          NewStartAiBoardEndpoint(s),
+		UploadAiBoard:         NewUploadAiBoardEndpoint(s),
+		GetAiBoard:            NewGetAiBoardEndpoint(s),
 		DeleteAiFile:          NewDeleteAiFileEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
@@ -254,6 +271,10 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.AddAiFile = m(e.AddAiFile)
 	e.StartAiUpload = m(e.StartAiUpload)
 	e.UploadAiFile = m(e.UploadAiFile)
+	e.OpenAiBoard = m(e.OpenAiBoard)
+	e.StartAiBoard = m(e.StartAiBoard)
+	e.UploadAiBoard = m(e.UploadAiBoard)
+	e.GetAiBoard = m(e.GetAiBoard)
 	e.DeleteAiFile = m(e.DeleteAiFile)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
@@ -1021,6 +1042,42 @@ func NewUploadAiFileEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		ep := req.(*UploadAiFileRequestData)
 		return s.UploadAiFile(ctx, ep.Payload, ep.Body)
+	}
+}
+
+// NewOpenAiBoardEndpoint returns an endpoint function that calls the method
+// "open_ai_board" of service "notes".
+func NewOpenAiBoardEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*OpenAiBoardPayload)
+		return s.OpenAiBoard(ctx, p)
+	}
+}
+
+// NewStartAiBoardEndpoint returns an endpoint function that calls the method
+// "start_ai_board" of service "notes".
+func NewStartAiBoardEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*StartAiBoardPayload)
+		return s.StartAiBoard(ctx, p)
+	}
+}
+
+// NewUploadAiBoardEndpoint returns an endpoint function that calls the method
+// "upload_ai_board" of service "notes".
+func NewUploadAiBoardEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*UploadAiBoardRequestData)
+		return s.UploadAiBoard(ctx, ep.Payload, ep.Body)
+	}
+}
+
+// NewGetAiBoardEndpoint returns an endpoint function that calls the method
+// "get_ai_board" of service "notes".
+func NewGetAiBoardEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*GetAiBoardPayload)
+		return s.GetAiBoard(ctx, p)
 	}
 }
 

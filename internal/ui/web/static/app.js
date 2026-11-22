@@ -31,6 +31,20 @@ const state = {
   subNotes: new Map(), // key of an opened sub notebook: its notes {notes, total, want, separators}
 };
 
+// The whiteboard shown, if any, in place of the note list and the preview
+// (see Whiteboards, below). It is here, before the code that reads it.
+const board = {
+  open: false, // whether the view is shown
+  id: null, // the board shown, or null for the list of boards
+  data: null, // the board shown, as GET /boards/{id} gives it
+  list: [], // the boards, as GET /boards gives them
+  assistant: null, // whether the assistant answers: {available, reason}
+  drafts: new Map(), // sticky note ID: the text being written in its box
+  compose: null, // the passage chosen for a new sticky note: {anchor, parent}
+  stale: false, // whether the board changed while a new sticky note was written
+  resize: null, // the ResizeObserver that lays the sticky notes out again
+};
+
 // loadExpanded reads the sub notebooks opened in the note list, kept per
 // browser.
 function loadExpanded() {
@@ -251,6 +265,7 @@ const archiveCount = () => state.notebooks.reduce((a, n) => a + archivedIn(n), 0
 
 
 function selectArchive() {
+  leaveBoard();
   if (state.archive && !searching()) return;
   state.archive = true;
   state.cell = null;
@@ -980,6 +995,7 @@ const KIND_SVG = {
   // Not a kind: the trash, which has none, shows a can in the notebook column.
   trash: ["M4 7h16", "M9.5 7V4.5h5V7", "M6.5 7l1 13h9l1-13", "M10 11v5.5", "M14 11v5.5"],
   // Nor is the archive, a box with a lid.
+  board: ["M5 4h14v10.5L13.5 20H5z", "M13.5 20v-5.5H19", "M8.5 8.5h7", "M8.5 12h4"],
   archive: ["rect:3.5,4.5,17,4,1", "M5 8.5v10A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-10", "M10 12.5h4"],
   // Not kinds either: a sub notebook in the note list, and the way back up.
   folder: ["M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"],
@@ -1220,7 +1236,7 @@ function renderNotebooks() {
   const ul = $("notebooks");
   ul.replaceChildren();
   const total = state.notebooks.filter((n) => n.id !== "trash" && !n.archived).reduce((a, n) => a + n.count, 0);
-  const all = el("li", !state.tag && !state.notebook && !state.archive ? "active" : "", el("span", "icon"), el("span", "name", t("all")), el("span", "count", String(total)));
+  const all = el("li", !state.tag && !state.notebook && !state.archive && !board.open ? "active" : "", el("span", "icon"), el("span", "name", t("all")), el("span", "count", String(total)));
   all.addEventListener("click", () => selectNotebook(null));
   ul.append(all);
   if (state.side === "tags") {
@@ -1239,7 +1255,7 @@ function renderNotebooks() {
     if (svg) icon.append(svg);
     if (svg && KINDS.includes(kind) && id !== "trash") icon.title = kind;
     li.append(icon, el("span", "name", name), el("span", "count", String(count)));
-    if (!state.tag && !state.archive && state.notebook === id) li.classList.add("active");
+    if (!state.tag && !state.archive && !board.open && state.notebook === id) li.classList.add("active");
     li.addEventListener("click", () => selectNotebook(id));
     li.addEventListener("contextmenu", (e) => {
       e.preventDefault();
@@ -1259,11 +1275,16 @@ function renderNotebooks() {
   };
   for (const nb of state.notebooks) {
     if (nb.parent || nb.archived) continue; // in the note list of its parent, or in the archive
-    if (nb.id === "trash" && (archiveCount() || archiveRoots().length || state.archive)) ul.append(archiveRow());
+    if (nb.id === "trash" && (board.list.length || board.open)) ul.append(boardRow());
+    if (nb.id === "trash" && (archiveCount() || archiveRoots().length || state.archive)) {
+      const row = archiveRow();
+      if (ul.querySelector("[data-boards]")) row.classList.remove("sep"); // one line above both
+      ul.append(row);
+    }
     // The notebooks in the trash are in its note list, as sub notebooks are
     // in their parent's; the trash counts their notes too.
     const count = nb.id === "trash" ? state.trashed.reduce((a, n) => a + n.count, nb.count) : withSubs(state.notebooks, nb);
-    const li = item(nb.id, nb.name, nb.kind, count, (nb.id === "trash" && !ul.querySelector("[data-archive]")) || nb.id === "inbox" ? "sep" : "");
+    const li = item(nb.id, nb.name, nb.kind, count, (nb.id === "trash" && !ul.querySelector("[data-archive], [data-boards]")) || nb.id === "inbox" ? "sep" : "");
     if (!nb.reserved) enableNotebookDrag(li, nb.id);
     if (nb.id === "trash") acceptNotebookTrash(li);
     ul.append(li);
@@ -1273,7 +1294,7 @@ function renderNotebooks() {
 // archiveRow returns the row of the archive in the left column, just above
 // the trash.
 function archiveRow() {
-  const li = el("li", "sep" + (state.archive ? " active" : ""), el("span", "icon", kindSVG("archive")), el("span", "name", t("archive")), el("span", "count", String(archiveCount())));
+  const li = el("li", "sep" + (state.archive && !board.open ? " active" : ""), el("span", "icon", kindSVG("archive")), el("span", "name", t("archive")), el("span", "count", String(archiveCount())));
   li.addEventListener("click", selectArchive);
   li.dataset.archive = "";
   acceptArchive(li);
@@ -1506,6 +1527,7 @@ async function moveNotebook(id, before, undoing) {
 // all). Sub notebooks and the notebooks in the trash open in cells of its
 // list (see showNotebook and showTrashed).
 function selectNotebook(id) {
+  leaveBoard();
   if (!state.tag && !state.archive && id === state.notebook) return;
   state.cell = null;
   state.tag = null;
@@ -1910,6 +1932,7 @@ $("notebook-new-form").addEventListener("submit", async (e) => {
 // selectTag lists the notes with tag in all notebooks but the trash, as
 // choosing a notebook does.
 function selectTag(tag) {
+  leaveBoard();
   if (state.side !== "tags") setSide("tags"); // show the tag chosen in the preview
   if (tag === state.tag) return;
   state.tag = tag;
@@ -2708,6 +2731,7 @@ function markSelected() {
 }
 
 function selectNote(id) {
+  leaveBoard();
   if (state.cell) {
     state.cell = null;
     markSelected();
@@ -2913,6 +2937,7 @@ async function loadNote() {
       button(t("deletePermanently"), deleteNote, { cls: "danger" }));
   } else {
     actions.append(iconButton("history", t("historyTitle"), openHistory));
+    if (n.body) actions.append(iconButton("board", t("boardOpenTitle"), () => openBoardFromNote(n)));
     if (zenn.configured) {
       const b = iconButton("zenn", t("zennTitle"), () => openZenn(n));
       if (n.zenn?.changed) b.append(zennDot());
@@ -4068,6 +4093,7 @@ function notePageURL(id) {
 // showNoteHash shows the URL of note id in the address bar, or none, without
 // adding to the history of the tab.
 function showNoteHash(id) {
+  if (board.open) return; // the address bar shows the board
   const hash = id ? "#note/" + encodeURIComponent(id) : "";
   if (location.hash !== hash) history.replaceState(null, "", location.pathname + location.search + hash);
 }
@@ -5834,21 +5860,29 @@ $("new-note").addEventListener("click", () => {
 // are part of the API version of the server (daemon.API): the page comes from
 // the server, which may be of another build than the app. Each one does what
 // the same key or button does, and nothing where that does nothing.
+// shownNote returns the note in the preview, or null while a whiteboard
+// hides it, so that the menus of the desktop app leave it alone.
+const shownNote = () => (board.open ? null : state.note);
+
 window.ebira = {
-  create: () => { if (leaveEditor()) startEdit(null); },
-  edit: () => { if (state.note && !state.editing) startEdit(state.note); },
+  create: () => {
+    if (!leaveEditor()) return;
+    leaveBoard(); // the editor is in the preview, under the board
+    startEdit(null);
+  },
+  edit: () => { if (shownNote() && !state.editing) startEdit(state.note); },
   save: () => { if (state.editing) saveNote(); },
   // leave closes the editor, asking first if it has unsaved changes, as before
   // the app quits; false when the user keeps editing.
   leave: () => leaveEditor(),
   // trash moves the note to the trash, or deletes it for good in the trash.
-  trash: () => { if (state.note && !state.editing) deleteNote(); },
-  restore: () => { if (!state.editing) restoreNote(); },
-  mark: () => { if (state.note && !state.editing && $("mark-open")) openMarkMenu(state.note, $("mark-open")); },
-  history: () => { if (state.note && !state.editing) openHistory(); },
-  copy: () => { if (state.note && !state.editing) copyNote(); },
-  copyLink: (markdown) => { if (state.note && !state.editing) copyLink(markdown); },
-  find: () => { if (state.note || state.editing) openFind(); },
+  trash: () => { if (shownNote() && !state.editing) deleteNote(); },
+  restore: () => { if (shownNote() && !state.editing) restoreNote(); },
+  mark: () => { if (shownNote() && !state.editing && $("mark-open")) openMarkMenu(state.note, $("mark-open")); },
+  history: () => { if (shownNote() && !state.editing) openHistory(); },
+  copy: () => { if (shownNote() && !state.editing) copyNote(); },
+  copyLink: (markdown) => { if (shownNote() && !state.editing) copyLink(markdown); },
+  find: () => { if (!board.open && (state.note || state.editing)) openFind(); },
   search: () => { $("q").focus(); $("q").select(); },
   previewStyle: () => openSettings("previewStyle"),
   // textSize makes the text of the body a size larger (1), smaller (-1), or
@@ -5871,12 +5905,12 @@ window.ebira = {
   // funnel.
   filter: () => $("filter-mode").click(),
   newNotebook: () => openNewNotebook(),
-  renameNotebook: () => { if (canRenameNotebook()) renameNotebook(state.notebook); },
+  renameNotebook: () => { if (!board.open && canRenameNotebook()) renameNotebook(state.notebook); },
   // archive puts the note shown in the archive, or takes it out, as the box
   // button of the preview; archiveNotebook the notebook shown, as its menu.
-  archive: () => { if (canArchiveNote()) archiveNotes([state.note.id], !state.note.archived_at); },
+  archive: () => { if (!board.open && canArchiveNote()) archiveNotes([state.note.id], !state.note.archived_at); },
   archiveNotebook: () => {
-    const nb = archivableNotebook();
+    const nb = board.open ? null : archivableNotebook();
     if (nb) archiveNotebook(nb.id, !nb.archived_at);
   },
   archiveCandidates: () => openArchiveCandidates(),
@@ -6192,11 +6226,14 @@ let toldState = "";
 // git, and whether the note and the notebook shown can be put in the archive
 // or taken out, and which.
 function tellState() {
-  const nb = archivableNotebook();
+  // A whiteboard hides the note and the notebook shown: the menus of the app
+  // for them are off meanwhile.
+  const on = !board.open;
+  const nb = on ? archivableNotebook() : null;
   const s = JSON.stringify({
-    note: !!state.note, trash: state.note?.notebook === "trash", editing: !!state.editing,
-    notebook: canRenameNotebook(), trashFull: trashFull(), git: !$("git-sync-open").hidden,
-    archivable: canArchiveNote(), archived: !!state.note?.archived_at,
+    note: on && !!state.note, trash: on && state.note?.notebook === "trash", editing: !!state.editing,
+    notebook: on && canRenameNotebook(), trashFull: trashFull(), git: !$("git-sync-open").hidden,
+    archivable: on && canArchiveNote(), archived: on && !!state.note?.archived_at,
     notebookArchivable: !!nb && !state.editing, notebookArchived: !!nb?.archived_at,
     filter: state.filter,
   });
@@ -6650,7 +6687,9 @@ function openLinkedNote() {
   selectNote(id);
 }
 
-window.addEventListener("hashchange", openLinkedNote);
+window.addEventListener("hashchange", () => {
+  if (!openBoardHash()) openLinkedNote();
+});
 
 // Search
 
@@ -6686,6 +6725,7 @@ $("q-clear").addEventListener("click", () => {
 });
 
 $("q").addEventListener("input", () => {
+  leaveBoard(); // the search shows its notes in the list
   showSearchClear();
   suggestTags();
   clearTimeout(searchTimer);
@@ -6839,6 +6879,9 @@ $("q").addEventListener("click", suggestTags); // the cursor moved
 
 document.addEventListener("keydown", (e) => {
   if ($("conflict").open || $("image-viewer").open || $("files-check").open || $("history").open || $("import-result").open || $("notebook-new").open || $("separator-edit").open || $("mark-names").open || $("server-settings").open) return;
+  // The keys of the list and the preview, hidden under a board, do nothing
+  // there; / still goes to the search box.
+  if (board.open && e.key !== "/") return;
   if ($("assistant").contains(e.target)) {
     if (e.key === "Escape" && !e.isComposing) {
       e.preventDefault();
@@ -6953,6 +6996,11 @@ function connect() {
     let nb = null;
     try { nb = JSON.parse(e.data).notebook ?? null; } catch (_) { /* no notebook */ }
     if (nb) notePrivateLost(nb);
+  });
+  es.addEventListener("board", (e) => {
+    let id = null;
+    try { id = JSON.parse(e.data).id ?? null; } catch (_) { /* no ID */ }
+    boardChanged(id);
   });
   for (const type of ["created", "updated", "deleted"]) {
     es.addEventListener(type, (e) => {
@@ -7267,6 +7315,678 @@ $("logout").addEventListener("click", async () => {
 
 // Start
 
+// Whiteboards: a text to understand (the source), such as a diff that Claude
+// Code opened with open_ai_board, with sticky notes on the passages the person
+// asks about, in the margin beside them. A memo keeps what the person wrote;
+// the assistant answers the others in the background, and an event of type
+// board tells when. At the end, the person writes what to give back to the
+// session, and may save the board as a note. The view takes the place of the
+// note list and the preview, at #board (the list of boards) and #board/<id>.
+
+
+const BOARD_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+// boardContext is how much text around a passage an anchor keeps, in
+// characters, to tell it apart from the same text elsewhere.
+const boardContext = 32;
+
+// loadBoards reads the list of boards, for the row in the left column.
+async function loadBoards() {
+  try {
+    board.list = await api("/boards");
+  } catch (_) {
+    board.list = []; // an older server, without boards
+  }
+}
+
+// boardRow returns the row of the whiteboards in the left column, above the
+// archive, with the number of boards open.
+function boardRow() {
+  const open = board.list.filter((b) => b.status === "open").length;
+  const li = el("li", "sep" + (board.open ? " active" : ""), el("span", "icon", kindSVG("board")), el("span", "name", t("boards")), el("span", "count", String(open)));
+  li.dataset.boards = "";
+  li.addEventListener("click", () => goBoard(null));
+  const spacer = el("span", "nb-more nb-spacer", kindSVG("more"));
+  spacer.setAttribute("aria-hidden", "true");
+  li.append(spacer);
+  return li;
+}
+
+// goBoard shows board id, or the list of boards for null, through the hash.
+function goBoard(id) {
+  const hash = id ? "#board/" + id : "#board";
+  if (location.hash === hash) showBoardView(id);
+  else location.hash = hash;
+}
+
+// openBoardHash shows the board of the hash of the page, and tells whether it
+// names one; another hash closes the view. A trailing slash, as in #board/,
+// is dropped from the address bar.
+function openBoardHash() {
+  const m = location.hash.match(/^#board(?:\/([^/]+))?\/?$/);
+  if (!m || (m[1] && !BOARD_ID.test(m[1]))) {
+    if (board.open) closeBoardView();
+    return false;
+  }
+  const hash = m[1] ? "#board/" + m[1] : "#board";
+  if (location.hash !== hash) history.replaceState(null, "", location.pathname + location.search + hash);
+  showBoardView(m[1] || null);
+  return true;
+}
+
+// leaveBoard closes the view and drops its hash, as when the person chooses a
+// notebook in the left column.
+function leaveBoard() {
+  if (!board.open) return;
+  closeBoardView();
+  history.replaceState(null, "", location.pathname + location.search);
+  showNoteHash(state.note?.id);
+}
+
+function showBoardView(id) {
+  // The editor is under the board: leave it first.
+  if (state.editing && !leaveEditor()) {
+    history.replaceState(null, "", location.pathname + location.search);
+    return;
+  }
+  board.open = true;
+  board.id = id;
+  board.compose = null;
+  document.querySelector(".panes").classList.add("board-open");
+  $("board").hidden = false;
+  renderNotebooks();
+  if (!board.assistant) {
+    api("/ask").then((s) => { board.assistant = s; }, () => { board.assistant = { available: false, reason: "" }; });
+  }
+  if (id) loadBoard();
+  else renderBoardList();
+}
+
+function closeBoardView() {
+  board.resize?.disconnect();
+  board.resize = null;
+  board.open = false;
+  board.id = null;
+  board.data = null;
+  board.drafts.clear();
+  document.querySelector(".panes").classList.remove("board-open");
+  $("board").hidden = true;
+  $("board").replaceChildren();
+  renderNotebooks();
+}
+
+// renderBoardList shows the boards, open ones first.
+async function renderBoardList() {
+  await loadBoards();
+  if (!board.open || board.id) return;
+  renderNotebooks();
+  const view = $("board");
+  const head = el("div", "board-head", el("h2", "", t("boards")), closeButton(() => leaveBoard()));
+  const ul = el("ul", "board-list");
+  const list = [...board.list].sort((a, b) => (a.status === b.status ? 0 : a.status === "open" ? -1 : 1));
+  for (const b of list) {
+    const info = [t(b.status === "open" ? "boardOpen" : "boardDone"), t("boardStickies", { n: b.stickies }), formatTime(b.updated_at)];
+    if (b.waiting) info.splice(2, 0, t("boardWaitingCount", { n: b.waiting }));
+    const li = el("li", b.status, el("span", "board-title", b.title), el("span", "board-info", info.join(" · ")));
+    li.addEventListener("click", () => goBoard(b.id));
+    li.append(iconButton("trash", t("boardDeleteTitle"), (e) => {
+      e.stopPropagation();
+      deleteBoard(b);
+    }));
+    ul.append(li);
+  }
+  view.replaceChildren(head, list.length ? ul : el("p", "empty", t("boardsEmpty")), el("p", "board-hint", t("boardsHint")));
+}
+
+async function deleteBoard(b) {
+  if (!confirm(t("boardDeleteConfirm", { title: b.title }))) return;
+  try {
+    await api(`/boards/${b.id}`, { method: "DELETE" });
+  } catch (e) {
+    alert(t("boardFailed", { error: e.message }));
+    return;
+  }
+  if (board.id === b.id) goBoard(null);
+  else renderBoardList();
+}
+
+// loadBoard reads the board shown and draws it.
+async function loadBoard() {
+  const id = board.id;
+  let data;
+  try {
+    data = await api(`/boards/${id}`);
+  } catch (e) {
+    if (board.id !== id) return;
+    $("board").replaceChildren(el("div", "board-head", el("h2", "", t("boards")), closeButton(() => goBoard(null))), el("p", "error", e.status === 404 ? t("boardGone") : t("boardFailed", { error: e.message })));
+    return;
+  }
+  if (board.id !== id || !board.open) return;
+  board.data = data;
+  renderBoard();
+}
+
+// openBoardFromNote opens a board on the body of note n.
+async function openBoardFromNote(n) {
+  let b;
+  try {
+    b = await api("/boards", { method: "POST", body: { note_id: n.id } });
+  } catch (e) {
+    alert(t("boardFailed", { error: e.message }));
+    return;
+  }
+  await loadBoards();
+  goBoard(b.id);
+}
+
+function renderBoard() {
+  const b = board.data;
+  const view = $("board");
+  const scroll = view.querySelector(".board-body")?.scrollTop ?? 0;
+  const focused = document.activeElement?.closest?.(".sticky")?.dataset.sticky;
+  const open = b.status === "open";
+
+  const title = el("h2", "", b.title);
+  if (open) {
+    title.title = t("boardRenameTitle");
+    title.addEventListener("dblclick", () => renameBoard(title));
+  }
+  const actions = el("div", "actions");
+  if (open) actions.append(button(t("boardFinish"), openBoardFinish, { cls: "primary", title: t("boardFinishTitle") }));
+  actions.append(iconButton("trash", t("boardDeleteTitle"), () => deleteBoard(b)), closeButton(() => goBoard(null)));
+  const head = el("div", "board-head", button(kindSVG("back"), () => goBoard(null), { cls: "icon-button", title: t("boards") }), title, actions);
+
+  const parts = [head];
+  if (b.result) {
+    const done = el("div", "board-result", el("h3", "", t("boardGivenBack")));
+    const text = el("div", "body");
+    renderBody(text, b.result.text || t("boardNothingBack"));
+    done.append(text);
+    if (b.result.note_id) {
+      const a = el("a", "", t("boardSavedNote"));
+      a.href = "/#note/" + encodeURIComponent(b.result.note_id);
+      done.append(el("p", "", a));
+    }
+    parts.push(done);
+  } else if (open) {
+    parts.push(el("p", "board-hint", t(b.from_session ? "boardHintSession" : "boardHint")));
+  }
+
+  const source = el("div", "board-source body");
+  renderBoardSource(source, b);
+  const margin = el("div", "board-stickies");
+  const body = el("div", "board-body", source, margin);
+  parts.push(body);
+  view.replaceChildren(...parts);
+
+  // The sticky notes on the source line up with their passages; those on an
+  // answer go under the sticky note of the answer.
+  const children = new Map();
+  for (const s of b.stickies) {
+    if (s.parent) children.set(s.parent, [...(children.get(s.parent) || []), s]);
+  }
+  const roots = b.stickies.filter((s) => !s.parent || !b.stickies.some((p) => p.id === s.parent))
+    .map((s) => ({ s, mark: markPassage(source, s.anchor, s.id) }));
+  // In the order of the passages; those whose passage is lost go last.
+  roots.sort((x, y) => (!x.mark || !y.mark ? !x.mark - !y.mark
+    : x.mark.compareDocumentPosition(y.mark) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  const cards = roots.map(({ s, mark }) => {
+    const card = stickyCard(s, children, open);
+    if (!mark) card.classList.add("lost");
+    margin.append(card);
+    return { card, mark };
+  });
+  for (const card of margin.querySelectorAll(".sticky")) {
+    const s = b.stickies.find((x) => x.id === card.dataset.sticky);
+    if (!s?.parent) continue;
+    const answer = margin.querySelector(`.sticky[data-sticky="${s.parent}"] > .sticky-messages`);
+    if (answer && !markPassage(answer, s.anchor, s.id)) card.classList.add("lost");
+  }
+  for (const m of view.querySelectorAll("mark.board-anchor")) {
+    m.addEventListener("click", () => showSticky(m.dataset.sticky));
+  }
+  if (open) {
+    source.addEventListener("mouseup", (e) => chooseBoardPassage(e, source, null));
+    for (const a of margin.querySelectorAll(".sticky-answer")) {
+      a.addEventListener("mouseup", (e) => chooseBoardPassage(e, a, a.dataset.sticky));
+    }
+  }
+  body.scrollTop = scroll;
+  // Laid out now, and again when a size changes: math and diagrams drawn
+  // later, images loaded, the window resized, a box of a sticky note grown.
+  // Not in an animation frame, which a hidden window may never draw.
+  layoutStickies(body, cards);
+  board.resize?.disconnect();
+  board.resize = new ResizeObserver(() => layoutStickies(body, cards));
+  board.resize.observe(source);
+  for (const c of cards) board.resize.observe(c.card);
+  if (focused) view.querySelector(`.sticky[data-sticky="${focused}"] textarea`)?.focus();
+}
+
+// renderBoardSource draws the source of b into e as its format says.
+function renderBoardSource(e, b) {
+  const { format, lang } = b.source;
+  if (format === "markdown") {
+    renderBody(e, b.text);
+    return;
+  }
+  const pre = el("pre", "board-lines " + format);
+  if (lang) pre.dataset.lang = lang;
+  const lines = b.text.replace(/\n$/, "").split("\n");
+  for (const line of lines) {
+    let cls = "line";
+    if (format === "diff") {
+      if (line.startsWith("@@")) cls += " hunk";
+      else if (/^(diff |index |--- |\+\+\+ )/.test(line)) cls += " file";
+      else if (line.startsWith("+")) cls += " add";
+      else if (line.startsWith("-")) cls += " del";
+    }
+    // Each line ends with its newline, so that a passage over lines reads as
+    // the source does.
+    pre.append(el("span", cls, line + "\n"));
+  }
+  if (format === "text") pre.classList.add("wrap");
+  e.classList.remove("body");
+  e.append(pre);
+}
+
+// locatePassage returns the offset of the passage of anchor a in text, or -1:
+// the occurrence whose text before and after matches the most of its prefix
+// and suffix, as the server finds it.
+function locatePassage(text, a) {
+  let best = -1;
+  let score = -1;
+  const prefix = a.prefix || "";
+  const suffix = a.suffix || "";
+  for (let i = text.indexOf(a.exact); i >= 0; i = text.indexOf(a.exact, i + 1)) {
+    let s = 0;
+    while (s < prefix.length && s < i && text[i - 1 - s] === prefix[prefix.length - 1 - s]) s++;
+    const after = i + a.exact.length;
+    let u = 0;
+    while (u < suffix.length && after + u < text.length && text[after + u] === suffix[u]) u++;
+    if (s + u > score) {
+      best = i;
+      score = s + u;
+    }
+  }
+  return best;
+}
+
+// markPassage marks the passage of anchor a in root, as marks for sticky note
+// id (one for each text node it spans), and returns the first, or null when
+// the passage is not found.
+function markPassage(root, a, id) {
+  const at = locatePassage(root.textContent, a);
+  if (at < 0) return null;
+  const end = at + a.exact.length;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  for (let pos = 0; walker.nextNode();) {
+    const n = walker.currentNode;
+    const len = n.nodeValue.length;
+    if (pos + len > at && pos < end) nodes.push([n, Math.max(at - pos, 0), Math.min(end - pos, len)]);
+    pos += len;
+    if (pos >= end) break;
+  }
+  let first = null;
+  for (const [n, from, to] of nodes) {
+    if (from === to) continue;
+    const range = document.createRange();
+    range.setStart(n, from);
+    range.setEnd(n, to);
+    const m = el("mark", "board-anchor");
+    m.dataset.sticky = id;
+    range.surroundContents(m);
+    first ??= m;
+  }
+  return first;
+}
+
+// layoutStickies puts the sticky notes beside their passages, each below the
+// one before; those whose passage is lost go last.
+function layoutStickies(body, cards) {
+  const top = body.querySelector(".board-stickies").getBoundingClientRect().top;
+  let next = 0;
+  const placed = cards.filter((c) => c.mark).map((c) => ({ ...c, y: c.mark.getBoundingClientRect().top - top }));
+  placed.sort((a, b) => a.y - b.y);
+  const margin = body.querySelector(".board-stickies");
+  [...placed, ...cards.filter((c) => !c.mark)].forEach((c, i) => {
+    // In the order of the passages, for narrow screens, where the sticky
+    // notes follow the source as they come. A card is moved only when out of
+    // place, as moving it takes the focus from its box.
+    if (margin.children[i] !== c.card) margin.insertBefore(c.card, margin.children[i] || null);
+    const y = Math.max(c.y ?? next, next);
+    c.card.style.top = y + "px";
+    next = y + c.card.offsetHeight + 8;
+  });
+  margin.style.minHeight = next + "px";
+}
+
+// stickyCard returns the card of sticky note s, with the sticky notes on its
+// answer below it.
+function stickyCard(s, children, open) {
+  // The state is a class of its own name: .error colors the whole card.
+  const card = el("div", `sticky ${s.kind} state-${s.state}`);
+  card.dataset.sticky = s.id;
+  const quote = el("blockquote", "sticky-quote", s.anchor.exact.replace(/\s+/g, " ").slice(0, 120));
+  quote.title = t("boardShowPassage");
+  quote.addEventListener("click", () => showPassage(s.id));
+  card.append(quote);
+  const msgs = el("div", "sticky-messages");
+  for (const m of s.messages) {
+    if (m.role === "assistant") {
+      const a = el("div", "sticky-answer body");
+      a.dataset.sticky = s.id;
+      renderBody(a, m.text);
+      msgs.append(a);
+    } else {
+      msgs.append(el("div", "sticky-ask", m.text));
+    }
+  }
+  card.append(msgs);
+  if (s.state === "waiting") card.append(el("p", "sticky-wait", t("boardWaiting")));
+  if (s.state === "error") {
+    const p = el("p", "error", t("boardAnswerFailed", { error: s.error || "" }));
+    if (open) p.append(" ", button(t("boardAskAgain"), () => askSticky(s, "")));
+    card.append(p);
+  }
+  if (open && s.state !== "waiting") {
+    const box = el("textarea");
+    box.rows = 1; // grows while written in (style.css)
+    box.placeholder = t(s.kind === "assistant" ? "boardFollowUp" : "boardAddMemo");
+    box.value = board.drafts.get(s.id) || "";
+    box.addEventListener("input", () => board.drafts.set(s.id, box.value));
+    const send = () => {
+      const text = box.value.trim();
+      if (text) askSticky(s, text);
+    };
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.isComposing) {
+        e.preventDefault();
+        send();
+      }
+    });
+    card.append(el("div", "sticky-reply", box, button(t(s.kind === "assistant" ? "boardSend" : "boardAdd"), send)));
+  }
+  const returns = el("input");
+  returns.type = "checkbox";
+  returns.checked = s.returns;
+  returns.disabled = !open;
+  returns.addEventListener("change", () => saveSticky(s, { returns: returns.checked }));
+  const foot = el("div", "sticky-foot", el("label", "", returns, t("boardReturns")));
+  if (open) foot.append(iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s)));
+  card.append(foot);
+  const kids = children.get(s.id) || [];
+  if (kids.length) card.append(el("div", "sticky-children", ...kids.map((k) => stickyCard(k, children, open))));
+  return card;
+}
+
+// showSticky scrolls to sticky note id and makes it stand out a moment.
+function showSticky(id) {
+  const card = $("board").querySelector(`.sticky[data-sticky="${id}"]`);
+  if (!card) return;
+  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  flash(card);
+}
+
+// showPassage scrolls to the passage of sticky note id.
+function showPassage(id) {
+  const m = $("board").querySelector(`mark.board-anchor[data-sticky="${id}"]`);
+  if (!m) return;
+  m.scrollIntoView({ block: "center", behavior: "smooth" });
+  for (const x of $("board").querySelectorAll(`mark.board-anchor[data-sticky="${id}"]`)) flash(x);
+}
+
+function flash(e) {
+  e.classList.remove("flash");
+  void e.offsetWidth; // start the animation again
+  e.classList.add("flash");
+}
+
+// chooseBoardPassage offers to put a sticky note on the passage chosen in
+// root: the source, or the answer of sticky note parent.
+function chooseBoardPassage(e, root, parent) {
+  const sel = getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (!root.contains(range.commonAncestorContainer)) return;
+  const raw = range.toString();
+  const exact = raw.trim();
+  if (!exact) return;
+  const before = document.createRange();
+  before.setStart(root, 0);
+  before.setEnd(range.startContainer, range.startOffset);
+  const after = document.createRange();
+  after.setStart(range.endContainer, range.endOffset);
+  after.setEnd(root, root.childNodes.length);
+  const lead = raw.length - raw.trimStart().length;
+  const trail = raw.length - raw.trimEnd().length;
+  const anchor = {
+    exact,
+    prefix: (before.toString() + raw.slice(0, lead)).slice(-boardContext),
+    suffix: (raw.slice(raw.length - trail) + after.toString()).slice(0, boardContext),
+  };
+  openBoardCompose(anchor, parent, range.getBoundingClientRect());
+  e.stopPropagation();
+}
+
+// openBoardCompose opens the box for a new sticky note on anchor, below the
+// passage at rect.
+function openBoardCompose(anchor, parent, rect) {
+  closeBoardCompose(false);
+  board.compose = { anchor, parent };
+  const view = $("board");
+  const box = el("textarea");
+  box.rows = 3;
+  box.placeholder = t("boardComposePlaceholder");
+  const ask = board.assistant?.available !== false;
+  const askButton = button(t("boardAsk"), () => addSticky("assistant", box.value), { cls: "primary", title: ask ? t("boardAskTitle") : (board.assistant?.reason || t("boardNoAssistant")) });
+  askButton.disabled = !ask;
+  const pop = el("div", "board-compose",
+    el("blockquote", "sticky-quote", anchor.exact.replace(/\s+/g, " ").slice(0, 120)),
+    box,
+    el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }), askButton));
+  pop.id = "board-compose";
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeBoardCompose();
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.isComposing) {
+      e.preventDefault();
+      if (ask && box.value.trim()) addSticky("assistant", box.value);
+      else addSticky("memo", box.value);
+    }
+  });
+  view.append(pop);
+  const v = view.getBoundingClientRect();
+  const left = Math.min(Math.max(rect.left - v.left, 8), Math.max(view.clientWidth - pop.offsetWidth - 8, 8));
+  pop.style.left = left + "px";
+  pop.style.top = rect.bottom - v.top + view.scrollTop + 6 + "px";
+  box.focus();
+}
+
+// closeBoardCompose closes the box for a new sticky note, and draws the
+// board again if it changed meanwhile, unless reload is false.
+function closeBoardCompose(reload = true) {
+  document.getElementById("board-compose")?.remove();
+  board.compose = null;
+  if (reload && board.stale) {
+    board.stale = false;
+    loadBoard();
+  }
+}
+
+async function addSticky(kind, text) {
+  const c = board.compose;
+  if (!c || !board.data) return;
+  text = text.trim();
+  if (kind === "assistant" && !text) return;
+  try {
+    await api(`/boards/${board.data.id}/stickies`, { method: "POST", body: { kind, anchor: c.anchor, parent: c.parent || undefined, text: text || undefined } });
+  } catch (e) {
+    alert(t("boardFailed", { error: e.message }));
+    return;
+  }
+  closeBoardCompose();
+  getSelection()?.removeAllRanges();
+  await loadBoard();
+}
+
+async function askSticky(s, text) {
+  try {
+    await api(`/boards/${board.data.id}/stickies/${s.id}/messages`, { method: "POST", body: text ? { text } : {} });
+  } catch (e) {
+    alert(t("boardFailed", { error: e.message }));
+    return;
+  }
+  board.drafts.delete(s.id);
+  await loadBoard();
+}
+
+async function saveSticky(s, body) {
+  try {
+    await api(`/boards/${board.data.id}/stickies/${s.id}`, { method: "PATCH", body });
+  } catch (e) {
+    alert(t("boardFailed", { error: e.message }));
+  }
+  await loadBoard();
+}
+
+async function deleteSticky(s) {
+  const kids = board.data.stickies.some((x) => x.parent === s.id);
+  if (!confirm(t(kids ? "boardStickyDeleteChildren" : "boardStickyDeleteConfirm"))) return;
+  try {
+    await api(`/boards/${board.data.id}/stickies/${s.id}`, { method: "DELETE" });
+  } catch (e) {
+    alert(t("boardFailed", { error: e.message }));
+    return;
+  }
+  board.drafts.delete(s.id);
+  await loadBoard();
+}
+
+// renameBoard turns the title into a box, saved with Enter.
+function renameBoard(h) {
+  const input = el("input");
+  input.value = board.data.title;
+  input.maxLength = 200;
+  let done = false;
+  const save = async () => {
+    if (done) return;
+    done = true;
+    const title = input.value.trim();
+    if (title && title !== board.data.title) {
+      try {
+        await api(`/boards/${board.data.id}`, { method: "PATCH", body: { title } });
+      } catch (e) {
+        alert(t("boardFailed", { error: e.message }));
+      }
+    }
+    loadBoard();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) save();
+    if (e.key === "Escape") {
+      done = true;
+      renderBoard();
+    }
+  });
+  input.addEventListener("blur", save);
+  h.replaceChildren(input);
+  input.focus();
+  input.select();
+}
+
+// openBoardFinish asks what to give back to the session, and whether to save
+// the board as a note, then finishes it.
+function openBoardFinish() {
+  const b = board.data;
+  const dlg = $("board-finish");
+  const text = el("textarea");
+  text.rows = 8;
+  text.placeholder = t("boardBackPlaceholder");
+  const returns = b.stickies.some((s) => s.returns);
+  const err = el("p", "error");
+  const draft = button(t("boardDraft"), async () => {
+    if (text.value.trim() && !confirm(t("boardDraftReplace"))) return;
+    draft.disabled = true;
+    draft.textContent = t("boardDrafting");
+    try {
+      const r = await api(`/boards/${b.id}/draft`, { method: "POST" });
+      text.value = r.text;
+      err.textContent = "";
+    } catch (e) {
+      err.textContent = t("boardFailed", { error: e.message });
+    }
+    draft.disabled = false;
+    draft.textContent = t("boardDraft");
+  }, { title: board.assistant?.available === false ? (board.assistant.reason || t("boardNoAssistant")) : returns ? t("boardDraftTitle") : t("boardDraftNone") });
+  draft.disabled = !returns || board.assistant?.available === false;
+
+  const save = el("input");
+  save.type = "checkbox";
+  let last = "";
+  try { last = localStorage.getItem("ebira.boardNotebook") || ""; } catch (_) { /* not kept */ }
+  const nbs = state.notebooks.filter((n) => n.id !== "trash" && !n.archived);
+  const select = el("select", "", ...nbs.map((n) => {
+    const o = el("option", "", (n.parent ? notebookName(n.parent) + " / " : "") + n.name);
+    o.value = n.id;
+    return o;
+  }));
+  if (nbs.some((n) => n.id === last)) select.value = last;
+  save.checked = !!last;
+  select.disabled = !save.checked;
+  save.addEventListener("change", () => { select.disabled = !save.checked; });
+
+  const finish = button(t("boardFinish"), async () => {
+    finish.disabled = true;
+    const body = { text: text.value.trim(), lang: lang === "ja" ? "ja" : "en" };
+    if (save.checked) body.notebook = select.value;
+    try {
+      await api(`/boards/${b.id}/finish`, { method: "POST", body });
+    } catch (e) {
+      err.textContent = t("boardFailed", { error: e.message });
+      finish.disabled = false;
+      return;
+    }
+    try { localStorage.setItem("ebira.boardNotebook", save.checked ? select.value : ""); } catch (_) { /* not kept */ }
+    dlg.close();
+    showToast(t(b.from_session ? "boardFinishedSession" : "boardFinished"));
+    await loadBoards();
+    loadBoard();
+  }, { cls: "primary" });
+
+  dlg.replaceChildren(
+    el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close())),
+    el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : "boardBackHint")),
+    text,
+    el("div", "board-draft", draft),
+    el("label", "board-save", save, t("boardSaveAsNote"), select),
+    err,
+    el("div", "files-actions", button(t("cancel"), () => dlg.close()), finish));
+  dlg.showModal();
+  text.focus();
+}
+
+let boardReload;
+
+// boardChanged follows an event of type board: a board was opened, changed or
+// deleted, such as when an answer came to a sticky note.
+function boardChanged(id) {
+  clearTimeout(boardReload);
+  boardReload = setTimeout(async () => {
+    await loadBoards();
+    if (!board.open) {
+      renderNotebooks();
+      return;
+    }
+    if (!board.id) renderBoardList();
+    else if (!id || id === board.id) {
+      // Not while a new sticky note is being written: the passage chosen
+      // would be lost.
+      if (!board.compose) loadBoard();
+      else board.stale = true;
+    } else renderNotebooks();
+  }, 150);
+}
+
 (async () => {
   // The note of the URL, read before the preview shows anything else, which
   // changes the address bar.
@@ -7302,6 +8022,7 @@ $("logout").addEventListener("click", async () => {
     $("list-info").textContent = t("serverUnreachable", { error: e.message });
     $("list-info").classList.add("error");
   }
+  await loadBoards();
   const selected = restoreView();
   renderNotebooks();
   await loadNotes();
@@ -7312,6 +8033,7 @@ $("logout").addEventListener("click", async () => {
     loadNote();
   }
   if (linked) selectNote(linked);
+  openBoardHash();
   connect();
   showGitSync();
   loadZenn();
