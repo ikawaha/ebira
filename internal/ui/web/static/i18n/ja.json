@@ -616,7 +616,7 @@
   "boardDeleteTitle": "ホワイトボードを削除",
   "boardDeleteConfirm": "ホワイトボード「{title}」を削除しますか？ノートにしたものは残ります。",
   "boardsEmpty": "ホワイトボードはありません。",
-  "boardsHint": "Claude Code が ebira の MCP サーバーで開きます。ノートは、プレビューのボタンからホワイトボードで開けます。",
+  "boardsHint": "Claude Code などの AI が、ebira の MCP サーバーで開きます。ノートは、プレビューのボタンからホワイトボードで開けます。",
   "boardFailed": "ホワイトボードの操作に失敗しました: {error}",
   "boardGone": "ホワイトボードがありません。削除されたか、終えてから 7 日たって消えた可能性があります。",
   "boardRenameTitle": "ダブルクリックで名前を変える",
@@ -658,6 +658,6 @@
   "boardDraftReplace": "書いた文を下書きで置き換えますか？",
   "boardSaveAsNote": "ホワイトボードをノートにする:",
   "boardFinished": "ホワイトボードを終えました。",
-  "boardFinishedSession": "ホワイトボードを終えました。Claude Code に終わったと伝えてください。",
+  "boardFinishedSession": "ホワイトボードを終えました。開いた AI に、終わったと伝えてください。",
   "boardOpenTitle": "ホワイトボードで開く"
 }

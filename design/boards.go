@@ -95,7 +95,7 @@ var Board = Type("Board", func() {
 	RequiredAttribute("text", String, "The source, copied when the board was opened")
 	RequiredAttribute("stickies", ArrayOf(BoardSticky), "The sticky notes, in the order they were added")
 	Attribute("result", BoardResult, "What was given back, once finished")
-	RequiredAttribute("from_session", Boolean, "Whether a Claude Code session opened the board, and waits for what is given back")
+	RequiredAttribute("from_session", Boolean, "Whether an AI client opened the board, and waits for what is given back")
 })
 
 // The whiteboards for people: the web UI reads them, puts sticky notes on them

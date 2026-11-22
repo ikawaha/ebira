@@ -132,8 +132,7 @@ type Board struct {
 	Stickies []*BoardSticky
 	// What was given back, once finished
 	Result *BoardResult
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool
 }
 
@@ -703,8 +702,7 @@ type jsonBoardTransport struct {
 	Stickies []*jsonBoardStickyTransport `json:"stickies"`
 	// What was given back, once finished
 	Result *jsonBoardResultTransport `json:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `json:"from_session"`
 }
 
@@ -1821,7 +1819,7 @@ func validateBoardJSONValue(path string, value any, description string) error {
 		case "from_session":
 			if err := validateBoardJSONValue5(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether a Claude Code session opened the board, and waits for what is given back",
+				typed[key], "Whether an AI client opened the board, and waits for what is given back",
 			); err != nil {
 				return err
 			}

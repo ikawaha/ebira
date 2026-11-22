@@ -99,8 +99,7 @@ type GetResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
 }
 
@@ -125,8 +124,7 @@ type OpenResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
 }
 
@@ -151,8 +149,7 @@ type SaveResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
 }
 
@@ -253,8 +250,7 @@ type FinishResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
 }
 

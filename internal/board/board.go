@@ -131,7 +131,7 @@ type Source struct {
 }
 
 // Origin tells who opened the board: an AI client, waiting for what is given
-// back, and its Claude Code session, kept for asking forks of it later.
+// back, and, from Claude Code, its session, kept for asking forks of it later.
 type Origin struct {
 	AI        bool   `json:"ai,omitempty"`
 	SessionID string `json:"session_id,omitempty"`

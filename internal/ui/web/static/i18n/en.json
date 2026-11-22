@@ -616,7 +616,7 @@
   "boardDeleteTitle": "Delete the whiteboard",
   "boardDeleteConfirm": "Delete the whiteboard \"{title}\"? A note saved from it stays.",
   "boardsEmpty": "No whiteboards.",
-  "boardsHint": "Claude Code opens a whiteboard with the ebira MCP server, and you can open one on a note with the button of the preview.",
+  "boardsHint": "AI such as Claude Code opens a whiteboard with the ebira MCP server, and you can open one on a note with the button of the preview.",
   "boardFailed": "The whiteboard failed: {error}",
   "boardGone": "The whiteboard does not exist. It may have been deleted, or kept 7 days after it was finished.",
   "boardRenameTitle": "Double-click to rename",
@@ -658,6 +658,6 @@
   "boardDraftReplace": "Replace what you wrote with a draft?",
   "boardSaveAsNote": "Save the whiteboard as a note in",
   "boardFinished": "Finished the whiteboard.",
-  "boardFinishedSession": "Finished the whiteboard. Tell Claude Code that you are done.",
+  "boardFinishedSession": "Finished the whiteboard. Tell the AI that opened it that you are done.",
   "boardOpenTitle": "Open on a whiteboard"
 }

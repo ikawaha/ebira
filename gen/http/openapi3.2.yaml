@@ -7438,7 +7438,7 @@ components:
                     format: date-time
                 from_session:
                     type: boolean
-                    description: Whether a Claude Code session opened the board, and waits for what is given back
+                    description: Whether an AI client opened the board, and waits for what is given back
                     example: false
                 id:
                     type: string

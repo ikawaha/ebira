@@ -103,8 +103,7 @@ type GetResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
 }
 
@@ -129,8 +128,7 @@ type OpenResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
 }
 
@@ -155,8 +153,7 @@ type SaveResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
 }
 
@@ -257,8 +254,7 @@ type FinishResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
 }
 
