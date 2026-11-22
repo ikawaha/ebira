@@ -34,8 +34,10 @@ The text goes to ebira as is, without being written out in this conversation.
    The response is JSON with the `url` of the board. The upload URL works once,
    for 10 minutes; if it fails, call `start_ai_board` again. Without a shell,
    use `open_ai_board` with the text or the ID of a note instead.
-4. Give the board's URL to the user and end your turn. Do not wait for the
-   board or read it again on your own.
+4. Give the board's `url` to the user exactly as the response has it, with
+   `http://` and the host and port as they are: ebira serves the board there.
+   Do not comment on the URL. Then end your turn. Do not wait for the board or
+   read it again on your own.
 
 ## When the user is done
 
