@@ -24,6 +24,8 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 
 登録したあとに始めた Claude Code のセッションから使えます。登録されているかは `claude mcp list` か、Claude Code の中の `/mcp` で確かめられます。アドレスを変えたあとは、ボタンか `ebira mcp add` で、前のアドレスの登録を新しいアドレスに置き換えられます。
 
+ボタンと `ebira mcp add` は、Claude Code がホワイトボード（[ホワイトボードで読み解く](whiteboard.md)）を開くためのスキル `ebira-whiteboard` も、Claude Code の設定の場所の `skills/`（`CLAUDE_CONFIG_DIR`、無ければ `~/.claude`）に入れます。ebira を新しくしたあとにもう一度実行すると、スキルも新しくなります。手で直したスキルは置き換えません（新しいものにするには、消してから実行します）。`ebira mcp add -skill=false` で、スキルを入れずに登録だけします。要らなくなったら、`skills/ebira-whiteboard` のディレクトリを消してください。
+
 ### ボタンが出ないとき
 
 ボタンは、ebira のサーバーが Claude Code（`claude`）を見つけられるときだけ出ます。サーバーがその機械の `claude` を実行して登録するためです。

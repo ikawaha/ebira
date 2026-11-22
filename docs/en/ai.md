@@ -24,6 +24,8 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 
 Sessions of Claude Code started after that can use it. `claude mcp list`, or `/mcp` in Claude Code, shows whether it is registered. After you change the address, the button and `ebira mcp add` replace the registration of the old address.
 
+The button and `ebira mcp add` also install the skill `ebira-whiteboard`, with which Claude Code opens whiteboards ([Reading on a whiteboard](whiteboard.md)), into `skills/` of the configuration directory of Claude Code (`CLAUDE_CONFIG_DIR`, else `~/.claude`). Running them again after you update ebira updates the skill too. A skill you changed by hand is not replaced; remove it, then run them, to get the new one. `ebira mcp add -skill=false` registers ebira without the skill. To remove the skill, remove the directory `skills/ebira-whiteboard`.
+
 ### Without the button
 
 The button shows only when the ebira server finds Claude Code (`claude`): the server runs `claude` of its machine to register it.
