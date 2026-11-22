@@ -241,3 +241,35 @@ func TestAskToolCap(t *testing.T) {
 		t.Errorf("the final request allows tools: %+v (after %d requests)", last.ToolChoice, len(m.reqs))
 	}
 }
+
+// TestPrompt checks that the system prompt is the one for questions about the
+// notes by default, and the one given otherwise, such as for whiteboards.
+func TestPrompt(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		prompt, want string
+	}{
+		{"", systemPrompt},
+		{BoardPrompt, BoardPrompt},
+	} {
+		m := &scriptedModel{steps: []step{{text: "answer"}}}
+		client, err := model.NewClient(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		a, err := New(ctx, client, newTestService(t), Config{Prompt: c.prompt})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := a.Ask(ctx, &genassistant.AskPayload{Question: "q"}); err != nil {
+			t.Fatal(err)
+		}
+		msgs := m.reqs[0].Messages
+		if len(msgs) == 0 || msgs[0].Role != model.ConversationRoleSystem {
+			t.Fatalf("no system message: %+v", msgs)
+		}
+		if got := msgs[0].Parts[0].(model.TextPart).Text; got != c.want {
+			t.Errorf("prompt %q: system prompt = %.60q…, want %.60q…", c.prompt, got, c.want)
+		}
+	}
+}

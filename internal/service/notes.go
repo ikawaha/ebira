@@ -47,6 +47,8 @@ type Notes struct {
 	uploads uploads
 	// zenn tells where notes are written as articles of Zenn (see SetZenn).
 	zenn zennConfig
+	// boards are the whiteboards (see SetBoards); nil has none.
+	boards *boards
 }
 
 var _ gennotes.Service = (*Notes)(nil)
@@ -77,7 +79,12 @@ func New(s *store.Store, ix *index.Index) *Notes {
 
 // Close ends all event streams. Call it when shutting down the server so that
 // open streams do not block the shutdown.
-func (s *Notes) Close() { s.events.close() }
+func (s *Notes) Close() {
+	s.events.close()
+	if s.boards != nil {
+		s.boards.stop()
+	}
+}
 
 func (s *Notes) List(ctx context.Context, p *gennotes.ListPayload) (*gennotes.NoteList, error) {
 	hidden, err := s.hiddenNotebooks(ctx)

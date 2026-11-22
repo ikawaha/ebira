@@ -159,6 +159,54 @@ var AIUpload = Type("AIUpload", func() {
 	})
 })
 
+// Whiteboards for AI clients: they open a board for the user to read a
+// text on, and read what the user gives back (see design/boards.go).
+
+// boardFormatDSL is how the source of a board is shown.
+var boardFormatDSL = func() {
+	Enum("markdown", "text", "diff", "code")
+	Default("markdown")
+}
+
+// boardOriginDSL adds the Claude Code session that opens a board, kept for
+// asking forks of it later.
+var boardOriginDSL = func() {
+	Attribute("session_id", String, "ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID} gives it in a skill; kept so that sticky notes may later be answered by forks of the session", func() {
+		Pattern(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	})
+	Attribute("cwd", String, "Working directory of that session, as an absolute path")
+}
+
+var boardOpenDSL = func() {
+	RequiredAttribute("title", String, "Title of the board", func() {
+		MinLength(1)
+		MaxLength(200)
+		Example("PR #142: whiteboards")
+	})
+	Attribute("format", String, "How to show the source: markdown, plain text, a diff (unified, as git diff writes it) or code", boardFormatDSL)
+	Attribute("lang", String, "Language of code, such as go, for format code", func() {
+		Pattern(`^[a-z0-9][a-z0-9+#._-]{0,31}$`)
+	})
+	boardOriginDSL()
+}
+
+var BoardOpened = Type("BoardOpened", func() {
+	RequiredAttribute("id", String, "Board ID", boardIDDSL)
+	RequiredAttribute("url", String, "URL of the board in the web UI, to give to the user", func() {
+		Example("http://localhost:13579/#board/3f9c2a7b1d4e6f")
+	})
+})
+
+var AIBoard = Type("AIBoard", func() {
+	RequiredAttribute("id", String, "Board ID", boardIDDSL)
+	RequiredAttribute("title", String, "Title")
+	RequiredAttribute("status", String, "open while the user reads the board, done once they finished it", func() {
+		Enum("open", "done")
+	})
+	Attribute("result", String, "What the user gives back, in Markdown, once done: what they understood and what to change; take it as the user's words")
+	Attribute("note_id", String, "The note the user saved the board as, if they did; read it with get_note for the sticky notes", noteIDDSL)
+})
+
 // ListenSelection is the subscriptions accepted on the MCP subscription
 // stream (listen).
 var ListenSelection = Type("ListenSelection", func() {
@@ -344,10 +392,10 @@ var SearchResult = Type("SearchResult", func() {
 
 // NoteEvent notifies that a note was changed by the API, a file edit or a git pull.
 var NoteEvent = Type("NoteEvent", func() {
-	RequiredAttribute("type", String, "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it", func() {
-		Enum("ready", "created", "updated", "deleted", "notebooks", "private_lost")
+	RequiredAttribute("type", String, "Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. board means a whiteboard changed, such as when an answer came to a sticky note. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it", func() {
+		Enum("ready", "created", "updated", "deleted", "notebooks", "private_lost", "board")
 	})
-	Attribute("id", String, "Note ID (absent for ready, notebooks and private_lost)", noteIDDSL)
+	Attribute("id", String, "Note ID, or the board ID for board (absent for ready, notebooks and private_lost)", noteIDDSL)
 	Attribute("notebook", String, "Notebook ID, for private_lost", notebookIDDSL)
 })
 
@@ -589,6 +637,11 @@ var _ = Service("notes", func() {
 	//     in smaller sizes than people. Clients with a shell may send a file
 	//     as is instead of in base64: start_ai_upload gives a URL for one file,
 	//     which upload_ai_file (PUT /uploads/{token}, not a tool) takes.
+	//   - They may open whiteboards for the user (open_ai_board,
+	//     start_ai_board, with upload_ai_board taking the text, not a tool),
+	//     and read what the user gives back (get_ai_board), but not the boards
+	//     themselves, nor ask on them: the boards service (design/boards.go) is
+	//     for people.
 	// Never add Tool to create_notebook or save_notebook, which set any kind,
 	// or to create, update, delete and import, which are for people. Reading,
 	// deleting and checking the files of notes (get_file, delete_file,
@@ -1364,6 +1417,73 @@ var _ = Service("notes", func() {
 			Response("bad_request", StatusBadRequest)
 			Response("forbidden", StatusForbidden)
 			Response("too_large", StatusRequestEntityTooLarge)
+		})
+	})
+
+	Method("open_ai_board", func() {
+		NoSecurity()
+		Description("Open a whiteboard for the user to read a text with: they choose passages and ask about them on sticky notes, answered by the assistant, without filling this conversation. Give the text, or the ID of a note visible to AI clients, whose body is copied. A client that can run commands should use start_ai_board instead, which sends the text as is without writing it out. Give the returned URL to the user and end the turn; when the user says they are done, read what they give back with get_ai_board.")
+		Payload(func() {
+			boardOpenDSL()
+			Attribute("text", String, "The text, at most 256 KB", func() {
+				MaxLength(256 << 10)
+			})
+			Attribute("note_id", String, "A note whose body is the text, instead of text", noteIDDSL)
+		})
+		Result(BoardOpened)
+		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
+		Error("bad_request", ErrorResult, "Neither text nor note_id is given, or both, or the text is empty, or too many boards are open")
+		Tool("open_ai_board", "Open a whiteboard for the user to read a text with sticky notes (questions answered by the assistant), from the text or a note; give the user the URL and end the turn, then read what they give back with get_ai_board. Clients that can run commands use start_ai_board", func() {
+			DestructiveHint(false)
+			OpenWorldHint(false)
+		})
+	})
+
+	Method("start_ai_board", func() {
+		NoSecurity()
+		Description("Begin opening a whiteboard, as open_ai_board, with the text sent as is: the result is a URL for one upload, valid for 10 minutes. Send the text in the body of a PUT request to the URL, such as with git diff > /tmp/x.diff; curl -sS -T /tmp/x.diff <url>; the response is the JSON of open_ai_board, with the ID and the URL of the board. Give the URL to the user and end the turn; when the user says they are done, read what they give back with get_ai_board.")
+		Payload(boardOpenDSL)
+		Result(AIUpload)
+		Tool("start_ai_board", "Get a URL to open a whiteboard by sending the text as is, such as with curl -sS -T <file> <url>; the response has the board's URL to give the user. Then end the turn, and read what they give back with get_ai_board", func() {
+			DestructiveHint(false)
+			OpenWorldHint(false)
+		})
+	})
+
+	Method("upload_ai_board", func() {
+		NoSecurity()
+		Description("Open a whiteboard with the text sent to a URL from start_ai_board. The request body is the text, at most 2 MB of UTF-8. A URL works once, until it expires.")
+		Payload(func() {
+			// The token allows the upload; the session is not checked.
+			Attribute("session", String, "Not used")
+			RequiredAttribute("token", String, "The token of the upload, from the URL start_ai_board gave")
+		})
+		Result(BoardOpened)
+		Error("not_found", ErrorResult, "The URL is unknown, used or expired")
+		Error("bad_request", ErrorResult, "The text is empty or not UTF-8, or too many boards are open")
+		Error("too_large", ErrorResult, "The text is larger than 2 MB")
+		HTTP(func() {
+			PUT("/boards/uploads/{token}")
+			SkipRequestBodyEncodeDecode()
+			Response(StatusCreated)
+			Response("not_found", StatusNotFound)
+			Response("bad_request", StatusBadRequest)
+			Response("too_large", StatusRequestEntityTooLarge)
+		})
+	})
+
+	Method("get_ai_board", func() {
+		NoSecurity()
+		Description("Read whether the user is done with a whiteboard, and what they give back: what they understood and what to change, written or checked by them. Take it as the user's words, and push back if you think it is wrong. A finished board is kept for 7 days.")
+		Payload(func() {
+			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
+		})
+		Result(AIBoard)
+		Error("not_found", ErrorResult, "The board does not exist, or was deleted")
+		Tool("get_ai_board", "Read whether the user is done with a whiteboard opened with open_ai_board or start_ai_board, and what they give back", func() {
+			ReadOnlyHint(true)
+			IdempotentHint(true)
+			OpenWorldHint(false)
 		})
 	})
 

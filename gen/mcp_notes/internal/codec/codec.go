@@ -752,6 +752,70 @@ func ValidateDeleteAiSeparatorPayloadTransport(value *DeleteAiSeparatorPayloadTr
 	return err
 }
 
+// GetAiBoardPayloadTransport stores JSON fields until they have been validated.
+type GetAiBoardPayloadTransport struct {
+	// Board ID, as in the URL of the board in the web UI after #board/
+	ID *string `json:"id"`
+}
+
+// ValidateGetAiBoardPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateGetAiBoardPayloadTransport(value *GetAiBoardPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// GetAiBoardResultTransport stores JSON fields until they have been validated.
+type GetAiBoardResultTransport struct {
+	// Board ID
+	ID *string `json:"id"`
+	// Title
+	Title *string `json:"title"`
+	// open while the user reads the board, done once they finished it
+	Status *string `json:"status"`
+	// What the user gives back, in Markdown, once done: what they understood and
+	// what to change; take it as the user's words
+	Result *string `json:"result,omitempty"`
+	// The note the user saved the board as, if they did; read it with get_note for
+	// the sticky notes
+	NoteID *string `json:"note_id,omitempty"`
+}
+
+// ValidateGetAiBoardResultTransport checks decoded JSON before it becomes a service value.
+func ValidateGetAiBoardResultTransport(value *GetAiBoardResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Status != nil {
+		if !(*value.Status == "open" || *value.Status == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *value.Status, []any{"open", "done"}))
+		}
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // GetInputTransport stores JSON fields until they have been validated.
 type GetInputTransport struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
@@ -2416,6 +2480,90 @@ func ValidateNotebooksResultTransport(value NotebooksResultTransport) (err error
 	return err
 }
 
+// OpenAiBoardPayloadTransport stores JSON fields until they have been validated.
+type OpenAiBoardPayloadTransport struct {
+	// Title of the board
+	Title *string `json:"title"`
+	// How to show the source: markdown, plain text, a diff (unified, as git diff
+	// writes it) or code
+	Format *string `json:"format,omitempty"`
+	// Language of code, such as go, for format code
+	Lang *string `json:"lang,omitempty"`
+	// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+	// gives it in a skill; kept so that sticky notes may later be answered by
+	// forks of the session
+	SessionID *string `json:"session_id,omitempty"`
+	// Working directory of that session, as an absolute path
+	Cwd *string `json:"cwd,omitempty"`
+	// The text, at most 256 KB
+	Text *string `json:"text,omitempty"`
+	// A note whose body is the text, instead of text
+	NoteID *string `json:"note_id,omitempty"`
+}
+
+// ValidateOpenAiBoardPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateOpenAiBoardPayloadTransport(value *OpenAiBoardPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Title != nil {
+		if utf8.RuneCountInString(*value.Title) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 200, false))
+		}
+	}
+	if value.Format != nil {
+		if !(*value.Format == "markdown" || *value.Format == "text" || *value.Format == "diff" || *value.Format == "code") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.format", *value.Format, []any{"markdown", "text", "diff", "code"}))
+		}
+	}
+	if value.Lang != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.lang", *value.Lang, "^[a-z0-9][a-z0-9+#._-]{0,31}$"))
+	}
+	if value.SessionID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.session_id", *value.SessionID, "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
+	}
+	if value.Text != nil {
+		if utf8.RuneCountInString(*value.Text) > 262144 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.text", *value.Text, utf8.RuneCountInString(*value.Text), 262144, false))
+		}
+	}
+	if value.NoteID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
+// OpenAiBoardResultTransport stores JSON fields until they have been validated.
+type OpenAiBoardResultTransport struct {
+	// Board ID
+	ID *string `json:"id"`
+	// URL of the board in the web UI, to give to the user
+	URL *string `json:"url"`
+}
+
+// ValidateOpenAiBoardResultTransport checks decoded JSON before it becomes a service value.
+func ValidateOpenAiBoardResultTransport(value *OpenAiBoardResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return err
+}
+
 // SearchInputTransport stores JSON fields until they have been validated.
 type SearchInputTransport struct {
 	// Session of people signed in with a passkey, set as a cookie by the server
@@ -2787,6 +2935,83 @@ func ValidateSearchResultZennArticleTransport(value *SearchResultZennArticleTran
 		if !(*value.Type == "tech" || *value.Type == "idea") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
 		}
+	}
+	return err
+}
+
+// StartAiBoardPayloadTransport stores JSON fields until they have been validated.
+type StartAiBoardPayloadTransport struct {
+	// Title of the board
+	Title *string `json:"title"`
+	// How to show the source: markdown, plain text, a diff (unified, as git diff
+	// writes it) or code
+	Format *string `json:"format,omitempty"`
+	// Language of code, such as go, for format code
+	Lang *string `json:"lang,omitempty"`
+	// ID of the Claude Code session opening the board, as ${CLAUDE_SESSION_ID}
+	// gives it in a skill; kept so that sticky notes may later be answered by
+	// forks of the session
+	SessionID *string `json:"session_id,omitempty"`
+	// Working directory of that session, as an absolute path
+	Cwd *string `json:"cwd,omitempty"`
+}
+
+// ValidateStartAiBoardPayloadTransport checks decoded JSON before it becomes a service value.
+func ValidateStartAiBoardPayloadTransport(value *StartAiBoardPayloadTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Title != nil {
+		if utf8.RuneCountInString(*value.Title) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 1, true))
+		}
+		if utf8.RuneCountInString(*value.Title) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.title", *value.Title, utf8.RuneCountInString(*value.Title), 200, false))
+		}
+	}
+	if value.Format != nil {
+		if !(*value.Format == "markdown" || *value.Format == "text" || *value.Format == "diff" || *value.Format == "code") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.format", *value.Format, []any{"markdown", "text", "diff", "code"}))
+		}
+	}
+	if value.Lang != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.lang", *value.Lang, "^[a-z0-9][a-z0-9+#._-]{0,31}$"))
+	}
+	if value.SessionID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.session_id", *value.SessionID, "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
+	}
+	return err
+}
+
+// StartAiBoardResultTransport stores JSON fields until they have been validated.
+type StartAiBoardResultTransport struct {
+	// The URL to send the file to, in the body of a PUT request
+	URL *string `json:"url"`
+	// When the URL stops working
+	ExpiresAt *string `json:"expires_at"`
+	// The largest file the URL takes, in bytes
+	MaxSize *int64 `json:"max_size"`
+}
+
+// ValidateStartAiBoardResultTransport checks decoded JSON before it becomes a service value.
+func ValidateStartAiBoardResultTransport(value *StartAiBoardResultTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if value.ExpiresAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("expires_at", "body"))
+	}
+	if value.MaxSize == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("max_size", "body"))
+	}
+	if value.ExpiresAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.expires_at", *value.ExpiresAt, goa.FormatDateTime))
 	}
 	return err
 }
@@ -3818,6 +4043,53 @@ func DecodeDeleteAiSeparatorPayload(data []byte) (out *notes.DeleteAiSeparatorPa
 	return out, nil
 }
 
+// DecodeGetAiBoardPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeGetAiBoardPayload(data []byte) (out *notes.GetAiBoardPayload, err error) {
+	var body *GetAiBoardPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode GetAiBoardPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode GetAiBoardPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode GetAiBoardPayload JSON after first value: %w", err)
+	}
+	if err := ValidateGetAiBoardPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate GetAiBoardPayload JSON: %w", err)
+	}
+	{
+		out = &notes.GetAiBoardPayload{
+			ID: *body.ID,
+		}
+	}
+	return out, nil
+}
+
+// EncodeGetAiBoardResult turns a service value into JSON using the field names in the Goa design.
+func EncodeGetAiBoardResult(in *notes.AIBoard) ([]byte, error) {
+	var body *GetAiBoardResultTransport
+	{
+		body = &GetAiBoardResultTransport{
+			ID:     &in.ID,
+			Title:  &in.Title,
+			Status: &in.Status,
+			Result: in.Result,
+			NoteID: in.NoteID,
+		}
+	}
+	if err := ValidateGetAiBoardResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate GetAiBoardResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode GetAiBoardResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // ValidateGetInputValue checks a service value against its declared field validation.
 
 func ValidateGetInputValue(in *notes.GetPayload) error {
@@ -4489,6 +4761,61 @@ func EncodeNotebooksResult(in []*notes.Notebook) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeOpenAiBoardPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeOpenAiBoardPayload(data []byte) (out *notes.OpenAiBoardPayload, err error) {
+	var body *OpenAiBoardPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode OpenAiBoardPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode OpenAiBoardPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode OpenAiBoardPayload JSON after first value: %w", err)
+	}
+	if err := ValidateOpenAiBoardPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate OpenAiBoardPayload JSON: %w", err)
+	}
+	{
+		out = &notes.OpenAiBoardPayload{
+			Title:     *body.Title,
+			Lang:      body.Lang,
+			SessionID: body.SessionID,
+			Cwd:       body.Cwd,
+			Text:      body.Text,
+			NoteID:    body.NoteID,
+		}
+		if body.Format != nil {
+			out.Format = *body.Format
+		}
+		if body.Format == nil {
+			out.Format = "markdown"
+		}
+	}
+	return out, nil
+}
+
+// EncodeOpenAiBoardResult turns a service value into JSON using the field names in the Goa design.
+func EncodeOpenAiBoardResult(in *notes.BoardOpened) ([]byte, error) {
+	var body *OpenAiBoardResultTransport
+	{
+		body = &OpenAiBoardResultTransport{
+			ID:  &in.ID,
+			URL: &in.URL,
+		}
+	}
+	if err := ValidateOpenAiBoardResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate OpenAiBoardResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode OpenAiBoardResult JSON: %w", err)
+	}
+	return data, nil
+}
+
 // ValidateSearchInputValue checks a service value against its declared field validation.
 
 func ValidateSearchInputValue(in *notes.SearchPayload) error {
@@ -4578,6 +4905,60 @@ func EncodeSearchResult(in *notes.SearchResult) ([]byte, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("encode SearchResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// DecodeStartAiBoardPayload checks JSON field names from the Goa design and returns a service value.
+func DecodeStartAiBoardPayload(data []byte) (out *notes.StartAiBoardPayload, err error) {
+	var body *StartAiBoardPayloadTransport
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		return out, fmt.Errorf("decode StartAiBoardPayload JSON: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return out, fmt.Errorf("decode StartAiBoardPayload JSON: multiple JSON values")
+		}
+		return out, fmt.Errorf("decode StartAiBoardPayload JSON after first value: %w", err)
+	}
+	if err := ValidateStartAiBoardPayloadTransport(body); err != nil {
+		return out, fmt.Errorf("validate StartAiBoardPayload JSON: %w", err)
+	}
+	{
+		out = &notes.StartAiBoardPayload{
+			Title:     *body.Title,
+			Lang:      body.Lang,
+			SessionID: body.SessionID,
+			Cwd:       body.Cwd,
+		}
+		if body.Format != nil {
+			out.Format = *body.Format
+		}
+		if body.Format == nil {
+			out.Format = "markdown"
+		}
+	}
+	return out, nil
+}
+
+// EncodeStartAiBoardResult turns a service value into JSON using the field names in the Goa design.
+func EncodeStartAiBoardResult(in *notes.AIUpload) ([]byte, error) {
+	var body *StartAiBoardResultTransport
+	{
+		body = &StartAiBoardResultTransport{
+			URL:       &in.URL,
+			ExpiresAt: &in.ExpiresAt,
+			MaxSize:   &in.MaxSize,
+		}
+	}
+	if err := ValidateStartAiBoardResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate StartAiBoardResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode StartAiBoardResult JSON: %w", err)
 	}
 	return data, nil
 }

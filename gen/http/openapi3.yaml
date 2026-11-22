@@ -1007,6 +1007,1378 @@ paths:
                                 name: verification_required
                                 temporary: false
                                 timeout: false
+    /boards:
+        get:
+            tags:
+                - boards
+            summary: list boards
+            description: List the whiteboards, last updated first.
+            operationId: boards#list
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/BoardSummary'
+                                example:
+                                    - created_at: "2026-10-16T09:30:00Z"
+                                      format: diff
+                                      id: 3f9c2a7b1d4e6f
+                                      status: done
+                                      stickies: 8159457130861961317
+                                      title: Est eos fugiat.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                      waiting: 3462309494990713507
+                                    - created_at: "2026-10-16T09:30:00Z"
+                                      format: diff
+                                      id: 3f9c2a7b1d4e6f
+                                      status: done
+                                      stickies: 8159457130861961317
+                                      title: Est eos fugiat.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                      waiting: 3462309494990713507
+                                    - created_at: "2026-10-16T09:30:00Z"
+                                      format: diff
+                                      id: 3f9c2a7b1d4e6f
+                                      status: done
+                                      stickies: 8159457130861961317
+                                      title: Est eos fugiat.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                      waiting: 3462309494990713507
+                                    - created_at: "2026-10-16T09:30:00Z"
+                                      format: diff
+                                      id: 3f9c2a7b1d4e6f
+                                      status: done
+                                      stickies: 8159457130861961317
+                                      title: Est eos fugiat.
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                      waiting: 3462309494990713507
+                            example:
+                                - created_at: "2026-10-16T09:30:00Z"
+                                  format: diff
+                                  id: 3f9c2a7b1d4e6f
+                                  status: done
+                                  stickies: 8159457130861961317
+                                  title: Est eos fugiat.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                                  waiting: 3462309494990713507
+                                - created_at: "2026-10-16T09:30:00Z"
+                                  format: diff
+                                  id: 3f9c2a7b1d4e6f
+                                  status: done
+                                  stickies: 8159457130861961317
+                                  title: Est eos fugiat.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                                  waiting: 3462309494990713507
+                                - created_at: "2026-10-16T09:30:00Z"
+                                  format: diff
+                                  id: 3f9c2a7b1d4e6f
+                                  status: done
+                                  stickies: 8159457130861961317
+                                  title: Est eos fugiat.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                                  waiting: 3462309494990713507
+                                - created_at: "2026-10-16T09:30:00Z"
+                                  format: diff
+                                  id: 3f9c2a7b1d4e6f
+                                  status: done
+                                  stickies: 8159457130861961317
+                                  title: Est eos fugiat.
+                                  updated_at: "2026-10-16T09:30:00Z"
+                                  waiting: 3462309494990713507
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        post:
+            tags:
+                - boards
+            summary: open boards
+            description: Open a whiteboard on the body of a note, copied as it is now.
+            operationId: boards#open
+            requestBody:
+                description: Request body for open.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/OpenRequestBody'
+                        example:
+                            note_id: be4c1193735ee1
+                            title: pfn
+            responses:
+                "201":
+                    description: Created response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Board'
+                            example:
+                                created_at: "2026-10-16T09:30:00Z"
+                                from_session: false
+                                id: 3f9c2a7b1d4e6f
+                                result:
+                                    finished_at: "2026-10-16T09:30:00Z"
+                                    note_id: be4c1193735ee1
+                                    text: Cumque accusantium doloremque eaque.
+                                source:
+                                    format: text
+                                    from: note
+                                    lang: Harum odio ut unde id dolorem.
+                                    note_id: be4c1193735ee1
+                                    size: 5018596344245903192
+                                status: open
+                                stickies:
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                text: Illo tempore occaecati non.
+                                title: Neque consequatur dolor quo et.
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The body of the note is empty, or too many boards are open'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}:
+        delete:
+            tags:
+                - boards
+            summary: delete boards
+            description: Delete a whiteboard, open or finished; a session waiting for it reads that it does not exist.
+            operationId: boards#delete
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        get:
+            tags:
+                - boards
+            summary: get boards
+            description: Get a whiteboard with its source and sticky notes.
+            operationId: boards#get
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Board'
+                            example:
+                                created_at: "2026-10-16T09:30:00Z"
+                                from_session: false
+                                id: 3f9c2a7b1d4e6f
+                                result:
+                                    finished_at: "2026-10-16T09:30:00Z"
+                                    note_id: be4c1193735ee1
+                                    text: Cumque accusantium doloremque eaque.
+                                source:
+                                    format: text
+                                    from: note
+                                    lang: Harum odio ut unde id dolorem.
+                                    note_id: be4c1193735ee1
+                                    size: 5018596344245903192
+                                status: open
+                                stickies:
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                text: Ut labore minima quo et voluptatem.
+                                title: Eaque ad eos quo dolore et voluptatem.
+                                updated_at: "2026-10-16T09:30:00Z"
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        patch:
+            tags:
+                - boards
+            summary: save boards
+            description: Rename a whiteboard.
+            operationId: boards#save
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+            requestBody:
+                description: Request body for save.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SaveRequestBody'
+                        example:
+                            title: w
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Board'
+                            example:
+                                created_at: "2026-10-16T09:30:00Z"
+                                from_session: false
+                                id: 3f9c2a7b1d4e6f
+                                result:
+                                    finished_at: "2026-10-16T09:30:00Z"
+                                    note_id: be4c1193735ee1
+                                    text: Cumque accusantium doloremque eaque.
+                                source:
+                                    format: text
+                                    from: note
+                                    lang: Harum odio ut unde id dolorem.
+                                    note_id: be4c1193735ee1
+                                    size: 5018596344245903192
+                                status: done
+                                stickies:
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                text: Quia nihil corporis voluptatem.
+                                title: Consequatur harum dolorum ullam.
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The title is empty'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/draft:
+        post:
+            tags:
+                - boards
+            summary: draft boards
+            description: 'Have the assistant draft what to give back to the session, from the sticky notes to give back. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.'
+            operationId: boards#draft
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DraftResponseBody'
+                            example:
+                                text: Totam est exercitationem ipsam.
+                "400":
+                    description: 'bad_request: No sticky note is to be given back, or the board is finished'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "503":
+                    description: 'unavailable: The assistant is not configured, or failed to answer'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unavailable
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/finish:
+        post:
+            tags:
+                - boards
+            summary: finish boards
+            description: 'Finish a whiteboard: keep what to give back to the session, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.'
+            operationId: boards#finish
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+            requestBody:
+                description: Request body for finish.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/FinishRequestBody'
+                        example:
+                            lang: ja
+                            notebook: inbox
+                            text: zln
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Board'
+                            example:
+                                created_at: "2026-10-16T09:30:00Z"
+                                from_session: true
+                                id: 3f9c2a7b1d4e6f
+                                result:
+                                    finished_at: "2026-10-16T09:30:00Z"
+                                    note_id: be4c1193735ee1
+                                    text: Cumque accusantium doloremque eaque.
+                                source:
+                                    format: text
+                                    from: note
+                                    lang: Harum odio ut unde id dolorem.
+                                    note_id: be4c1193735ee1
+                                    size: 5018596344245903192
+                                status: done
+                                stickies:
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                    - anchor:
+                                        exact: qh0
+                                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                        suffix: Eveniet corporis nobis explicabo et sit.
+                                      created_at: "2026-10-16T09:30:00Z"
+                                      error: Soluta accusantium.
+                                      id: s1a2b3c4d
+                                      kind: memo
+                                      messages:
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                        - at: "2026-10-16T09:30:00Z"
+                                          role: assistant
+                                          text: Eum quaerat rerum illo natus.
+                                      parent: s1a2b3c4d
+                                      returns: false
+                                      state: error
+                                      updated_at: "2026-10-16T09:30:00Z"
+                                text: Porro fugiat sequi.
+                                title: Ut quam aperiam commodi consequuntur.
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer, or the notebook is invalid'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/stickies:
+        post:
+            tags:
+                - boards
+            summary: add_sticky boards
+            description: 'Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and comes back waiting: the answer comes later, told by an event of type board on /events.'
+            operationId: boards#add_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+            requestBody:
+                description: Request body for add_sticky.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AddStickyRequestBody'
+                        example:
+                            anchor:
+                                exact: qh0
+                                prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                suffix: Eveniet corporis nobis explicabo et sit.
+                            kind: assistant
+                            parent: s1a2b3c4d
+                            text: rc5
+            responses:
+                "201":
+                    description: Created response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BoardSticky'
+                            example:
+                                anchor:
+                                    exact: qh0
+                                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                    suffix: Eveniet corporis nobis explicabo et sit.
+                                created_at: "2026-10-16T09:30:00Z"
+                                error: Et dolorem id molestias.
+                                id: s1a2b3c4d
+                                kind: assistant
+                                messages:
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                parent: s1a2b3c4d
+                                returns: true
+                                state: error
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The passage or the question is empty or too long, the board is finished, or it has too many sticky notes'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board, or the parent sticky note, does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "503":
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unavailable
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/stickies/{sticky}:
+        delete:
+            tags:
+                - boards
+            summary: delete_sticky boards
+            description: Delete a sticky note, with the sticky notes on its answer.
+            operationId: boards#delete_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+                - name: sticky
+                  in: path
+                  description: Sticky note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Sticky note ID
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                  example: s1a2b3c4d
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The board is finished'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board or the sticky note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+        patch:
+            tags:
+                - boards
+            summary: save_sticky boards
+            description: 'Change a sticky note: the text of a memo, or whether it is given back at the end.'
+            operationId: boards#save_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+                - name: sticky
+                  in: path
+                  description: Sticky note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Sticky note ID
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                  example: s1a2b3c4d
+            requestBody:
+                description: Request body for save_sticky.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SaveStickyRequestBody'
+                        example:
+                            returns: false
+                            text: 1l5
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BoardSticky'
+                            example:
+                                anchor:
+                                    exact: qh0
+                                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                    suffix: Eveniet corporis nobis explicabo et sit.
+                                created_at: "2026-10-16T09:30:00Z"
+                                error: Quae ducimus officiis recusandae quaerat mollitia.
+                                id: s1a2b3c4d
+                                kind: memo
+                                messages:
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                parent: s1a2b3c4d
+                                returns: false
+                                state: error
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The text is too long, is given for a sticky note that is not a memo, or the board is finished'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board or the sticky note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/stickies/{sticky}/messages:
+        post:
+            tags:
+                - boards
+            summary: ask_sticky boards
+            description: 'Add a message to a sticky note: a follow-up question to the assistant, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.'
+            operationId: boards#ask_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  schema:
+                    type: string
+                    description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                  example: 3f9c2a7b1d4e6f
+                - name: sticky
+                  in: path
+                  description: Sticky note ID
+                  required: true
+                  schema:
+                    type: string
+                    description: Sticky note ID
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                  example: s1a2b3c4d
+            requestBody:
+                description: Request body for ask_sticky.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AskStickyRequestBody'
+                        example:
+                            text: aam
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BoardSticky'
+                            example:
+                                anchor:
+                                    exact: qh0
+                                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                                    suffix: Eveniet corporis nobis explicabo et sit.
+                                created_at: "2026-10-16T09:30:00Z"
+                                error: Est adipisci suscipit voluptatem.
+                                id: s1a2b3c4d
+                                kind: assistant
+                                messages:
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                    - at: "2026-10-16T09:30:00Z"
+                                      role: assistant
+                                      text: Eum quaerat rerum illo natus.
+                                parent: s1a2b3c4d
+                                returns: false
+                                state: error
+                                updated_at: "2026-10-16T09:30:00Z"
+                "400":
+                    description: 'bad_request: The message is empty or too long, the sticky note waits for an answer, the board is finished, or the sticky note has too many messages'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The board or the sticky note does not exist'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "503":
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unavailable
+                                temporary: false
+                                timeout: false
+            security:
+                - session_cookie_ebira_session: []
+    /boards/uploads/{token}:
+        put:
+            tags:
+                - notes
+            summary: upload_ai_board notes
+            description: Open a whiteboard with the text sent to a URL from start_ai_board. The request body is the text, at most 2 MB of UTF-8. A URL works once, until it expires.
+            operationId: notes#upload_ai_board
+            parameters:
+                - name: token
+                  in: path
+                  description: The token of the upload, from the URL start_ai_board gave
+                  required: true
+                  schema:
+                    type: string
+                    description: The token of the upload, from the URL start_ai_board gave
+                    example: Praesentium aperiam.
+                  example: Praesentium aperiam.
+                - name: ebira_session
+                  in: cookie
+                  description: Not used
+                  schema:
+                    type: string
+                    description: Not used
+                    example: Enim nostrum consequuntur consequatur consectetur et voluptatem.
+                  example: Enim nostrum consequuntur consequatur consectetur et voluptatem.
+            responses:
+                "201":
+                    description: Created response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BoardOpened'
+                            example:
+                                id: 3f9c2a7b1d4e6f
+                                url: http://localhost:13579/#board/3f9c2a7b1d4e6f
+                "400":
+                    description: 'bad_request: The text is empty or not UTF-8, or too many boards are open'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: bad_request
+                                temporary: false
+                                timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: unauthorized
+                                temporary: false
+                                timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: verification_required
+                                temporary: false
+                                timeout: false
+                "404":
+                    description: 'not_found: The URL is unknown, used or expired'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
+                "413":
+                    description: 'too_large: The text is larger than 2 MB'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: too_large
+                                temporary: false
+                                timeout: false
+            security: []
     /events:
         get:
             tags:
@@ -5945,6 +7317,40 @@ components:
             description: Request body for add_guide.
             example:
                 lang: ja
+        AddStickyRequestBody:
+            type: object
+            properties:
+                anchor:
+                    $ref: '#/components/schemas/BoardAnchor'
+                kind:
+                    type: string
+                    description: memo, or assistant to ask the assistant
+                    example: assistant
+                    enum:
+                        - memo
+                        - assistant
+                parent:
+                    type: string
+                    description: The sticky note whose answer the passage is in
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                text:
+                    type: string
+                    description: The memo, or the question; required for the assistant
+                    example: rc5
+                    maxLength: 10240
+            description: Request body for add_sticky.
+            example:
+                anchor:
+                    exact: qh0
+                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                    suffix: Eveniet corporis nobis explicabo et sit.
+                kind: assistant
+                parent: s1a2b3c4d
+                text: rc5
+            required:
+                - anchor
+                - kind
         ArchiveNotesRequestBody:
             type: object
             properties:
@@ -5996,6 +7402,567 @@ components:
                 answer: Quia molestiae nesciunt qui dignissimos vel.
             required:
                 - answer
+        AskStickyRequestBody:
+            type: object
+            properties:
+                text:
+                    type: string
+                    description: The message
+                    example: aam
+                    maxLength: 10240
+            description: Request body for ask_sticky.
+            example:
+                text: aam
+        Board:
+            type: object
+            properties:
+                created_at:
+                    type: string
+                    description: Creation time
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                from_session:
+                    type: boolean
+                    description: Whether a Claude Code session opened the board, and waits for what is given back
+                    example: false
+                id:
+                    type: string
+                    description: Board ID
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                result:
+                    $ref: '#/components/schemas/BoardResult'
+                source:
+                    $ref: '#/components/schemas/BoardSource'
+                status:
+                    type: string
+                    description: open, or done once finished
+                    example: open
+                    enum:
+                        - open
+                        - done
+                stickies:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BoardSticky'
+                    description: The sticky notes, in the order they were added
+                    example:
+                        - anchor:
+                            exact: qh0
+                            prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                            suffix: Eveniet corporis nobis explicabo et sit.
+                          created_at: "2026-10-16T09:30:00Z"
+                          error: Soluta accusantium.
+                          id: s1a2b3c4d
+                          kind: memo
+                          messages:
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                          parent: s1a2b3c4d
+                          returns: false
+                          state: error
+                          updated_at: "2026-10-16T09:30:00Z"
+                        - anchor:
+                            exact: qh0
+                            prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                            suffix: Eveniet corporis nobis explicabo et sit.
+                          created_at: "2026-10-16T09:30:00Z"
+                          error: Soluta accusantium.
+                          id: s1a2b3c4d
+                          kind: memo
+                          messages:
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                          parent: s1a2b3c4d
+                          returns: false
+                          state: error
+                          updated_at: "2026-10-16T09:30:00Z"
+                        - anchor:
+                            exact: qh0
+                            prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                            suffix: Eveniet corporis nobis explicabo et sit.
+                          created_at: "2026-10-16T09:30:00Z"
+                          error: Soluta accusantium.
+                          id: s1a2b3c4d
+                          kind: memo
+                          messages:
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                          parent: s1a2b3c4d
+                          returns: false
+                          state: error
+                          updated_at: "2026-10-16T09:30:00Z"
+                        - anchor:
+                            exact: qh0
+                            prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                            suffix: Eveniet corporis nobis explicabo et sit.
+                          created_at: "2026-10-16T09:30:00Z"
+                          error: Soluta accusantium.
+                          id: s1a2b3c4d
+                          kind: memo
+                          messages:
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                            - at: "2026-10-16T09:30:00Z"
+                              role: assistant
+                              text: Eum quaerat rerum illo natus.
+                          parent: s1a2b3c4d
+                          returns: false
+                          state: error
+                          updated_at: "2026-10-16T09:30:00Z"
+                text:
+                    type: string
+                    description: The source, copied when the board was opened
+                    example: Ut labore minima quo et voluptatem.
+                title:
+                    type: string
+                    description: Title
+                    example: Eaque ad eos quo dolore et voluptatem.
+                updated_at:
+                    type: string
+                    description: Last update time
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+            example:
+                created_at: "2026-10-16T09:30:00Z"
+                from_session: false
+                id: 3f9c2a7b1d4e6f
+                result:
+                    finished_at: "2026-10-16T09:30:00Z"
+                    note_id: be4c1193735ee1
+                    text: Cumque accusantium doloremque eaque.
+                source:
+                    format: text
+                    from: note
+                    lang: Harum odio ut unde id dolorem.
+                    note_id: be4c1193735ee1
+                    size: 5018596344245903192
+                status: open
+                stickies:
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      returns: false
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      returns: false
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      returns: false
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      returns: false
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                text: Ut labore minima quo et voluptatem.
+                title: Eaque ad eos quo dolore et voluptatem.
+                updated_at: "2026-10-16T09:30:00Z"
+            required:
+                - id
+                - title
+                - status
+                - created_at
+                - updated_at
+                - source
+                - text
+                - stickies
+                - from_session
+        BoardAnchor:
+            type: object
+            properties:
+                exact:
+                    type: string
+                    description: The passage
+                    example: qh0
+                    minLength: 1
+                prefix:
+                    type: string
+                    description: Text just before the passage, at most 256 characters
+                    example: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                suffix:
+                    type: string
+                    description: Text just after the passage, at most 256 characters
+                    example: Eveniet corporis nobis explicabo et sit.
+            description: 'The passage a sticky note is on, as a W3C text quote selector: the passage, with some text before and after it to tell it apart from the same text elsewhere'
+            example:
+                exact: qh0
+                prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                suffix: Eveniet corporis nobis explicabo et sit.
+            required:
+                - exact
+        BoardMessage:
+            type: object
+            properties:
+                at:
+                    type: string
+                    description: When it was written
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                role:
+                    type: string
+                    description: 'Who wrote it: the person (user) or the assistant'
+                    example: assistant
+                    enum:
+                        - user
+                        - assistant
+                text:
+                    type: string
+                    description: Message in Markdown
+                    example: Eum quaerat rerum illo natus.
+            example:
+                at: "2026-10-16T09:30:00Z"
+                role: assistant
+                text: Eum quaerat rerum illo natus.
+            required:
+                - role
+                - text
+                - at
+        BoardOpened:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Board ID
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                url:
+                    type: string
+                    description: URL of the board in the web UI, to give to the user
+                    example: http://localhost:13579/#board/3f9c2a7b1d4e6f
+            example:
+                id: 3f9c2a7b1d4e6f
+                url: http://localhost:13579/#board/3f9c2a7b1d4e6f
+            required:
+                - id
+                - url
+        BoardResult:
+            type: object
+            properties:
+                finished_at:
+                    type: string
+                    description: When the board was finished
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                note_id:
+                    type: string
+                    description: The note the board was saved as, if it was
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                text:
+                    type: string
+                    description: What the person gives back to the session, in Markdown
+                    example: Cumque accusantium doloremque eaque.
+            example:
+                finished_at: "2026-10-16T09:30:00Z"
+                note_id: be4c1193735ee1
+                text: Cumque accusantium doloremque eaque.
+            required:
+                - text
+                - finished_at
+        BoardSource:
+            type: object
+            properties:
+                format:
+                    type: string
+                    description: How to show the source
+                    example: text
+                    enum:
+                        - markdown
+                        - text
+                        - diff
+                        - code
+                from:
+                    type: string
+                    description: 'Where the source came from: sent to an upload URL, given as text, or the body of a note'
+                    example: note
+                    enum:
+                        - upload
+                        - text
+                        - note
+                lang:
+                    type: string
+                    description: Language of code
+                    example: Harum odio ut unde id dolorem.
+                note_id:
+                    type: string
+                    description: The note the source was copied from
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                size:
+                    type: integer
+                    description: Size of the source, in bytes
+                    example: 5018596344245903192
+                    format: int64
+            example:
+                format: text
+                from: note
+                lang: Harum odio ut unde id dolorem.
+                note_id: be4c1193735ee1
+                size: 5018596344245903192
+            required:
+                - from
+                - format
+                - size
+        BoardSticky:
+            type: object
+            properties:
+                anchor:
+                    $ref: '#/components/schemas/BoardAnchor'
+                created_at:
+                    type: string
+                    description: Creation time
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                error:
+                    type: string
+                    description: Why the last answer failed
+                    example: Soluta accusantium.
+                id:
+                    type: string
+                    description: Sticky note ID
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                kind:
+                    type: string
+                    description: memo, written by the person, or assistant, answered by the assistant
+                    example: memo
+                    enum:
+                        - memo
+                        - assistant
+                messages:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BoardMessage'
+                    description: The messages, oldest first
+                    example:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                parent:
+                    type: string
+                    description: The sticky note this one is on, for one on a passage of an answer
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                returns:
+                    type: boolean
+                    description: Whether what the sticky note found is to be given back to the session, at the end
+                    example: false
+                state:
+                    type: string
+                    description: idle, waiting for an answer, or error when the last answer failed
+                    example: error
+                    enum:
+                        - idle
+                        - waiting
+                        - error
+                updated_at:
+                    type: string
+                    description: Last update time
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+            description: A sticky note on a passage of the source, or of the answer of another sticky note (its parent)
+            example:
+                anchor:
+                    exact: qh0
+                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                    suffix: Eveniet corporis nobis explicabo et sit.
+                created_at: "2026-10-16T09:30:00Z"
+                error: Soluta accusantium.
+                id: s1a2b3c4d
+                kind: memo
+                messages:
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                parent: s1a2b3c4d
+                returns: false
+                state: error
+                updated_at: "2026-10-16T09:30:00Z"
+            required:
+                - id
+                - anchor
+                - kind
+                - messages
+                - state
+                - returns
+                - created_at
+                - updated_at
+        BoardSummary:
+            type: object
+            properties:
+                created_at:
+                    type: string
+                    description: Creation time
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                format:
+                    type: string
+                    description: How the source is shown
+                    example: diff
+                    enum:
+                        - markdown
+                        - text
+                        - diff
+                        - code
+                id:
+                    type: string
+                    description: Board ID
+                    example: 3f9c2a7b1d4e6f
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                status:
+                    type: string
+                    description: open, or done once finished
+                    example: done
+                    enum:
+                        - open
+                        - done
+                stickies:
+                    type: integer
+                    description: Number of sticky notes
+                    example: 8159457130861961317
+                    format: int64
+                title:
+                    type: string
+                    description: Title
+                    example: Est eos fugiat.
+                updated_at:
+                    type: string
+                    description: Last update time
+                    example: "2026-10-16T09:30:00Z"
+                    format: date-time
+                waiting:
+                    type: integer
+                    description: Number of sticky notes waiting for an answer
+                    example: 3462309494990713507
+                    format: int64
+            example:
+                created_at: "2026-10-16T09:30:00Z"
+                format: diff
+                id: 3f9c2a7b1d4e6f
+                status: done
+                stickies: 8159457130861961317
+                title: Est eos fugiat.
+                updated_at: "2026-10-16T09:30:00Z"
+                waiting: 3462309494990713507
+            required:
+                - id
+                - title
+                - status
+                - created_at
+                - updated_at
+                - format
+                - stickies
+                - waiting
         BrokenFileRef:
             type: object
             properties:
@@ -6297,6 +8264,17 @@ components:
                 status: expired
             required:
                 - status
+        DraftResponseBody:
+            type: object
+            properties:
+                text:
+                    type: string
+                    description: The draft, in Markdown
+                    example: Totam est exercitationem ipsam.
+            example:
+                text: Totam est exercitationem ipsam.
+            required:
+                - text
         Error:
             type: object
             properties:
@@ -6505,6 +8483,34 @@ components:
                 - size
                 - replaced_at
                 - current
+        FinishRequestBody:
+            type: object
+            properties:
+                lang:
+                    type: string
+                    description: Language of the headings of the note, that of the UI
+                    default: en
+                    example: ja
+                    enum:
+                        - en
+                        - ja
+                notebook:
+                    type: string
+                    description: Notebook to save the board in as a note; not saved when omitted
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+                text:
+                    type: string
+                    description: What to give back, in Markdown; may be empty
+                    example: zln
+                    maxLength: 65536
+            description: Request body for finish.
+            example:
+                lang: ja
+                notebook: inbox
+                text: zln
+            required:
+                - text
         GitConflict:
             type: object
             properties:
@@ -7262,7 +9268,7 @@ components:
             properties:
                 id:
                     type: string
-                    description: Note ID (absent for ready, notebooks and private_lost)
+                    description: Note ID, or the board ID for board (absent for ready, notebooks and private_lost)
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                 notebook:
@@ -7272,7 +9278,7 @@ components:
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 type:
                     type: string
-                    description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it
+                    description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. board means a whiteboard changed, such as when an answer came to a sticky note. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it
                     example: notebooks
                     enum:
                         - ready
@@ -7281,6 +9287,7 @@ components:
                         - deleted
                         - notebooks
                         - private_lost
+                        - board
             example:
                 id: be4c1193735ee1
                 notebook: inbox
@@ -7981,6 +9988,25 @@ components:
             required:
                 - stop_words
                 - stop_tags
+        OpenRequestBody:
+            type: object
+            properties:
+                note_id:
+                    type: string
+                    description: The note
+                    example: be4c1193735ee1
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                title:
+                    type: string
+                    description: Title of the board; the note's title when omitted
+                    example: pfn
+                    maxLength: 200
+            description: Request body for open.
+            example:
+                note_id: be4c1193735ee1
+                title: pfn
+            required:
+                - note_id
         PasskeyInfo:
             type: object
             properties:
@@ -8112,6 +10138,20 @@ components:
                 name: Commodi vel.
                 order: 6133899287636492423
                 sort: updated
+        SaveRequestBody:
+            type: object
+            properties:
+                title:
+                    type: string
+                    description: Title
+                    example: w
+                    minLength: 1
+                    maxLength: 200
+            description: Request body for save.
+            example:
+                title: w
+            required:
+                - title
         SaveSettingsRequestBody:
             type: object
             properties:
@@ -8168,6 +10208,22 @@ components:
                             - Aliquid incidunt.
                             - Reprehenderit ad dolores aut est omnis.
                 version: Quibusdam perferendis impedit.
+        SaveStickyRequestBody:
+            type: object
+            properties:
+                returns:
+                    type: boolean
+                    description: Whether what the sticky note found is to be given back
+                    example: false
+                text:
+                    type: string
+                    description: The new text of a memo; empty to leave only the mark on the passage
+                    example: 1l5
+                    maxLength: 10240
+            description: Request body for save_sticky.
+            example:
+                returns: false
+                text: 1l5
         SearchResult:
             type: object
             properties:
@@ -9212,6 +11268,8 @@ components:
 tags:
     - name: assistant
       description: Answers questions about the notes with the assistant agent.
+    - name: boards
+      description: 'Whiteboards for people: a text to read with sticky notes on its passages, answered by the assistant. AI clients open them, and read what is given back, with the tools of the notes service.'
     - name: notes
       description: CRUD and search for notes.
     - name: auth

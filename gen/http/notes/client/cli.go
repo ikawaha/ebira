@@ -1406,6 +1406,29 @@ func BuildUploadAiFilePayload(notesUploadAiFileToken *string, notesUploadAiFileS
 	return v, nil
 }
 
+// BuildUploadAiBoardPayload builds the payload for the notes upload_ai_board
+// endpoint from CLI flags.
+func BuildUploadAiBoardPayload(notesUploadAiBoardToken *string, notesUploadAiBoardSession *string) (*notes.UploadAiBoardPayload, error) {
+	var token string
+	{
+		if notesUploadAiBoardToken == nil {
+			return nil, fmt.Errorf("missing required flag --token")
+		}
+		token = *notesUploadAiBoardToken
+	}
+	var session *string
+	{
+		if notesUploadAiBoardSession != nil {
+			session = notesUploadAiBoardSession
+		}
+	}
+	v := &notes.UploadAiBoardPayload{}
+	v.Token = token
+	v.Session = session
+
+	return v, nil
+}
+
 // BuildAddFilePayload builds the payload for the notes add_file endpoint from
 // CLI flags.
 func BuildAddFilePayload(notesAddFileID *string, notesAddFileName *string, notesAddFileSession *string) (*notes.AddFilePayload, error) {

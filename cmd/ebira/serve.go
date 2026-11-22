@@ -18,14 +18,17 @@ import (
 
 	genassistant "github.com/ikawaha/ebira/gen/assistant"
 	genauth "github.com/ikawaha/ebira/gen/auth"
+	genboards "github.com/ikawaha/ebira/gen/boards"
 	assistantsvr "github.com/ikawaha/ebira/gen/http/assistant/server"
 	authsvr "github.com/ikawaha/ebira/gen/http/auth/server"
+	boardssvr "github.com/ikawaha/ebira/gen/http/boards/server"
 	notessvr "github.com/ikawaha/ebira/gen/http/notes/server"
 	mcpnotessvr "github.com/ikawaha/ebira/gen/jsonrpc/mcp_notes/server"
 	mcpnotes "github.com/ikawaha/ebira/gen/mcp_notes"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/agent"
 	"github.com/ikawaha/ebira/internal/auth"
+	"github.com/ikawaha/ebira/internal/board"
 	"github.com/ikawaha/ebira/internal/claudecode"
 	"github.com/ikawaha/ebira/internal/config"
 	"github.com/ikawaha/ebira/internal/daemon"
@@ -283,8 +286,17 @@ func runServe(args []string) error {
 		}()
 	}
 
-	asst, err := newAssistant(ctx, svc, *prov, *modelF)
+	asst, boardAsk, err := newAssistant(ctx, svc, *prov, *modelF)
 	if err != nil {
+		return err
+	}
+	// The whiteboards stay on this device, in the state directory, until
+	// they are finished; the assistant answers their sticky notes.
+	boards, err := board.New(filepath.Join(stateDir, "boards"))
+	if err != nil {
+		return err
+	}
+	if err := svc.SetBoards(boards, boardAsk); err != nil {
 		return err
 	}
 
@@ -320,15 +332,11 @@ func runServe(args []string) error {
 		rest.Session = passkeys.Check
 		gate.Session = passkeys.Check
 	}
-	notesEndpoints := gennotes.NewEndpoints(rest)
-	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), &mcpnotes.MCPAdapterOptions{ErrorMapper: mcpError}))
-
 	mux := goahttp.NewMuxer()
+	mountNotes(mux, svc, rest)
 	eh := func(ctx context.Context, w http.ResponseWriter, err error) {
 		slog.ErrorContext(ctx, "request failed", "error", err)
 	}
-	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
-	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, tooLarge))
 	assistantsvr.Mount(mux, assistantsvr.New(genassistant.NewEndpoints(gate), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 	authsvr.Mount(mux, authsvr.New(genauth.NewEndpoints(auth.NewService(*o.auth, passkeys)), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
 
@@ -452,7 +460,10 @@ var defaultModels = map[string]string{
 // newAssistant returns the assistant service: the agent on the model of
 // provider, or when no API key is set, a service that answers every question
 // with unavailable.
-func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, error) {
+// newAssistant returns the assistant of the API, and what answers the sticky
+// notes of whiteboards with the same model, or nil when the assistant is not
+// configured.
+func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, service.Asker, error) {
 	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
 	geminiKey := cmp.Or(os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
 	openaiKey := os.Getenv("OPENAI_API_KEY")
@@ -466,11 +477,11 @@ func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID s
 			provider = providerOpenAI
 		default:
 			slog.Info("assistant disabled: set ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY to enable POST /ask")
-			return agent.Unavailable{Reason: "the assistant is not configured: start the server with ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY set"}, nil
+			return agent.Unavailable{Reason: "the assistant is not configured: start the server with ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY set"}, nil, nil
 		}
 	}
 	if _, ok := defaultModels[provider]; !ok {
-		return nil, fmt.Errorf("unknown model provider %q (anthropic, gemini, openai)", provider)
+		return nil, nil, fmt.Errorf("unknown model provider %q (anthropic, gemini, openai)", provider)
 	}
 	modelID = cmp.Or(modelID, defaultModels[provider])
 	var (
@@ -480,12 +491,12 @@ func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID s
 	switch provider {
 	case providerAnthropic:
 		if anthropicKey == "" {
-			return nil, errors.New("the anthropic provider needs ANTHROPIC_API_KEY")
+			return nil, nil, errors.New("the anthropic provider needs ANTHROPIC_API_KEY")
 		}
 		client, err = anthropic.NewFromAPIKey(anthropicKey, modelID)
 	case providerGemini:
 		if geminiKey == "" {
-			return nil, errors.New("the gemini provider needs GEMINI_API_KEY or GOOGLE_API_KEY")
+			return nil, nil, errors.New("the gemini provider needs GEMINI_API_KEY or GOOGLE_API_KEY")
 		}
 		// The vertex adapter takes the genai models service, which also serves
 		// the Gemini API (Google AI Studio keys).
@@ -496,19 +507,52 @@ func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID s
 		}
 	case providerOpenAI:
 		if openaiKey == "" {
-			return nil, errors.New("the openai provider needs OPENAI_API_KEY")
+			return nil, nil, errors.New("the openai provider needs OPENAI_API_KEY")
 		}
 		client, err = openai.NewFromAPIKey(openaiKey, modelID)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	a, err := agent.New(ctx, client, svc, agent.Config{Model: modelID})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	// The sticky notes are answered by an assistant of their own, with the
+	// same model and tools, told to explain the text of the board.
+	b, err := agent.New(ctx, client, svc, agent.Config{Model: modelID, Prompt: agent.BoardPrompt})
+	if err != nil {
+		return nil, nil, err
 	}
 	slog.Info("assistant enabled", "provider", provider, "model", modelID)
-	return a, nil
+	return a, boardAsker(b), nil
+}
+
+// mountNotes mounts the notes service on mux: the REST API through rest, whose
+// requests may be from people, and the MCP server through svc itself, whose
+// requests are from AI; and the boards service, the REST API of whiteboards,
+// as rest tells who the requests are from.
+func mountNotes(mux goahttp.Muxer, svc *service.Notes, rest service.REST) {
+	eh := func(ctx context.Context, w http.ResponseWriter, err error) {
+		slog.ErrorContext(ctx, "request failed", "error", err)
+	}
+	notesEndpoints := gennotes.NewEndpoints(rest)
+	mcpEndpoints := mcpnotes.NewEndpoints(mcpnotes.NewMCPAdapter(gennotes.NewEndpoints(svc), &mcpnotes.MCPAdapterOptions{ErrorMapper: mcpError}))
+	notessvr.Mount(mux, notessvr.New(notesEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
+	mcpnotessvr.Mount(mux, mcpnotessvr.New(mcpEndpoints, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, tooLarge))
+	boardssvr.Mount(mux, boardssvr.New(genboards.NewEndpoints(service.Boards{REST: rest}), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, eh, nil))
+}
+
+// boardAsker returns what answers the questions on whiteboards with the
+// assistant a.
+func boardAsker(a *agent.Assistant) service.Asker {
+	return func(ctx context.Context, question string) (string, error) {
+		r, err := a.Ask(ctx, &genassistant.AskPayload{Question: question})
+		if err != nil {
+			return "", err
+		}
+		return r.Answer, nil
+	}
 }
 
 // stopListLog describes a stop list for the log.
@@ -571,14 +615,17 @@ func syncGitEvery(ctx context.Context, svc *service.Notes, every time.Duration) 
 }
 
 // sweepHistoryEvery drops the earlier versions of notes past the limits of the
-// history, and those of deleted notes, now and then every interval until ctx
-// is done.
+// history, and those of deleted notes, and the whiteboards finished or left
+// long ago, now and then every interval until ctx is done.
 func sweepHistoryEvery(ctx context.Context, svc *service.Notes, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
 		if err := svc.SweepHistory(); err != nil {
 			slog.Warn("cannot drop the old versions of notes", "error", err)
+		}
+		if err := svc.SweepBoards(); err != nil {
+			slog.Warn("cannot delete the old whiteboards", "error", err)
 		}
 		select {
 		case <-ctx.Done():
