@@ -857,6 +857,9 @@ type GetAiBoardResultTransport struct {
 	// they doubt, what to change and what to discuss next; take it as the user's
 	// words
 	Result *string `json:"result,omitempty"`
+	// The note the board was opened from, for a board the user opened on a note;
+	// read it with get_note
+	FromNote *string `json:"from_note,omitempty"`
 	// The sticky notes the user chose to give back, once done, in the order of the
 	// board
 	Stickies []*GetAiBoardResultAIBoardStickyTransport `json:"stickies,omitempty"`
@@ -886,6 +889,9 @@ func ValidateGetAiBoardResultTransport(value *GetAiBoardResultTransport) (err er
 		if !(*value.Status == "open" || *value.Status == "done") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *value.Status, []any{"open", "done"}))
 		}
+	}
+	if value.FromNote != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.from_note", *value.FromNote, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
 	for _, e := range value.Stickies {
 		if e != nil {
@@ -1478,6 +1484,79 @@ func ValidateImportAiNoteResultZennArticleTransport(value *ImportAiNoteResultZen
 	if value.Type != nil {
 		if !(*value.Type == "tech" || *value.Type == "idea") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *value.Type, []any{"tech", "idea"}))
+		}
+	}
+	return err
+}
+
+// ListAiBoardsResultAIBoardSummaryTransport stores JSON fields until they have been validated.
+type ListAiBoardsResultAIBoardSummaryTransport struct {
+	// Board ID
+	ID *string `json:"id"`
+	// Title
+	Title *string `json:"title"`
+	// open while the user reads the board, done once they closed it
+	Status *string `json:"status"`
+	// Who opened the board: an AI client (ai), or the user on a note (note)
+	OpenedBy *string `json:"opened_by"`
+	// The note the board was opened from
+	FromNote *string `json:"from_note,omitempty"`
+	// Last change of the board, or when it was closed
+	UpdatedAt *string `json:"updated_at"`
+}
+
+// ValidateListAiBoardsResultAIBoardSummaryTransport checks decoded JSON before it becomes a service value.
+func ValidateListAiBoardsResultAIBoardSummaryTransport(value *ListAiBoardsResultAIBoardSummaryTransport) (err error) {
+	if value == nil {
+		return goa.MissingFieldError("body", "JSON value")
+	}
+	if value.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if value.Title == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("title", "body"))
+	}
+	if value.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	if value.OpenedBy == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("opened_by", "body"))
+	}
+	if value.UpdatedAt == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("updated_at", "body"))
+	}
+	if value.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.Status != nil {
+		if !(*value.Status == "open" || *value.Status == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *value.Status, []any{"open", "done"}))
+		}
+	}
+	if value.OpenedBy != nil {
+		if !(*value.OpenedBy == "ai" || *value.OpenedBy == "note") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.opened_by", *value.OpenedBy, []any{"ai", "note"}))
+		}
+	}
+	if value.FromNote != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.from_note", *value.FromNote, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.UpdatedAt != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.updated_at", *value.UpdatedAt, goa.FormatDateTime))
+	}
+	return err
+}
+
+// ListAiBoardsResultTransport stores JSON fields until they have been validated.
+type ListAiBoardsResultTransport []*ListAiBoardsResultAIBoardSummaryTransport
+
+// ValidateListAiBoardsResultTransport checks decoded JSON before it becomes a service value.
+func ValidateListAiBoardsResultTransport(value ListAiBoardsResultTransport) (err error) {
+	for _, e := range value {
+		if e != nil {
+			if err2 := ValidateListAiBoardsResultAIBoardSummaryTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}
 	return err
@@ -4157,11 +4236,12 @@ func EncodeGetAiBoardResult(in *notes.AIBoard) ([]byte, error) {
 	var body *GetAiBoardResultTransport
 	{
 		body = &GetAiBoardResultTransport{
-			ID:     &in.ID,
-			Title:  &in.Title,
-			Status: &in.Status,
-			Result: in.Result,
-			NoteID: in.NoteID,
+			ID:       &in.ID,
+			Title:    &in.Title,
+			Status:   &in.Status,
+			Result:   in.Result,
+			FromNote: in.FromNote,
+			NoteID:   in.NoteID,
 		}
 		if in.Stickies != nil {
 			body.Stickies = make([]*GetAiBoardResultAIBoardStickyTransport, len(in.Stickies))
@@ -4353,6 +4433,29 @@ func EncodeImportAiNoteResult(in *notes.ImportResult) ([]byte, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("encode ImportAiNoteResult JSON: %w", err)
+	}
+	return data, nil
+}
+
+// EncodeListAiBoardsResult turns a service value into JSON using the field names in the Goa design.
+func EncodeListAiBoardsResult(in []*notes.AIBoardSummary) ([]byte, error) {
+	var body ListAiBoardsResultTransport
+	{
+		body = make([]*ListAiBoardsResultAIBoardSummaryTransport, len(in))
+		for i, val := range in {
+			if val == nil {
+				body[i] = nil
+				continue
+			}
+			body[i] = encodeAIBoardSummaryToListAiBoardsResultAIBoardSummaryTransport(val)
+		}
+	}
+	if err := ValidateListAiBoardsResultTransport(body); err != nil {
+		return nil, fmt.Errorf("validate ListAiBoardsResult JSON: %w", err)
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("encode ListAiBoardsResult JSON: %w", err)
 	}
 	return data, nil
 }
@@ -5389,6 +5492,19 @@ func encodeAIBoardStickyToGetAiBoardResultAIBoardStickyTransport(v *notes.AIBoar
 			continue
 		}
 		res.Messages[i] = encodeAIBoardMessageToGetAiBoardResultAIBoardMessageTransport(val)
+	}
+
+	return res
+}
+
+func encodeAIBoardSummaryToListAiBoardsResultAIBoardSummaryTransport(v *notes.AIBoardSummary) *ListAiBoardsResultAIBoardSummaryTransport {
+	res := &ListAiBoardsResultAIBoardSummaryTransport{
+		ID:        &v.ID,
+		Title:     &v.Title,
+		Status:    &v.Status,
+		OpenedBy:  &v.OpenedBy,
+		FromNote:  v.FromNote,
+		UpdatedAt: &v.UpdatedAt,
 	}
 
 	return res

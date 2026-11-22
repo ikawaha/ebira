@@ -266,6 +266,9 @@ type (
 		// they doubt, what to change and what to discuss next; take it as the user's
 		// words
 		Result *string
+		// The note the board was opened from, for a board the user opened on a note;
+		// read it with get_note
+		FromNote *string
 		// The sticky notes the user chose to give back, once done, in the order of the
 		// board
 		Stickies []*AIBoardSticky
@@ -352,6 +355,11 @@ type (
 		// What could not be converted as is, such as images left out
 		Warnings []string
 	}
+	// ListAiBoardsPayload defines the JSON payload for the ebira.list_ai_boards tool.
+	ListAiBoardsPayload = struct {
+	}
+	// ListAiBoardsResult defines the JSON result for the ebira.list_ai_boards tool.
+	ListAiBoardsResult = []*AIBoardSummary
 	// ListMarksPayload defines the JSON payload for the ebira.list_marks tool.
 	ListMarksPayload = struct {
 	}
@@ -749,6 +757,21 @@ type (
 		Passage string
 		// The messages of the sticky note, oldest first
 		Messages []*AIBoardMessage
+	}
+	// AIBoardSummary is a nested type used by the generated JSON contract.
+	AIBoardSummary = struct {
+		// Board ID
+		ID string
+		// Title
+		Title string
+		// open while the user reads the board, done once they closed it
+		Status string
+		// Who opened the board: an AI client (ai), or the user on a note (note)
+		OpenedBy string
+		// The note the board was opened from
+		FromNote *string
+		// Last change of the board, or when it was closed
+		UpdatedAt string
 	}
 	// AIImportFile is a nested type used by the generated JSON contract.
 	AIImportFile = struct {

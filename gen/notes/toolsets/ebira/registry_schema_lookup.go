@@ -36,35 +36,37 @@ func ToolSchema(name tools.Ident) (*genregistry.ToolSchema, bool) {
 	case "ebira.get_ai_board":
 		return declarations.schema165(), true
 	case "ebira.get_note":
-		return declarations.schema188(), true
+		return declarations.schema189(), true
 	case "ebira.import_ai_note":
-		return declarations.schema232(), true
+		return declarations.schema233(), true
+	case "ebira.list_ai_boards":
+		return declarations.schema294(), true
 	case "ebira.list_marks":
-		return declarations.schema293(), true
+		return declarations.schema308(), true
 	case "ebira.list_notebooks":
-		return declarations.schema304(), true
+		return declarations.schema319(), true
 	case "ebira.list_notes":
-		return declarations.schema324(), true
+		return declarations.schema339(), true
 	case "ebira.list_tags":
-		return declarations.schema388(), true
+		return declarations.schema403(), true
 	case "ebira.make_notebook_private":
-		return declarations.schema402(), true
+		return declarations.schema417(), true
 	case "ebira.move_ai_note":
-		return declarations.schema409(), true
+		return declarations.schema424(), true
 	case "ebira.move_ai_separator":
-		return declarations.schema453(), true
+		return declarations.schema468(), true
 	case "ebira.open_ai_board":
-		return declarations.schema472(), true
+		return declarations.schema487(), true
 	case "ebira.search_notes":
-		return declarations.schema495(), true
+		return declarations.schema510(), true
 	case "ebira.start_ai_board":
-		return declarations.schema548(), true
+		return declarations.schema563(), true
 	case "ebira.start_ai_upload":
-		return declarations.schema568(), true
+		return declarations.schema583(), true
 	case "ebira.update_ai_note":
-		return declarations.schema584(), true
+		return declarations.schema599(), true
 	case "ebira.update_ai_separator":
-		return declarations.schema656(), true
+		return declarations.schema671(), true
 	default:
 		return nil, false
 	}

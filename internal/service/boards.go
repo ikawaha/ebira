@@ -302,13 +302,62 @@ func (s *Notes) GetAiBoard(ctx context.Context, p *gennotes.GetAiBoardPayload) (
 	if err != nil {
 		return nil, boardErr(err)
 	}
+	if !s.aiMaySee(ctx, b) {
+		return nil, boardErr(board.ErrNotFound)
+	}
 	res := &gennotes.AIBoard{ID: b.ID, Title: b.Title, Status: b.Status}
+	if b.Source.NoteID != "" {
+		res.FromNote = &b.Source.NoteID
+	}
 	if b.Status == board.Done && b.Result != nil {
 		res.Result = &b.Result.Text
 		if b.Result.NoteID != "" {
 			res.NoteID = &b.Result.NoteID
 		}
 		res.Stickies = givenBack(b)
+	}
+	return res, nil
+}
+
+// aiMaySee reports whether the request may read board b. A board opened on
+// a note holds a copy of its body, the sticky notes on it and the answers,
+// so AI clients read it only while they may see the note: not one in a
+// private, drop or the trash notebook, nor one deleted. People see all.
+func (s *Notes) aiMaySee(ctx context.Context, b *board.Board) bool {
+	if b.Source.NoteID == "" {
+		return true
+	}
+	_, err := s.Get(ctx, &gennotes.GetPayload{ID: b.Source.NoteID})
+	return err == nil
+}
+
+func (s *Notes) ListAiBoards(ctx context.Context) ([]*gennotes.AIBoardSummary, error) {
+	st, err := s.boardStore()
+	if err != nil {
+		return nil, err
+	}
+	list, err := st.List()
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*gennotes.AIBoardSummary, 0, len(list))
+	for i := range list {
+		b := &list[i]
+		if !s.aiMaySee(ctx, b) {
+			continue
+		}
+		by := "note"
+		if b.Origin.AI {
+			by = "ai"
+		}
+		at := b.UpdatedAt
+		if b.Result != nil {
+			at = b.Result.FinishedAt
+		}
+		res = append(res, &gennotes.AIBoardSummary{
+			ID: b.ID, Title: b.Title, Status: b.Status, OpenedBy: by,
+			FromNote: optional(b.Source.NoteID), UpdatedAt: store.FormatTime(at),
+		})
 	}
 	return res, nil
 }

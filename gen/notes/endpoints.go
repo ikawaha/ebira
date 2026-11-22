@@ -56,6 +56,7 @@ type Endpoints struct {
 	StartAiBoard          goa.Endpoint
 	UploadAiBoard         goa.Endpoint
 	GetAiBoard            goa.Endpoint
+	ListAiBoards          goa.Endpoint
 	DeleteAiFile          goa.Endpoint
 	UpdateAiNote          goa.Endpoint
 	DeleteAiNote          goa.Endpoint
@@ -198,6 +199,7 @@ func NewEndpoints(s Service) *Endpoints {
 		StartAiBoard:          NewStartAiBoardEndpoint(s),
 		UploadAiBoard:         NewUploadAiBoardEndpoint(s),
 		GetAiBoard:            NewGetAiBoardEndpoint(s),
+		ListAiBoards:          NewListAiBoardsEndpoint(s),
 		DeleteAiFile:          NewDeleteAiFileEndpoint(s),
 		UpdateAiNote:          NewUpdateAiNoteEndpoint(s),
 		DeleteAiNote:          NewDeleteAiNoteEndpoint(s),
@@ -275,6 +277,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.StartAiBoard = m(e.StartAiBoard)
 	e.UploadAiBoard = m(e.UploadAiBoard)
 	e.GetAiBoard = m(e.GetAiBoard)
+	e.ListAiBoards = m(e.ListAiBoards)
 	e.DeleteAiFile = m(e.DeleteAiFile)
 	e.UpdateAiNote = m(e.UpdateAiNote)
 	e.DeleteAiNote = m(e.DeleteAiNote)
@@ -1078,6 +1081,14 @@ func NewGetAiBoardEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		p := req.(*GetAiBoardPayload)
 		return s.GetAiBoard(ctx, p)
+	}
+}
+
+// NewListAiBoardsEndpoint returns an endpoint function that calls the method
+// "list_ai_boards" of service "notes".
+func NewListAiBoardsEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.ListAiBoards(ctx)
 	}
 }
 

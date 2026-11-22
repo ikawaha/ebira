@@ -1,6 +1,6 @@
 ---
 name: ebira-whiteboard
-description: Open a text — an explanation you wrote, a diff, a plan, a file — on an ebira whiteboard, where the user reads it and asks about passages on sticky notes without filling this conversation; then read what they give back. Use when the user asks to open, read or go through something on the whiteboard (ホワイトボード), or says they are done with one (終わった).
+description: Open a text — an explanation you wrote, a diff, a plan, a file — on an ebira whiteboard, where the user reads it and asks about passages on sticky notes without filling this conversation; then read what they give back. Use when the user asks to open, read or go through something on the whiteboard (ホワイトボード), says they are done with one (終わった), or asks you to read a whiteboard they closed.
 ---
 
 # Reading a text on an ebira whiteboard
@@ -58,3 +58,13 @@ doubt, what to change and what to discuss next. A question they asked tells
 you what was unclear; an answer they kept tells you what they now take as
 true, so check it against the code before you build on it. Act on it as on any
 request of theirs, and push back if you think something in it is wrong.
+
+## A board the user opened on a note
+
+The user may open a whiteboard on one of their notes, read it there and close
+it, then ask you to read it, such as "read the whiteboard I closed". Find it
+with `list_ai_boards` (newest first; `opened_by: note`, with the note in
+`from_note`), and ask which one if it is not clear. Read it with
+`get_ai_board` as above, and the note with `get_note` if it helps. Then answer
+the points and the sticky notes in the conversation. The points were also added
+at the end of the note; change the note only if the user asks you to.

@@ -311,6 +311,9 @@ type (
 		// they doubt, what to change and what to discuss next; take it as the user's
 		// words
 		Result *string `json:"result,omitempty"`
+		// The note the board was opened from, for a board the user opened on a note;
+		// read it with get_note
+		FromNote *string `json:"from_note,omitempty"`
 		// The sticky notes the user chose to give back, once done, in the order of the
 		// board
 		Stickies []*AIBoardStickyTransport `json:"stickies,omitempty"`
@@ -409,6 +412,17 @@ type (
 		// What could not be converted as is, such as images left out
 		Warnings []string `json:"warnings"`
 	}
+	// ListAiBoardsPayloadTransport is the internal JSON transport type for ListAiBoardsPayload.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ListAiBoardsPayloadTransport struct {
+	}
+	// ListAiBoardsResultTransport is the internal JSON transport type for ListAiBoardsResult.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	ListAiBoardsResultTransport []*AIBoardSummaryTransport
 	// ListMarksPayloadTransport is the internal JSON transport type for ListMarksPayload.
 	// It lives in the toolset-local http package and is used only for JSON
 	// decode + validation (missing-field detection) before transforming into
@@ -887,6 +901,24 @@ type (
 		Passage *string `json:"passage"`
 		// The messages of the sticky note, oldest first
 		Messages []*AIBoardMessageTransport `json:"messages"`
+	}
+	// AIBoardSummaryTransport is the internal JSON transport type for AIBoardSummaryTransport.
+	// It lives in the toolset-local http package and is used only for JSON
+	// decode + validation (missing-field detection) before transforming into
+	// the public tool type.
+	AIBoardSummaryTransport struct {
+		// Board ID
+		ID *string `json:"id"`
+		// Title
+		Title *string `json:"title"`
+		// open while the user reads the board, done once they closed it
+		Status *string `json:"status"`
+		// Who opened the board: an AI client (ai), or the user on a note (note)
+		OpenedBy *string `json:"opened_by"`
+		// The note the board was opened from
+		FromNote *string `json:"from_note,omitempty"`
+		// Last change of the board, or when it was closed
+		UpdatedAt *string `json:"updated_at"`
 	}
 	// AIImportFileTransport is the internal JSON transport type for AIImportFileTransport.
 	// It lives in the toolset-local http package and is used only for JSON

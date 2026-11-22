@@ -285,6 +285,8 @@ func withMCPTransport(h *Server, origins []string, next http.HandlerFunc) http.H
 					return
 				}
 				switch params.Name {
+				case "list_ai_boards":
+					mode.wrapOutput = true
 				case "list_marks":
 					mode.wrapOutput = true
 				case "list_notebooks":
@@ -745,6 +747,8 @@ func mcpLegacyResult(value any, mode mcpLegacyMode) (any, error) {
 		for index, tool := range copy.Tools {
 			item := *tool
 			switch item.Name {
+			case "list_ai_boards":
+				item.OutputSchema = json.RawMessage("{\"$defs\":{\"AIBoardSummary\":{\"additionalProperties\":false,\"properties\":{\"from_note\":{\"description\":\"The note the board was opened from\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"id\":{\"description\":\"Board ID\",\"pattern\":\"^[a-z0-9][a-z0-9_-]{0,63}$\",\"type\":\"string\"},\"opened_by\":{\"description\":\"Who opened the board: an AI client (ai), or the user on a note (note)\",\"enum\":[\"ai\",\"note\"],\"type\":\"string\"},\"status\":{\"description\":\"open while the user reads the board, done once they closed it\",\"enum\":[\"open\",\"done\"],\"type\":\"string\"},\"title\":{\"description\":\"Title\",\"type\":\"string\"},\"updated_at\":{\"description\":\"Last change of the board, or when it was closed\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\",\"title\",\"status\",\"opened_by\",\"updated_at\"],\"title\":\"AIBoardSummary\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"value\":{\"items\":{\"$ref\":\"#/$defs/AIBoardSummary\"},\"type\":\"array\"}},\"required\":[\"value\"],\"type\":\"object\"}")
 			case "list_marks":
 				item.OutputSchema = json.RawMessage("{\"$defs\":{\"MarkInfo\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"description\":\"Mark ID\",\"enum\":[\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"purple\",\"gray\",\"star\",\"important\",\"question\",\"done\",\"pin\",\"urgent\",\"idea\",\"wip\",\"hold\",\"dropped\",\"reply\",\"waiting\",\"review\"],\"type\":\"string\"},\"kind\":{\"description\":\"color, or symbol for a mark drawn as an emoji\",\"enum\":[\"color\",\"symbol\"],\"type\":\"string\"},\"name\":{\"description\":\"Name the user gave the mark, which says what it means, such as important; absent for none\",\"type\":\"string\"}},\"required\":[\"id\",\"kind\"],\"title\":\"MarkInfo\",\"type\":\"object\"}},\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"value\":{\"items\":{\"$ref\":\"#/$defs/MarkInfo\"},\"type\":\"array\"}},\"required\":[\"value\"],\"type\":\"object\"}")
 			case "list_notebooks":

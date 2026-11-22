@@ -114,3 +114,83 @@ func TestBoardAppendRefused(t *testing.T) {
 		t.Errorf("closing = %v", err)
 	}
 }
+
+func TestAIReadsBoardsOnNotes(t *testing.T) {
+	svc, _ := newBoardService(t, nil)
+	person := AsPerson(context.Background())
+	ai := WithBaseURL(context.Background(), "http://localhost:13579")
+
+	work, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "work", Kind: "default"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("plan"), Notebook: &work.ID, Title: "Plan", Body: ptr("Use a trie.\n")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	diary, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "diary", Kind: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("secret"), Notebook: &diary.ID, Title: "Secret", Body: ptr("Not for AI.\n")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onShared, err := boardsOf(svc).Open(person, &genboards.OpenPayload{NoteID: shared.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onSecret, err := boardsOf(svc).Open(person, &genboards.OpenPayload{NoteID: secret.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	byAI, err := svc.OpenAiBoard(ai, &gennotes.OpenAiBoardPayload{Title: "Diff", Format: "text", Text: ptr("x")})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// AI clients list the boards they opened and those on notes they see,
+	// not one on a private note, which holds a copy of it.
+	list, err := svc.ListAiBoards(ai)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]*gennotes.AIBoardSummary{}
+	for _, b := range list {
+		seen[b.ID] = b
+	}
+	if b := seen[onShared.ID]; b == nil || b.OpenedBy != "note" || deref(b.FromNote) != shared.ID {
+		t.Errorf("board on a shared note = %+v", b)
+	}
+	if b := seen[byAI.ID]; b == nil || b.OpenedBy != "ai" || b.FromNote != nil {
+		t.Errorf("board an AI opened = %+v", b)
+	}
+	if seen[onSecret.ID] != nil || len(list) != 2 {
+		t.Errorf("AI lists %d boards, with the private one: %v", len(list), seen[onSecret.ID] != nil)
+	}
+	if _, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: onSecret.ID}); errorName(err) != "not_found" {
+		t.Errorf("board on a private note for AI = %v", err)
+	}
+
+	// Closed, the board on the shared note gives AI clients what was given
+	// back, with the note it was opened from.
+	q, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: onShared.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}, Text: ptr("why not a map?")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: onShared.ID, Text: "- compare", Stickies: []string{q.ID}, AppendToNote: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: onShared.ID})
+	if err != nil || got.Status != "done" || deref(got.FromNote) != shared.ID || deref(got.Result) != "- compare" || len(got.Stickies) != 1 {
+		t.Errorf("closed board on a note for AI = %+v, %v", got, err)
+	}
+
+	// Made private later, the note hides its board too.
+	if _, err := svc.SaveNotebook(person, &gennotes.SaveNotebookPayload{ID: shared.Notebook, Kind: ptr("private")}); err != nil {
+		t.Skipf("making the notebook private: %v", err)
+	}
+	if _, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: onShared.ID}); errorName(err) != "not_found" {
+		t.Errorf("board on a note made private = %v", err)
+	}
+}
