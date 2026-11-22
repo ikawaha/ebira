@@ -558,6 +558,15 @@ a.zenn-article:hover { color: var(--accent); }
 .body code { background: var(--code-bg); padding: 1px 4px; border-radius: var(--r-sm); font: var(--fs-sm)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .body pre { background: var(--code-bg); padding: 12px; border-radius: var(--r-lg); overflow-x: auto; }
 .body pre code { padding: 0; background: none; }
+/* A diff code block (colorDiffs): the lines added and deleted on green and
+   red across the block, the heads of hunks in the accent and the heads of
+   files bold. */
+.body pre code.diff { display: inline-block; min-width: 100%; }
+.body pre code.diff .line { display: block; margin: 0 -12px; padding: 0 12px; }
+.body pre code.diff .line.add { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.body pre code.diff .line.del { background: color-mix(in srgb, var(--ng) 14%, transparent); }
+.body pre code.diff .line.hunk { color: var(--accent); }
+.body pre code.diff .line.file { font-weight: 600; }
 /* A bar above each code block folds and unfolds it (addCodeFolds). */
 .body .code-fold { margin: 1em 0 0; }
 .body .code-fold > summary { display: flex; align-items: center; gap: 8px; padding: 2px 8px; border-radius: var(--r-lg); background: var(--code-bg); color: var(--fg-muted); font-size: var(--fs-xs); cursor: pointer; list-style: none; user-select: none; }
