@@ -460,8 +460,8 @@ func (s *Notes) fullBoard(ctx context.Context, st *board.Store, b *board.Board) 
 		Fork:        s.forkState(ctx, b),
 	}
 	if b.Source.NoteID != "" {
-		title, state := s.noteState(ctx, b)
-		res.Source.NoteTitle, res.Source.NoteState = optional(title), optional(state)
+		title, notebook, state := s.noteState(ctx, b)
+		res.Source.NoteTitle, res.Source.NoteNotebook, res.Source.NoteState = optional(title), optional(notebook), optional(state)
 	}
 	for i := range b.Stickies {
 		res.Stickies = append(res.Stickies, apiSticky(&b.Stickies[i]))
@@ -986,20 +986,16 @@ func (bs *boards) forgetBoard(b *board.Board) {
 	}
 }
 
-// appendToNote adds text at the end of note id, after a blank line. A note
-// changed meanwhile is read again, so nothing written in it is lost.
-func (s *Notes) appendToNote(ctx context.Context, id, text string) error {
+// changeNoteBody changes the body of note id with change. A note changed
+// meanwhile is read again, so nothing written in it is lost.
+func (s *Notes) changeNoteBody(ctx context.Context, id string, change func(string) string) error {
 	var err error
 	for range 3 {
 		var n *gennotes.Note
 		if n, err = s.Get(ctx, &gennotes.GetPayload{ID: id}); err != nil {
 			return err
 		}
-		body := strings.TrimRight(n.Body, "\n")
-		if body != "" {
-			body += "\n\n"
-		}
-		body += text
+		body := change(n.Body)
 		version := n.Version
 		if _, err = s.Update(ctx, &gennotes.UpdatePayload{ID: id, Body: &body, IfMatch: &version}); err == nil {
 			return nil
@@ -1012,22 +1008,22 @@ func (s *Notes) appendToNote(ctx context.Context, id, text string) error {
 	return err
 }
 
-// noteState tells how the note board b was opened from is now: its title,
-// and ok, changed, trash or missing.
-func (s *Notes) noteState(ctx context.Context, b *board.Board) (title, state string) {
+// noteState tells how the note board b was opened from is now: its title
+// and notebook, and ok, changed, trash or missing.
+func (s *Notes) noteState(ctx context.Context, b *board.Board) (title, notebook, state string) {
 	n, err := s.Get(ctx, &gennotes.GetPayload{ID: b.Source.NoteID})
 	var se *goa.ServiceError
 	switch {
 	case errors.As(err, &se) && se.Name == "not_found":
-		return "", "missing"
+		return "", "", "missing"
 	case err != nil:
-		return "", ""
+		return "", "", ""
 	case n.Notebook == store.Trash:
-		return n.Title, "trash"
+		return n.Title, "", "trash"
 	case b.Source.NoteVersion != "" && !store.MatchVersion(b.Source.NoteVersion, n.Version):
-		return n.Title, "changed"
+		return n.Title, n.Notebook, "changed"
 	}
-	return n.Title, "ok"
+	return n.Title, n.Notebook, "ok"
 }
 
 // askFork asks a fork the question of sticky note st of b, whose source is
@@ -1139,6 +1135,9 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 	if appendToNote && from == nil {
 		return nil, gennotes.MakeBadRequest(errors.New("the board was not opened from a note, or the note is in the trash or deleted"))
 	}
+	if appendToNote && p.Notebook == nil {
+		return nil, gennotes.MakeBadRequest(errors.New("the note links to the minutes: keep them in a notebook"))
+	}
 	source, err := st.Source(b.ID)
 	if err != nil {
 		return nil, boardErr(err)
@@ -1155,12 +1154,11 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 		noteID = n.ID
 	}
 	if appendToNote {
-		var minutes *board.NoteRef
-		if noteID != "" {
-			minutes = &board.NoteRef{ID: noteID, Title: b.Title}
-		}
-		add := board.Appendix(b, source, p.Text, given, p.Lang, s.now().Local().Format(time.DateOnly), minutes)
-		if err := s.appendToNote(ctx, from.ID, add); err != nil {
+		minutes := board.NoteRef{ID: noteID, Title: b.Title}
+		day := s.now().Local().Format(time.DateOnly)
+		if err := s.changeNoteBody(ctx, from.ID, func(body string) string {
+			return board.AddDiscussion(body, p.Lang, day, minutes)
+		}); err != nil {
 			return nil, err
 		}
 	}

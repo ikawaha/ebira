@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	genboards "github.com/ikawaha/ebira/gen/boards"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
@@ -20,8 +21,8 @@ func TestBoardAppendsToNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if deref(b.Source.NoteState) != "ok" || deref(b.Source.NoteTitle) != "Plan" {
-		t.Errorf("note of the board = %v, %v", deref(b.Source.NoteState), deref(b.Source.NoteTitle))
+	if deref(b.Source.NoteState) != "ok" || deref(b.Source.NoteTitle) != "Plan" || deref(b.Source.NoteNotebook) != n.Notebook {
+		t.Errorf("note of the board = %v, %v, %v", deref(b.Source.NoteState), deref(b.Source.NoteTitle), deref(b.Source.NoteNotebook))
 	}
 	q, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: b.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}, Text: ptr("why not a map?")})
 	if err != nil {
@@ -54,25 +55,17 @@ func TestBoardAppendsToNote(t *testing.T) {
 		t.Fatalf("result = %+v", done.Result)
 	}
 
-	// The note keeps its body, with the change made meanwhile, and gets the
-	// next points, the sticky note given back and a link to the minutes.
+	// The note keeps its body, with the change made meanwhile, and gets a
+	// line linking to the minutes in its section of discussions; the points
+	// and the sticky notes are in the minutes.
 	got, _ := svc.Get(person, &gennotes.GetPayload{ID: n.ID})
-	for _, want := range []string{
-		"Use a trie for the index.\nMind memory.\n\n## Discussed on a whiteboard (",
-		"### Next points\n\n- compare with a map\n",
-		"**Memo** why not a map?",
-		"Minutes: [Plan](/#note/" + *done.Result.NoteID + ")",
-	} {
-		if !strings.Contains(got.Body, want) {
-			t.Errorf("note has no %q:\n%s", want, got.Body)
-		}
+	day := time.Now().Format(time.DateOnly)
+	if want := "Use a trie for the index.\nMind memory.\n\n## Appendix: discussions\n\n- " + day + " [Plan](/#note/" + *done.Result.NoteID + ")\n"; got.Body != want {
+		t.Errorf("note:\n%s\nwant:\n%s", got.Body, want)
 	}
-	if strings.Contains(got.Body, "only for me") {
-		t.Errorf("note has a sticky note not given back:\n%s", got.Body)
-	}
-	// The minutes link to the note.
+	// The minutes link to the note, and have the points.
 	minutes, _ := svc.Get(person, &gennotes.GetPayload{ID: *done.Result.NoteID})
-	if !strings.HasPrefix(minutes.Body, "From the note: [Plan](/#note/plan)\n") {
+	if !strings.HasPrefix(minutes.Body, "From the note: [Plan](/#note/plan)\n") || !strings.Contains(minutes.Body, "- compare with a map") {
 		t.Errorf("minutes:\n%s", minutes.Body)
 	}
 }
@@ -89,6 +82,19 @@ func TestBoardAppendRefused(t *testing.T) {
 	}
 	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: opened.ID, AppendToNote: ptr(true)}); errorName(err) != "bad_request" {
 		t.Errorf("adding without a note = %v", err)
+	}
+
+	// Nor without the minutes to link to.
+	kept, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("kept"), Title: "Kept", Body: ptr("x")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kb, err := boardsOf(svc).Open(person, &genboards.OpenPayload{NoteID: kept.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: kb.ID, AppendToNote: ptr(true)}); errorName(err) != "bad_request" {
+		t.Errorf("adding without the minutes = %v", err)
 	}
 
 	// Nor one whose note is in the trash.
@@ -178,7 +184,7 @@ func TestAIReadsBoardsOnNotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: onShared.ID, Text: "- compare", Stickies: []string{q.ID}, AppendToNote: ptr(true)}); err != nil {
+	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: onShared.ID, Text: "- compare", Stickies: []string{q.ID}, Notebook: &work.ID, AppendToNote: ptr(true)}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: onShared.ID})

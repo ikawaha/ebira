@@ -184,8 +184,7 @@ type BoardResult struct {
 	Stickies []string
 	// The note the minutes of the board were kept in, if they were
 	NoteID *string
-	// Whether the next points and the sticky notes were added at the end of the
-	// note the board was opened from
+	// Whether a link to the minutes was added to the note the board was opened from
 	Appended bool
 	// When the board was finished
 	FinishedAt string
@@ -199,6 +198,9 @@ type BoardSource struct {
 	NoteID *string
 	// The title of that note now, if it is there
 	NoteTitle *string
+	// The notebook of that note now, if it is there, where its minutes go by
+	// default
+	NoteNotebook *string
 	// The state of that note now: ok; changed since the board was opened; trash,
 	// in the trash; or missing, deleted. Closing the board may add to it unless it
 	// is in the trash or missing
@@ -304,8 +306,9 @@ type FinishPayload struct {
 	Stickies []string
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string
-	// Add the next points and the sticky notes given back, with a link to the
-	// minutes if kept, at the end of the note the board was opened from
+	// Add a line linking to the minutes, which are then to be kept (notebook), in
+	// the section of discussions at the end of the note the board was opened from
+	// (Appendix: discussions)
 	AppendToNote *bool
 	// Language of the headings of the note, that of the UI
 	Lang string
@@ -518,8 +521,7 @@ type jsonBoardResultTransport struct {
 	Stickies []string `json:"stickies"`
 	// The note the minutes of the board were kept in, if they were
 	NoteID *string `json:"note_id,omitempty"`
-	// Whether the next points and the sticky notes were added at the end of the
-	// note the board was opened from
+	// Whether a link to the minutes was added to the note the board was opened from
 	Appended *bool `json:"appended"`
 	// When the board was finished
 	FinishedAt *string `json:"finished_at"`
@@ -563,6 +565,9 @@ type jsonBoardSourceTransport struct {
 	NoteID *string `json:"note_id,omitempty"`
 	// The title of that note now, if it is there
 	NoteTitle *string `json:"note_title,omitempty"`
+	// The notebook of that note now, if it is there, where its minutes go by
+	// default
+	NoteNotebook *string `json:"note_notebook,omitempty"`
 	// The state of that note now: ok; changed since the board was opened; trash,
 	// in the trash; or missing, deleted. Closing the board may add to it unless it
 	// is in the trash or missing
@@ -596,6 +601,9 @@ func validatejsonBoardSourceTransport(value *jsonBoardSourceTransport) (err erro
 	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.NoteNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_notebook", *value.NoteNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.NoteState != nil {
 		if !(*value.NoteState == "ok" || *value.NoteState == "changed" || *value.NoteState == "trash" || *value.NoteState == "missing") {
@@ -922,6 +930,9 @@ func validateBoardSourceOriginal(value *BoardSource) (err error) {
 	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.NoteNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_notebook", *value.NoteNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if value.NoteState != nil {
 		if !(*value.NoteState == "ok" || *value.NoteState == "changed" || *value.NoteState == "trash" || *value.NoteState == "missing") {
@@ -1550,12 +1561,13 @@ func EncodeBoardSource(in *BoardSource) ([]byte, error) {
 	var body *jsonBoardSourceTransport
 	{
 		body = &jsonBoardSourceTransport{
-			From:      &in.From,
-			NoteID:    in.NoteID,
-			NoteTitle: in.NoteTitle,
-			NoteState: in.NoteState,
-			Format:    &in.Format,
-			Lang:      in.Lang,
+			From:         &in.From,
+			NoteID:       in.NoteID,
+			NoteTitle:    in.NoteTitle,
+			NoteNotebook: in.NoteNotebook,
+			NoteState:    in.NoteState,
+			Format:       &in.Format,
+			Lang:         in.Lang,
 		}
 		size := boardIntTransport(in.Size)
 		body.Size = &size
@@ -1588,12 +1600,13 @@ func ValidateBoardSourceValue(in *BoardSource) error {
 	var body *jsonBoardSourceTransport
 	{
 		body = &jsonBoardSourceTransport{
-			From:      &in.From,
-			NoteID:    in.NoteID,
-			NoteTitle: in.NoteTitle,
-			NoteState: in.NoteState,
-			Format:    &in.Format,
-			Lang:      in.Lang,
+			From:         &in.From,
+			NoteID:       in.NoteID,
+			NoteTitle:    in.NoteTitle,
+			NoteNotebook: in.NoteNotebook,
+			NoteState:    in.NoteState,
+			Format:       &in.Format,
+			Lang:         in.Lang,
 		}
 		size := boardIntTransport(in.Size)
 		body.Size = &size
@@ -1630,13 +1643,14 @@ func DecodeBoardSource(data []byte) (out *BoardSource, err error) {
 	}
 	{
 		out = &BoardSource{
-			From:      *body.From,
-			NoteID:    body.NoteID,
-			NoteTitle: body.NoteTitle,
-			NoteState: body.NoteState,
-			Format:    *body.Format,
-			Lang:      body.Lang,
-			Size:      int(*body.Size),
+			From:         *body.From,
+			NoteID:       body.NoteID,
+			NoteTitle:    body.NoteTitle,
+			NoteNotebook: body.NoteNotebook,
+			NoteState:    body.NoteState,
+			Format:       *body.Format,
+			Lang:         body.Lang,
+			Size:         int(*body.Size),
 		}
 	}
 	return out, nil
@@ -1928,13 +1942,14 @@ func decodeBoardResultTransportToBoardResult(v *jsonBoardResultTransport) *Board
 
 func decodeBoardSourceTransportToBoardSource(v *jsonBoardSourceTransport) *BoardSource {
 	res := &BoardSource{
-		From:      *v.From,
-		NoteID:    v.NoteID,
-		NoteTitle: v.NoteTitle,
-		NoteState: v.NoteState,
-		Format:    *v.Format,
-		Lang:      v.Lang,
-		Size:      int(*v.Size),
+		From:         *v.From,
+		NoteID:       v.NoteID,
+		NoteTitle:    v.NoteTitle,
+		NoteNotebook: v.NoteNotebook,
+		NoteState:    v.NoteState,
+		Format:       *v.Format,
+		Lang:         v.Lang,
+		Size:         int(*v.Size),
 	}
 
 	return res
@@ -2011,12 +2026,13 @@ func encodeBoardResultToBoardResultTransport(v *BoardResult) *jsonBoardResultTra
 
 func encodeBoardSourceToBoardSourceTransport(v *BoardSource) *jsonBoardSourceTransport {
 	res := &jsonBoardSourceTransport{
-		From:      &v.From,
-		NoteID:    v.NoteID,
-		NoteTitle: v.NoteTitle,
-		NoteState: v.NoteState,
-		Format:    &v.Format,
-		Lang:      v.Lang,
+		From:         &v.From,
+		NoteID:       v.NoteID,
+		NoteTitle:    v.NoteTitle,
+		NoteNotebook: v.NoteNotebook,
+		NoteState:    v.NoteState,
+		Format:       &v.Format,
+		Lang:         v.Lang,
 	}
 	size := boardIntTransport(v.Size)
 	res.Size = &size
@@ -2271,7 +2287,7 @@ func validateBoardJSONValue8(path string, value any, description string) error {
 		case "appended":
 			if err := validateBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether the next points and the sticky notes were added at the end of the note the board was opened from",
+				typed[key], "Whether a link to the minutes was added to the note the board was opened from",
 			); err != nil {
 				return err
 			}
@@ -2388,6 +2404,13 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 			); err != nil {
 				return err
 			}
+		case "note_notebook":
+			if err := validateBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The notebook of that note now, if it is there, where its minutes go by default",
+			); err != nil {
+				return err
+			}
 		case "note_state":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
@@ -2415,6 +2438,7 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 				"from",
 				"lang",
 				"note_id",
+				"note_notebook",
 				"note_state",
 				"note_title",
 				"size",
@@ -3038,6 +3062,11 @@ func checkBoardBoardSourceValue(in *BoardSource, field string, active map[any]bo
 		if in.NoteTitle != nil {
 			if !utf8.ValidString(string(*in.NoteTitle)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_title", false))
+			}
+		}
+		if in.NoteNotebook != nil {
+			if !utf8.ValidString(string(*in.NoteNotebook)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_notebook", false))
 			}
 		}
 		if in.NoteState != nil {

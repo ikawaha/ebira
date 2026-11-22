@@ -58,7 +58,7 @@ var BoardResult = Type("BoardResult", func() {
 	RequiredAttribute("text", String, "What the person gives back to the session, in Markdown")
 	RequiredAttribute("stickies", ArrayOf(String, stickyIDDSL), "The sticky notes given back with the text")
 	Attribute("note_id", String, "The note the minutes of the board were kept in, if they were", noteIDDSL)
-	RequiredAttribute("appended", Boolean, "Whether the next points and the sticky notes were added at the end of the note the board was opened from")
+	RequiredAttribute("appended", Boolean, "Whether a link to the minutes was added to the note the board was opened from")
 	RequiredAttribute("finished_at", String, "When the board was finished", timeDSL)
 })
 
@@ -68,6 +68,7 @@ var BoardSource = Type("BoardSource", func() {
 	})
 	Attribute("note_id", String, "The note the source was copied from", noteIDDSL)
 	Attribute("note_title", String, "The title of that note now, if it is there")
+	Attribute("note_notebook", String, "The notebook of that note now, if it is there, where its minutes go by default", notebookIDDSL)
 	Attribute("note_state", String, "The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing", func() {
 		Enum("ok", "changed", "trash", "missing")
 	})
@@ -334,7 +335,7 @@ var _ = Service("boards", func() {
 				MaxLength(200)
 			})
 			Attribute("notebook", String, "Notebook to save the board in as a note; not saved when omitted", notebookIDDSL)
-			Attribute("append_to_note", Boolean, "Add the next points and the sticky notes given back, with a link to the minutes if kept, at the end of the note the board was opened from")
+			Attribute("append_to_note", Boolean, "Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)")
 			Attribute("lang", String, "Language of the headings of the note, that of the UI", func() {
 				Enum("en", "ja")
 				Default("en")
@@ -342,7 +343,7 @@ var _ = Service("boards", func() {
 		})
 		Result(Board)
 		Error("not_found", ErrorResult, "The board does not exist")
-		Error("bad_request", ErrorResult, "The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there (append_to_note)")
+		Error("bad_request", ErrorResult, "The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there or the minutes are not kept (append_to_note)")
 		HTTP(func() {
 			POST("/boards/{id}/finish")
 			Response(StatusOK)

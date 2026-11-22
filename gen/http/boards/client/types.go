@@ -75,8 +75,9 @@ type FinishRequestBody struct {
 	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
-	// Add the next points and the sticky notes given back, with a link to the
-	// minutes if kept, at the end of the note the board was opened from
+	// Add a line linking to the minutes, which are then to be kept (notebook), in
+	// the section of discussions at the end of the note the board was opened from
+	// (Appendix: discussions)
 	AppendToNote *bool `form:"append_to_note,omitempty" json:"append_to_note,omitempty" xml:"append_to_note,omitempty"`
 	// Language of the headings of the note, that of the UI
 	Lang string `form:"lang" json:"lang" xml:"lang"`
@@ -883,6 +884,9 @@ type BoardSourceResponseBody struct {
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
 	// The title of that note now, if it is there
 	NoteTitle *string `form:"note_title,omitempty" json:"note_title,omitempty" xml:"note_title,omitempty"`
+	// The notebook of that note now, if it is there, where its minutes go by
+	// default
+	NoteNotebook *string `form:"note_notebook,omitempty" json:"note_notebook,omitempty" xml:"note_notebook,omitempty"`
 	// The state of that note now: ok; changed since the board was opened; trash,
 	// in the trash; or missing, deleted. Closing the board may add to it unless it
 	// is in the trash or missing
@@ -949,8 +953,7 @@ type BoardResultResponseBody struct {
 	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// The note the minutes of the board were kept in, if they were
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
-	// Whether the next points and the sticky notes were added at the end of the
-	// note the board was opened from
+	// Whether a link to the minutes was added to the note the board was opened from
 	Appended *bool `form:"appended,omitempty" json:"appended,omitempty" xml:"appended,omitempty"`
 	// When the board was finished
 	FinishedAt *string `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
@@ -3124,6 +3127,9 @@ func ValidateBoardSourceResponseBody(body *BoardSourceResponseBody) (err error) 
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
+	if body.NoteNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_notebook", *body.NoteNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
+	}
 	if body.NoteState != nil {
 		if !(*body.NoteState == "ok" || *body.NoteState == "changed" || *body.NoteState == "trash" || *body.NoteState == "missing") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.note_state", *body.NoteState, []any{"ok", "changed", "trash", "missing"}))
@@ -3156,6 +3162,9 @@ func validateBoardSourceResponseBody(body *BoardSourceResponseBody, path string)
 	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.NoteNotebook != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_notebook", *body.NoteNotebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
 	}
 	if body.NoteState != nil {
 		if !(*body.NoteState == "ok" || *body.NoteState == "changed" || *body.NoteState == "trash" || *body.NoteState == "missing") {

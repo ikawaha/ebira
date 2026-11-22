@@ -137,29 +137,62 @@ func writeStickies(sb *strings.Builder, b *Board, source, lang string, level int
 	return true
 }
 
-// Appendix returns what closing board b adds at the end of the note it was
-// opened from, in the words of lang: under a heading of the day, the next
-// points (result), the sticky notes chosen to give back (stickies), and a
-// link to the minutes, if they were kept.
-func Appendix(b *Board, source, result string, stickies []string, lang, day string, minutes *NoteRef) string {
-	chosen := make(map[string]bool, len(stickies))
-	for _, id := range stickies {
-		chosen[id] = true
+// AddDiscussion returns body, the body of the note a board was opened from,
+// with a line linking to the minutes of a discussion on it, of the day, in
+// its section of discussions at the end (Appendix: discussions), made if it
+// has none. A section in another language, or not at the end any more, takes
+// the line too, after its last line.
+func AddDiscussion(body, lang, day string, minutes NoteRef) string {
+	line := "- " + day + " " + minutes.link()
+	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")
+	at := -1
+	for i, l := range lines {
+		if isDiscussions(l) {
+			at = i
+		}
 	}
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "## %s\n", strings.ReplaceAll(label(lang, "discussed"), "{date}", day))
-	if r := strings.TrimSpace(result); r != "" {
-		fmt.Fprintf(&sb, "\n### %s\n\n%s\n", label(lang, "next_points"), r)
+	if at < 0 {
+		head := strings.TrimRight(body, "\n")
+		if head != "" {
+			head += "\n\n"
+		}
+		return head + "## " + label(lang, "discussions") + "\n\n" + line + "\n"
 	}
-	var st strings.Builder
-	if writeStickies(&st, b, source, lang, 3, func(s *Sticky) bool { return chosen[s.ID] }) {
-		sb.WriteString("\n")
-		sb.WriteString(st.String())
+	// The section runs to the next heading of its level or above.
+	end := len(lines)
+	for i := at + 1; i < len(lines); i++ {
+		if m := headingLevel.FindString(lines[i]); m != "" && len(strings.TrimSpace(m)) <= 2 {
+			end = i
+			break
+		}
 	}
-	if minutes != nil {
-		fmt.Fprintf(&sb, "\n%s: %s\n", label(lang, "minutes"), minutes.link())
+	last := end
+	for last > at+1 && strings.TrimSpace(lines[last-1]) == "" {
+		last--
 	}
-	return sb.String()
+	add := []string{line}
+	if last == at+1 {
+		add = []string{"", line} // a blank line below the heading
+	}
+	if last < len(lines) && strings.TrimSpace(lines[last]) != "" {
+		add = append(add, "") // and above the next heading
+	}
+	out := append(append(append([]string{}, lines[:last]...), add...), lines[last:]...)
+	return strings.Join(out, "\n") + "\n"
+}
+
+// headingLevel matches the marks of an ATX heading.
+var headingLevel = regexp.MustCompile(`^#{1,6}\s`)
+
+// isDiscussions reports whether line is the heading of the section of
+// discussions, in any language.
+func isDiscussions(line string) bool {
+	for _, words := range labels {
+		if h, ok := words["discussions"]; ok && strings.TrimSpace(line) == "## "+h {
+			return true
+		}
+	}
+	return false
 }
 
 // heading returns the heading of a sticky note on passage: its start, quoted.

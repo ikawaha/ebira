@@ -1149,6 +1149,7 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_notebook: inbox
                                     note_state: trash
                                     note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
@@ -1358,6 +1359,7 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_notebook: inbox
                                     note_state: trash
                                     note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
@@ -1536,6 +1538,7 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_notebook: inbox
                                     note_state: trash
                                     note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
@@ -1782,6 +1785,7 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_notebook: inbox
                                     note_state: trash
                                     note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
@@ -1879,7 +1883,7 @@ paths:
                                 title: Ut quam aperiam commodi consequuntur.
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
-                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there (append_to_note)'
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there or the minutes are not kept (append_to_note)'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -7632,6 +7636,7 @@ components:
                     from: note
                     lang: Harum odio ut unde id dolorem.
                     note_id: be4c1193735ee1
+                    note_notebook: inbox
                     note_state: trash
                     note_title: Autem et qui sed cum explicabo.
                     size: 5018596344245903192
@@ -7838,7 +7843,7 @@ components:
             properties:
                 appended:
                     type: boolean
-                    description: Whether the next points and the sticky notes were added at the end of the note the board was opened from
+                    description: Whether a link to the minutes was added to the note the board was opened from
                     example: false
                 finished_at:
                     type: string
@@ -7906,6 +7911,11 @@ components:
                     description: The note the source was copied from
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                note_notebook:
+                    type: string
+                    description: The notebook of that note now, if it is there, where its minutes go by default
+                    example: inbox
+                    pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
                 note_state:
                     type: string
                     description: 'The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing'
@@ -7929,6 +7939,7 @@ components:
                 from: note
                 lang: Harum odio ut unde id dolorem.
                 note_id: be4c1193735ee1
+                note_notebook: inbox
                 note_state: trash
                 note_title: Autem et qui sed cum explicabo.
                 size: 5018596344245903192
@@ -8644,7 +8655,7 @@ components:
             properties:
                 append_to_note:
                     type: boolean
-                    description: Add the next points and the sticky notes given back, with a link to the minutes if kept, at the end of the note the board was opened from
+                    description: 'Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)'
                     example: false
                 lang:
                     type: string

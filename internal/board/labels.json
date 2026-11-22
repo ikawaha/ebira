@@ -7,9 +7,7 @@
     "answer": "A",
     "memo": "Memo",
     "from_note": "From the note",
-    "discussed": "Discussed on a whiteboard ({date})",
-    "next_points": "Next points",
-    "minutes": "Minutes"
+    "discussions": "Appendix: discussions"
   },
   "ja": {
     "stickies": "付箋",
@@ -19,8 +17,6 @@
     "answer": "答",
     "memo": "メモ",
     "from_note": "元のノート",
-    "discussed": "ホワイトボードで議論した（{date}）",
-    "next_points": "論点",
-    "minutes": "議事録"
+    "discussions": "補足：議論"
   }
 }

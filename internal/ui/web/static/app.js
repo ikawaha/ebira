@@ -7952,8 +7952,8 @@ function renameBoard(h) {
 function openBoardFinish() {
   const b = board.data;
   const dlg = $("board-finish");
-  // A board opened from a note gives back to that note: the next points and
-  // the sticky notes checked are added at its end, unless it is gone.
+  // A board opened from a note links its minutes from that note, in its
+  // section of discussions at the end, unless the note is gone.
   const fromNote = b.source.from === "note";
   const noteThere = fromNote && (b.source.note_state === "ok" || b.source.note_state === "changed");
   const text = el("textarea");
@@ -8020,17 +8020,31 @@ function openBoardFinish() {
     return o;
   }));
   if (nbs.some((n) => n.id === last)) select.value = last;
+  // The minutes of a board opened from a note go with the note by default.
+  const near = b.source.note_notebook;
+  if (fromNote && nbs.some((n) => n.id === near)) select.value = near;
   save.checked = !!last;
   select.disabled = !save.checked;
   save.addEventListener("change", () => { select.disabled = !save.checked; });
 
+  // The line added to the note links to the minutes, so adding it keeps them.
   const append = el("input");
   append.type = "checkbox";
   append.checked = noteThere;
+  if (noteThere) {
+    save.checked = true;
+    select.disabled = false;
+  }
+  append.addEventListener("change", () => {
+    if (append.checked) {
+      save.checked = true;
+      select.disabled = false;
+    }
+  });
+  save.addEventListener("change", () => { if (!save.checked) append.checked = false; });
   const appendRow = [];
   if (noteThere) {
     appendRow.push(el("label", "board-save", append, t("boardAppendToNote", { title: b.source.note_title || "" })));
-    if (b.source.note_state === "changed") appendRow.push(el("p", "board-hint", t("boardNoteChanged")));
   } else if (fromNote) {
     appendRow.push(el("p", "board-hint", t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
   }

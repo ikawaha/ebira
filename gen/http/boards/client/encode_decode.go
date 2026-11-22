@@ -1579,13 +1579,14 @@ func unmarshalBoardSummaryResponseToBoardsBoardSummary(v *BoardSummaryResponse) 
 // *boards.BoardSource from a value of type *BoardSourceResponseBody.
 func unmarshalBoardSourceResponseBodyToBoardsBoardSource(v *BoardSourceResponseBody) *boards.BoardSource {
 	res := &boards.BoardSource{
-		From:      *v.From,
-		NoteID:    v.NoteID,
-		NoteTitle: v.NoteTitle,
-		NoteState: v.NoteState,
-		Format:    *v.Format,
-		Lang:      v.Lang,
-		Size:      *v.Size,
+		From:         *v.From,
+		NoteID:       v.NoteID,
+		NoteTitle:    v.NoteTitle,
+		NoteNotebook: v.NoteNotebook,
+		NoteState:    v.NoteState,
+		Format:       *v.Format,
+		Lang:         v.Lang,
+		Size:         *v.Size,
 	}
 
 	return res

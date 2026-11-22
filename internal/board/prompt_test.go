@@ -171,31 +171,25 @@ func TestNoteBodyFromNote(t *testing.T) {
 	}
 }
 
-func TestAppendix(t *testing.T) {
-	now := time.Now()
-	b := &Board{Title: "Plan", Status: Open, Source: Source{Format: Markdown}}
-	q, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "trie"}, Messages: []Message{{Text: "why a trie?"}}}, now)
-	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "Use"}, Messages: []Message{{Text: "only for me"}}}, now)
-	c, _ := b.Add(Sticky{Kind: Memo, Parent: q.ID, Anchor: Anchor{Exact: "why"}, Messages: []Message{{Text: "on the memo"}}}, now)
-	got := Appendix(b, "Use a trie.\n", "- check memory", []string{q.ID, c.ID}, "ja", "2026-11-22", &NoteRef{ID: "m1", Title: "Plan"})
-	for _, want := range []string{
-		"## ホワイトボードで議論した（2026-11-22）\n",
-		"\n### 論点\n\n- check memory\n",
-		"\n### 付箋\n",
-		"\n#### “trie”\n",
-		"**メモ** why a trie?",
-		"\n##### “why”\n",
-		"\n議事録: [Plan](/#note/m1)\n",
+func TestAddDiscussion(t *testing.T) {
+	m := NoteRef{ID: "m1", Title: "Plan"}
+	for _, c := range []struct{ name, body, lang, want string }{
+		{"new", "# Plan\n\nUse a trie.\n", "ja",
+			"# Plan\n\nUse a trie.\n\n## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"empty", "", "en", "## Appendix: discussions\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"again", "Use a trie.\n\n## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n\n", "ja",
+			"Use a trie.\n\n## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"another language", "x\n\n## Appendix: discussions\n\n- 2026-11-22 [Plan](/#note/m0)\n", "ja",
+			"x\n\n## Appendix: discussions\n\n- 2026-11-22 [Plan](/#note/m0)\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"not at the end", "## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n\n## Later\n\nmore\n", "ja",
+			"## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n\nmore\n"},
+		{"subsection inside", "## 補足：議論\n\n- a\n\n### old\n\n- b\n", "ja",
+			"## 補足：議論\n\n- a\n\n### old\n\n- b\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"empty section", "## 補足：議論\n## Later\n", "ja",
+			"## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n"},
 	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("appendix has no %q:\n%s", want, got)
+		if got := AddDiscussion(c.body, c.lang, "2026-11-23", m); got != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
 		}
-	}
-	if strings.Contains(got, "only for me") {
-		t.Errorf("appendix has a sticky note not chosen:\n%s", got)
-	}
-	// Nothing chosen and no points: the heading only.
-	if got := Appendix(b, "Use a trie.\n", "", nil, "en", "2026-11-22", nil); got != "## Discussed on a whiteboard (2026-11-22)\n" {
-		t.Errorf("empty appendix: %q", got)
 	}
 }
