@@ -927,6 +927,7 @@ function renderBody(el, body, ranges) {
   el.innerHTML = clean;
   renderMath(el);
   renderDiagrams(el);
+  colorDiffs(el);
   if (!ranges || !ranges.length) return;
   // The markers in text become <mark> elements.
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -956,6 +957,38 @@ function renderBody(el, body, ranges) {
     }
     flush();
     node.replaceWith(frag);
+  }
+}
+
+// DIFF_LANGS are the languages of the code blocks colored as diffs.
+const DIFF_LANGS = ["diff", "patch"];
+
+// diffLineClass returns the class of a line of a diff: hunk for the head of a
+// hunk (@@), file for the heads of a file, add and del for the lines added
+// and deleted, and none for the others.
+function diffLineClass(line) {
+  if (line.startsWith("@@")) return "hunk";
+  if (/^(diff |index |--- |\+\+\+ )/.test(line)) return "file";
+  if (line.startsWith("+")) return "add";
+  if (line.startsWith("-")) return "del";
+  return "";
+}
+
+// colorDiffs puts each line of the diff code blocks in root into a span with
+// the class of the line. The text stays as it is, with the markers of the
+// highlights, which become <mark> elements after this.
+function colorDiffs(root) {
+  for (const code of root.querySelectorAll("pre > code")) {
+    const lang = /(?:^|\s)language-(\S+)/.exec(code.className)?.[1];
+    if (!DIFF_LANGS.includes(lang?.toLowerCase())) continue;
+    const lines = code.textContent.replace(/\n$/, "").split("\n");
+    code.classList.add("diff");
+    code.replaceChildren(...lines.map((line) => {
+      const cls = diffLineClass(line.replace(/\uE000|\uE001/g, ""));
+      // Each line ends with its newline, so that the text copied from the
+      // block reads as the source does.
+      return el("span", cls ? "line " + cls : "line", line + "\n");
+    }));
   }
 }
 

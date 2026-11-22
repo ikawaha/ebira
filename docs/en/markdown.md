@@ -37,6 +37,16 @@ func main() {
 
 In the preview, the bar above a code block, with its language and number of lines, folds and unfolds it. A folded block opens when you go to a match inside it.
 
+A `diff` (or `patch`) code block shows the lines added on green and the lines deleted on red.
+
+```diff
+@@ -1,3 +1,3 @@
+ func main() {
+-	fmt.Println("Hello")
++	fmt.Println("Hello, ebira")
+ }
+```
+
 ## Links
 
 `[text](https://example.com)` links out. To link to another note, copy its link with the chain button after its title (or `Y`) and paste it. For example: [Welcome to ebira](welcome.md)
