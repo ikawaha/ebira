@@ -159,7 +159,7 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `create_ai_notebook` | Make a new collab notebook, or a sub notebook in one, for the AI to write in |
 | `archive_ai_notebook` | Put a collab notebook in the archive, or take it out |
 | `make_notebook_private` | Hide a notebook from AI; only you can undo it |
-| `open_ai_board` / `start_ai_board` / `get_ai_board` | Open a text or a diff on a whiteboard (given, or by a URL for one upload), and read what you give back when you are done ([Reading on a whiteboard](whiteboard.md)) |
+| `open_ai_board` / `start_ai_board` / `get_ai_board` / `list_ai_boards` | Open a text or a diff on a whiteboard (given, or by a URL for one upload), and read what you give back when you are done; find and read the boards you opened on a note and closed too ([Reading on a whiteboard](whiteboard.md)) |
 
 The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten. The files AI replaces or deletes are kept too, to be put back from the [history](history.md).
 

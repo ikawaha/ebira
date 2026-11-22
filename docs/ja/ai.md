@@ -159,7 +159,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 | `create_ai_notebook` | AI が書くための、新しい collab のノートブック（か、その中のサブノートブック）を作る |
 | `archive_ai_notebook` | collab のノートブックをアーカイブへ移す・戻す |
 | `make_notebook_private` | ノートブックを AI から見えなくする。戻せるのはあなただけ |
-| `open_ai_board` / `start_ai_board` / `get_ai_board` | 文や差分をホワイトボードで開き（本文か、1 回だけのアップロードの URL で）、あなたが読み終えて渡した論点と付箋を読む（[ホワイトボードで読み解く](whiteboard.md)） |
+| `open_ai_board` / `start_ai_board` / `get_ai_board` / `list_ai_boards` | 文や差分をホワイトボードで開き（本文か、1 回だけのアップロードの URL で）、あなたが読み終えて渡した論点と付箋を読む。あなたがノートから開いて閉じたボードも探して読める（[ホワイトボードで読み解く](whiteboard.md)） |
 
 版があるので、AI の変更は安全です。AI が読んだあとでノートが変わっていれば、その変更は拒まれ、あなたが書いた内容は上書きされません。AI が置き換えたり消したりしたファイルも残り、[履歴](history.md)から戻せます。
 
