@@ -92,6 +92,7 @@ const (
 const (
 	Memo      = "memo"      // written by the person
 	Assistant = "assistant" // answered by the assistant
+	Fork      = "fork"      // answered by a fork of the Claude Code session that opened the board
 )
 
 // States of sticky notes.
@@ -141,13 +142,16 @@ type Origin struct {
 // Sticky is a sticky note on a passage of the source, or of the answer of
 // another sticky note (its parent).
 type Sticky struct {
-	ID        string    `json:"id"`
-	Parent    string    `json:"parent,omitempty"`
-	Anchor    Anchor    `json:"anchor"`
-	Kind      string    `json:"kind"`
-	Messages  []Message `json:"messages"`
-	State     string    `json:"state"`
-	Error     string    `json:"error,omitempty"`
+	ID       string    `json:"id"`
+	Parent   string    `json:"parent,omitempty"`
+	Anchor   Anchor    `json:"anchor"`
+	Kind     string    `json:"kind"`
+	Messages []Message `json:"messages"`
+	State    string    `json:"state"`
+	Error    string    `json:"error,omitempty"`
+	// Session is the Claude Code session that answers a sticky note of kind
+	// fork: a fork of the session of the board, or of that of its parent.
+	Session   string    `json:"session,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -249,7 +253,7 @@ func (b *Board) Add(s Sticky, now time.Time) (*Sticky, error) {
 		return nil, invalid("no sticky note %q to put a sticky note on", s.Parent)
 	}
 	switch s.Kind {
-	case Memo, Assistant:
+	case Memo, Assistant, Fork:
 	default:
 		return nil, invalid("unknown kind of sticky note %q", s.Kind)
 	}
@@ -283,10 +287,10 @@ func (b *Board) newStickyID() string {
 }
 
 // Remove removes the sticky note id of b, with the sticky notes on it, and
-// tells whether there was one.
-func (b *Board) Remove(id string) bool {
+// returns them, or nil without one.
+func (b *Board) Remove(id string) []Sticky {
 	if b.Find(id) == nil {
-		return false
+		return nil
 	}
 	gone := map[string]bool{id: true}
 	for changed := true; changed; {
@@ -297,8 +301,26 @@ func (b *Board) Remove(id string) bool {
 			}
 		}
 	}
-	b.Stickies = slices.DeleteFunc(b.Stickies, func(s Sticky) bool { return gone[s.ID] })
-	return true
+	var removed []Sticky
+	b.Stickies = slices.DeleteFunc(b.Stickies, func(s Sticky) bool {
+		if gone[s.ID] {
+			removed = append(removed, s)
+		}
+		return gone[s.ID]
+	})
+	return removed
+}
+
+// Sessions returns the Claude Code sessions of the sticky notes in stickies,
+// which ebira made for them.
+func Sessions(stickies []Sticky) []string {
+	var ids []string
+	for _, s := range stickies {
+		if s.Session != "" {
+			ids = append(ids, s.Session)
+		}
+	}
+	return ids
 }
 
 // Say adds a message to the sticky note s: one of the person, or an answer of
@@ -513,18 +535,20 @@ func (s *Store) Update(id string, change func(*Board) error) (*Board, error) {
 	return b, nil
 }
 
-// Delete deletes board id.
-func (s *Store) Delete(id string) error {
+// Delete deletes board id, and returns it as it was: nil when its file
+// could not be read, which does not keep it from being deleted.
+func (s *Store) Delete(id string) (*Board, error) {
 	dir, err := s.boardDir(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, err := os.Stat(filepath.Join(dir, boardFile)); errors.Is(err, os.ErrNotExist) {
-		return ErrNotFound
+	b, err := s.read(id)
+	if errors.Is(err, ErrNotFound) {
+		return nil, err
 	}
-	return os.RemoveAll(dir)
+	return b, os.RemoveAll(dir)
 }
 
 // Interrupt marks the sticky notes waiting for an answer as failed, as the
@@ -555,8 +579,8 @@ func (s *Store) Interrupt(reason string) error {
 }
 
 // Sweep deletes the boards finished more than DoneAge ago, and the open ones
-// untouched for more than IdleAge, and returns their IDs.
-func (s *Store) Sweep() ([]string, error) {
+// untouched for more than IdleAge, and returns them.
+func (s *Store) Sweep() ([]Board, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	boards, err := s.list()
@@ -564,7 +588,7 @@ func (s *Store) Sweep() ([]string, error) {
 		return nil, err
 	}
 	now := s.now()
-	var gone []string
+	var gone []Board
 	for _, b := range boards {
 		old := b.Status == Open && now.Sub(b.UpdatedAt) > IdleAge
 		if b.Status == Done {
@@ -580,7 +604,7 @@ func (s *Store) Sweep() ([]string, error) {
 		if err := os.RemoveAll(filepath.Join(s.dir, b.ID)); err != nil {
 			return gone, err
 		}
-		gone = append(gone, b.ID)
+		gone = append(gone, b)
 	}
 	return gone, nil
 }

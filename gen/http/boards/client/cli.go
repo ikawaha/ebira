@@ -198,8 +198,8 @@ func BuildAddStickyPayload(boardsAddStickyBody *string, boardsAddStickyID *strin
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-		if !(body.Kind == "memo" || body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", body.Kind, []any{"memo", "assistant"}))
+		if !(body.Kind == "memo" || body.Kind == "assistant" || body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 		if body.Text != nil {
 			if utf8.RuneCountInString(*body.Text) > 10240 {

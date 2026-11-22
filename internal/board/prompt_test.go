@@ -147,3 +147,18 @@ func TestNoteBodyQuotes(t *testing.T) {
 		t.Errorf("order of the sticky notes, want fall, later, nowhere:\n%s", got)
 	}
 }
+
+func TestForkQuestion(t *testing.T) {
+	now := time.Now()
+	b := &Board{Title: "Plan", Status: Open, Source: Source{Format: Markdown}}
+	s, _ := b.Add(Sticky{Kind: Fork, Anchor: Anchor{Exact: "trie"}, Messages: []Message{{Text: "why a trie?"}}}, now)
+	q := ForkQuestion(b, "Use a trie for the index.", s, false)
+	if !strings.Contains(q, "fork of this session") || !strings.Contains(q, `"Plan"`) || !strings.Contains(q, "<<<trie>>>") || !strings.Contains(q, "why a trie?") {
+		t.Errorf("first question:\n%s", q)
+	}
+	s.Say(Agent, "fast prefix search", now)
+	s.Say(User, "and memory?", now)
+	if q := ForkQuestion(b, "Use a trie for the index.", s, true); q != "The person asks again on the same sticky note: and memory?" {
+		t.Errorf("question again: %q", q)
+	}
+}

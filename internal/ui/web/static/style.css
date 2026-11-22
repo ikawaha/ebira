@@ -919,6 +919,10 @@ mark.board-anchor { background: color-mix(in srgb, var(--mark-bg) 55%, transpare
 .sticky-quote { margin: 0 0 8px; padding: 0 0 0 8px; border-left: 3px solid var(--mark-current); color: var(--fg-muted); font-size: var(--fs-xs); cursor: pointer; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .sticky-ask { white-space: pre-wrap; overflow-wrap: anywhere; font-weight: 600; margin: 4px 0; }
 .sticky.memo .sticky-ask { font-weight: normal; }
+.sticky-kind { margin: 0 0 4px; color: var(--accent); font-size: var(--fs-xs); font-weight: 600; }
+.sticky-resume { margin-top: 8px; font-size: var(--fs-xs); color: var(--fg-muted); }
+.sticky-resume summary { cursor: pointer; }
+.sticky-resume .auth-cmd code { font-size: inherit; word-break: break-all; }
 .sticky-answer { margin: 4px 0; overflow-wrap: anywhere; }
 .sticky-answer > :first-child { margin-top: 0; }
 .sticky-answer > :last-child { margin-bottom: 0; }

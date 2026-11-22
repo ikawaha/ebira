@@ -7702,7 +7702,8 @@ function stickyCard(s, children, open) {
     }
   }
   card.append(msgs);
-  if (s.state === "waiting") card.append(el("p", "sticky-wait", t("boardWaiting")));
+  if (s.kind === "fork") card.prepend(el("p", "sticky-kind", t("boardForkMark")));
+  if (s.state === "waiting") card.append(el("p", "sticky-wait", t(s.kind === "fork" ? "boardForkWaiting" : "boardWaiting")));
   if (s.state === "error") {
     const p = el("p", "error", t("boardAnswerFailed", { error: s.error || "" }));
     if (open) p.append(" ", button(t("boardAskAgain"), () => askSticky(s, "")));
@@ -7711,7 +7712,8 @@ function stickyCard(s, children, open) {
   if (open && s.state !== "waiting") {
     const box = el("textarea");
     box.rows = 1; // grows while written in (style.css)
-    box.placeholder = t(s.kind === "assistant" ? "boardFollowUp" : "boardAddMemo");
+    const asks = s.kind === "assistant" || s.kind === "fork";
+    box.placeholder = t(asks ? "boardFollowUp" : "boardAddMemo");
     box.value = board.drafts.get(s.id) || "";
     box.addEventListener("input", () => board.drafts.set(s.id, box.value));
     const send = () => {
@@ -7724,7 +7726,15 @@ function stickyCard(s, children, open) {
         send();
       }
     });
-    card.append(el("div", "sticky-reply", box, button(t(s.kind === "assistant" ? "boardSend" : "boardAdd"), send)));
+    card.append(el("div", "sticky-reply", box, button(t(asks ? "boardSend" : "boardAdd"), send)));
+  }
+  // The session of a fork goes on in a terminal, where the side trip may go
+  // deeper than a sticky note.
+  if (s.kind === "fork" && s.session && s.messages.some((m) => m.role === "assistant")) {
+    const cwd = board.data?.fork?.cwd;
+    const resume = el("details", "sticky-resume", el("summary", "", t("boardForkResume")),
+      copyRow((cwd ? `cd '${cwd.replace(/'/g, "'\\''")}' && ` : "") + `claude --resume ${s.session}`));
+    card.append(resume);
   }
   if (open) card.append(el("div", "sticky-foot", iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s))));
   else if (board.data?.result?.stickies?.includes(s.id)) card.append(el("div", "sticky-foot sticky-given", t("boardStickyGiven")));
@@ -7794,10 +7804,20 @@ function openBoardCompose(anchor, parent, rect) {
   const ask = board.assistant?.available !== false;
   const askButton = button(t("boardAsk"), () => addSticky("assistant", box.value), { cls: "primary", title: ask ? t("boardAskTitle") : (board.assistant?.reason || t("boardNoAssistant")) });
   askButton.disabled = !ask;
+  const buttons = el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }));
+  // A fork of the Claude Code session that opened the board answers knowing
+  // its conversation; boards opened otherwise do not show the button.
+  const fork = board.data?.fork;
+  if (fork && !["no_session", "done"].includes(fork.reason)) {
+    const forkButton = button(t("boardFork"), () => addSticky("fork", box.value), { title: fork.available ? t("boardForkTitle") : t(forkReasons[fork.reason] || "boardForkUnavailable") });
+    forkButton.disabled = !fork.available;
+    buttons.append(forkButton);
+  }
+  buttons.append(askButton);
   const pop = el("div", "board-compose",
     el("blockquote", "sticky-quote", anchor.exact.replace(/\s+/g, " ").slice(0, 120)),
     box,
-    el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }), askButton));
+    buttons);
   pop.id = "board-compose";
   box.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeBoardCompose();
@@ -7826,11 +7846,19 @@ function closeBoardCompose(reload = true) {
   }
 }
 
+// forkReasons are the messages of why a fork cannot answer, by the reason of
+// the board.
+const forkReasons = {
+  auth_none: "boardForkAuthNone",
+  not_found: "boardForkNotFound",
+  session_missing: "boardForkSessionMissing",
+};
+
 async function addSticky(kind, text) {
   const c = board.compose;
   if (!c || !board.data) return;
   text = text.trim();
-  if (kind === "assistant" && !text) return;
+  if ((kind === "assistant" || kind === "fork") && !text) return;
   try {
     await api(`/boards/${board.data.id}/stickies`, { method: "POST", body: { kind, anchor: c.anchor, parent: c.parent || undefined, text: text || undefined } });
   } catch (e) {

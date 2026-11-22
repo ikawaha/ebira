@@ -116,7 +116,7 @@ func (c *Client) Delete(ctx context.Context, p *DeletePayload) (err error) {
 // AddSticky may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The board, or the parent sticky note, does not exist
 //   - "bad_request" (type *goa.ServiceError): The passage or the question is empty or too long, the board is finished, or it has too many sticky notes
-//   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set
+//   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - error: internal error
 func (c *Client) AddSticky(ctx context.Context, p *AddStickyPayload) (res *BoardSticky, err error) {
@@ -158,7 +158,7 @@ func (c *Client) DeleteSticky(ctx context.Context, p *DeleteStickyPayload) (err 
 // AskSticky may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The board or the sticky note does not exist
 //   - "bad_request" (type *goa.ServiceError): The message is empty or too long, the sticky note waits for an answer, the board is finished, or the sticky note has too many messages
-//   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set
+//   - "unavailable" (type *goa.ServiceError): The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - error: internal error
 func (c *Client) AskSticky(ctx context.Context, p *AskStickyPayload) (res *BoardSticky, err error) {

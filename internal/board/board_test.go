@@ -172,11 +172,11 @@ func TestStickies(t *testing.T) {
 
 	// Removing a sticky note removes the ones on it.
 	b, err = s.Update(b.ID, func(b *Board) error {
-		if !b.Remove(root) {
-			t.Error("Remove = false")
+		if gone := b.Remove(root); len(gone) == 0 || gone[0].ID != root {
+			t.Errorf("Remove = %v", gone)
 		}
-		if b.Remove("nope") {
-			t.Error("Remove of nothing = true")
+		if b.Remove("nope") != nil {
+			t.Error("Remove of nothing removed something")
 		}
 		return nil
 	})
@@ -195,7 +195,7 @@ func TestStickyInvalid(t *testing.T) {
 		s   Sticky
 		err error
 	}{
-		"kind":         {Sticky{Kind: "fork", Anchor: Anchor{Exact: "x"}}, ErrInvalid},
+		"kind":         {Sticky{Kind: "note", Anchor: Anchor{Exact: "x"}}, ErrInvalid},
 		"no passage":   {Sticky{Kind: Memo, Anchor: Anchor{Exact: " "}}, ErrInvalid},
 		"long passage": {Sticky{Kind: Memo, Anchor: Anchor{Exact: strings.Repeat("x", MaxQuote+1)}}, ErrTooLarge},
 		"long prefix":  {Sticky{Kind: Memo, Anchor: Anchor{Exact: "x", Prefix: strings.Repeat("あ", MaxContext+1)}}, ErrInvalid},
@@ -261,7 +261,7 @@ func TestNotFound(t *testing.T) {
 		if _, err := s.Source(id); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Source(%q) = %v", id, err)
 		}
-		if err := s.Delete(id); !errors.Is(err, ErrNotFound) {
+		if _, err := s.Delete(id); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Delete(%q) = %v", id, err)
 		}
 		if _, err := s.Update(id, func(*Board) error { return nil }); !errors.Is(err, ErrNotFound) {
@@ -287,8 +287,8 @@ func TestListAndDelete(t *testing.T) {
 	if len(boards) != 2 || boards[0].ID != b.ID || boards[1].ID != a.ID {
 		t.Fatalf("list = %v, want b then a", boards)
 	}
-	if err := s.Delete(a.ID); err != nil {
-		t.Fatal(err)
+	if gone, err := s.Delete(a.ID); err != nil || gone == nil || gone.ID != a.ID {
+		t.Fatalf("Delete = %v, %v", gone, err)
 	}
 	if _, err := s.Get(a.ID); !errors.Is(err, ErrNotFound) {
 		t.Errorf("deleted board: %v", err)

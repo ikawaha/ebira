@@ -1253,6 +1253,7 @@ func marshalBoardsBoardStickyToBoardStickyResponseBody(v *boards.BoardSticky) *B
 		Kind:      v.Kind,
 		State:     v.State,
 		Error:     v.Error,
+		Session:   v.Session,
 		CreatedAt: v.CreatedAt,
 		UpdatedAt: v.UpdatedAt,
 	}
@@ -1314,6 +1315,18 @@ func marshalBoardsBoardResultToBoardResultResponseBody(v *boards.BoardResult) *B
 		}
 	} else {
 		res.Stickies = []string{}
+	}
+
+	return res
+}
+
+// marshalBoardsBoardForkToBoardForkResponseBody builds a value of type
+// *BoardForkResponseBody from a value of type *boards.BoardFork.
+func marshalBoardsBoardForkToBoardForkResponseBody(v *boards.BoardFork) *BoardForkResponseBody {
+	res := &BoardForkResponseBody{
+		Available: v.Available,
+		Reason:    v.Reason,
+		Cwd:       v.Cwd,
 	}
 
 	return res

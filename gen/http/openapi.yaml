@@ -747,6 +747,7 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - fork
                 "400":
                     description: 'bad_request: The body of the note is empty, or too many boards are open'
                     schema:
@@ -816,6 +817,7 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - fork
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     schema:
@@ -923,6 +925,7 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - fork
                 "400":
                     description: 'bad_request: The title is empty'
                     schema:
@@ -1079,6 +1082,7 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - fork
                 "400":
                     description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, or the notebook is invalid'
                     schema:
@@ -1124,7 +1128,7 @@ paths:
             tags:
                 - boards
             summary: add_sticky boards
-            description: 'Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and comes back waiting: the answer comes later, told by an event of type board on /events.'
+            description: 'Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and one of the fork kind asks a fork of the Claude Code session that opened the board, which needs a session signed in with a passkey: they come back waiting, and the answer comes later, told by an event of type board on /events.'
             operationId: boards#add_sticky
             parameters:
                 - name: id
@@ -1191,7 +1195,7 @@ paths:
                             temporary: false
                             timeout: false
                 "503":
-                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)'
                     schema:
                         $ref: '#/definitions/BoardsAddStickyUnavailableResponseBody'
                     examples:
@@ -1351,7 +1355,7 @@ paths:
             tags:
                 - boards
             summary: ask_sticky boards
-            description: 'Add a message to a sticky note: a follow-up question to the assistant, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.'
+            description: 'Add a message to a sticky note: a follow-up question to the assistant or a fork, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.'
             operationId: boards#ask_sticky
             parameters:
                 - name: id
@@ -1421,7 +1425,7 @@ paths:
                             temporary: false
                             timeout: false
                 "503":
-                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)'
                     schema:
                         $ref: '#/definitions/BoardsAskStickyUnavailableResponseBody'
                     examples:
@@ -6063,6 +6067,8 @@ definitions:
                 description: Creation time
                 example: "2026-10-16T09:30:00Z"
                 format: date-time
+            fork:
+                $ref: '#/definitions/BoardFork'
             from_session:
                 type: boolean
                 description: Whether an AI client opened the board, and waits for what is given back
@@ -6108,6 +6114,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6129,6 +6136,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6150,6 +6158,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6171,6 +6180,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
             text:
@@ -6188,6 +6198,10 @@ definitions:
                 format: date-time
         example:
             created_at: "2026-10-16T09:30:00Z"
+            fork:
+                available: false
+                cwd: Eveniet sed qui autem quaerat.
+                reason: auth_none
             from_session: false
             id: 3f9c2a7b1d4e6f
             result:
@@ -6224,6 +6238,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6245,6 +6260,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6266,6 +6282,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6287,6 +6304,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
             text: Ut labore minima quo et voluptatem.
@@ -6302,6 +6320,7 @@ definitions:
             - text
             - stickies
             - from_session
+            - fork
     BoardAnchor:
         title: BoardAnchor
         type: object
@@ -6326,6 +6345,34 @@ definitions:
             suffix: Eveniet corporis nobis explicabo et sit.
         required:
             - exact
+    BoardFork:
+        title: BoardFork
+        type: object
+        properties:
+            available:
+                type: boolean
+                description: Whether forks of the session that opened the board can answer sticky notes
+                example: false
+            cwd:
+                type: string
+                description: The working directory of the session, where claude --resume goes on with the session of a sticky note
+                example: Eveniet sed qui autem quaerat.
+            reason:
+                type: string
+                description: 'Why not: auth_none (forks need passkeys), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)'
+                example: auth_none
+                enum:
+                    - auth_none
+                    - no_session
+                    - session_missing
+                    - not_found
+                    - done
+        example:
+            available: false
+            cwd: Eveniet sed qui autem quaerat.
+            reason: auth_none
+        required:
+            - available
     BoardMessage:
         title: BoardMessage
         type: object
@@ -6479,11 +6526,12 @@ definitions:
                 pattern: ^s[0-9a-f]{8}$
             kind:
                 type: string
-                description: memo, written by the person, or assistant, answered by the assistant
+                description: memo, written by the person; assistant, answered by the assistant; or fork, answered by a fork of the Claude Code session that opened the board
                 example: memo
                 enum:
                     - memo
                     - assistant
+                    - fork
             messages:
                 type: array
                 items:
@@ -6504,6 +6552,11 @@ definitions:
                 description: The sticky note this one is on, for one on a passage of an answer
                 example: s1a2b3c4d
                 pattern: ^s[0-9a-f]{8}$
+            session:
+                type: string
+                description: The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with
+                example: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                format: uuid
             state:
                 type: string
                 description: idle, waiting for an answer, or error when the last answer failed
@@ -6538,6 +6591,7 @@ definitions:
                   role: assistant
                   text: Eum quaerat rerum illo natus.
             parent: s1a2b3c4d
+            session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
             state: error
             updated_at: "2026-10-16T09:30:00Z"
         required:
@@ -6709,11 +6763,12 @@ definitions:
                 $ref: '#/definitions/BoardAnchor'
             kind:
                 type: string
-                description: memo, or assistant to ask the assistant
+                description: memo; assistant to ask the assistant; fork to ask a fork of the Claude Code session that opened the board
                 example: assistant
                 enum:
                     - memo
                     - assistant
+                    - fork
             parent:
                 type: string
                 description: The sticky note whose answer the passage is in
@@ -6721,7 +6776,7 @@ definitions:
                 pattern: ^s[0-9a-f]{8}$
             text:
                 type: string
-                description: The memo, or the question; required for the assistant
+                description: The memo, or the question; required for the assistant and a fork
                 example: rc5
                 maxLength: 10240
         example:

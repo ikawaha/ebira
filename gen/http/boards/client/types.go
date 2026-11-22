@@ -37,9 +37,10 @@ type AddStickyRequestBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage
 	Anchor *BoardAnchorRequestBody `form:"anchor" json:"anchor" xml:"anchor"`
-	// memo, or assistant to ask the assistant
+	// memo; assistant to ask the assistant; fork to ask a fork of the Claude Code
+	// session that opened the board
 	Kind string `form:"kind" json:"kind" xml:"kind"`
-	// The memo, or the question; required for the assistant
+	// The memo, or the question; required for the assistant and a fork
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 }
 
@@ -101,6 +102,8 @@ type GetResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
 
 // OpenResponseBody is the type of the "boards" service "open" endpoint HTTP
@@ -126,6 +129,8 @@ type OpenResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
 
 // SaveResponseBody is the type of the "boards" service "save" endpoint HTTP
@@ -151,6 +156,8 @@ type SaveResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
 
 // AddStickyResponseBody is the type of the "boards" service "add_sticky"
@@ -162,7 +169,8 @@ type AddStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor,omitempty" json:"anchor,omitempty" xml:"anchor,omitempty"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages,omitempty" json:"messages,omitempty" xml:"messages,omitempty"`
@@ -170,6 +178,9 @@ type AddStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
 	// Last update time
@@ -185,7 +196,8 @@ type SaveStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor,omitempty" json:"anchor,omitempty" xml:"anchor,omitempty"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages,omitempty" json:"messages,omitempty" xml:"messages,omitempty"`
@@ -193,6 +205,9 @@ type SaveStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
 	// Last update time
@@ -208,7 +223,8 @@ type AskStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor,omitempty" json:"anchor,omitempty" xml:"anchor,omitempty"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages,omitempty" json:"messages,omitempty" xml:"messages,omitempty"`
@@ -216,6 +232,9 @@ type AskStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
 	// Last update time
@@ -252,6 +271,8 @@ type FinishResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
 
 // ListUnauthorizedResponseBody is the type of the "boards" service "list"
@@ -873,7 +894,8 @@ type BoardStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor,omitempty" json:"anchor,omitempty" xml:"anchor,omitempty"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages,omitempty" json:"messages,omitempty" xml:"messages,omitempty"`
@@ -881,6 +903,9 @@ type BoardStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
 	// Last update time
@@ -917,6 +942,20 @@ type BoardResultResponseBody struct {
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
 	// When the board was finished
 	FinishedAt *string `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+}
+
+// BoardForkResponseBody is used to define fields on response body types.
+type BoardForkResponseBody struct {
+	// Whether forks of the session that opened the board can answer sticky notes
+	Available *bool `form:"available,omitempty" json:"available,omitempty" xml:"available,omitempty"`
+	// Why not: auth_none (forks need passkeys), no_session (no Claude Code session
+	// opened the board), session_missing (Claude Code no longer has it), not_found
+	// (claude is not found on the machine of the server) or done (the board is
+	// finished)
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+	// The working directory of the session, where claude --resume goes on with the
+	// session of a sticky note
+	Cwd *string `form:"cwd,omitempty" json:"cwd,omitempty" xml:"cwd,omitempty"`
 }
 
 // BoardAnchorRequestBody is used to define fields on request body types.
@@ -1071,6 +1110,7 @@ func NewGetBoardOK(body *GetResponseBody) *boards.Board {
 	if body.Result != nil {
 		v.Result = unmarshalBoardResultResponseBodyToBoardsBoardResult(body.Result)
 	}
+	v.Fork = unmarshalBoardForkResponseBodyToBoardsBoardFork(body.Fork)
 
 	return v
 }
@@ -1127,6 +1167,7 @@ func NewOpenBoardCreated(body *OpenResponseBody) *boards.Board {
 	if body.Result != nil {
 		v.Result = unmarshalBoardResultResponseBodyToBoardsBoardResult(body.Result)
 	}
+	v.Fork = unmarshalBoardForkResponseBodyToBoardsBoardFork(body.Fork)
 
 	return v
 }
@@ -1197,6 +1238,7 @@ func NewSaveBoardOK(body *SaveResponseBody) *boards.Board {
 	if body.Result != nil {
 		v.Result = unmarshalBoardResultResponseBodyToBoardsBoardResult(body.Result)
 	}
+	v.Fork = unmarshalBoardForkResponseBodyToBoardsBoardFork(body.Fork)
 
 	return v
 }
@@ -1281,6 +1323,7 @@ func NewAddStickyBoardStickyCreated(body *AddStickyResponseBody) *boards.BoardSt
 		Kind:      *body.Kind,
 		State:     *body.State,
 		Error:     body.Error,
+		Session:   body.Session,
 		CreatedAt: *body.CreatedAt,
 		UpdatedAt: *body.UpdatedAt,
 	}
@@ -1366,6 +1409,7 @@ func NewSaveStickyBoardStickyOK(body *SaveStickyResponseBody) *boards.BoardStick
 		Kind:      *body.Kind,
 		State:     *body.State,
 		Error:     body.Error,
+		Session:   body.Session,
 		CreatedAt: *body.CreatedAt,
 		UpdatedAt: *body.UpdatedAt,
 	}
@@ -1481,6 +1525,7 @@ func NewAskStickyBoardStickyOK(body *AskStickyResponseBody) *boards.BoardSticky 
 		Kind:      *body.Kind,
 		State:     *body.State,
 		Error:     body.Error,
+		Session:   body.Session,
 		CreatedAt: *body.CreatedAt,
 		UpdatedAt: *body.UpdatedAt,
 	}
@@ -1648,6 +1693,7 @@ func NewFinishBoardOK(body *FinishResponseBody) *boards.Board {
 	if body.Result != nil {
 		v.Result = unmarshalBoardResultResponseBodyToBoardsBoardResult(body.Result)
 	}
+	v.Fork = unmarshalBoardForkResponseBodyToBoardsBoardFork(body.Fork)
 
 	return v
 }
@@ -1725,6 +1771,9 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
 	}
+	if body.Fork == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
+	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -1753,6 +1802,11 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 	}
 	if body.Result != nil {
 		if err2 := validateBoardResultResponseBody(body.Result, "body.result"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Fork != nil {
+		if err2 := validateBoardForkResponseBody(body.Fork, "body.fork"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -1788,6 +1842,9 @@ func ValidateOpenResponseBody(body *OpenResponseBody) (err error) {
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
 	}
+	if body.Fork == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
+	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -1816,6 +1873,11 @@ func ValidateOpenResponseBody(body *OpenResponseBody) (err error) {
 	}
 	if body.Result != nil {
 		if err2 := validateBoardResultResponseBody(body.Result, "body.result"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Fork != nil {
+		if err2 := validateBoardForkResponseBody(body.Fork, "body.fork"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -1851,6 +1913,9 @@ func ValidateSaveResponseBody(body *SaveResponseBody) (err error) {
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
 	}
+	if body.Fork == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
+	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -1879,6 +1944,11 @@ func ValidateSaveResponseBody(body *SaveResponseBody) (err error) {
 	}
 	if body.Result != nil {
 		if err2 := validateBoardResultResponseBody(body.Result, "body.result"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Fork != nil {
+		if err2 := validateBoardForkResponseBody(body.Fork, "body.fork"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -1921,8 +1991,8 @@ func ValidateAddStickyResponseBody(body *AddStickyResponseBody) (err error) {
 		}
 	}
 	if body.Kind != nil {
-		if !(*body.Kind == "memo" || *body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant"}))
+		if !(*body.Kind == "memo" || *body.Kind == "assistant" || *body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 	}
 	for _, e := range body.Messages {
@@ -1936,6 +2006,9 @@ func ValidateAddStickyResponseBody(body *AddStickyResponseBody) (err error) {
 		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *body.State, []any{"idle", "waiting", "error"}))
 		}
+	}
+	if body.Session != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.session", *body.Session, goa.FormatUUID))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -1982,8 +2055,8 @@ func ValidateSaveStickyResponseBody(body *SaveStickyResponseBody) (err error) {
 		}
 	}
 	if body.Kind != nil {
-		if !(*body.Kind == "memo" || *body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant"}))
+		if !(*body.Kind == "memo" || *body.Kind == "assistant" || *body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 	}
 	for _, e := range body.Messages {
@@ -1997,6 +2070,9 @@ func ValidateSaveStickyResponseBody(body *SaveStickyResponseBody) (err error) {
 		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *body.State, []any{"idle", "waiting", "error"}))
 		}
+	}
+	if body.Session != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.session", *body.Session, goa.FormatUUID))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -2043,8 +2119,8 @@ func ValidateAskStickyResponseBody(body *AskStickyResponseBody) (err error) {
 		}
 	}
 	if body.Kind != nil {
-		if !(*body.Kind == "memo" || *body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant"}))
+		if !(*body.Kind == "memo" || *body.Kind == "assistant" || *body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 	}
 	for _, e := range body.Messages {
@@ -2058,6 +2134,9 @@ func ValidateAskStickyResponseBody(body *AskStickyResponseBody) (err error) {
 		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *body.State, []any{"idle", "waiting", "error"}))
 		}
+	}
+	if body.Session != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.session", *body.Session, goa.FormatUUID))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -2105,6 +2184,9 @@ func ValidateFinishResponseBody(body *FinishResponseBody) (err error) {
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
 	}
+	if body.Fork == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
+	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -2133,6 +2215,11 @@ func ValidateFinishResponseBody(body *FinishResponseBody) (err error) {
 	}
 	if body.Result != nil {
 		if err2 := validateBoardResultResponseBody(body.Result, "body.result"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Fork != nil {
+		if err2 := validateBoardForkResponseBody(body.Fork, "body.fork"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -3094,8 +3181,8 @@ func ValidateBoardStickyResponseBody(body *BoardStickyResponseBody) (err error) 
 		}
 	}
 	if body.Kind != nil {
-		if !(*body.Kind == "memo" || *body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant"}))
+		if !(*body.Kind == "memo" || *body.Kind == "assistant" || *body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 	}
 	for _, e := range body.Messages {
@@ -3109,6 +3196,9 @@ func ValidateBoardStickyResponseBody(body *BoardStickyResponseBody) (err error) 
 		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *body.State, []any{"idle", "waiting", "error"}))
 		}
+	}
+	if body.Session != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("body.session", *body.Session, goa.FormatUUID))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -3155,8 +3245,8 @@ func validateBoardStickyResponseBody(body *BoardStickyResponseBody, path string)
 		}
 	}
 	if body.Kind != nil {
-		if !(*body.Kind == "memo" || *body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".kind", *body.Kind, []any{"memo", "assistant"}))
+		if !(*body.Kind == "memo" || *body.Kind == "assistant" || *body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".kind", *body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 	}
 	for _, e := range body.Messages {
@@ -3170,6 +3260,9 @@ func validateBoardStickyResponseBody(body *BoardStickyResponseBody, path string)
 		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".state", *body.State, []any{"idle", "waiting", "error"}))
 		}
+	}
+	if body.Session != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat(path+".session", *body.Session, goa.FormatUUID))
 	}
 	if body.CreatedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".created_at", *body.CreatedAt, goa.FormatDateTime))
@@ -3295,6 +3388,33 @@ func validateBoardResultResponseBody(body *BoardResultResponseBody, path string)
 	}
 	if body.FinishedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".finished_at", *body.FinishedAt, goa.FormatDateTime))
+	}
+	return
+}
+
+// ValidateBoardForkResponseBody runs the validations defined on BoardFork
+func ValidateBoardForkResponseBody(body *BoardForkResponseBody) (err error) {
+	if body.Available == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("available", "body"))
+	}
+	if body.Reason != nil {
+		if !(*body.Reason == "auth_none" || *body.Reason == "no_session" || *body.Reason == "session_missing" || *body.Reason == "not_found" || *body.Reason == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.reason", *body.Reason, []any{"auth_none", "no_session", "session_missing", "not_found", "done"}))
+		}
+	}
+	return
+}
+
+// validateBoardForkResponseBody checks BoardFork and reports errors using the
+// path supplied by its caller
+func validateBoardForkResponseBody(body *BoardForkResponseBody, path string) (err error) {
+	if body.Available == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("available", path))
+	}
+	if body.Reason != nil {
+		if !(*body.Reason == "auth_none" || *body.Reason == "no_session" || *body.Reason == "session_missing" || *body.Reason == "not_found" || *body.Reason == "done") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".reason", *body.Reason, []any{"auth_none", "no_session", "session_missing", "not_found", "done"}))
+		}
 	}
 	return
 }

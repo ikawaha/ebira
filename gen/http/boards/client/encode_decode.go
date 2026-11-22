@@ -1598,6 +1598,7 @@ func unmarshalBoardStickyResponseBodyToBoardsBoardSticky(v *BoardStickyResponseB
 		Kind:      *v.Kind,
 		State:     *v.State,
 		Error:     v.Error,
+		Session:   v.Session,
 		CreatedAt: *v.CreatedAt,
 		UpdatedAt: *v.UpdatedAt,
 	}
@@ -1649,6 +1650,18 @@ func unmarshalBoardResultResponseBodyToBoardsBoardResult(v *BoardResultResponseB
 	res.Stickies = make([]string, len(v.Stickies))
 	for i, val := range v.Stickies {
 		res.Stickies[i] = val
+	}
+
+	return res
+}
+
+// unmarshalBoardForkResponseBodyToBoardsBoardFork builds a value of type
+// *boards.BoardFork from a value of type *BoardForkResponseBody.
+func unmarshalBoardForkResponseBodyToBoardsBoardFork(v *BoardForkResponseBody) *boards.BoardFork {
+	res := &boards.BoardFork{
+		Available: *v.Available,
+		Reason:    v.Reason,
+		Cwd:       v.Cwd,
 	}
 
 	return res

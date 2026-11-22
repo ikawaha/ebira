@@ -162,3 +162,21 @@ func clipRight(s string, n int) string {
 func oneLine(s string, n int) string {
 	return clipRight(strings.Join(strings.Fields(s), " "), n)
 }
+
+// forkFrame tells a fork of the session that opened b where its question
+// comes from, and keeps it from working on the task of the session.
+const forkFrame = "You are a fork of this session, answering a side question that the person asked on a sticky note of the whiteboard this session opened, titled %q. Your answer goes on the sticky note, not into the main conversation. Answer the question only, briefly, in Markdown, in the language of the question. Read files if it helps, but do not change anything.\n\n"
+
+// ForkQuestion builds what a fork of the Claude Code session of b is asked
+// for the sticky note s: the question of Question at first, and, when
+// resumed in a session that has the earlier messages, the last one only.
+func ForkQuestion(b *Board, source string, s *Sticky, resumed bool) string {
+	if resumed {
+		last := ""
+		if n := len(s.Messages); n > 0 && s.Messages[n-1].Role == User {
+			last = s.Messages[n-1].Text
+		}
+		return cut("The person asks again on the same sticky note: "+last, MaxQuestion)
+	}
+	return cut(fmt.Sprintf(forkFrame, b.Title)+Question(b, source, s), MaxQuestion)
+}

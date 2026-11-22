@@ -54,6 +54,13 @@ func requireVerified(ctx context.Context) error {
 	return nil
 }
 
+// signedIn reports whether the request is from people signed in with a
+// passkey, rather than without passkeys (auth: none).
+func signedIn(ctx context.Context) bool {
+	_, ok := ctx.Value(verifiedKey{}).(bool)
+	return ok
+}
+
 // APIKeyAuth checks the session of a request on the endpoints made from Notes
 // itself, which MCP and the assistant use: their requests are from AI, even
 // with the session cookie of a browser, which MCP clients pass on. The REST

@@ -39,14 +39,17 @@ var BoardSticky = Type("BoardSticky", func() {
 	RequiredAttribute("id", String, "Sticky note ID", stickyIDDSL)
 	Attribute("parent", String, "The sticky note this one is on, for one on a passage of an answer", stickyIDDSL)
 	RequiredAttribute("anchor", BoardAnchor, "The passage the sticky note is on")
-	RequiredAttribute("kind", String, "memo, written by the person, or assistant, answered by the assistant", func() {
-		Enum("memo", "assistant")
+	RequiredAttribute("kind", String, "memo, written by the person; assistant, answered by the assistant; or fork, answered by a fork of the Claude Code session that opened the board", func() {
+		Enum("memo", "assistant", "fork")
 	})
 	RequiredAttribute("messages", ArrayOf(BoardMessage), "The messages, oldest first")
 	RequiredAttribute("state", String, "idle, waiting for an answer, or error when the last answer failed", func() {
 		Enum("idle", "waiting", "error")
 	})
 	Attribute("error", String, "Why the last answer failed")
+	Attribute("session", String, "The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with", func() {
+		Format(FormatUUID)
+	})
 	RequiredAttribute("created_at", String, "Creation time", timeDSL)
 	RequiredAttribute("updated_at", String, "Last update time", timeDSL)
 })
@@ -96,6 +99,15 @@ var Board = Type("Board", func() {
 	RequiredAttribute("stickies", ArrayOf(BoardSticky), "The sticky notes, in the order they were added")
 	Attribute("result", BoardResult, "What was given back, once finished")
 	RequiredAttribute("from_session", Boolean, "Whether an AI client opened the board, and waits for what is given back")
+	RequiredAttribute("fork", BoardFork, "Whether sticky notes of the fork kind can be put on the board")
+})
+
+var BoardFork = Type("BoardFork", func() {
+	RequiredAttribute("available", Boolean, "Whether forks of the session that opened the board can answer sticky notes")
+	Attribute("reason", String, "Why not: auth_none (forks need passkeys), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)", func() {
+		Enum("auth_none", "no_session", "session_missing", "not_found", "done")
+	})
+	Attribute("cwd", String, "The working directory of the session, where claude --resume goes on with the session of a sticky note")
 })
 
 // The whiteboards for people: the web UI reads them, puts sticky notes on them
@@ -193,23 +205,23 @@ var _ = Service("boards", func() {
 	})
 
 	Method("add_sticky", func() {
-		Description("Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and comes back waiting: the answer comes later, told by an event of type board on /events.")
+		Description("Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and one of the fork kind asks a fork of the Claude Code session that opened the board, which needs a session signed in with a passkey: they come back waiting, and the answer comes later, told by an event of type board on /events.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
 			Attribute("parent", String, "The sticky note whose answer the passage is in", stickyIDDSL)
 			RequiredAttribute("anchor", BoardAnchor, "The passage")
-			RequiredAttribute("kind", String, "memo, or assistant to ask the assistant", func() {
-				Enum("memo", "assistant")
+			RequiredAttribute("kind", String, "memo; assistant to ask the assistant; fork to ask a fork of the Claude Code session that opened the board", func() {
+				Enum("memo", "assistant", "fork")
 			})
-			Attribute("text", String, "The memo, or the question; required for the assistant", func() {
+			Attribute("text", String, "The memo, or the question; required for the assistant and a fork", func() {
 				MaxLength(10 << 10)
 			})
 		})
 		Result(BoardSticky)
 		Error("not_found", ErrorResult, "The board, or the parent sticky note, does not exist")
 		Error("bad_request", ErrorResult, "The passage or the question is empty or too long, the board is finished, or it has too many sticky notes")
-		Error("unavailable", ErrorResult, "The assistant is not configured, such as when no model API key is set")
+		Error("unavailable", ErrorResult, "The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)")
 		HTTP(func() {
 			POST("/boards/{id}/stickies")
 			Response(StatusCreated)
@@ -258,7 +270,7 @@ var _ = Service("boards", func() {
 	})
 
 	Method("ask_sticky", func() {
-		Description("Add a message to a sticky note: a follow-up question to the assistant, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.")
+		Description("Add a message to a sticky note: a follow-up question to the assistant or a fork, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
@@ -270,7 +282,7 @@ var _ = Service("boards", func() {
 		Result(BoardSticky)
 		Error("not_found", ErrorResult, "The board or the sticky note does not exist")
 		Error("bad_request", ErrorResult, "The message is empty or too long, the sticky note waits for an answer, the board is finished, or the sticky note has too many messages")
-		Error("unavailable", ErrorResult, "The assistant is not configured, such as when no model API key is set")
+		Error("unavailable", ErrorResult, "The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)")
 		HTTP(func() {
 			POST("/boards/{id}/stickies/{sticky}/messages")
 			Response(StatusOK)

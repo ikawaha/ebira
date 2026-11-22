@@ -7,8 +7,11 @@ import (
 	"io"
 	"log"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	genboards "github.com/ikawaha/ebira/gen/boards"
 	gennotes "github.com/ikawaha/ebira/gen/notes"
 	"github.com/ikawaha/ebira/internal/board"
@@ -38,7 +41,36 @@ const (
 	boardAnswers = 2
 	// boardAnswerTime bounds one answer, from when its turn comes.
 	boardAnswerTime = 3 * time.Minute
+	// boardForks is how many forks answer at once: each reads the whole
+	// conversation of the session again.
+	boardForks = 1
+	// boardForkTime bounds one answer of a fork, which may read files.
+	boardForkTime = 10 * time.Minute
 )
+
+// ForkAsk is a question for a fork of a Claude Code session (Forker).
+type ForkAsk struct {
+	// Cwd is the working directory of the session.
+	Cwd string
+	// Resume is the session to resume.
+	Resume string
+	// Session, when set, forks Resume into a new session of that ID; else
+	// the question goes on in Resume.
+	Session string
+	// Question is the prompt.
+	Question string
+}
+
+// Forker answers questions in forks of Claude Code sessions, for the sticky
+// notes of the fork kind (see internal/claudecode).
+type Forker interface {
+	// Ask asks a fork the question of a, and returns its answer.
+	Ask(ctx context.Context, a ForkAsk) (string, error)
+	// Has reports whether Claude Code keeps session id.
+	Has(id string) bool
+	// Remove deletes session id, one that Ask made.
+	Remove(id string) error
+}
 
 // eventBoard tells that a whiteboard changed.
 const eventBoard = "board"
@@ -53,8 +85,13 @@ type boards struct {
 	store *board.Store
 	ask   Asker // nil when the assistant is not available
 	turns chan struct{}
+	fork  atomic.Pointer[Forker] // nil until found, and when claude is not found
+	forks chan struct{}
 	ctx   context.Context // ends with the service, and the answers with it
 	stop  context.CancelFunc
+
+	mu      sync.Mutex
+	running map[string]context.CancelFunc // answers under way, by board and sticky note
 }
 
 // SetBoards gives the service the whiteboards of st, with ask answering the
@@ -65,8 +102,63 @@ func (s *Notes) SetBoards(st *board.Store, ask Asker) error {
 		return err
 	}
 	ctx, stop := context.WithCancel(context.Background())
-	s.boards = &boards{store: st, ask: ask, turns: make(chan struct{}, boardAnswers), ctx: ctx, stop: stop}
+	s.boards = &boards{
+		store: st, ask: ask, turns: make(chan struct{}, boardAnswers), forks: make(chan struct{}, boardForks),
+		ctx: ctx, stop: stop, running: map[string]context.CancelFunc{},
+	}
 	return nil
+}
+
+// SetForker gives the service the forks of Claude Code sessions, which
+// answer the sticky notes of the fork kind; nil when claude is not found.
+// Call it after SetBoards, at any time: finding claude may take a while.
+func (s *Notes) SetForker(f Forker) {
+	if s.boards != nil && f != nil {
+		s.boards.fork.Store(&f)
+	}
+}
+
+// forker returns the forks, or nil.
+func (bs *boards) forker() Forker {
+	if f := bs.fork.Load(); f != nil {
+		return *f
+	}
+	return nil
+}
+
+// runKey is the key of an answer under way in boards.running.
+func runKey(board, sticky string) string { return board + "/" + sticky }
+
+// cancel stops the answers under way for the sticky notes of board, or all
+// of them without stickies.
+func (bs *boards) cancel(id string, stickies []board.Sticky) {
+	bs.mu.Lock()
+	defer bs.mu.Unlock()
+	for key, stop := range bs.running {
+		if stickies == nil && strings.HasPrefix(key, id+"/") {
+			stop()
+		}
+	}
+	for _, st := range stickies {
+		if stop, ok := bs.running[runKey(id, st.ID)]; ok {
+			stop()
+		}
+	}
+}
+
+// forget stops the answers of stickies of board, and deletes the Claude Code
+// sessions ebira made for them: never the session that opened the board.
+func (bs *boards) forget(id string, stickies []board.Sticky) {
+	bs.cancel(id, stickies)
+	f := bs.forker()
+	if f == nil {
+		return
+	}
+	for _, session := range board.Sessions(stickies) {
+		if err := f.Remove(session); err != nil {
+			log.Printf("whiteboard %s: removing session %s: %v", id, session, err)
+		}
+	}
 }
 
 // SweepBoards deletes the boards finished or left long ago.
@@ -75,8 +167,9 @@ func (s *Notes) SweepBoards() error {
 		return nil
 	}
 	gone, err := s.boards.store.Sweep()
-	for _, id := range gone {
-		s.events.publish(eventBoard, id)
+	for _, b := range gone {
+		s.boards.forget(b.ID, b.Stickies)
+		s.events.publish(eventBoard, b.ID)
 	}
 	return err
 }
@@ -294,11 +387,11 @@ func (r Boards) Get(ctx context.Context, p *genboards.GetPayload) (*genboards.Bo
 	if err != nil {
 		return nil, err
 	}
-	return s.fullBoard(st, b)
+	return s.fullBoard(ctx, st, b)
 }
 
 // fullBoard returns b with its source, as the API gives it.
-func (s *Notes) fullBoard(st *board.Store, b *board.Board) (*genboards.Board, error) {
+func (s *Notes) fullBoard(ctx context.Context, st *board.Store, b *board.Board) (*genboards.Board, error) {
 	text, err := st.Source(b.ID)
 	if err != nil {
 		return nil, boardErr(err)
@@ -313,6 +406,7 @@ func (s *Notes) fullBoard(st *board.Store, b *board.Board) (*genboards.Board, er
 		Text:        text,
 		Stickies:    make([]*genboards.BoardSticky, 0, len(b.Stickies)),
 		FromSession: b.Origin.AI,
+		Fork:        s.forkState(ctx, b),
 	}
 	for i := range b.Stickies {
 		res.Stickies = append(res.Stickies, apiSticky(&b.Stickies[i]))
@@ -323,12 +417,54 @@ func (s *Notes) fullBoard(st *board.Store, b *board.Board) (*genboards.Board, er
 	return res, nil
 }
 
+// forkState tells whether forks of the session of b can answer its sticky
+// notes, for the request ctx: one signed in with a passkey, as a fork runs
+// Claude Code on the machine of the server.
+func (s *Notes) forkState(ctx context.Context, b *board.Board) *genboards.BoardFork {
+	var reason string
+	switch {
+	case b.Status != board.Open:
+		reason = "done"
+	case b.Origin.SessionID == "" || b.Origin.Cwd == "":
+		reason = "no_session"
+	case !signedIn(ctx):
+		reason = "auth_none"
+	case s.boards == nil || s.boards.forker() == nil:
+		reason = "not_found"
+	case !s.boards.forker().Has(b.Origin.SessionID):
+		reason = "session_missing"
+	}
+	res := &genboards.BoardFork{Available: reason == "", Cwd: optional(b.Origin.Cwd)}
+	if reason != "" {
+		res.Reason = &reason
+	}
+	return res
+}
+
+// forkErrors are the errors of a fork that cannot answer, by the reason of
+// forkState.
+var forkErrors = map[string]string{
+	"done":            "the board is finished",
+	"no_session":      "no Claude Code session opened the board",
+	"auth_none":       "forks need passkeys: sign in with a passkey (ebira auth passkey)",
+	"not_found":       "claude (Claude Code) is not found on the machine of the server",
+	"session_missing": "Claude Code no longer has the session that opened the board",
+}
+
+// requireFork fails unless forks of the session of b can answer.
+func (s *Notes) requireFork(ctx context.Context, b *board.Board) error {
+	if st := s.forkState(ctx, b); !st.Available {
+		return gennotes.MakeUnavailable(errors.New(forkErrors[*st.Reason]))
+	}
+	return nil
+}
+
 func apiSticky(s *board.Sticky) *genboards.BoardSticky {
 	res := &genboards.BoardSticky{
 		ID: s.ID, Parent: optional(s.Parent),
 		Anchor: &genboards.BoardAnchor{Exact: s.Anchor.Exact, Prefix: optional(s.Anchor.Prefix), Suffix: optional(s.Anchor.Suffix)},
 		Kind:   s.Kind, Messages: make([]*genboards.BoardMessage, 0, len(s.Messages)),
-		State: s.State, Error: optional(s.Error),
+		State: s.State, Error: optional(s.Error), Session: optional(s.Session),
 		CreatedAt: store.FormatTime(s.CreatedAt), UpdatedAt: store.FormatTime(s.UpdatedAt),
 	}
 	for _, m := range s.Messages {
@@ -365,7 +501,7 @@ func (r Boards) Open(ctx context.Context, p *genboards.OpenPayload) (*genboards.
 	if err != nil {
 		return nil, err
 	}
-	return s.fullBoard(s.boards.store, nb)
+	return s.fullBoard(ctx, s.boards.store, nb)
 }
 
 // changeBoard changes board id with change, for people, and tells the
@@ -399,7 +535,7 @@ func (r Boards) Save(ctx context.Context, p *genboards.SavePayload) (*genboards.
 	if err != nil {
 		return nil, err
 	}
-	return s.fullBoard(st, b)
+	return s.fullBoard(ctx, st, b)
 }
 
 func (r Boards) Delete(ctx context.Context, p *genboards.DeletePayload) error {
@@ -411,8 +547,14 @@ func (r Boards) Delete(ctx context.Context, p *genboards.DeletePayload) error {
 	if err != nil {
 		return err
 	}
-	if err := st.Delete(p.ID); err != nil {
+	b, err := st.Delete(p.ID)
+	if err != nil {
 		return boardErr(err)
+	}
+	if b != nil {
+		s.boards.forget(b.ID, b.Stickies)
+	} else {
+		s.boards.cancel(p.ID, nil)
 	}
 	s.events.publish(eventBoard, p.ID)
 	return nil
@@ -441,21 +583,28 @@ func (r Boards) AddSticky(ctx context.Context, p *genboards.AddStickyPayload) (*
 		return nil, err
 	}
 	text := deref(p.Text)
-	asks := p.Kind == board.Assistant
-	if asks {
+	asks := p.Kind == board.Assistant || p.Kind == board.Fork
+	if p.Kind == board.Assistant {
 		if err := s.requireAsker(); err != nil {
 			return nil, err
 		}
-		if strings.TrimSpace(text) == "" {
-			return nil, gennotes.MakeBadRequest(errors.New("ask the assistant a question"))
-		}
 	}
-	if p.Parent != nil {
-		// A sticky note on a missing parent is not found, rather than invalid.
-		if _, b, err := s.getBoard(ctx, p.ID); err != nil {
+	if asks && strings.TrimSpace(text) == "" {
+		return nil, gennotes.MakeBadRequest(errors.New("ask a question"))
+	}
+	if p.Parent != nil || p.Kind == board.Fork {
+		_, b, err := s.getBoard(ctx, p.ID)
+		if err != nil {
 			return nil, err
-		} else if b.Find(*p.Parent) == nil {
+		}
+		// A sticky note on a missing parent is not found, rather than invalid.
+		if p.Parent != nil && b.Find(*p.Parent) == nil {
 			return nil, gennotes.MakeNotFound(fmt.Errorf("no sticky note %q", *p.Parent))
+		}
+		if p.Kind == board.Fork {
+			if err := s.requireFork(ctx, b); err != nil {
+				return nil, err
+			}
 		}
 	}
 	var added board.Sticky
@@ -467,6 +616,9 @@ func (r Boards) AddSticky(ctx context.Context, p *genboards.AddStickyPayload) (*
 		}
 		if strings.TrimSpace(text) != "" {
 			in.Messages = []board.Message{{Role: board.User, Text: text}}
+		}
+		if p.Kind == board.Fork {
+			in.Session = uuid.NewString()
 		}
 		st, err := b.Add(in, s.now())
 		if err != nil {
@@ -482,7 +634,7 @@ func (r Boards) AddSticky(ctx context.Context, p *genboards.AddStickyPayload) (*
 		return nil, err
 	}
 	if asks {
-		s.answer(p.ID, added.ID)
+		s.answer(p.ID, added.ID, added.Kind)
 	}
 	return apiSticky(&added), nil
 }
@@ -524,16 +676,22 @@ func (r Boards) SaveSticky(ctx context.Context, p *genboards.SaveStickyPayload) 
 
 func (r Boards) DeleteSticky(ctx context.Context, p *genboards.DeleteStickyPayload) error {
 	s := r.Notes
+	var removed []board.Sticky
 	_, _, err := s.changeBoard(ctx, p.ID, func(b *board.Board) error {
 		if err := requireOpen(b); err != nil {
 			return err
 		}
-		if !b.Remove(p.Sticky) {
+		if removed = b.Remove(p.Sticky); removed == nil {
 			return fmt.Errorf("%w: no sticky note %q", board.ErrNotFound, p.Sticky)
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	// Deleting a sticky note waiting for an answer stops it.
+	s.boards.forget(p.ID, removed)
+	return nil
 }
 
 func (r Boards) AskSticky(ctx context.Context, p *genboards.AskStickyPayload) (*genboards.BoardSticky, error) {
@@ -552,8 +710,12 @@ func (r Boards) AskSticky(ctx context.Context, p *genboards.AskStickyPayload) (*
 		if st.State == board.Waiting {
 			return fmt.Errorf("%w: the sticky note waits for an answer", board.ErrInvalid)
 		}
-		if st.Kind == board.Assistant {
-			if err := s.requireAsker(); err != nil {
+		if st.Kind == board.Assistant || st.Kind == board.Fork {
+			if st.Kind == board.Assistant {
+				if err := s.requireAsker(); err != nil {
+					return err
+				}
+			} else if err := s.requireFork(ctx, b); err != nil {
 				return err
 			}
 			asks = true
@@ -575,7 +737,7 @@ func (r Boards) AskSticky(ctx context.Context, p *genboards.AskStickyPayload) (*
 		return nil, err
 	}
 	if asks {
-		s.answer(p.ID, asked.ID)
+		s.answer(p.ID, asked.ID, asked.Kind)
 	}
 	return apiSticky(&asked), nil
 }
@@ -587,16 +749,31 @@ func (s *Notes) requireAsker() error {
 	return nil
 }
 
-// answer asks the assistant the question of sticky note sid of board id, in
-// the background, and writes the answer, or why it failed, on the sticky
-// note.
-func (s *Notes) answer(id, sid string) {
+// answer asks the assistant, or a fork for kind fork, the question of sticky
+// note sid of board id, in the background, and writes the answer, or why it
+// failed, on the sticky note. Deleting the sticky note or the board stops it.
+func (s *Notes) answer(id, sid, kind string) {
 	bs := s.boards
+	turns, limit := bs.turns, boardAnswerTime
+	if kind == board.Fork {
+		turns, limit = bs.forks, boardForkTime
+	}
+	ctx, cancel := context.WithCancel(bs.ctx)
+	key := runKey(id, sid)
+	bs.mu.Lock()
+	bs.running[key] = cancel
+	bs.mu.Unlock()
 	go func() {
+		defer func() {
+			bs.mu.Lock()
+			delete(bs.running, key)
+			bs.mu.Unlock()
+			cancel()
+		}()
 		select {
-		case bs.turns <- struct{}{}:
-			defer func() { <-bs.turns }()
-		case <-bs.ctx.Done():
+		case turns <- struct{}{}:
+			defer func() { <-turns }()
+		case <-ctx.Done():
 			return
 		}
 		b, err := bs.store.Get(id)
@@ -611,11 +788,28 @@ func (s *Notes) answer(id, sid string) {
 		if err != nil {
 			return
 		}
-		ctx, cancel := context.WithTimeout(bs.ctx, boardAnswerTime)
-		reply, err := bs.ask(ctx, board.Question(b, source, st))
-		cancel()
+		actx, acancel := context.WithTimeout(ctx, limit)
+		var reply string
+		if kind == board.Fork {
+			reply, err = bs.askFork(actx, b, source, st)
+		} else {
+			reply, err = bs.ask(actx, board.Question(b, source, st))
+		}
+		timedOut := errors.Is(actx.Err(), context.DeadlineExceeded)
+		acancel()
 		if bs.ctx.Err() != nil {
 			return // the server stops; SetBoards marks it next time
+		}
+		if ctx.Err() != nil {
+			// The sticky note or the board was deleted: a fork may have made
+			// its session meanwhile.
+			if kind == board.Fork {
+				bs.forget(id, []board.Sticky{*st})
+			}
+			return
+		}
+		if timedOut {
+			err = fmt.Errorf("no answer in %v", limit)
 		}
 		_, uerr := bs.store.Update(id, func(b *board.Board) error {
 			st := b.Find(sid)
@@ -641,6 +835,28 @@ func (s *Notes) answer(id, sid string) {
 }
 
 var errGone = errors.New("the sticky note is gone")
+
+// askFork asks a fork the question of sticky note st of b, whose source is
+// source. The first question forks the session of the parent sticky note, if
+// a fork answers it, else that of the board, into the session of st; the next
+// ones go on in it.
+func (bs *boards) askFork(ctx context.Context, b *board.Board, source string, st *board.Sticky) (string, error) {
+	f := bs.forker()
+	if f == nil {
+		return "", errors.New(forkErrors["not_found"])
+	}
+	resumed := f.Has(st.Session)
+	a := ForkAsk{Cwd: b.Origin.Cwd, Question: board.ForkQuestion(b, source, st, resumed)}
+	if resumed {
+		a.Resume = st.Session
+	} else {
+		a.Resume, a.Session = b.Origin.SessionID, st.Session
+		if p := b.Find(st.Parent); p != nil && p.Kind == board.Fork && f.Has(p.Session) {
+			a.Resume = p.Session
+		}
+	}
+	return f.Ask(ctx, a)
+}
 
 func (r Boards) Draft(ctx context.Context, p *genboards.DraftPayload) (*genboards.DraftResult, error) {
 	s := r.Notes
@@ -730,5 +946,5 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 	if err != nil {
 		return nil, err
 	}
-	return s.fullBoard(st, b)
+	return s.fullBoard(ctx, st, b)
 }

@@ -299,6 +299,14 @@ func runServe(args []string) error {
 	if err := svc.SetBoards(boards, boardAsk); err != nil {
 		return err
 	}
+	// Forks of the Claude Code session that opened a board answer the
+	// sticky notes of the fork kind, with claude of this machine. Finding it
+	// may ask the login shell, so the server does not wait for it.
+	go func() {
+		if f := newForker(ctx, *addr); f != nil {
+			svc.SetForker(f)
+		}
+	}()
 
 	if gitEvery > 0 {
 		go syncGitEvery(ctx, svc, gitEvery)
