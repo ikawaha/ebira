@@ -1,7 +1,7 @@
 {
   "en": {
     "stickies": "Sticky notes",
-    "source": "Source",
+    "source": "Topic",
     "lines": "{n} lines",
     "question": "Q",
     "answer": "A",
@@ -9,7 +9,7 @@
   },
   "ja": {
     "stickies": "付箋",
-    "source": "本筋",
+    "source": "議題",
     "lines": "{n} 行",
     "question": "問",
     "answer": "答",

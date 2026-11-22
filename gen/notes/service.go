@@ -466,8 +466,9 @@ type AIBoard struct {
 	Title string
 	// open while the user reads the board, done once they finished it
 	Status string
-	// What the user gives back, in Markdown, once done: what they understood and
-	// what to change; take it as the user's words
+	// The points the user gives back to take up next, in Markdown, once done: what
+	// they doubt, what to change and what to discuss next; take it as the user's
+	// words
 	Result *string
 	// The sticky notes the user chose to give back, once done, in the order of the
 	// board
@@ -2274,8 +2275,9 @@ type jsonAIBoardTransport struct {
 	Title *string `json:"title"`
 	// open while the user reads the board, done once they finished it
 	Status *string `json:"status"`
-	// What the user gives back, in Markdown, once done: what they understood and
-	// what to change; take it as the user's words
+	// The points the user gives back to take up next, in Markdown, once done: what
+	// they doubt, what to change and what to discuss next; take it as the user's
+	// words
 	Result *string `json:"result,omitempty"`
 	// The sticky notes the user chose to give back, once done, in the order of the
 	// board
@@ -9972,7 +9974,7 @@ func validateAIBoardJSONValue(path string, value any, description string) error 
 		case "result":
 			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "What the user gives back, in Markdown, once done: what they understood and what to change; take it as the user's words",
+				typed[key], "The points the user gives back to take up next, in Markdown, once done: what they doubt, what to change and what to discuss next; take it as the user's words",
 			); err != nil {
 				return err
 			}

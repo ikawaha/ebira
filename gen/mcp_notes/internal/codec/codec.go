@@ -853,8 +853,9 @@ type GetAiBoardResultTransport struct {
 	Title *string `json:"title"`
 	// open while the user reads the board, done once they finished it
 	Status *string `json:"status"`
-	// What the user gives back, in Markdown, once done: what they understood and
-	// what to change; take it as the user's words
+	// The points the user gives back to take up next, in Markdown, once done: what
+	// they doubt, what to change and what to discuss next; take it as the user's
+	// words
 	Result *string `json:"result,omitempty"`
 	// The sticky notes the user chose to give back, once done, in the order of the
 	// board

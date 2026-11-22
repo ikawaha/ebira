@@ -123,7 +123,7 @@ func TestNoteBodyJapanese(t *testing.T) {
 	q, _ := b.Add(Sticky{Kind: Assistant, Anchor: Anchor{Exact: "語"}, Messages: []Message{{Text: "何？"}}}, time.Now())
 	q.Say(Agent, "答え", time.Now())
 	got := NoteBody(b, "語\n", "", "ja")
-	for _, want := range []string{"## 付箋\n", "**問** 何？", "**答** 答え", "## 本筋\n", "<summary>text (1 行)</summary>"} {
+	for _, want := range []string{"## 付箋\n", "**問** 何？", "**答** 答え", "## 議題\n", "<summary>text (1 行)</summary>"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("note lacks %q:\n%s", want, got)
 		}

@@ -1496,7 +1496,7 @@ var getAiBoardResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("result")},
 		JSONType:    "string",
-		Description: "What the user gives back, in Markdown, once done: what they understood and what to change; take it as the user's words",
+		Description: "The points the user gives back to take up next, in Markdown, once done: what they doubt, what to change and what to discuss next; take it as the user's words",
 	},
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("stickies")},
@@ -10529,7 +10529,7 @@ func validateGetAiBoardResultJSONValue(path string, value any, description strin
 		case "result":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "What the user gives back, in Markdown, once done: what they understood and what to change; take it as the user's words",
+				typed[key], "The points the user gives back to take up next, in Markdown, once done: what they doubt, what to change and what to discuss next; take it as the user's words",
 			); err != nil {
 				return err
 			}

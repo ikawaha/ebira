@@ -203,7 +203,7 @@ var AIBoard = Type("AIBoard", func() {
 	RequiredAttribute("status", String, "open while the user reads the board, done once they finished it", func() {
 		Enum("open", "done")
 	})
-	Attribute("result", String, "What the user gives back, in Markdown, once done: what they understood and what to change; take it as the user's words")
+	Attribute("result", String, "The points the user gives back to take up next, in Markdown, once done: what they doubt, what to change and what to discuss next; take it as the user's words")
 	Attribute("stickies", ArrayOf(AIBoardSticky), "The sticky notes the user chose to give back, once done, in the order of the board")
 	Attribute("note_id", String, "The note the user saved the board as, if they did", noteIDDSL)
 })

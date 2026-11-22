@@ -7399,12 +7399,21 @@ function leaveBoard() {
   showNoteHash(state.note?.id);
 }
 
+// closeBoardFinish closes the window to close a board, if it is open.
+function closeBoardFinish() {
+  const dlg = document.getElementById("board-finish");
+  if (dlg?.open) dlg.close();
+}
+
 function showBoardView(id) {
   // The editor is under the board: leave it first.
   if (state.editing && !leaveEditor()) {
     history.replaceState(null, "", location.pathname + location.search);
     return;
   }
+  // The window to close a board belongs to the board it was opened on:
+  // going to another one, as by the back button, closes it.
+  if (board.id !== id) closeBoardFinish();
   board.open = true;
   board.id = id;
   board.compose = null;
@@ -7419,6 +7428,7 @@ function showBoardView(id) {
 }
 
 function closeBoardView() {
+  closeBoardFinish();
   board.resize?.disconnect();
   board.resize = null;
   board.open = false;
@@ -7509,7 +7519,9 @@ function renderBoard() {
   }
   const actions = el("div", "actions");
   if (open) actions.append(button(t("boardFinish"), openBoardFinish, { cls: "primary", title: t("boardFinishTitle") }));
-  actions.append(iconButton("trash", t("boardDeleteTitle"), () => deleteBoard(b)), closeButton(() => goBoard(null)));
+  // The board itself is closed with "Close the board"; this one only goes
+  // back to the list.
+  actions.append(iconButton("trash", t("boardDeleteTitle"), () => deleteBoard(b)), iconButton("close", t("boardBackToList"), () => goBoard(null)));
   const head = el("div", "board-head", button(kindSVG("back"), () => goBoard(null), { cls: "icon-button", title: t("boards") }), title, actions);
 
   const parts = [head];
