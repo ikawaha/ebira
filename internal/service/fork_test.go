@@ -90,14 +90,19 @@ func TestForkStickies(t *testing.T) {
 		return boardsOf(svc).AddSticky(ctx, &genboards.AddStickyPayload{ID: opened.ID, Parent: parent, Kind: board.Fork, Anchor: &genboards.BoardAnchor{Exact: exact}, Text: ptr(text)})
 	}
 
-	// Without passkeys, no fork: anyone who reaches the server could run
-	// Claude Code on its machine.
+	// Without passkeys, no fork from another machine: anyone who reaches the
+	// server could run Claude Code on its machine.
 	none := AsPerson(context.Background())
 	if b, err := boardsOf(svc).Get(none, &genboards.GetPayload{ID: opened.ID}); err != nil || b.Fork.Available || deref(b.Fork.Reason) != "auth_none" || deref(b.Fork.Cwd) != cwd {
-		t.Errorf("fork without passkeys = %+v, %v", b.Fork, err)
+		t.Errorf("fork from another machine without passkeys = %+v, %v", b.Fork, err)
 	}
 	if _, err := add(none, nil, "trie", "why?"); errorName(err) != "unavailable" {
-		t.Errorf("fork without passkeys = %v", err)
+		t.Errorf("fork from another machine without passkeys = %v", err)
+	}
+	// From this machine, it is as signed in.
+	local := FromThisMachine(AsPerson(WithBaseURL(context.Background(), "http://localhost:13579")))
+	if b, err := boardsOf(svc).Get(local, &genboards.GetPayload{ID: opened.ID}); err != nil || !b.Fork.Available {
+		t.Errorf("fork from this machine without passkeys = %+v, %v", b.Fork, err)
 	}
 	if b, err := boardsOf(svc).Get(person, &genboards.GetPayload{ID: opened.ID}); err != nil || !b.Fork.Available {
 		t.Fatalf("fork signed in = %+v, %v", b.Fork, err)

@@ -649,7 +649,7 @@
   "boardFork": "分岐して聞く",
   "boardForkTitle": "AI のセッションを分岐させて聞きます。会話の続きとして答えます（数分かかることがあります）",
   "boardForkUnavailable": "分岐して聞けません",
-  "boardForkAuthNone": "分岐して聞くには、パスキーでのサインインが要ります（ebira auth passkey）",
+  "boardForkAuthNone": "別の機械から分岐して聞くには、パスキーでのサインインが要ります（ebira auth passkey）",
   "boardForkNotFound": "サーバーの機械で Claude Code（claude）が見つかりません",
   "boardForkSessionMissing": "AI のセッションが見つかりません",
   "boardForkMark": "分岐した Claude",

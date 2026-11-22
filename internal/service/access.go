@@ -54,6 +54,22 @@ func requireVerified(ctx context.Context) error {
 	return nil
 }
 
+// thisMachineKey marks a request from this machine (FromThisMachine).
+type thisMachineKey struct{}
+
+// FromThisMachine marks ctx as a request from this machine: from a loopback
+// address, to localhost, rather than from another machine or through a
+// proxy for one. Without passkeys, what runs programs of this machine, such
+// as forks of Claude Code, serves only such requests.
+func FromThisMachine(ctx context.Context) context.Context {
+	return context.WithValue(ctx, thisMachineKey{}, true)
+}
+
+func fromThisMachine(ctx context.Context) bool {
+	v, _ := ctx.Value(thisMachineKey{}).(bool)
+	return v
+}
+
 // signedIn reports whether the request is from people signed in with a
 // passkey, rather than without passkeys (auth: none).
 func signedIn(ctx context.Context) bool {

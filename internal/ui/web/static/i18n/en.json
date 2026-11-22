@@ -649,7 +649,7 @@
   "boardFork": "Ask a fork",
   "boardForkTitle": "A fork of the session of the AI answers, going on from its conversation (it may take minutes)",
   "boardForkUnavailable": "A fork cannot answer",
-  "boardForkAuthNone": "Forks need a session signed in with a passkey (ebira auth passkey)",
+  "boardForkAuthNone": "From another machine, forks need a session signed in with a passkey (ebira auth passkey)",
   "boardForkNotFound": "Claude Code (claude) is not found on the machine of the server",
   "boardForkSessionMissing": "The session of the AI is not found",
   "boardForkMark": "Fork of Claude",

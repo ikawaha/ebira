@@ -7758,7 +7758,7 @@ components:
                     example: Eveniet sed qui autem quaerat.
                 reason:
                     type: string
-                    description: 'Why not: auth_none (forks need passkeys), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)'
+                    description: 'Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), no_session (no Claude Code session opened the board), session_missing (Claude Code no longer has it), not_found (claude is not found on the machine of the server) or done (the board is finished)'
                     example: auth_none
                     enum:
                         - auth_none

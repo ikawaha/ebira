@@ -423,8 +423,9 @@ func (s *Notes) fullBoard(ctx context.Context, st *board.Store, b *board.Board) 
 }
 
 // forkState tells whether forks of the session of b can answer its sticky
-// notes, for the request ctx: one signed in with a passkey, as a fork runs
-// Claude Code on the machine of the server.
+// notes, for the request ctx. A fork runs Claude Code on the machine of the
+// server, so the request is signed in with a passkey or, without passkeys,
+// comes from this machine.
 func (s *Notes) forkState(ctx context.Context, b *board.Board) *genboards.BoardFork {
 	var reason string
 	switch {
@@ -432,7 +433,7 @@ func (s *Notes) forkState(ctx context.Context, b *board.Board) *genboards.BoardF
 		reason = "done"
 	case b.Origin.SessionID == "" || b.Origin.Cwd == "":
 		reason = "no_session"
-	case !signedIn(ctx):
+	case !signedIn(ctx) && !fromThisMachine(ctx):
 		reason = "auth_none"
 	case s.boards == nil || s.boards.forker() == nil:
 		reason = "not_found"
@@ -451,7 +452,7 @@ func (s *Notes) forkState(ctx context.Context, b *board.Board) *genboards.BoardF
 var forkErrors = map[string]string{
 	"done":            "the board is finished",
 	"no_session":      "no Claude Code session opened the board",
-	"auth_none":       "forks need passkeys: sign in with a passkey (ebira auth passkey)",
+	"auth_none":       "from another machine, forks need passkeys: sign in with a passkey (ebira auth passkey)",
 	"not_found":       "claude (Claude Code) is not found on the machine of the server",
 	"session_missing": "Claude Code no longer has the session that opened the board",
 }

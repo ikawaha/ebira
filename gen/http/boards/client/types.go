@@ -960,10 +960,10 @@ type BoardResultResponseBody struct {
 type BoardForkResponseBody struct {
 	// Whether forks of the session that opened the board can answer sticky notes
 	Available *bool `form:"available,omitempty" json:"available,omitempty" xml:"available,omitempty"`
-	// Why not: auth_none (forks need passkeys), no_session (no Claude Code session
-	// opened the board), session_missing (Claude Code no longer has it), not_found
-	// (claude is not found on the machine of the server) or done (the board is
-	// finished)
+	// Why not: auth_none (a request from another machine without passkeys: forks
+	// need passkeys there), no_session (no Claude Code session opened the board),
+	// session_missing (Claude Code no longer has it), not_found (claude is not
+	// found on the machine of the server) or done (the board is finished)
 	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
 	// The working directory of the session, where claude --resume goes on with the
 	// session of a sticky note

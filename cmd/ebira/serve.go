@@ -659,7 +659,13 @@ func loopback(host string) bool {
 // server at that host. The guard has checked the host already.
 func withBaseURL(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r.WithContext(service.WithBaseURL(r.Context(), "http://"+r.Host)))
+		ctx := service.WithBaseURL(r.Context(), "http://"+r.Host)
+		// Without passkeys, forks of Claude Code serve requests from this
+		// machine only.
+		if fromLoopback(r) {
+			ctx = service.FromThisMachine(ctx)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
