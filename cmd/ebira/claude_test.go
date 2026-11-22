@@ -15,7 +15,8 @@ import (
 	"github.com/ikawaha/ebira/internal/claudecode"
 )
 
-// fakeClaude puts a claude in PATH that keeps the URL of ebira in a file.
+// fakeClaude puts a claude in PATH that keeps the URL of ebira in a file,
+// with a configuration directory of its own for the skills.
 func fakeClaude(t *testing.T) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -40,6 +41,7 @@ esac
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(dir, "config"))
 	return state
 }
 
@@ -63,17 +65,27 @@ func TestClaudeHandler(t *testing.T) {
 		return st
 	}
 
-	if st := get("127.0.0.1:50000", "localhost:13579"); !st.Available || st.Registered != "" || st.URL != "http://localhost:13579/mcp" {
+	if st := get("127.0.0.1:50000", "localhost:13579"); !st.Available || st.Registered != "" || st.URL != "http://localhost:13579/mcp" || st.Skill != claudecode.SkillMissing {
 		t.Errorf("before registering: %+v", st)
 	}
-	if w := do(http.MethodPost, "127.0.0.1:50000", "localhost:13579"); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"added"`) {
+	if w := do(http.MethodPost, "127.0.0.1:50000", "localhost:13579"); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"status":"added"`) || !strings.Contains(w.Body.String(), `"skill":"missing"`) {
 		t.Errorf("POST = %d %s", w.Code, w.Body)
 	}
 	if data, _ := os.ReadFile(state); string(data) != "http://localhost:13579/mcp" {
 		t.Errorf("registered %q", data)
 	}
-	if st := get("[::1]:50000", "[::1]:13579"); st.Registered != "http://localhost:13579/mcp" {
+	if st := get("[::1]:50000", "[::1]:13579"); st.Registered != "http://localhost:13579/mcp" || st.Skill != claudecode.SkillCurrent || st.SkillPath != filepath.Join(os.Getenv("CLAUDE_CONFIG_DIR"), "skills", "ebira-whiteboard", "SKILL.md") {
 		t.Errorf("after registering: %+v", st)
+	}
+	// Once registered, POST installs a skill that is missing.
+	if err := os.Remove(claudecode.SkillPath(os.Getenv("CLAUDE_CONFIG_DIR"), claudecode.SkillName)); err != nil {
+		t.Fatal(err)
+	}
+	if w := do(http.MethodPost, "127.0.0.1:50000", "localhost:13579"); !strings.Contains(w.Body.String(), `"status":"unchanged"`) || !strings.Contains(w.Body.String(), `"skill":"missing"`) {
+		t.Errorf("POST again = %d %s", w.Code, w.Body)
+	}
+	if st := get("127.0.0.1:50000", "localhost:13579"); st.Skill != claudecode.SkillCurrent {
+		t.Errorf("after POST again: %+v", st)
 	}
 
 	// Another machine, or a proxy on this machine for another machine.
@@ -129,11 +141,28 @@ func TestMCPAdd(t *testing.T) {
 	if _, err := os.Stat(state); err == nil {
 		t.Error("-print registered it")
 	}
-	if out := run("-addr", "localhost:13600", "-yes"); !strings.Contains(out, "Registered.") {
-		t.Errorf("-yes:\n%s", out)
+	skill := claudecode.SkillPath(os.Getenv("CLAUDE_CONFIG_DIR"), claudecode.SkillName)
+	if out := run("-addr", "localhost:13600", "-yes", "-skill=false"); !strings.Contains(out, "Registered.") || strings.Contains(out, "skill") {
+		t.Errorf("-skill=false:\n%s", out)
 	}
-	if out := run("-addr", "localhost:13600", "-yes"); !strings.Contains(out, "has it already") {
+	if _, err := os.Stat(skill); err == nil {
+		t.Error("-skill=false installed the skill")
+	}
+	if out := run("-addr", "localhost:13600", "-yes"); !strings.Contains(out, "has it already") || !strings.Contains(out, "Installed the skill ebira-whiteboard") {
+		t.Errorf("with the skill:\n%s", out)
+	}
+	if out := run("-addr", "localhost:13600", "-yes"); !strings.Contains(out, "has it already") || !strings.Contains(out, "has the skill ebira-whiteboard already") || strings.Contains(out, "Installed") {
 		t.Errorf("again:\n%s", out)
+	}
+	mine := []byte("---\nname: ebira-whiteboard\ndescription: mine\n---\n")
+	if err := os.WriteFile(skill, mine, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out := run("-addr", "localhost:13600", "-yes"); !strings.Contains(out, "changed by hand") {
+		t.Errorf("a skill changed by hand:\n%s", out)
+	}
+	if data, _ := os.ReadFile(skill); !bytes.Equal(data, mine) {
+		t.Error("the skill changed by hand was replaced")
 	}
 	if out := run("-addr", "localhost:13700", "-yes"); !strings.Contains(out, "in place of http://localhost:13600/mcp") {
 		t.Errorf("another address:\n%s", out)

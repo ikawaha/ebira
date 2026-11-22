@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -28,10 +29,25 @@ type claudeState struct {
 	Command string `json:"command"`
 	// Registered is the URL of ebira that Claude Code has in the user scope.
 	Registered string `json:"registered,omitempty"`
+	// Skill is the state of the skill that opens whiteboards
+	// (claudecode.SkillStatus): missing, current, outdated or modified.
+	Skill string `json:"skill,omitempty"`
+	// SkillPath is where the skill is.
+	SkillPath string `json:"skill_path,omitempty"`
+}
+
+// claudeAdded is the answer of POST /claude/mcp.
+type claudeAdded struct {
+	claudecode.Result
+	// Skill is the state of the skill that opens whiteboards before
+	// POST /claude/mcp installed it: missing, outdated, current (nothing to
+	// do) or modified (left as it is).
+	Skill string `json:"skill"`
 }
 
 // claudeHandler serves GET /claude/mcp, and POST /claude/mcp, which registers
-// this server with Claude Code in the user scope (claudecode.Add). Both run
+// this server with Claude Code in the user scope (claudecode.Add), and
+// installs the skill that opens whiteboards (claudecode.InstallSkill). Both run
 // claude of this machine, so they serve requests from this machine only: a
 // browser on another machine would register ebira with a Claude Code it
 // does not use. The request carries nothing to register: the URL comes from
@@ -80,6 +96,11 @@ func claudeHandler(addr string, find func(context.Context) (claudecode.Client, e
 			reply(w, http.StatusOK, st)
 			return
 		}
+		configDir, err := claudecode.ConfigDir(ctx)
+		if err != nil {
+			fail(w, http.StatusInternalServerError, "failed", err.Error())
+			return
+		}
 		if r.Method == http.MethodPost {
 			res, err := c.Add(ctx, url)
 			if err != nil {
@@ -88,7 +109,14 @@ func claudeHandler(addr string, find func(context.Context) (claudecode.Client, e
 				return
 			}
 			slog.InfoContext(ctx, "registered with Claude Code", "url", url, "status", res.Status)
-			reply(w, http.StatusOK, res)
+			skill, err := claudecode.InstallSkill(configDir, claudecode.SkillName)
+			if err != nil && !errors.Is(err, claudecode.ErrSkillModified) {
+				slog.ErrorContext(ctx, "installing the skill failed", "error", err)
+				fail(w, http.StatusInternalServerError, "failed", err.Error())
+				return
+			}
+			slog.InfoContext(ctx, "installed the skill of Claude Code", "skill", claudecode.SkillName, "found", skill)
+			reply(w, http.StatusOK, claudeAdded{Result: res, Skill: skill})
 			return
 		}
 		reg, err := c.Get(ctx)
@@ -100,6 +128,10 @@ func claudeHandler(addr string, find func(context.Context) (claudecode.Client, e
 		st.Available = true
 		if reg != nil {
 			st.Registered = reg.URL
+		}
+		st.SkillPath = claudecode.SkillPath(configDir, claudecode.SkillName)
+		if st.Skill, err = claudecode.SkillStatus(configDir, claudecode.SkillName); err != nil {
+			st.Skill = ""
 		}
 		reply(w, http.StatusOK, st)
 	})

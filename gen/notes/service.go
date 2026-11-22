@@ -212,10 +212,11 @@ type Service interface {
 	OpenAiBoard(context.Context, *OpenAiBoardPayload) (res *BoardOpened, err error)
 	// Begin opening a whiteboard, as open_ai_board, with the text sent as is: the
 	// result is a URL for one upload, valid for 10 minutes. Send the text in the
-	// body of a PUT request to the URL, such as with git diff > /tmp/x.diff; curl
-	// -sS -T /tmp/x.diff <url>; the response is the JSON of open_ai_board, with
-	// the ID and the URL of the board. Give the URL to the user and end the turn;
-	// when the user says they are done, read what they give back with get_ai_board.
+	// body of a PUT request to the URL, such as with git diff | curl -sS -T -
+	// <url>, or curl -sS -T <file> <url>; the response is the JSON of
+	// open_ai_board, with the ID and the URL of the board. Give the URL to the
+	// user and end the turn; when the user says they are done, read what they give
+	// back with get_ai_board.
 	StartAiBoard(context.Context, *StartAiBoardPayload) (res *AIUpload, err error)
 	// Open a whiteboard with the text sent to a URL from start_ai_board. The
 	// request body is the text, at most 2 MB of UTF-8. A URL works once, until it

@@ -121,7 +121,7 @@ func (a *MCPAdapter) ServerDiscover(ctx context.Context, _ *DiscoverPayload) (*D
 	defer span.End()
 	capabilities := &ServerCapabilities{}
 	capabilities.Tools = &ToolsCapability{ListChanged: boolPtr(true)}
-	instructions := "ebira holds the user's own notes: work logs, past decisions, procedures and memos.\nWhen a task or question may depend on something the user has written down (how something was done before, why a decision was made, project context, people, preferences), search with search_notes before answering from general knowledge or asking the user, then read the notes found with get_note. Searching is cheap, and a search that finds nothing is fine.\nWhen the user asks to write something down as a note or a memo, write it in ebira."
+	instructions := "ebira holds the user's own notes: work logs, past decisions, procedures and memos.\nWhen a task or question may depend on something the user has written down (how something was done before, why a decision was made, project context, people, preferences), search with search_notes before answering from general knowledge or asking the user, then read the notes found with get_note. Searching is cheap, and a search that finds nothing is fine.\nWhen the user asks to write something down as a note or a memo, write it in ebira.\nWhen the user asks to read something on a whiteboard, follow the skill ebira-whiteboard if you have it, else start_ai_board."
 	return &DiscoverResult{
 		Instructions:      &instructions,
 		ResultType:        "complete",

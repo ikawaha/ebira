@@ -614,7 +614,8 @@ var archiveFilter = func() {
 // and do not repeat the tool descriptions.
 const mcpInstructions = `ebira holds the user's own notes: work logs, past decisions, procedures and memos.
 When a task or question may depend on something the user has written down (how something was done before, why a decision was made, project context, people, preferences), search with search_notes before answering from general knowledge or asking the user, then read the notes found with get_note. Searching is cheap, and a search that finds nothing is fine.
-When the user asks to write something down as a note or a memo, write it in ebira.`
+When the user asks to write something down as a note or a memo, write it in ebira.
+When the user asks to read something on a whiteboard, follow the skill ebira-whiteboard if you have it, else start_ai_board.`
 
 var _ = Service("notes", func() {
 	Description("CRUD and search for notes.")
@@ -1441,7 +1442,7 @@ var _ = Service("notes", func() {
 
 	Method("start_ai_board", func() {
 		NoSecurity()
-		Description("Begin opening a whiteboard, as open_ai_board, with the text sent as is: the result is a URL for one upload, valid for 10 minutes. Send the text in the body of a PUT request to the URL, such as with git diff > /tmp/x.diff; curl -sS -T /tmp/x.diff <url>; the response is the JSON of open_ai_board, with the ID and the URL of the board. Give the URL to the user and end the turn; when the user says they are done, read what they give back with get_ai_board.")
+		Description("Begin opening a whiteboard, as open_ai_board, with the text sent as is: the result is a URL for one upload, valid for 10 minutes. Send the text in the body of a PUT request to the URL, such as with git diff | curl -sS -T - <url>, or curl -sS -T <file> <url>; the response is the JSON of open_ai_board, with the ID and the URL of the board. Give the URL to the user and end the turn; when the user says they are done, read what they give back with get_ai_board.")
 		Payload(boardOpenDSL)
 		Result(AIUpload)
 		Tool("start_ai_board", "Get a URL to open a whiteboard by sending the text as is, such as with curl -sS -T <file> <url>; the response has the board's URL to give the user. Then end the turn, and read what they give back with get_ai_board", func() {

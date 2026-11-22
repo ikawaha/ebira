@@ -6501,8 +6501,9 @@ function openMCP() {
   showClaude(claude, intro);
 }
 
-// showClaude tells in box whether Claude Code has ebira, with a button that
-// registers it (POST /claude/mcp). The server runs claude, so the button is
+// showClaude tells in box whether Claude Code has ebira and its skill that
+// opens whiteboards, with a button that registers it and installs the skill
+// (POST /claude/mcp). The server runs claude, so the button is
 // there only when the server finds claude and the page is on its machine;
 // else intro tells to run the command above, which ebira mcp add, on
 // the machine of the server, would not help with.
@@ -6525,15 +6526,29 @@ async function showClaude(box, intro, done) {
     box.replaceChildren(...parts);
     return;
   }
+  // A skill changed by hand is left as it is; one missing or of another
+  // version is installed with the registration, or alone.
+  const skill = st.skill === "missing" || st.skill === "outdated";
+  const modified = st.skill === "modified" ? el("p", "msg", t("mcpClaudeSkillModified", { path: st.skill_path })) : null;
   if (st.registered === st.url) {
     if (!done) parts.push(el("p", "", t("mcpClaudeRegistered")));
-    box.replaceChildren(...parts);
-    return;
+    if (modified) parts.push(modified);
+    if (!skill) {
+      box.replaceChildren(...parts);
+      return;
+    }
+    parts.push(el("p", "msg", t(st.skill === "missing" ? "mcpClaudeSkillMissing" : "mcpClaudeSkillOutdated")));
   }
-  if (st.registered) parts.push(el("p", "msg", t("mcpClaudeOther", { url: st.registered })));
+  if (st.registered && st.registered !== st.url) parts.push(el("p", "msg", t("mcpClaudeOther", { url: st.registered })));
+  if (modified && st.registered !== st.url) parts.push(modified);
+  if (st.registered !== st.url && skill) parts.push(el("p", "msg", t("mcpClaudeSkillWith")));
   let msg;
-  const go = button(t(st.registered ? "mcpClaudeReplace" : "mcpClaudeAdd"), async () => {
-    if (!confirm(t("mcpClaudeConfirm", { command: st.command }))) return;
+  const label = st.registered === st.url ? "mcpClaudeSkillAdd" : st.registered ? "mcpClaudeReplace" : "mcpClaudeAdd";
+  const go = button(t(label), async () => {
+    const ask = st.registered === st.url
+      ? t("mcpClaudeSkillConfirm", { path: st.skill_path })
+      : t("mcpClaudeConfirm", { command: st.command }) + (skill ? "\n\n" + t("mcpClaudeSkillConfirm", { path: st.skill_path }) : "");
+    if (!confirm(ask)) return;
     go.disabled = true;
     msg.textContent = t("mcpClaudeRunning");
     msg.className = "msg";
@@ -6546,7 +6561,9 @@ async function showClaude(box, intro, done) {
       go.disabled = false;
       return;
     }
-    showClaude(box, intro, res.status === "replaced" ? t("mcpClaudeReplaced", { url: res.previous }) : t("mcpClaudeAdded"));
+    const said = { replaced: t("mcpClaudeReplaced", { url: res.previous }), added: t("mcpClaudeAdded") }[res.status];
+    const installed = res.skill === "missing" || res.skill === "outdated" ? t("mcpClaudeSkillAdded") : "";
+    showClaude(box, intro, [said, installed].filter(Boolean).join(" "));
   }, { cls: "primary" });
   msg = el("p", "msg", "");
   parts.push(el("div", "mcp-claude-go", go), msg);
