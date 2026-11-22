@@ -39,7 +39,7 @@ A whiteboard opened with the skill `ebira-whiteboard` of Claude Code keeps the I
 - "Go on in a terminal" on an answered sticky note gives the command to go on with the fork in Claude Code.
 - The sessions of the forks are deleted with the whiteboard. The original session is left as it is.
 
-A fork runs `claude` of the machine of the server, so it works only while you are signed in with a passkey (`ebira auth passkey`). Without passkeys (`auth: none`), the button is disabled. It is billed as Claude Code of that machine is: the `ANTHROPIC_API_KEY` of the assistant, if the server has one, is not passed on to forks.
+A fork runs `claude` of the machine of the server, so without passkeys (`auth: none`) it works only from a browser on that machine. From another machine, sign in with a passkey (`ebira auth passkey`). It is billed as Claude Code of that machine is: the `ANTHROPIC_API_KEY` of the assistant, if the server has one, is not passed on to forks.
 
 ## Closing the board
 
