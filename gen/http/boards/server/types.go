@@ -48,8 +48,6 @@ type AddStickyRequestBody struct {
 type SaveStickyRequestBody struct {
 	// The new text of a memo; empty to leave only the mark on the passage
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
-	// Whether what the sticky note found is to be given back
-	Returns *bool `form:"returns,omitempty" json:"returns,omitempty" xml:"returns,omitempty"`
 }
 
 // AskStickyRequestBody is the type of the "boards" service "ask_sticky"
@@ -59,11 +57,21 @@ type AskStickyRequestBody struct {
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 }
 
+// DraftRequestBody is the type of the "boards" service "draft" endpoint HTTP
+// request body.
+type DraftRequestBody struct {
+	// The sticky notes to draft from
+	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
+}
+
 // FinishRequestBody is the type of the "boards" service "finish" endpoint HTTP
 // request body.
 type FinishRequestBody struct {
 	// What to give back, in Markdown; may be empty
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
+	// The sticky notes to give back: the session reads their passages and
+	// messages, those of the assistant too. The others are not given back
+	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
 	// Language of the headings of the note, that of the UI
@@ -169,9 +177,6 @@ type AddStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -195,9 +200,6 @@ type SaveStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -221,9 +223,6 @@ type AskStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -890,9 +889,6 @@ type BoardStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -923,6 +919,8 @@ type BoardMessageResponseBody struct {
 type BoardResultResponseBody struct {
 	// What the person gives back to the session, in Markdown
 	Text string `form:"text" json:"text" xml:"text"`
+	// The sticky notes given back with the text
+	Stickies []string `form:"stickies" json:"stickies" xml:"stickies"`
 	// The note the board was saved as, if it was
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
 	// When the board was finished
@@ -1061,7 +1059,6 @@ func NewAddStickyResponseBody(res *boards.BoardSticky) *AddStickyResponseBody {
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
-		Returns:   res.Returns,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
 	}
@@ -1092,7 +1089,6 @@ func NewSaveStickyResponseBody(res *boards.BoardSticky) *SaveStickyResponseBody 
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
-		Returns:   res.Returns,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
 	}
@@ -1123,7 +1119,6 @@ func NewAskStickyResponseBody(res *boards.BoardSticky) *AskStickyResponseBody {
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
-		Returns:   res.Returns,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
 	}
@@ -1700,8 +1695,7 @@ func NewAddStickyPayload(body *AddStickyRequestBody, id string, session *string)
 // NewSaveStickyPayload builds a boards service save_sticky endpoint payload.
 func NewSaveStickyPayload(body *SaveStickyRequestBody, id string, sticky string, session *string) *boards.SaveStickyPayload {
 	v := &boards.SaveStickyPayload{
-		Text:    body.Text,
-		Returns: body.Returns,
+		Text: body.Text,
 	}
 	v.ID = id
 	v.Sticky = sticky
@@ -1734,8 +1728,12 @@ func NewAskStickyPayload(body *AskStickyRequestBody, id string, sticky string, s
 }
 
 // NewDraftPayload builds a boards service draft endpoint payload.
-func NewDraftPayload(id string, session *string) *boards.DraftPayload {
+func NewDraftPayload(body *DraftRequestBody, id string, session *string) *boards.DraftPayload {
 	v := &boards.DraftPayload{}
+	v.Stickies = make([]string, len(body.Stickies))
+	for i, val := range body.Stickies {
+		v.Stickies[i] = val
+	}
 	v.ID = id
 	v.Session = session
 
@@ -1750,6 +1748,12 @@ func NewFinishPayload(body *FinishRequestBody, id string, session *string) *boar
 	}
 	if body.Lang != nil {
 		v.Lang = *body.Lang
+	}
+	if body.Stickies != nil {
+		v.Stickies = make([]string, len(body.Stickies))
+		for i, val := range body.Stickies {
+			v.Stickies[i] = val
+		}
 	}
 	if body.Lang == nil {
 		v.Lang = "en"
@@ -1844,6 +1848,23 @@ func ValidateAskStickyRequestBody(body *AskStickyRequestBody) (err error) {
 	return
 }
 
+// ValidateDraftRequestBody runs the validations defined on DraftRequestBody
+func ValidateDraftRequestBody(body *DraftRequestBody) (err error) {
+	if body.Stickies == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "body"))
+	}
+	if len(body.Stickies) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 1, true))
+	}
+	if len(body.Stickies) > 200 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 200, false))
+	}
+	for _, e := range body.Stickies {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
+	}
+	return
+}
+
 // ValidateFinishRequestBody runs the validations defined on FinishRequestBody
 func ValidateFinishRequestBody(body *FinishRequestBody) (err error) {
 	if body.Text == nil {
@@ -1853,6 +1874,12 @@ func ValidateFinishRequestBody(body *FinishRequestBody) (err error) {
 		if utf8.RuneCountInString(*body.Text) > 65536 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.text", *body.Text, utf8.RuneCountInString(*body.Text), 65536, false))
 		}
+	}
+	if len(body.Stickies) > 200 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 200, false))
+	}
+	for _, e := range body.Stickies {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
 	}
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))

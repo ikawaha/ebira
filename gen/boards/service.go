@@ -42,8 +42,7 @@ type Service interface {
 	// assistant kind asks it the text as a question, and comes back waiting: the
 	// answer comes later, told by an event of type board on /events.
 	AddSticky(context.Context, *AddStickyPayload) (res *BoardSticky, err error)
-	// Change a sticky note: the text of a memo, or whether it is given back at the
-	// end.
+	// Change the text of a memo.
 	SaveSticky(context.Context, *SaveStickyPayload) (res *BoardSticky, err error)
 	// Delete a sticky note, with the sticky notes on its answer.
 	DeleteSticky(context.Context, *DeleteStickyPayload) (err error)
@@ -52,13 +51,14 @@ type Service interface {
 	// after an error asks the question that failed when text is omitted.
 	AskSticky(context.Context, *AskStickyPayload) (res *BoardSticky, err error)
 	// Have the assistant draft what to give back to the session, from the sticky
-	// notes to give back. The draft is for the person to check and change before
-	// finishing: the sticky notes hold text from outside, such as a pull request,
-	// which is not to reach the session unchecked.
+	// notes chosen when finishing. The draft is for the person to check and change
+	// before finishing: the sticky notes hold text from outside, such as a pull
+	// request, which is not to reach the session unchecked.
 	Draft(context.Context, *DraftPayload) (res *DraftResult, err error)
-	// Finish a whiteboard: keep what to give back to the session, for
-	// get_ai_board, and save the board as a note in notebook if given. A finished
-	// board takes no more sticky notes and is deleted after 7 days.
+	// Finish a whiteboard: keep what to give back to the session, the text and the
+	// sticky notes chosen, for get_ai_board, and save the board as a note in
+	// notebook if given. A finished board takes no more sticky notes and is
+	// deleted after 7 days.
 	Finish(context.Context, *FinishPayload) (res *Board, err error)
 }
 
@@ -161,6 +161,8 @@ type BoardMessage struct {
 type BoardResult struct {
 	// What the person gives back to the session, in Markdown
 	Text string
+	// The sticky notes given back with the text
+	Stickies []string
 	// The note the board was saved as, if it was
 	NoteID *string
 	// When the board was finished
@@ -197,9 +199,6 @@ type BoardSticky struct {
 	State string
 	// Why the last answer failed
 	Error *string
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool
 	// Creation time
 	CreatedAt string
 	// Last update time
@@ -250,6 +249,8 @@ type DraftPayload struct {
 	Session *string
 	// Board ID, as in the URL of the board in the web UI after #board/
 	ID string
+	// The sticky notes to draft from
+	Stickies []string
 }
 
 // DraftResult is the result type of the boards service draft method.
@@ -266,6 +267,9 @@ type FinishPayload struct {
 	ID string
 	// What to give back, in Markdown; may be empty
 	Text string
+	// The sticky notes to give back: the session reads their passages and
+	// messages, those of the assistant too. The others are not given back
+	Stickies []string
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string
 	// Language of the headings of the note, that of the UI
@@ -317,8 +321,6 @@ type SaveStickyPayload struct {
 	Sticky string
 	// The new text of a memo; empty to leave only the mark on the passage
 	Text *string
-	// Whether what the sticky note found is to be given back
-	Returns *bool
 }
 
 // MakeUnauthorized builds a goa.ServiceError from an error.
@@ -446,6 +448,8 @@ func validatejsonBoardMessageTransport(value *jsonBoardMessageTransport) (err er
 type jsonBoardResultTransport struct {
 	// What the person gives back to the session, in Markdown
 	Text *string `json:"text"`
+	// The sticky notes given back with the text
+	Stickies []string `json:"stickies"`
 	// The note the board was saved as, if it was
 	NoteID *string `json:"note_id,omitempty"`
 	// When the board was finished
@@ -460,8 +464,14 @@ func validatejsonBoardResultTransport(value *jsonBoardResultTransport) (err erro
 	if value.Text == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("text", "body"))
 	}
+	if value.Stickies == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "body"))
+	}
 	if value.FinishedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
+	}
+	for _, e := range value.Stickies {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
 	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
@@ -533,9 +543,6 @@ type jsonBoardStickyTransport struct {
 	State *string `json:"state"`
 	// Why the last answer failed
 	Error *string `json:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns *bool `json:"returns"`
 	// Creation time
 	CreatedAt *string `json:"created_at"`
 	// Last update time
@@ -561,9 +568,6 @@ func validatejsonBoardStickyTransport(value *jsonBoardStickyTransport) (err erro
 	}
 	if value.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
-	}
-	if value.Returns == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("returns", "body"))
 	}
 	if value.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
@@ -872,6 +876,12 @@ func validateBoardMessageOriginal(value *BoardMessage) (err error) {
 
 // validateBoardResultOriginal checks the original typed value before JSON conversion.
 func validateBoardResultOriginal(value *BoardResult) (err error) {
+	if value.Stickies == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "value"))
+	}
+	for _, e := range value.Stickies {
+		err = goa.MergeErrors(err, goa.ValidatePattern("value.stickies[*]", e, "^s[0-9a-f]{8}$"))
+	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -1091,7 +1101,7 @@ func DecodeBoardAnchor(data []byte) (out *BoardAnchor, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode BoardAnchor JSON: %w", err)
 	}
-	if err := validateBoardJSONValue10("", root, ""); err != nil {
+	if err := validateBoardJSONValue12("", root, ""); err != nil {
 		return out, fmt.Errorf("decode BoardAnchor JSON: %w", err)
 	}
 	var body *jsonBoardAnchorTransport
@@ -1180,7 +1190,7 @@ func DecodeBoardMessage(data []byte) (out *BoardMessage, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode BoardMessage JSON: %w", err)
 	}
-	if err := validateBoardJSONValue3("", root, ""); err != nil {
+	if err := validateBoardJSONValue4("", root, ""); err != nil {
 		return out, fmt.Errorf("decode BoardMessage JSON: %w", err)
 	}
 	var body *jsonBoardMessageTransport
@@ -1223,6 +1233,10 @@ func EncodeBoardResult(in *BoardResult) ([]byte, error) {
 			NoteID:     in.NoteID,
 			FinishedAt: &in.FinishedAt,
 		}
+		body.Stickies = make([]string, len(in.Stickies))
+		for i, val := range in.Stickies {
+			body.Stickies[i] = val
+		}
 	}
 	if err := validatejsonBoardResultTransport(body); err != nil {
 		return nil, fmt.Errorf("validate BoardResult JSON: %w", err)
@@ -1256,6 +1270,10 @@ func ValidateBoardResultValue(in *BoardResult) error {
 			NoteID:     in.NoteID,
 			FinishedAt: &in.FinishedAt,
 		}
+		body.Stickies = make([]string, len(in.Stickies))
+		for i, val := range in.Stickies {
+			body.Stickies[i] = val
+		}
 	}
 	if err := validatejsonBoardResultTransport(body); err != nil {
 		return fmt.Errorf("validate BoardResult value: %w", err)
@@ -1269,7 +1287,7 @@ func DecodeBoardResult(data []byte) (out *BoardResult, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode BoardResult JSON: %w", err)
 	}
-	if err := validateBoardJSONValue5("", root, ""); err != nil {
+	if err := validateBoardJSONValue6("", root, ""); err != nil {
 		return out, fmt.Errorf("decode BoardResult JSON: %w", err)
 	}
 	var body *jsonBoardResultTransport
@@ -1292,6 +1310,10 @@ func DecodeBoardResult(data []byte) (out *BoardResult, err error) {
 			Text:       *body.Text,
 			NoteID:     body.NoteID,
 			FinishedAt: *body.FinishedAt,
+		}
+		out.Stickies = make([]string, len(body.Stickies))
+		for i, val := range body.Stickies {
+			out.Stickies[i] = val
 		}
 	}
 	return out, nil
@@ -1364,7 +1386,7 @@ func DecodeBoardSource(data []byte) (out *BoardSource, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode BoardSource JSON: %w", err)
 	}
-	if err := validateBoardJSONValue6("", root, ""); err != nil {
+	if err := validateBoardJSONValue8("", root, ""); err != nil {
 		return out, fmt.Errorf("decode BoardSource JSON: %w", err)
 	}
 	var body *jsonBoardSourceTransport
@@ -1410,7 +1432,6 @@ func EncodeBoardSticky(in *BoardSticky) ([]byte, error) {
 			Kind:      &in.Kind,
 			State:     &in.State,
 			Error:     in.Error,
-			Returns:   &in.Returns,
 			CreatedAt: &in.CreatedAt,
 			UpdatedAt: &in.UpdatedAt,
 		}
@@ -1457,7 +1478,6 @@ func ValidateBoardStickyValue(in *BoardSticky) error {
 			Kind:      &in.Kind,
 			State:     &in.State,
 			Error:     in.Error,
-			Returns:   &in.Returns,
 			CreatedAt: &in.CreatedAt,
 			UpdatedAt: &in.UpdatedAt,
 		}
@@ -1483,7 +1503,7 @@ func DecodeBoardSticky(data []byte) (out *BoardSticky, err error) {
 	if err != nil {
 		return out, fmt.Errorf("decode BoardSticky JSON: %w", err)
 	}
-	if err := validateBoardJSONValue9("", root, ""); err != nil {
+	if err := validateBoardJSONValue11("", root, ""); err != nil {
 		return out, fmt.Errorf("decode BoardSticky JSON: %w", err)
 	}
 	var body *jsonBoardStickyTransport
@@ -1508,7 +1528,6 @@ func DecodeBoardSticky(data []byte) (out *BoardSticky, err error) {
 			Kind:      *body.Kind,
 			State:     *body.State,
 			Error:     body.Error,
-			Returns:   *body.Returns,
 			CreatedAt: *body.CreatedAt,
 			UpdatedAt: *body.UpdatedAt,
 		}
@@ -1659,6 +1678,10 @@ func decodeBoardResultTransportToBoardResult(v *jsonBoardResultTransport) *Board
 		NoteID:     v.NoteID,
 		FinishedAt: *v.FinishedAt,
 	}
+	res.Stickies = make([]string, len(v.Stickies))
+	for i, val := range v.Stickies {
+		res.Stickies[i] = val
+	}
 
 	return res
 }
@@ -1682,7 +1705,6 @@ func decodeBoardStickyTransportToBoardSticky(v *jsonBoardStickyTransport) *Board
 		Kind:      *v.Kind,
 		State:     *v.State,
 		Error:     v.Error,
-		Returns:   *v.Returns,
 		CreatedAt: *v.CreatedAt,
 		UpdatedAt: *v.UpdatedAt,
 	}
@@ -1725,6 +1747,10 @@ func encodeBoardResultToBoardResultTransport(v *BoardResult) *jsonBoardResultTra
 		NoteID:     v.NoteID,
 		FinishedAt: &v.FinishedAt,
 	}
+	res.Stickies = make([]string, len(v.Stickies))
+	for i, val := range v.Stickies {
+		res.Stickies[i] = val
+	}
 
 	return res
 }
@@ -1749,7 +1775,6 @@ func encodeBoardStickyToBoardStickyTransport(v *BoardSticky) *jsonBoardStickyTra
 		Kind:      &v.Kind,
 		State:     &v.State,
 		Error:     v.Error,
-		Returns:   &v.Returns,
 		CreatedAt: &v.CreatedAt,
 		UpdatedAt: &v.UpdatedAt,
 	}
@@ -1794,7 +1819,7 @@ func validateBoardJSONValue(path string, value any, description string) error {
 				return err
 			}
 		case "from_session":
-			if err := validateBoardJSONValue4(
+			if err := validateBoardJSONValue5(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether a Claude Code session opened the board, and waits for what is given back",
 			); err != nil {
@@ -1808,14 +1833,14 @@ func validateBoardJSONValue(path string, value any, description string) error {
 				return err
 			}
 		case "result":
-			if err := validateBoardJSONValue5(
+			if err := validateBoardJSONValue6(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "What was given back, once finished",
 			); err != nil {
 				return err
 			}
 		case "source":
-			if err := validateBoardJSONValue6(
+			if err := validateBoardJSONValue8(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Where the source came from and how to show it",
 			); err != nil {
@@ -1829,7 +1854,7 @@ func validateBoardJSONValue(path string, value any, description string) error {
 				return err
 			}
 		case "stickies":
-			if err := validateBoardJSONValue8(
+			if err := validateBoardJSONValue10(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The sticky notes, in the order they were added",
 			); err != nil {
@@ -1890,8 +1915,8 @@ func validateBoardJSONValue2(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue4(path string, value any, description string) error {
+// validateBoardJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue5(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -1906,8 +1931,8 @@ func validateBoardJSONValue4(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue5(path string, value any, description string) error {
+// validateBoardJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue6(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -1940,6 +1965,13 @@ func validateBoardJSONValue5(path string, value any, description string) error {
 			); err != nil {
 				return err
 			}
+		case "stickies":
+			if err := validateBoardJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The sticky notes given back with the text",
+			); err != nil {
+				return err
+			}
 		case "text":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
@@ -1951,6 +1983,7 @@ func validateBoardJSONValue5(path string, value any, description string) error {
 			return unknownJSONFieldError(path, key, []string{
 				"finished_at",
 				"note_id",
+				"stickies",
 				"text",
 			})
 		}
@@ -1958,8 +1991,32 @@ func validateBoardJSONValue5(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue6 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue6(path string, value any, description string) error {
+// validateBoardJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateBoardJSONValue2(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateBoardJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue8(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2007,7 +2064,7 @@ func validateBoardJSONValue6(path string, value any, description string) error {
 				return err
 			}
 		case "size":
-			if err := validateBoardJSONValue7(
+			if err := validateBoardJSONValue9(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Size of the source, in bytes",
 			); err != nil {
@@ -2026,8 +2083,8 @@ func validateBoardJSONValue6(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue7(path string, value any, description string) error {
+// validateBoardJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue9(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2042,8 +2099,8 @@ func validateBoardJSONValue7(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue8 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue8(path string, value any, description string) error {
+// validateBoardJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue10(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2059,7 +2116,7 @@ func validateBoardJSONValue8(path string, value any, description string) error {
 		if item == nil {
 			continue
 		}
-		if err := validateBoardJSONValue9(
+		if err := validateBoardJSONValue11(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -2069,8 +2126,8 @@ func validateBoardJSONValue8(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue9 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue9(path string, value any, description string) error {
+// validateBoardJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue11(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2090,7 +2147,7 @@ func validateBoardJSONValue9(path string, value any, description string) error {
 	for _, key := range keys {
 		switch key {
 		case "anchor":
-			if err := validateBoardJSONValue10(
+			if err := validateBoardJSONValue12(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The passage the sticky note is on",
 			); err != nil {
@@ -2125,7 +2182,7 @@ func validateBoardJSONValue9(path string, value any, description string) error {
 				return err
 			}
 		case "messages":
-			if err := validateBoardJSONValue11(
+			if err := validateBoardJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The messages, oldest first",
 			); err != nil {
@@ -2135,13 +2192,6 @@ func validateBoardJSONValue9(path string, value any, description string) error {
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "The sticky note this one is on, for one on a passage of an answer",
-			); err != nil {
-				return err
-			}
-		case "returns":
-			if err := validateBoardJSONValue4(
-				generatedJSONChildPath(path, key, false),
-				typed[key], "Whether what the sticky note found is to be given back to the session, at the end",
 			); err != nil {
 				return err
 			}
@@ -2168,7 +2218,6 @@ func validateBoardJSONValue9(path string, value any, description string) error {
 				"kind",
 				"messages",
 				"parent",
-				"returns",
 				"state",
 				"updated_at",
 			})
@@ -2177,8 +2226,8 @@ func validateBoardJSONValue9(path string, value any, description string) error {
 	return nil
 }
 
-// validateBoardJSONValue10 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue10(path string, value any, description string) error {
+// validateBoardJSONValue12 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue12(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2229,8 +2278,8 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 	return nil
 }
 
-// validateBoardJSONValue11 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue11(path string, value any, description string) error {
+// validateBoardJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue3(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2246,7 +2295,7 @@ func validateBoardJSONValue11(path string, value any, description string) error 
 		if item == nil {
 			continue
 		}
-		if err := validateBoardJSONValue3(
+		if err := validateBoardJSONValue4(
 			generatedJSONChildPath(path, strconv.Itoa(index), true),
 			item, description,
 		); err != nil {
@@ -2256,8 +2305,8 @@ func validateBoardJSONValue11(path string, value any, description string) error 
 	return nil
 }
 
-// validateBoardJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateBoardJSONValue3(path string, value any, description string) error {
+// validateBoardJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateBoardJSONValue4(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -2357,7 +2406,7 @@ func validateBoardSummaryJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "stickies":
-			if err := validateBoardJSONValue7(
+			if err := validateBoardJSONValue9(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Number of sticky notes",
 			); err != nil {
@@ -2378,7 +2427,7 @@ func validateBoardSummaryJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "waiting":
-			if err := validateBoardJSONValue7(
+			if err := validateBoardJSONValue9(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Number of sticky notes waiting for an answer",
 			); err != nil {
@@ -2761,6 +2810,13 @@ func checkBoardBoardResultValue(in *BoardResult, field string, active map[any]bo
 	if in != nil {
 		if !utf8.ValidString(string(in.Text)) {
 			return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
+		}
+		for index1, item1 := range in.Stickies {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "stickies", false), strconv.Itoa(index1), true))
+			}
 		}
 		if in.NoteID != nil {
 			if !utf8.ValidString(string(*in.NoteID)) {

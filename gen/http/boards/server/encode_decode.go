@@ -982,9 +982,28 @@ func DecodeDraftRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.D
 	return func(r *http.Request) (*boards.DraftPayload, error) {
 		var payload *boards.DraftPayload
 		var (
+			body DraftRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateDraftRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
 			id      string
 			session *string
-			err     error
 			c       *http.Cookie
 
 			params = mux.Vars(r)
@@ -1002,7 +1021,7 @@ func DecodeDraftRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.D
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDraftPayload(id, session)
+		payload = NewDraftPayload(&body, id, session)
 
 		return payload, nil
 	}
@@ -1234,7 +1253,6 @@ func marshalBoardsBoardStickyToBoardStickyResponseBody(v *boards.BoardSticky) *B
 		Kind:      v.Kind,
 		State:     v.State,
 		Error:     v.Error,
-		Returns:   v.Returns,
 		CreatedAt: v.CreatedAt,
 		UpdatedAt: v.UpdatedAt,
 	}
@@ -1288,6 +1306,14 @@ func marshalBoardsBoardResultToBoardResultResponseBody(v *boards.BoardResult) *B
 		Text:       v.Text,
 		NoteID:     v.NoteID,
 		FinishedAt: v.FinishedAt,
+	}
+	if v.Stickies != nil {
+		res.Stickies = make([]string, len(v.Stickies))
+		for i, val := range v.Stickies {
+			res.Stickies[i] = val
+		}
+	} else {
+		res.Stickies = []string{}
 	}
 
 	return res

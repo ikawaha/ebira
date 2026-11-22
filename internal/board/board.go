@@ -148,7 +148,6 @@ type Sticky struct {
 	Messages  []Message `json:"messages"`
 	State     string    `json:"state"`
 	Error     string    `json:"error,omitempty"`
-	Returns   bool      `json:"returns,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -172,7 +171,9 @@ type Message struct {
 
 // Result is what the person gives back to the session, at the end.
 type Result struct {
-	Text       string    `json:"text"`
+	Text string `json:"text"`
+	// Stickies are the IDs of the sticky notes given back with Text.
+	Stickies   []string  `json:"stickies,omitempty"`
 	NoteID     string    `json:"note_id,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
 }

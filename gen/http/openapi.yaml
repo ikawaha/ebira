@@ -968,7 +968,7 @@ paths:
             tags:
                 - boards
             summary: draft boards
-            description: 'Have the assistant draft what to give back to the session, from the sticky notes to give back. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.'
+            description: 'Have the assistant draft what to give back to the session, from the sticky notes chosen when finishing. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.'
             operationId: boards#draft
             parameters:
                 - name: id
@@ -977,6 +977,13 @@ paths:
                   required: true
                   type: string
                   pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: DraftRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsDraftRequestBody'
+                    required:
+                        - stickies
             responses:
                 "200":
                     description: OK response.
@@ -985,7 +992,7 @@ paths:
                         required:
                             - text
                 "400":
-                    description: 'bad_request: No sticky note is to be given back, or the board is finished'
+                    description: 'bad_request: No sticky note is chosen, a chosen one does not exist, or the board is finished'
                     schema:
                         $ref: '#/definitions/BoardsDraftBadRequestResponseBody'
                     examples:
@@ -1041,7 +1048,7 @@ paths:
             tags:
                 - boards
             summary: finish boards
-            description: 'Finish a whiteboard: keep what to give back to the session, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.'
+            description: 'Finish a whiteboard: keep what to give back to the session, the text and the sticky notes chosen, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.'
             operationId: boards#finish
             parameters:
                 - name: id
@@ -1073,7 +1080,7 @@ paths:
                             - stickies
                             - from_session
                 "400":
-                    description: 'bad_request: The board is finished, a sticky note waits for an answer, or the notebook is invalid'
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, or the notebook is invalid'
                     schema:
                         $ref: '#/definitions/BoardsFinishBadRequestResponseBody'
                     examples:
@@ -1145,7 +1152,6 @@ paths:
                             - kind
                             - messages
                             - state
-                            - returns
                             - created_at
                             - updated_at
                 "400":
@@ -1267,7 +1273,7 @@ paths:
             tags:
                 - boards
             summary: save_sticky boards
-            description: 'Change a sticky note: the text of a memo, or whether it is given back at the end.'
+            description: Change the text of a memo.
             operationId: boards#save_sticky
             parameters:
                 - name: id
@@ -1298,7 +1304,6 @@ paths:
                             - kind
                             - messages
                             - state
-                            - returns
                             - created_at
                             - updated_at
                 "400":
@@ -1377,7 +1382,6 @@ paths:
                             - kind
                             - messages
                             - state
-                            - returns
                             - created_at
                             - updated_at
                 "400":
@@ -6104,7 +6108,6 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6126,7 +6129,6 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6148,7 +6150,6 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6170,7 +6171,6 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
             text:
@@ -6193,6 +6193,9 @@ definitions:
             result:
                 finished_at: "2026-10-16T09:30:00Z"
                 note_id: be4c1193735ee1
+                stickies:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
                 text: Cumque accusantium doloremque eaque.
             source:
                 format: text
@@ -6221,7 +6224,6 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6243,7 +6245,6 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6265,7 +6266,6 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6287,7 +6287,6 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
             text: Ut labore minima quo et voluptatem.
@@ -6388,6 +6387,16 @@ definitions:
                 description: The note the board was saved as, if it was
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: The sticky notes given back with the text
+                example:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
             text:
                 type: string
                 description: What the person gives back to the session, in Markdown
@@ -6395,9 +6404,13 @@ definitions:
         example:
             finished_at: "2026-10-16T09:30:00Z"
             note_id: be4c1193735ee1
+            stickies:
+                - s1a2b3c4d
+                - s1a2b3c4d
             text: Cumque accusantium doloremque eaque.
         required:
             - text
+            - stickies
             - finished_at
     BoardSource:
         title: BoardSource
@@ -6491,10 +6504,6 @@ definitions:
                 description: The sticky note this one is on, for one on a passage of an answer
                 example: s1a2b3c4d
                 pattern: ^s[0-9a-f]{8}$
-            returns:
-                type: boolean
-                description: Whether what the sticky note found is to be given back to the session, at the end
-                example: false
             state:
                 type: string
                 description: idle, waiting for an answer, or error when the last answer failed
@@ -6529,7 +6538,6 @@ definitions:
                   role: assistant
                   text: Eum quaerat rerum illo natus.
             parent: s1a2b3c4d
-            returns: false
             state: error
             updated_at: "2026-10-16T09:30:00Z"
         required:
@@ -6538,7 +6546,6 @@ definitions:
             - kind
             - messages
             - state
-            - returns
             - created_at
             - updated_at
     BoardSummary:
@@ -7298,6 +7305,26 @@ definitions:
             - temporary
             - timeout
             - fault
+    BoardsDraftRequestBody:
+        title: BoardsDraftRequestBody
+        type: object
+        properties:
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: The sticky notes to draft from
+                example:
+                    - s1a2b3c4d
+                minItems: 1
+                maxItems: 200
+        example:
+            stickies:
+                - s1a2b3c4d
+        required:
+            - stickies
     BoardsDraftResponseBody:
         title: BoardsDraftResponseBody
         type: object
@@ -7499,6 +7526,18 @@ definitions:
                 description: Notebook to save the board in as a note; not saved when omitted
                 example: inbox
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: 'The sticky notes to give back: the session reads their passages and messages, those of the assistant too. The others are not given back'
+                example:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                maxItems: 200
             text:
                 type: string
                 description: What to give back, in Markdown; may be empty
@@ -7507,6 +7546,10 @@ definitions:
         example:
             lang: ja
             notebook: inbox
+            stickies:
+                - s1a2b3c4d
+                - s1a2b3c4d
+                - s1a2b3c4d
             text: zln
         required:
             - text
@@ -8020,17 +8063,12 @@ definitions:
         title: BoardsSaveStickyRequestBody
         type: object
         properties:
-            returns:
-                type: boolean
-                description: Whether what the sticky note found is to be given back
-                example: false
             text:
                 type: string
                 description: The new text of a memo; empty to leave only the mark on the passage
                 example: 1l5
                 maxLength: 10240
         example:
-            returns: false
             text: 1l5
     BoardsSaveStickyUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'

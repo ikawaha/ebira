@@ -214,8 +214,32 @@ func (s *Notes) GetAiBoard(ctx context.Context, p *gennotes.GetAiBoardPayload) (
 		if b.Result.NoteID != "" {
 			res.NoteID = &b.Result.NoteID
 		}
+		res.Stickies = givenBack(b)
 	}
 	return res, nil
+}
+
+// givenBack returns the sticky notes of b given back to the session, in the
+// order of the board. Those not chosen stay on the board: neither the user's
+// messages nor the answers reach the session.
+func givenBack(b *board.Board) []*gennotes.AIBoardSticky {
+	chosen := make(map[string]bool, len(b.Result.Stickies))
+	for _, id := range b.Result.Stickies {
+		chosen[id] = true
+	}
+	res := []*gennotes.AIBoardSticky{}
+	for i := range b.Stickies {
+		st := &b.Stickies[i]
+		if !chosen[st.ID] {
+			continue
+		}
+		s := &gennotes.AIBoardSticky{ID: st.ID, Parent: optional(st.Parent), Passage: st.Anchor.Exact, Messages: make([]*gennotes.AIBoardMessage, 0, len(st.Messages))}
+		for _, m := range st.Messages {
+			s.Messages = append(s.Messages, &gennotes.AIBoardMessage{Role: m.Role, Text: m.Text})
+		}
+		res = append(res, s)
+	}
+	return res
 }
 
 func (r Boards) List(ctx context.Context, _ *genboards.ListPayload) ([]*genboards.BoardSummary, error) {
@@ -294,7 +318,7 @@ func (s *Notes) fullBoard(st *board.Store, b *board.Board) (*genboards.Board, er
 		res.Stickies = append(res.Stickies, apiSticky(&b.Stickies[i]))
 	}
 	if r := b.Result; r != nil {
-		res.Result = &genboards.BoardResult{Text: r.Text, NoteID: optional(r.NoteID), FinishedAt: store.FormatTime(r.FinishedAt)}
+		res.Result = &genboards.BoardResult{Text: r.Text, Stickies: append([]string{}, r.Stickies...), NoteID: optional(r.NoteID), FinishedAt: store.FormatTime(r.FinishedAt)}
 	}
 	return res, nil
 }
@@ -304,7 +328,7 @@ func apiSticky(s *board.Sticky) *genboards.BoardSticky {
 		ID: s.ID, Parent: optional(s.Parent),
 		Anchor: &genboards.BoardAnchor{Exact: s.Anchor.Exact, Prefix: optional(s.Anchor.Prefix), Suffix: optional(s.Anchor.Suffix)},
 		Kind:   s.Kind, Messages: make([]*genboards.BoardMessage, 0, len(s.Messages)),
-		State: s.State, Error: optional(s.Error), Returns: s.Returns,
+		State: s.State, Error: optional(s.Error),
 		CreatedAt: store.FormatTime(s.CreatedAt), UpdatedAt: store.FormatTime(s.UpdatedAt),
 	}
 	for _, m := range s.Messages {
@@ -488,9 +512,6 @@ func (r Boards) SaveSticky(ctx context.Context, p *genboards.SaveStickyPayload) 
 				st.Messages = []board.Message{{Role: board.User, Text: t, At: st.Messages[0].At}}
 			}
 		}
-		if p.Returns != nil {
-			st.Returns = *p.Returns
-		}
 		st.UpdatedAt = s.now()
 		saved = *st
 		return nil
@@ -630,19 +651,20 @@ func (r Boards) Draft(ctx context.Context, p *genboards.DraftPayload) (*genboard
 	if err := requireOpen(b); err != nil {
 		return nil, boardErr(err)
 	}
-	returns := false
-	for _, st := range b.Stickies {
-		returns = returns || st.Returns
-	}
-	if !returns {
+	if len(p.Stickies) == 0 {
 		return nil, gennotes.MakeBadRequest(errors.New("choose the sticky notes to give back first"))
+	}
+	for _, id := range p.Stickies {
+		if b.Find(id) == nil {
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("no sticky note %q", id))
+		}
 	}
 	if err := s.requireAsker(); err != nil {
 		return nil, err
 	}
 	actx, cancel := context.WithTimeout(ctx, boardAnswerTime)
 	defer cancel()
-	text, err := s.boards.ask(actx, board.DraftQuestion(b))
+	text, err := s.boards.ask(actx, board.DraftQuestion(b, p.Stickies))
 	if err != nil {
 		log.Printf("whiteboard %s: draft: %v", p.ID, err)
 		return nil, gennotes.MakeUnavailable(fmt.Errorf("the assistant did not draft: %w", err))
@@ -670,6 +692,18 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 	if err := ready(b); err != nil {
 		return nil, boardErr(err)
 	}
+	// The sticky notes to give back, once each, and all on the board.
+	var given []string
+	seen := map[string]bool{}
+	for _, id := range p.Stickies {
+		if b.Find(id) == nil {
+			return nil, gennotes.MakeBadRequest(fmt.Errorf("no sticky note %q", id))
+		}
+		if !seen[id] {
+			seen[id] = true
+			given = append(given, id)
+		}
+	}
 	noteID := ""
 	if p.Notebook != nil {
 		source, err := st.Source(b.ID)
@@ -690,7 +724,7 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 			return err
 		}
 		b.Status = board.Done
-		b.Result = &board.Result{Text: p.Text, NoteID: noteID, FinishedAt: s.now()}
+		b.Result = &board.Result{Text: p.Text, Stickies: given, NoteID: noteID, FinishedAt: s.now()}
 		return nil
 	})
 	if err != nil {

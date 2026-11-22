@@ -938,6 +938,12 @@ mark.board-anchor { background: color-mix(in srgb, var(--mark-bg) 55%, transpare
 .flash { animation: board-flash 1s ease-out; }
 @keyframes board-flash { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
 .board-finish .board-draft { margin: 8px 0 12px; }
+.sticky-given { color: var(--fg-muted); font-size: var(--fs-sm); }
+.board-finish .board-picks { max-height: 40vh; overflow-y: auto; margin-bottom: 4px; }
+.board-finish .board-pick { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; font-size: var(--fs-sm); cursor: pointer; }
+.board-finish .board-pick input { flex: none; }
+.board-finish .board-pick-passage { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
+.board-finish .board-pick-message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board-finish .board-save { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .board-finish select { font: inherit; padding: 2px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); color: var(--fg); }
 @media (max-width: 760px) {

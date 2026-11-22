@@ -1293,6 +1293,10 @@ func EncodeDraftRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.
 				Value: v,
 			})
 		}
+		body := NewDraftRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("boards", "draft", err)
+		}
 		return nil
 	}
 }
@@ -1594,7 +1598,6 @@ func unmarshalBoardStickyResponseBodyToBoardsBoardSticky(v *BoardStickyResponseB
 		Kind:      *v.Kind,
 		State:     *v.State,
 		Error:     v.Error,
-		Returns:   *v.Returns,
 		CreatedAt: *v.CreatedAt,
 		UpdatedAt: *v.UpdatedAt,
 	}
@@ -1642,6 +1645,10 @@ func unmarshalBoardResultResponseBodyToBoardsBoardResult(v *BoardResultResponseB
 		Text:       *v.Text,
 		NoteID:     v.NoteID,
 		FinishedAt: *v.FinishedAt,
+	}
+	res.Stickies = make([]string, len(v.Stickies))
+	for i, val := range v.Stickies {
+		res.Stickies[i] = val
 	}
 
 	return res

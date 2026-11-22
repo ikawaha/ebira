@@ -419,6 +419,13 @@ func ValidateGetAiBoardResultTransport(body *GetAiBoardResultTransport) (err err
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []any{"open", "done"}))
 		}
 	}
+	for _, e := range body.Stickies {
+		if e != nil {
+			if err2 := ValidateAIBoardStickyTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
@@ -1226,6 +1233,49 @@ func ValidateUpdateAiSeparatorResultTransport(body *UpdateAiSeparatorResultTrans
 	}
 	if body.Before != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.before", *body.Before, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
+// ValidateAIBoardMessageTransport runs the validations defined on AIBoardMessageTransport.
+func ValidateAIBoardMessageTransport(body *AIBoardMessageTransport) (err error) {
+	if body.Role == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("role", "body"))
+	}
+	if body.Text == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("text", "body"))
+	}
+	if body.Role != nil {
+		if !(*body.Role == "user" || *body.Role == "assistant") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.role", *body.Role, []any{"user", "assistant"}))
+		}
+	}
+	return
+}
+
+// ValidateAIBoardStickyTransport runs the validations defined on AIBoardStickyTransport.
+func ValidateAIBoardStickyTransport(body *AIBoardStickyTransport) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Passage == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("passage", "body"))
+	}
+	if body.Messages == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("messages", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^s[0-9a-f]{8}$"))
+	}
+	if body.Parent != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.parent", *body.Parent, "^s[0-9a-f]{8}$"))
+	}
+	for _, e := range body.Messages {
+		if e != nil {
+			if err2 := ValidateAIBoardMessageTransport(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
 	}
 	return
 }

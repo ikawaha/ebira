@@ -47,13 +47,13 @@ var BoardSticky = Type("BoardSticky", func() {
 		Enum("idle", "waiting", "error")
 	})
 	Attribute("error", String, "Why the last answer failed")
-	RequiredAttribute("returns", Boolean, "Whether what the sticky note found is to be given back to the session, at the end")
 	RequiredAttribute("created_at", String, "Creation time", timeDSL)
 	RequiredAttribute("updated_at", String, "Last update time", timeDSL)
 })
 
 var BoardResult = Type("BoardResult", func() {
 	RequiredAttribute("text", String, "What the person gives back to the session, in Markdown")
+	RequiredAttribute("stickies", ArrayOf(String, stickyIDDSL), "The sticky notes given back with the text")
 	Attribute("note_id", String, "The note the board was saved as, if it was", noteIDDSL)
 	RequiredAttribute("finished_at", String, "When the board was finished", timeDSL)
 })
@@ -220,7 +220,7 @@ var _ = Service("boards", func() {
 	})
 
 	Method("save_sticky", func() {
-		Description("Change a sticky note: the text of a memo, or whether it is given back at the end.")
+		Description("Change the text of a memo.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
@@ -228,7 +228,6 @@ var _ = Service("boards", func() {
 			Attribute("text", String, "The new text of a memo; empty to leave only the mark on the passage", func() {
 				MaxLength(10 << 10)
 			})
-			Attribute("returns", Boolean, "Whether what the sticky note found is to be given back")
 		})
 		Result(BoardSticky)
 		Error("not_found", ErrorResult, "The board or the sticky note does not exist")
@@ -282,16 +281,20 @@ var _ = Service("boards", func() {
 	})
 
 	Method("draft", func() {
-		Description("Have the assistant draft what to give back to the session, from the sticky notes to give back. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.")
+		Description("Have the assistant draft what to give back to the session, from the sticky notes chosen when finishing. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
+			RequiredAttribute("stickies", ArrayOf(String, stickyIDDSL), "The sticky notes to draft from", func() {
+				MinLength(1)
+				MaxLength(200)
+			})
 		})
 		Result(func() {
 			RequiredAttribute("text", String, "The draft, in Markdown")
 		})
 		Error("not_found", ErrorResult, "The board does not exist")
-		Error("bad_request", ErrorResult, "No sticky note is to be given back, or the board is finished")
+		Error("bad_request", ErrorResult, "No sticky note is chosen, a chosen one does not exist, or the board is finished")
 		Error("unavailable", ErrorResult, "The assistant is not configured, or failed to answer")
 		HTTP(func() {
 			POST("/boards/{id}/draft")
@@ -303,12 +306,15 @@ var _ = Service("boards", func() {
 	})
 
 	Method("finish", func() {
-		Description("Finish a whiteboard: keep what to give back to the session, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.")
+		Description("Finish a whiteboard: keep what to give back to the session, the text and the sticky notes chosen, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
 			RequiredAttribute("text", String, "What to give back, in Markdown; may be empty", func() {
 				MaxLength(64 << 10)
+			})
+			Attribute("stickies", ArrayOf(String, stickyIDDSL), "The sticky notes to give back: the session reads their passages and messages, those of the assistant too. The others are not given back", func() {
+				MaxLength(200)
 			})
 			Attribute("notebook", String, "Notebook to save the board in as a note; not saved when omitted", notebookIDDSL)
 			Attribute("lang", String, "Language of the headings of the note, that of the UI", func() {
@@ -318,7 +324,7 @@ var _ = Service("boards", func() {
 		})
 		Result(Board)
 		Error("not_found", ErrorResult, "The board does not exist")
-		Error("bad_request", ErrorResult, "The board is finished, a sticky note waits for an answer, or the notebook is invalid")
+		Error("bad_request", ErrorResult, "The board is finished, a sticky note waits for an answer or does not exist, or the notebook is invalid")
 		HTTP(func() {
 			POST("/boards/{id}/finish")
 			Response(StatusOK)

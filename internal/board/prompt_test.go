@@ -78,9 +78,8 @@ func TestDraftQuestion(t *testing.T) {
 	now := time.Now()
 	b := &Board{Title: "t", Status: Open}
 	a, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "kept"}, Messages: []Message{{Text: "give back"}}}, now)
-	a.Returns = true
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "skipped"}, Messages: []Message{{Text: "not this"}}}, now)
-	q := DraftQuestion(b)
+	q := DraftQuestion(b, []string{a.ID})
 	if !strings.Contains(q, "kept") || !strings.Contains(q, "give back") || strings.Contains(q, "not this") {
 		t.Errorf("draft question:\n%s", q)
 	}

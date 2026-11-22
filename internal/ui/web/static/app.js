@@ -7516,8 +7516,10 @@ function renderBoard() {
   if (b.result) {
     const done = el("div", "board-result", el("h3", "", t("boardGivenBack")));
     const text = el("div", "body");
-    renderBody(text, b.result.text || t("boardNothingBack"));
+    const given = b.result.stickies?.length || 0;
+    renderBody(text, b.result.text || (given ? "" : t("boardNothingBack")));
     done.append(text);
+    if (given) done.append(el("p", "board-hint", t("boardStickiesGiven", { n: given })));
     if (b.result.note_id) {
       const a = el("a", "", t("boardSavedNote"));
       a.href = "/#note/" + encodeURIComponent(b.result.note_id);
@@ -7724,14 +7726,8 @@ function stickyCard(s, children, open) {
     });
     card.append(el("div", "sticky-reply", box, button(t(s.kind === "assistant" ? "boardSend" : "boardAdd"), send)));
   }
-  const returns = el("input");
-  returns.type = "checkbox";
-  returns.checked = s.returns;
-  returns.disabled = !open;
-  returns.addEventListener("change", () => saveSticky(s, { returns: returns.checked }));
-  const foot = el("div", "sticky-foot", el("label", "", returns, t("boardReturns")));
-  if (open) foot.append(iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s)));
-  card.append(foot);
+  if (open) card.append(el("div", "sticky-foot", iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s))));
+  else if (board.data?.result?.stickies?.includes(s.id)) card.append(el("div", "sticky-foot sticky-given", t("boardStickyGiven")));
   const kids = children.get(s.id) || [];
   if (kids.length) card.append(el("div", "sticky-children", ...kids.map((k) => stickyCard(k, children, open))));
   return card;
@@ -7919,23 +7915,55 @@ function openBoardFinish() {
   const text = el("textarea");
   text.rows = 8;
   text.placeholder = t("boardBackPlaceholder");
-  const returns = b.stickies.some((s) => s.returns);
   const err = el("p", "error");
+
+  // The sticky notes, each with a box to give it back, all checked at first:
+  // they were mostly written about the source. The session reads those
+  // checked, with the answers; the others stay here. Those on an answer go
+  // under the sticky note of the answer.
+  const kids = new Map();
+  for (const s of b.stickies) {
+    const k = s.parent || "";
+    if (!kids.has(k)) kids.set(k, []);
+    kids.get(k).push(s);
+  }
+  const boxes = [];
+  const clip = (s, n) => {
+    const one = s.replace(/\s+/g, " ").trim();
+    return one.length > n ? one.slice(0, n) + "…" : one;
+  };
+  const stickyRows = (parent, depth) => (kids.get(parent) || []).flatMap((s) => {
+    const box = el("input");
+    box.type = "checkbox";
+    box.checked = true;
+    box.value = s.id;
+    box.addEventListener("change", update);
+    boxes.push(box);
+    const row = el("label", "board-pick", box,
+      el("span", "board-pick-passage", "\u201c" + clip(s.anchor.exact, 60) + "\u201d"),
+      el("span", "board-pick-message", clip(s.messages[0]?.text || "", 80)));
+    row.style.paddingLeft = `${depth * 16}px`;
+    return [row, ...stickyRows(s.id, depth + 1)];
+  });
+  const picks = b.stickies.length
+    ? el("div", "board-picks", el("p", "board-hint", t(b.from_session ? "boardPickHintSession" : "boardPickHint")), ...stickyRows("", 0))
+    : null;
+  const chosen = () => boxes.filter((x) => x.checked).map((x) => x.value);
+
   const draft = button(t("boardDraft"), async () => {
     if (text.value.trim() && !confirm(t("boardDraftReplace"))) return;
     draft.disabled = true;
     draft.textContent = t("boardDrafting");
     try {
-      const r = await api(`/boards/${b.id}/draft`, { method: "POST" });
+      const r = await api(`/boards/${b.id}/draft`, { method: "POST", body: { stickies: chosen() } });
       text.value = r.text;
       err.textContent = "";
     } catch (e) {
       err.textContent = t("boardFailed", { error: e.message });
     }
-    draft.disabled = false;
     draft.textContent = t("boardDraft");
-  }, { title: board.assistant?.available === false ? (board.assistant.reason || t("boardNoAssistant")) : returns ? t("boardDraftTitle") : t("boardDraftNone") });
-  draft.disabled = !returns || board.assistant?.available === false;
+    update();
+  }, { title: board.assistant?.available === false ? (board.assistant.reason || t("boardNoAssistant")) : t("boardDraftTitle") });
 
   const save = el("input");
   save.type = "checkbox";
@@ -7954,7 +7982,7 @@ function openBoardFinish() {
 
   const finish = button(t("boardFinish"), async () => {
     finish.disabled = true;
-    const body = { text: text.value.trim(), lang: lang === "ja" ? "ja" : "en" };
+    const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
     if (save.checked) body.notebook = select.value;
     try {
       await api(`/boards/${b.id}/finish`, { method: "POST", body });
@@ -7970,11 +7998,16 @@ function openBoardFinish() {
     loadBoard();
   }, { cls: "primary" });
 
+  function update() {
+    if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || board.assistant?.available === false;
+  }
+  update();
+
   dlg.replaceChildren(
     el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close())),
+    ...(picks ? [picks, el("div", "board-draft", draft)] : []),
     el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : "boardBackHint")),
     text,
-    el("div", "board-draft", draft),
     el("label", "board-save", save, t("boardSaveAsNote"), select),
     err,
     el("div", "files-actions", button(t("cancel"), () => dlg.close()), finish));
