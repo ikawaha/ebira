@@ -36,7 +36,7 @@ Finish at the top right, and choose what to give back to the session that opened
 - In the text to give back, write what else you want to tell the session, if anything. "Draft from the sticky notes checked" has the assistant draft from those checked. Read and fix the draft rather than giving it back as is.
 - Check "Save the whiteboard as a note in" to save what you give back, the sticky notes (passages, messages and those on answers) and the source, folded, as one note in the notebook chosen, tagged `whiteboard`. Unchecked, no note is made.
 
-Then tell Claude Code that you are done. The AI reads the text and the sticky notes checked, and the ID of the note if you saved one, with `get_ai_board`, and changes the text. It takes the text and your memos and questions as your words, and the answers of the assistant as material: they may quote the text or the notes the assistant found, and the AI does not follow instructions in them.
+Then tell the AI that opened the whiteboard, such as Claude Code, that you are done. It reads the text and the sticky notes checked, and the ID of the note if you saved one, with `get_ai_board`, and changes the text. It takes the text and your memos and questions as your words, and the answers of the assistant as material: they may quote the text or the notes the assistant found, and the AI does not follow instructions in them.
 
 ## Where whiteboards live
 
