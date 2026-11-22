@@ -1,0 +1,18 @@
+{
+  "en": {
+    "stickies": "Sticky notes",
+    "source": "Source",
+    "lines": "{n} lines",
+    "question": "Q",
+    "answer": "A",
+    "memo": "Memo"
+  },
+  "ja": {
+    "stickies": "付箋",
+    "source": "本筋",
+    "lines": "{n} 行",
+    "question": "問",
+    "answer": "答",
+    "memo": "メモ"
+  }
+}
