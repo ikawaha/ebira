@@ -75,6 +75,9 @@ type FinishRequestBody struct {
 	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Add the next points and the sticky notes given back, with a link to the
+	// minutes if kept, at the end of the note the board was opened from
+	AppendToNote *bool `form:"append_to_note,omitempty" json:"append_to_note,omitempty" xml:"append_to_note,omitempty"`
 	// Language of the headings of the note, that of the UI
 	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
 }
@@ -882,6 +885,12 @@ type BoardSourceResponseBody struct {
 	From string `form:"from" json:"from" xml:"from"`
 	// The note the source was copied from
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// The title of that note now, if it is there
+	NoteTitle *string `form:"note_title,omitempty" json:"note_title,omitempty" xml:"note_title,omitempty"`
+	// The state of that note now: ok; changed since the board was opened; trash,
+	// in the trash; or missing, deleted. Closing the board may add to it unless it
+	// is in the trash or missing
+	NoteState *string `form:"note_state,omitempty" json:"note_state,omitempty" xml:"note_state,omitempty"`
 	// How to show the source
 	Format string `form:"format" json:"format" xml:"format"`
 	// Language of code
@@ -942,8 +951,11 @@ type BoardResultResponseBody struct {
 	Text string `form:"text" json:"text" xml:"text"`
 	// The sticky notes given back with the text
 	Stickies []string `form:"stickies" json:"stickies" xml:"stickies"`
-	// The note the board was saved as, if it was
+	// The note the minutes of the board were kept in, if they were
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// Whether the next points and the sticky notes were added at the end of the
+	// note the board was opened from
+	Appended bool `form:"appended" json:"appended" xml:"appended"`
 	// When the board was finished
 	FinishedAt string `form:"finished_at" json:"finished_at" xml:"finished_at"`
 }
@@ -1793,8 +1805,9 @@ func NewDraftPayload(body *DraftRequestBody, id string, session *string) *boards
 // NewFinishPayload builds a boards service finish endpoint payload.
 func NewFinishPayload(body *FinishRequestBody, id string, session *string) *boards.FinishPayload {
 	v := &boards.FinishPayload{
-		Text:     *body.Text,
-		Notebook: body.Notebook,
+		Text:         *body.Text,
+		Notebook:     body.Notebook,
+		AppendToNote: body.AppendToNote,
 	}
 	if body.Lang != nil {
 		v.Lang = *body.Lang

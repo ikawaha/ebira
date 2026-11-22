@@ -1234,11 +1234,13 @@ func marshalBoardsBoardSummaryToBoardSummaryResponse(v *boards.BoardSummary) *Bo
 // *BoardSourceResponseBody from a value of type *boards.BoardSource.
 func marshalBoardsBoardSourceToBoardSourceResponseBody(v *boards.BoardSource) *BoardSourceResponseBody {
 	res := &BoardSourceResponseBody{
-		From:   v.From,
-		NoteID: v.NoteID,
-		Format: v.Format,
-		Lang:   v.Lang,
-		Size:   v.Size,
+		From:      v.From,
+		NoteID:    v.NoteID,
+		NoteTitle: v.NoteTitle,
+		NoteState: v.NoteState,
+		Format:    v.Format,
+		Lang:      v.Lang,
+		Size:      v.Size,
 	}
 
 	return res
@@ -1306,6 +1308,7 @@ func marshalBoardsBoardResultToBoardResultResponseBody(v *boards.BoardResult) *B
 	res := &BoardResultResponseBody{
 		Text:       v.Text,
 		NoteID:     v.NoteID,
+		Appended:   v.Appended,
 		FinishedAt: v.FinishedAt,
 	}
 	if v.Stickies != nil {

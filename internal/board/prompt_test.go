@@ -93,7 +93,7 @@ func TestNoteBody(t *testing.T) {
 	b.Add(Sticky{Parent: q.ID, Kind: Memo, Anchor: Anchor{Exact: "entry"}, Messages: []Message{{Text: "see the spec"}}}, now)
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "*bold* [link]"}}, now)
 
-	got := NoteBody(b, "func main() {\n```\n}\n", "  Given back.  ", "en")
+	got := NoteBody(b, "func main() {\n```\n}\n", "  Given back.  ", "en", nil)
 	for _, want := range []string{
 		"Given back.\n\n## Sticky notes\n",
 		"### \u201cfunc main() { }\u201d\n\n> func main() {\n> }\n",
@@ -112,7 +112,7 @@ func TestNoteBody(t *testing.T) {
 		t.Errorf("child out of place:\n%s", got)
 	}
 
-	md := NoteBody(&Board{Source: Source{Format: Markdown}}, "# Plan\n", "", "fr")
+	md := NoteBody(&Board{Source: Source{Format: Markdown}}, "# Plan\n", "", "fr", nil)
 	if strings.Contains(md, "Sticky notes") || !strings.Contains(md, "\n# Plan\n") || strings.Contains(md, "```") {
 		t.Errorf("Markdown source without sticky notes:\n%s", md)
 	}
@@ -122,7 +122,7 @@ func TestNoteBodyJapanese(t *testing.T) {
 	b := &Board{Status: Open, Source: Source{Format: Text}}
 	q, _ := b.Add(Sticky{Kind: Assistant, Anchor: Anchor{Exact: "語"}, Messages: []Message{{Text: "何？"}}}, time.Now())
 	q.Say(Agent, "答え", time.Now())
-	got := NoteBody(b, "語\n", "", "ja")
+	got := NoteBody(b, "語\n", "", "ja", nil)
 	for _, want := range []string{"## 付箋\n", "**問** 何？", "**答** 答え", "## 議題\n", "<summary>text (1 行)</summary>"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("note lacks %q:\n%s", want, got)
@@ -138,7 +138,7 @@ func TestNoteBodyQuotes(t *testing.T) {
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "later"}}, now)
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "fall\n+\t// back *now*\n1. one"}}, now)
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "nowhere"}}, now)
-	got := NoteBody(b, "short terms fall\n+\t// back *now*\n1. one\nlater\n", "", "en")
+	got := NoteBody(b, "short terms fall\n+\t// back *now*\n1. one\nlater\n", "", "en", nil)
 	if want := "> fall\n> \\+\t// back \\*now\\*\n> \\1. one\n"; !strings.Contains(got, want) {
 		t.Errorf("quote, want %q in:\n%s", want, got)
 	}
@@ -160,5 +160,42 @@ func TestForkQuestion(t *testing.T) {
 	s.Say(User, "and memory?", now)
 	if q := ForkQuestion(b, "Use a trie for the index.", s, true); q != "The person asks again on the same sticky note: and memory?" {
 		t.Errorf("question again: %q", q)
+	}
+}
+
+func TestNoteBodyFromNote(t *testing.T) {
+	b := &Board{Title: "Plan", Status: Open, Source: Source{From: FromNote, NoteID: "n1", Format: Markdown}}
+	got := NoteBody(b, "Use a trie.\n", "", "ja", &NoteRef{ID: "n1", Title: "Plan [draft]"})
+	if !strings.HasPrefix(got, "元のノート: [Plan \\[draft\\]](/#note/n1)\n\n") {
+		t.Errorf("note body:\n%s", got)
+	}
+}
+
+func TestAppendix(t *testing.T) {
+	now := time.Now()
+	b := &Board{Title: "Plan", Status: Open, Source: Source{Format: Markdown}}
+	q, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "trie"}, Messages: []Message{{Text: "why a trie?"}}}, now)
+	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "Use"}, Messages: []Message{{Text: "only for me"}}}, now)
+	c, _ := b.Add(Sticky{Kind: Memo, Parent: q.ID, Anchor: Anchor{Exact: "why"}, Messages: []Message{{Text: "on the memo"}}}, now)
+	got := Appendix(b, "Use a trie.\n", "- check memory", []string{q.ID, c.ID}, "ja", "2026-11-22", &NoteRef{ID: "m1", Title: "Plan"})
+	for _, want := range []string{
+		"## ホワイトボードで議論した（2026-11-22）\n",
+		"\n### 論点\n\n- check memory\n",
+		"\n### 付箋\n",
+		"\n#### “trie”\n",
+		"**メモ** why a trie?",
+		"\n##### “why”\n",
+		"\n議事録: [Plan](/#note/m1)\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("appendix has no %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "only for me") {
+		t.Errorf("appendix has a sticky note not chosen:\n%s", got)
+	}
+	// Nothing chosen and no points: the heading only.
+	if got := Appendix(b, "Use a trie.\n", "", nil, "en", "2026-11-22", nil); got != "## Discussed on a whiteboard (2026-11-22)\n" {
+		t.Errorf("empty appendix: %q", got)
 	}
 }

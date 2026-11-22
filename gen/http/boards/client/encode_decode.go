@@ -1579,11 +1579,13 @@ func unmarshalBoardSummaryResponseToBoardsBoardSummary(v *BoardSummaryResponse) 
 // *boards.BoardSource from a value of type *BoardSourceResponseBody.
 func unmarshalBoardSourceResponseBodyToBoardsBoardSource(v *BoardSourceResponseBody) *boards.BoardSource {
 	res := &boards.BoardSource{
-		From:   *v.From,
-		NoteID: v.NoteID,
-		Format: *v.Format,
-		Lang:   v.Lang,
-		Size:   *v.Size,
+		From:      *v.From,
+		NoteID:    v.NoteID,
+		NoteTitle: v.NoteTitle,
+		NoteState: v.NoteState,
+		Format:    *v.Format,
+		Lang:      v.Lang,
+		Size:      *v.Size,
 	}
 
 	return res
@@ -1645,6 +1647,7 @@ func unmarshalBoardResultResponseBodyToBoardsBoardResult(v *BoardResultResponseB
 	res := &boards.BoardResult{
 		Text:       *v.Text,
 		NoteID:     v.NoteID,
+		Appended:   *v.Appended,
 		FinishedAt: *v.FinishedAt,
 	}
 	res.Stickies = make([]string, len(v.Stickies))

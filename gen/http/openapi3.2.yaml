@@ -1137,6 +1137,7 @@ paths:
                                 from_session: false
                                 id: 3f9c2a7b1d4e6f
                                 result:
+                                    appended: false
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1148,6 +1149,8 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_state: trash
+                                    note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
                                 status: open
                                 stickies:
@@ -1343,6 +1346,7 @@ paths:
                                 from_session: false
                                 id: 3f9c2a7b1d4e6f
                                 result:
+                                    appended: false
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1354,6 +1358,8 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_state: trash
+                                    note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
                                 status: open
                                 stickies:
@@ -1518,6 +1524,7 @@ paths:
                                 from_session: false
                                 id: 3f9c2a7b1d4e6f
                                 result:
+                                    appended: false
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1529,6 +1536,8 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_state: trash
+                                    note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
                                 status: done
                                 stickies:
@@ -1737,6 +1746,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/FinishRequestBody'
                         example:
+                            append_to_note: false
                             lang: ja
                             notebook: inbox
                             stickies:
@@ -1760,6 +1770,7 @@ paths:
                                 from_session: true
                                 id: 3f9c2a7b1d4e6f
                                 result:
+                                    appended: false
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1771,6 +1782,8 @@ paths:
                                     from: note
                                     lang: Harum odio ut unde id dolorem.
                                     note_id: be4c1193735ee1
+                                    note_state: trash
+                                    note_title: Autem et qui sed cum explicabo.
                                     size: 5018596344245903192
                                 status: done
                                 stickies:
@@ -1866,7 +1879,7 @@ paths:
                                 title: Ut quam aperiam commodi consequuntur.
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
-                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, or the notebook is invalid'
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there (append_to_note)'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -7607,6 +7620,7 @@ components:
                 from_session: false
                 id: 3f9c2a7b1d4e6f
                 result:
+                    appended: false
                     finished_at: "2026-10-16T09:30:00Z"
                     note_id: be4c1193735ee1
                     stickies:
@@ -7618,6 +7632,8 @@ components:
                     from: note
                     lang: Harum odio ut unde id dolorem.
                     note_id: be4c1193735ee1
+                    note_state: trash
+                    note_title: Autem et qui sed cum explicabo.
                     size: 5018596344245903192
                 status: open
                 stickies:
@@ -7821,6 +7837,10 @@ components:
         BoardResult:
             type: object
             properties:
+                appended:
+                    type: boolean
+                    description: Whether the next points and the sticky notes were added at the end of the note the board was opened from
+                    example: false
                 finished_at:
                     type: string
                     description: When the board was finished
@@ -7828,7 +7848,7 @@ components:
                     format: date-time
                 note_id:
                     type: string
-                    description: The note the board was saved as, if it was
+                    description: The note the minutes of the board were kept in, if they were
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
                 stickies:
@@ -7846,6 +7866,7 @@ components:
                     description: What the person gives back to the session, in Markdown
                     example: Cumque accusantium doloremque eaque.
             example:
+                appended: false
                 finished_at: "2026-10-16T09:30:00Z"
                 note_id: be4c1193735ee1
                 stickies:
@@ -7855,6 +7876,7 @@ components:
             required:
                 - text
                 - stickies
+                - appended
                 - finished_at
         BoardSource:
             type: object
@@ -7885,6 +7907,19 @@ components:
                     description: The note the source was copied from
                     example: be4c1193735ee1
                     pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                note_state:
+                    type: string
+                    description: 'The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing'
+                    example: trash
+                    enum:
+                        - ok
+                        - changed
+                        - trash
+                        - missing
+                note_title:
+                    type: string
+                    description: The title of that note now, if it is there
+                    example: Autem et qui sed cum explicabo.
                 size:
                     type: integer
                     description: Size of the source, in bytes
@@ -7895,6 +7930,8 @@ components:
                 from: note
                 lang: Harum odio ut unde id dolorem.
                 note_id: be4c1193735ee1
+                note_state: trash
+                note_title: Autem et qui sed cum explicabo.
                 size: 5018596344245903192
             required:
                 - from
@@ -8606,6 +8643,10 @@ components:
         FinishRequestBody:
             type: object
             properties:
+                append_to_note:
+                    type: boolean
+                    description: Add the next points and the sticky notes given back, with a link to the minutes if kept, at the end of the note the board was opened from
+                    example: false
                 lang:
                     type: string
                     description: Language of the headings of the note, that of the UI
@@ -8638,6 +8679,7 @@ components:
                     maxLength: 65536
             description: Request body for finish.
             example:
+                append_to_note: false
                 lang: ja
                 notebook: inbox
                 stickies:

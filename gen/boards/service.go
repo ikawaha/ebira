@@ -181,8 +181,11 @@ type BoardResult struct {
 	Text string
 	// The sticky notes given back with the text
 	Stickies []string
-	// The note the board was saved as, if it was
+	// The note the minutes of the board were kept in, if they were
 	NoteID *string
+	// Whether the next points and the sticky notes were added at the end of the
+	// note the board was opened from
+	Appended bool
 	// When the board was finished
 	FinishedAt string
 }
@@ -193,6 +196,12 @@ type BoardSource struct {
 	From string
 	// The note the source was copied from
 	NoteID *string
+	// The title of that note now, if it is there
+	NoteTitle *string
+	// The state of that note now: ok; changed since the board was opened; trash,
+	// in the trash; or missing, deleted. Closing the board may add to it unless it
+	// is in the trash or missing
+	NoteState *string
 	// How to show the source
 	Format string
 	// Language of code
@@ -294,6 +303,9 @@ type FinishPayload struct {
 	Stickies []string
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string
+	// Add the next points and the sticky notes given back, with a link to the
+	// minutes if kept, at the end of the note the board was opened from
+	AppendToNote *bool
 	// Language of the headings of the note, that of the UI
 	Lang string
 }
@@ -502,8 +514,11 @@ type jsonBoardResultTransport struct {
 	Text *string `json:"text"`
 	// The sticky notes given back with the text
 	Stickies []string `json:"stickies"`
-	// The note the board was saved as, if it was
+	// The note the minutes of the board were kept in, if they were
 	NoteID *string `json:"note_id,omitempty"`
+	// Whether the next points and the sticky notes were added at the end of the
+	// note the board was opened from
+	Appended *bool `json:"appended"`
 	// When the board was finished
 	FinishedAt *string `json:"finished_at"`
 }
@@ -518,6 +533,9 @@ func validatejsonBoardResultTransport(value *jsonBoardResultTransport) (err erro
 	}
 	if value.Stickies == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "body"))
+	}
+	if value.Appended == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("appended", "body"))
 	}
 	if value.FinishedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
@@ -541,6 +559,12 @@ type jsonBoardSourceTransport struct {
 	From *string `json:"from"`
 	// The note the source was copied from
 	NoteID *string `json:"note_id,omitempty"`
+	// The title of that note now, if it is there
+	NoteTitle *string `json:"note_title,omitempty"`
+	// The state of that note now: ok; changed since the board was opened; trash,
+	// in the trash; or missing, deleted. Closing the board may add to it unless it
+	// is in the trash or missing
+	NoteState *string `json:"note_state,omitempty"`
 	// How to show the source
 	Format *string `json:"format"`
 	// Language of code
@@ -570,6 +594,11 @@ func validatejsonBoardSourceTransport(value *jsonBoardSourceTransport) (err erro
 	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.NoteState != nil {
+		if !(*value.NoteState == "ok" || *value.NoteState == "changed" || *value.NoteState == "trash" || *value.NoteState == "missing") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.note_state", *value.NoteState, []any{"ok", "changed", "trash", "missing"}))
+		}
 	}
 	if value.Format != nil {
 		if !(*value.Format == "markdown" || *value.Format == "text" || *value.Format == "diff" || *value.Format == "code") {
@@ -891,6 +920,11 @@ func validateBoardSourceOriginal(value *BoardSource) (err error) {
 	}
 	if value.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("value.note_id", *value.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if value.NoteState != nil {
+		if !(*value.NoteState == "ok" || *value.NoteState == "changed" || *value.NoteState == "trash" || *value.NoteState == "missing") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.note_state", *value.NoteState, []any{"ok", "changed", "trash", "missing"}))
+		}
 	}
 	if !(value.Format == "markdown" || value.Format == "text" || value.Format == "diff" || value.Format == "code") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.format", value.Format, []any{"markdown", "text", "diff", "code"}))
@@ -1412,6 +1446,7 @@ func EncodeBoardResult(in *BoardResult) ([]byte, error) {
 		body = &jsonBoardResultTransport{
 			Text:       &in.Text,
 			NoteID:     in.NoteID,
+			Appended:   &in.Appended,
 			FinishedAt: &in.FinishedAt,
 		}
 		body.Stickies = make([]string, len(in.Stickies))
@@ -1449,6 +1484,7 @@ func ValidateBoardResultValue(in *BoardResult) error {
 		body = &jsonBoardResultTransport{
 			Text:       &in.Text,
 			NoteID:     in.NoteID,
+			Appended:   &in.Appended,
 			FinishedAt: &in.FinishedAt,
 		}
 		body.Stickies = make([]string, len(in.Stickies))
@@ -1490,6 +1526,7 @@ func DecodeBoardResult(data []byte) (out *BoardResult, err error) {
 		out = &BoardResult{
 			Text:       *body.Text,
 			NoteID:     body.NoteID,
+			Appended:   *body.Appended,
 			FinishedAt: *body.FinishedAt,
 		}
 		out.Stickies = make([]string, len(body.Stickies))
@@ -1511,10 +1548,12 @@ func EncodeBoardSource(in *BoardSource) ([]byte, error) {
 	var body *jsonBoardSourceTransport
 	{
 		body = &jsonBoardSourceTransport{
-			From:   &in.From,
-			NoteID: in.NoteID,
-			Format: &in.Format,
-			Lang:   in.Lang,
+			From:      &in.From,
+			NoteID:    in.NoteID,
+			NoteTitle: in.NoteTitle,
+			NoteState: in.NoteState,
+			Format:    &in.Format,
+			Lang:      in.Lang,
 		}
 		size := boardIntTransport(in.Size)
 		body.Size = &size
@@ -1547,10 +1586,12 @@ func ValidateBoardSourceValue(in *BoardSource) error {
 	var body *jsonBoardSourceTransport
 	{
 		body = &jsonBoardSourceTransport{
-			From:   &in.From,
-			NoteID: in.NoteID,
-			Format: &in.Format,
-			Lang:   in.Lang,
+			From:      &in.From,
+			NoteID:    in.NoteID,
+			NoteTitle: in.NoteTitle,
+			NoteState: in.NoteState,
+			Format:    &in.Format,
+			Lang:      in.Lang,
 		}
 		size := boardIntTransport(in.Size)
 		body.Size = &size
@@ -1587,11 +1628,13 @@ func DecodeBoardSource(data []byte) (out *BoardSource, err error) {
 	}
 	{
 		out = &BoardSource{
-			From:   *body.From,
-			NoteID: body.NoteID,
-			Format: *body.Format,
-			Lang:   body.Lang,
-			Size:   int(*body.Size),
+			From:      *body.From,
+			NoteID:    body.NoteID,
+			NoteTitle: body.NoteTitle,
+			NoteState: body.NoteState,
+			Format:    *body.Format,
+			Lang:      body.Lang,
+			Size:      int(*body.Size),
 		}
 	}
 	return out, nil
@@ -1870,6 +1913,7 @@ func decodeBoardResultTransportToBoardResult(v *jsonBoardResultTransport) *Board
 	res := &BoardResult{
 		Text:       *v.Text,
 		NoteID:     v.NoteID,
+		Appended:   *v.Appended,
 		FinishedAt: *v.FinishedAt,
 	}
 	res.Stickies = make([]string, len(v.Stickies))
@@ -1882,11 +1926,13 @@ func decodeBoardResultTransportToBoardResult(v *jsonBoardResultTransport) *Board
 
 func decodeBoardSourceTransportToBoardSource(v *jsonBoardSourceTransport) *BoardSource {
 	res := &BoardSource{
-		From:   *v.From,
-		NoteID: v.NoteID,
-		Format: *v.Format,
-		Lang:   v.Lang,
-		Size:   int(*v.Size),
+		From:      *v.From,
+		NoteID:    v.NoteID,
+		NoteTitle: v.NoteTitle,
+		NoteState: v.NoteState,
+		Format:    *v.Format,
+		Lang:      v.Lang,
+		Size:      int(*v.Size),
 	}
 
 	return res
@@ -1950,6 +1996,7 @@ func encodeBoardResultToBoardResultTransport(v *BoardResult) *jsonBoardResultTra
 	res := &jsonBoardResultTransport{
 		Text:       &v.Text,
 		NoteID:     v.NoteID,
+		Appended:   &v.Appended,
 		FinishedAt: &v.FinishedAt,
 	}
 	res.Stickies = make([]string, len(v.Stickies))
@@ -1962,10 +2009,12 @@ func encodeBoardResultToBoardResultTransport(v *BoardResult) *jsonBoardResultTra
 
 func encodeBoardSourceToBoardSourceTransport(v *BoardSource) *jsonBoardSourceTransport {
 	res := &jsonBoardSourceTransport{
-		From:   &v.From,
-		NoteID: v.NoteID,
-		Format: &v.Format,
-		Lang:   v.Lang,
+		From:      &v.From,
+		NoteID:    v.NoteID,
+		NoteTitle: v.NoteTitle,
+		NoteState: v.NoteState,
+		Format:    &v.Format,
+		Lang:      v.Lang,
 	}
 	size := boardIntTransport(v.Size)
 	res.Size = &size
@@ -2217,6 +2266,13 @@ func validateBoardJSONValue8(path string, value any, description string) error {
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "appended":
+			if err := validateBoardJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the next points and the sticky notes were added at the end of the note the board was opened from",
+			); err != nil {
+				return err
+			}
 		case "finished_at":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
@@ -2227,7 +2283,7 @@ func validateBoardJSONValue8(path string, value any, description string) error {
 		case "note_id":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The note the board was saved as, if it was",
+				typed[key], "The note the minutes of the board were kept in, if they were",
 			); err != nil {
 				return err
 			}
@@ -2247,6 +2303,7 @@ func validateBoardJSONValue8(path string, value any, description string) error {
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"appended",
 				"finished_at",
 				"note_id",
 				"stickies",
@@ -2329,6 +2386,20 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 			); err != nil {
 				return err
 			}
+		case "note_state":
+			if err := validateBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing",
+			); err != nil {
+				return err
+			}
+		case "note_title":
+			if err := validateBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "The title of that note now, if it is there",
+			); err != nil {
+				return err
+			}
 		case "size":
 			if err := validateBoardJSONValue11(
 				generatedJSONChildPath(path, key, false),
@@ -2342,6 +2413,8 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 				"from",
 				"lang",
 				"note_id",
+				"note_state",
+				"note_title",
 				"size",
 			})
 		}
@@ -2958,6 +3031,16 @@ func checkBoardBoardSourceValue(in *BoardSource, field string, active map[any]bo
 		if in.NoteID != nil {
 			if !utf8.ValidString(string(*in.NoteID)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_id", false))
+			}
+		}
+		if in.NoteTitle != nil {
+			if !utf8.ValidString(string(*in.NoteTitle)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_title", false))
+			}
+		}
+		if in.NoteState != nil {
+			if !utf8.ValidString(string(*in.NoteState)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "note_state", false))
 			}
 		}
 		if !utf8.ValidString(string(in.Format)) {

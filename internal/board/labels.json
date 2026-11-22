@@ -5,7 +5,11 @@
     "lines": "{n} lines",
     "question": "Q",
     "answer": "A",
-    "memo": "Memo"
+    "memo": "Memo",
+    "from_note": "From the note",
+    "discussed": "Discussed on a whiteboard ({date})",
+    "next_points": "Next points",
+    "minutes": "Minutes"
   },
   "ja": {
     "stickies": "付箋",
@@ -13,6 +17,10 @@
     "lines": "{n} 行",
     "question": "問",
     "answer": "答",
-    "memo": "メモ"
+    "memo": "メモ",
+    "from_note": "元のノート",
+    "discussed": "ホワイトボードで議論した（{date}）",
+    "next_points": "論点",
+    "minutes": "議事録"
   }
 }

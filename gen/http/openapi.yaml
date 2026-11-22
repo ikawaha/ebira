@@ -1084,7 +1084,7 @@ paths:
                             - from_session
                             - fork
                 "400":
-                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, or the notebook is invalid'
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there (append_to_note)'
                     schema:
                         $ref: '#/definitions/BoardsFinishBadRequestResponseBody'
                     examples:
@@ -6205,6 +6205,7 @@ definitions:
             from_session: false
             id: 3f9c2a7b1d4e6f
             result:
+                appended: false
                 finished_at: "2026-10-16T09:30:00Z"
                 note_id: be4c1193735ee1
                 stickies:
@@ -6216,6 +6217,8 @@ definitions:
                 from: note
                 lang: Harum odio ut unde id dolorem.
                 note_id: be4c1193735ee1
+                note_state: trash
+                note_title: Autem et qui sed cum explicabo.
                 size: 5018596344245903192
             status: open
             stickies:
@@ -6424,6 +6427,10 @@ definitions:
         title: BoardResult
         type: object
         properties:
+            appended:
+                type: boolean
+                description: Whether the next points and the sticky notes were added at the end of the note the board was opened from
+                example: false
             finished_at:
                 type: string
                 description: When the board was finished
@@ -6431,7 +6438,7 @@ definitions:
                 format: date-time
             note_id:
                 type: string
-                description: The note the board was saved as, if it was
+                description: The note the minutes of the board were kept in, if they were
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
             stickies:
@@ -6449,6 +6456,7 @@ definitions:
                 description: What the person gives back to the session, in Markdown
                 example: Cumque accusantium doloremque eaque.
         example:
+            appended: false
             finished_at: "2026-10-16T09:30:00Z"
             note_id: be4c1193735ee1
             stickies:
@@ -6458,6 +6466,7 @@ definitions:
         required:
             - text
             - stickies
+            - appended
             - finished_at
     BoardSource:
         title: BoardSource
@@ -6489,6 +6498,19 @@ definitions:
                 description: The note the source was copied from
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            note_state:
+                type: string
+                description: 'The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing'
+                example: trash
+                enum:
+                    - ok
+                    - changed
+                    - trash
+                    - missing
+            note_title:
+                type: string
+                description: The title of that note now, if it is there
+                example: Autem et qui sed cum explicabo.
             size:
                 type: integer
                 description: Size of the source, in bytes
@@ -6499,6 +6521,8 @@ definitions:
             from: note
             lang: Harum odio ut unde id dolorem.
             note_id: be4c1193735ee1
+            note_state: trash
+            note_title: Autem et qui sed cum explicabo.
             size: 5018596344245903192
         required:
             - from
@@ -7568,6 +7592,10 @@ definitions:
         title: BoardsFinishRequestBody
         type: object
         properties:
+            append_to_note:
+                type: boolean
+                description: Add the next points and the sticky notes given back, with a link to the minutes if kept, at the end of the note the board was opened from
+                example: false
             lang:
                 type: string
                 description: Language of the headings of the note, that of the UI
@@ -7599,6 +7627,7 @@ definitions:
                 example: zln
                 maxLength: 65536
         example:
+            append_to_note: false
             lang: ja
             notebook: inbox
             stickies:

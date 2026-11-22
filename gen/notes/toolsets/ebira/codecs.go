@@ -1546,7 +1546,7 @@ var getAiBoardResultFields = []tools.FieldMetadata{
 	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note_id")},
 		JSONType:    "string",
-		Description: "The note the user saved the board as, if they did",
+		Description: "The note the user kept the minutes of the board in, if they did: the next points, the sticky notes and the topic",
 	},
 }
 var getNotePayloadFields = []tools.FieldMetadata{
@@ -10522,7 +10522,7 @@ func validateGetAiBoardResultJSONValue(path string, value any, description strin
 		case "note_id":
 			if err := validateStringJSONValue(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The note the user saved the board as, if they did",
+				typed[key], "The note the user kept the minutes of the board in, if they did: the next points, the sticky notes and the topic",
 			); err != nil {
 				return err
 			}

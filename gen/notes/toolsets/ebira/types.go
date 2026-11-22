@@ -269,7 +269,8 @@ type (
 		// The sticky notes the user chose to give back, once done, in the order of the
 		// board
 		Stickies []*AIBoardSticky
-		// The note the user saved the board as, if they did
+		// The note the user kept the minutes of the board in, if they did: the next
+		// points, the sticky notes and the topic
 		NoteID *string
 	}
 	// GetNotePayload defines the JSON payload for the ebira.get_note tool.

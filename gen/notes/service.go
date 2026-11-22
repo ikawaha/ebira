@@ -473,7 +473,8 @@ type AIBoard struct {
 	// The sticky notes the user chose to give back, once done, in the order of the
 	// board
 	Stickies []*AIBoardSticky
-	// The note the user saved the board as, if they did
+	// The note the user kept the minutes of the board in, if they did: the next
+	// points, the sticky notes and the topic
 	NoteID *string
 }
 
@@ -2282,7 +2283,8 @@ type jsonAIBoardTransport struct {
 	// The sticky notes the user chose to give back, once done, in the order of the
 	// board
 	Stickies []*jsonAIBoardStickyTransport `json:"stickies,omitempty"`
-	// The note the user saved the board as, if they did
+	// The note the user kept the minutes of the board in, if they did: the next
+	// points, the sticky notes and the topic
 	NoteID *string `json:"note_id,omitempty"`
 }
 
@@ -9967,7 +9969,7 @@ func validateAIBoardJSONValue(path string, value any, description string) error 
 		case "note_id":
 			if err := validateAIBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "The note the user saved the board as, if they did",
+				typed[key], "The note the user kept the minutes of the board in, if they did: the next points, the sticky notes and the topic",
 			); err != nil {
 				return err
 			}

@@ -314,7 +314,8 @@ type (
 		// The sticky notes the user chose to give back, once done, in the order of the
 		// board
 		Stickies []*AIBoardStickyTransport `json:"stickies,omitempty"`
-		// The note the user saved the board as, if they did
+		// The note the user kept the minutes of the board in, if they did: the next
+		// points, the sticky notes and the topic
 		NoteID *string `json:"note_id,omitempty"`
 	}
 	// GetNotePayloadTransport is the internal JSON transport type for GetNotePayload.

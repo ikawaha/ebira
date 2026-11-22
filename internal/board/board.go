@@ -125,8 +125,11 @@ type Board struct {
 type Source struct {
 	From   string `json:"from"`
 	NoteID string `json:"note_id,omitempty"`
-	Format string `json:"format"`
-	Lang   string `json:"lang,omitempty"`
+	// NoteVersion is the version of the note when the board was opened from
+	// it, to tell whether it changed since.
+	NoteVersion string `json:"note_version,omitempty"`
+	Format      string `json:"format"`
+	Lang        string `json:"lang,omitempty"`
 	// Size is the size of source.md, in bytes.
 	Size int `json:"size"`
 }
@@ -177,8 +180,11 @@ type Message struct {
 type Result struct {
 	Text string `json:"text"`
 	// Stickies are the IDs of the sticky notes given back with Text.
-	Stickies   []string  `json:"stickies,omitempty"`
-	NoteID     string    `json:"note_id,omitempty"`
+	Stickies []string `json:"stickies,omitempty"`
+	NoteID   string   `json:"note_id,omitempty"`
+	// Appended tells whether the next points were added to the note the
+	// board was opened from.
+	Appended   bool      `json:"appended,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
 }
 

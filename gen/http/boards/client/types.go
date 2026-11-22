@@ -75,6 +75,9 @@ type FinishRequestBody struct {
 	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
 	// Notebook to save the board in as a note; not saved when omitted
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Add the next points and the sticky notes given back, with a link to the
+	// minutes if kept, at the end of the note the board was opened from
+	AppendToNote *bool `form:"append_to_note,omitempty" json:"append_to_note,omitempty" xml:"append_to_note,omitempty"`
 	// Language of the headings of the note, that of the UI
 	Lang string `form:"lang" json:"lang" xml:"lang"`
 }
@@ -878,6 +881,12 @@ type BoardSourceResponseBody struct {
 	From *string `form:"from,omitempty" json:"from,omitempty" xml:"from,omitempty"`
 	// The note the source was copied from
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// The title of that note now, if it is there
+	NoteTitle *string `form:"note_title,omitempty" json:"note_title,omitempty" xml:"note_title,omitempty"`
+	// The state of that note now: ok; changed since the board was opened; trash,
+	// in the trash; or missing, deleted. Closing the board may add to it unless it
+	// is in the trash or missing
+	NoteState *string `form:"note_state,omitempty" json:"note_state,omitempty" xml:"note_state,omitempty"`
 	// How to show the source
 	Format *string `form:"format,omitempty" json:"format,omitempty" xml:"format,omitempty"`
 	// Language of code
@@ -938,8 +947,11 @@ type BoardResultResponseBody struct {
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 	// The sticky notes given back with the text
 	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
-	// The note the board was saved as, if it was
+	// The note the minutes of the board were kept in, if they were
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// Whether the next points and the sticky notes were added at the end of the
+	// note the board was opened from
+	Appended *bool `form:"appended,omitempty" json:"appended,omitempty" xml:"appended,omitempty"`
 	// When the board was finished
 	FinishedAt *string `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
 }
@@ -1038,9 +1050,10 @@ func NewDraftRequestBody(p *boards.DraftPayload) *DraftRequestBody {
 // "finish" endpoint of the "boards" service.
 func NewFinishRequestBody(p *boards.FinishPayload) *FinishRequestBody {
 	body := &FinishRequestBody{
-		Text:     p.Text,
-		Notebook: p.Notebook,
-		Lang:     p.Lang,
+		Text:         p.Text,
+		Notebook:     p.Notebook,
+		AppendToNote: p.AppendToNote,
+		Lang:         p.Lang,
 	}
 	if p.Stickies != nil {
 		body.Stickies = make([]string, len(p.Stickies))
@@ -3110,6 +3123,11 @@ func ValidateBoardSourceResponseBody(body *BoardSourceResponseBody) (err error) 
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
 	}
+	if body.NoteState != nil {
+		if !(*body.NoteState == "ok" || *body.NoteState == "changed" || *body.NoteState == "trash" || *body.NoteState == "missing") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.note_state", *body.NoteState, []any{"ok", "changed", "trash", "missing"}))
+		}
+	}
 	if body.Format != nil {
 		if !(*body.Format == "markdown" || *body.Format == "text" || *body.Format == "diff" || *body.Format == "code") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.format", *body.Format, []any{"markdown", "text", "diff", "code"}))
@@ -3137,6 +3155,11 @@ func validateBoardSourceResponseBody(body *BoardSourceResponseBody, path string)
 	}
 	if body.NoteID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern(path+".note_id", *body.NoteID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	if body.NoteState != nil {
+		if !(*body.NoteState == "ok" || *body.NoteState == "changed" || *body.NoteState == "trash" || *body.NoteState == "missing") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".note_state", *body.NoteState, []any{"ok", "changed", "trash", "missing"}))
+		}
 	}
 	if body.Format != nil {
 		if !(*body.Format == "markdown" || *body.Format == "text" || *body.Format == "diff" || *body.Format == "code") {
@@ -3353,6 +3376,9 @@ func ValidateBoardResultResponseBody(body *BoardResultResponseBody) (err error) 
 	if body.Stickies == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "body"))
 	}
+	if body.Appended == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("appended", "body"))
+	}
 	if body.FinishedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", "body"))
 	}
@@ -3376,6 +3402,9 @@ func validateBoardResultResponseBody(body *BoardResultResponseBody, path string)
 	}
 	if body.Stickies == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", path))
+	}
+	if body.Appended == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("appended", path))
 	}
 	if body.FinishedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("finished_at", path))

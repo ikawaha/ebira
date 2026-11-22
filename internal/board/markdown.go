@@ -35,60 +35,36 @@ func label(lang, key string) string {
 // Tag is the tag of the notes boards are saved as.
 const Tag = "whiteboard"
 
-// NoteBody returns the body of the note board b is saved as, with source as
-// its source and result as what is given back, in the words of lang (en or
-// ja): what is given back, the sticky notes, each under a heading with the
-// sticky notes on its answer one level below, and the source, folded as it
-// may be long.
-func NoteBody(b *Board, source, result, lang string) string {
+// NoteRef names a note, for a link to it.
+type NoteRef struct {
+	ID, Title string
+}
+
+// link returns a Markdown link to n, which the web UI opens as a note.
+func (n NoteRef) link() string {
+	title := strings.TrimSpace(n.Title)
+	if title == "" {
+		title = n.ID
+	}
+	return "[" + escapeInline(title) + "](/#note/" + n.ID + ")"
+}
+
+// NoteBody returns the body of the note the minutes of board b are kept in,
+// with source as its source and result as the next points, in the words of
+// lang (en or ja): a link to the note b was opened from, if from is given,
+// the next points, the sticky notes, each under a heading with the sticky
+// notes on its answer one level below, and the source, folded as it may be
+// long.
+func NoteBody(b *Board, source, result, lang string, from *NoteRef) string {
 	var sb strings.Builder
+	if from != nil {
+		fmt.Fprintf(&sb, "%s: %s\n\n", label(lang, "from_note"), from.link())
+	}
 	if r := strings.TrimSpace(result); r != "" {
 		sb.WriteString(r)
 		sb.WriteString("\n\n")
 	}
-	children := map[string][]*Sticky{}
-	var roots []*Sticky
-	for i := range b.Stickies {
-		s := &b.Stickies[i]
-		if s.Parent == "" || b.Find(s.Parent) == nil {
-			roots = append(roots, s)
-		} else {
-			children[s.Parent] = append(children[s.Parent], s)
-		}
-	}
-	// In the order of the passages in the source, as on the board; those
-	// whose passage is not found go last.
-	at := map[string]int{}
-	for _, s := range roots {
-		at[s.ID] = Locate(source, s.Anchor)
-		if at[s.ID] < 0 {
-			at[s.ID] = len(source)
-		}
-	}
-	slices.SortStableFunc(roots, func(x, y *Sticky) int { return at[x.ID] - at[y.ID] })
-	if len(roots) > 0 {
-		fmt.Fprintf(&sb, "## %s\n", label(lang, "stickies"))
-		var write func(s *Sticky, level int)
-		write = func(s *Sticky, level int) {
-			fmt.Fprintf(&sb, "\n%s %s\n\n", strings.Repeat("#", min(level, 6)), heading(s.Anchor.Exact))
-			sb.WriteString(quote(s.Anchor.Exact))
-			for _, m := range s.Messages {
-				who := "question"
-				if m.Role == Agent {
-					who = "answer"
-				} else if s.Kind == Memo {
-					who = "memo"
-				}
-				who = "**" + label(lang, who) + "**"
-				fmt.Fprintf(&sb, "\n%s %s\n", who, strings.TrimSpace(m.Text))
-			}
-			for _, c := range children[s.ID] {
-				write(c, level+1)
-			}
-		}
-		for _, s := range roots {
-			write(s, 3)
-		}
+	if writeStickies(&sb, b, source, lang, 2, nil) {
 		sb.WriteString("\n")
 	}
 	fmt.Fprintf(&sb, "## %s\n\n", label(lang, "source"))
@@ -100,6 +76,89 @@ func NoteBody(b *Board, source, result, lang string) string {
 	fmt.Fprintf(&sb, "<details>\n<summary>%s (%s)</summary>\n\n", b.Source.Format, n)
 	sb.WriteString(fence(source, b.Source))
 	sb.WriteString("\n</details>\n")
+	return sb.String()
+}
+
+// writeStickies writes the sticky notes of b under a heading of level, in
+// the order of their passages in source, each under a heading one level
+// below with the sticky notes on its answer below it. With keep, only the
+// sticky notes it keeps are written: one whose parent is not kept goes with
+// the others. It reports whether it wrote any.
+func writeStickies(sb *strings.Builder, b *Board, source, lang string, level int, keep func(*Sticky) bool) bool {
+	kept := func(s *Sticky) bool { return keep == nil || keep(s) }
+	children := map[string][]*Sticky{}
+	var roots []*Sticky
+	for i := range b.Stickies {
+		s := &b.Stickies[i]
+		if !kept(s) {
+			continue
+		}
+		if p := b.Find(s.Parent); s.Parent == "" || p == nil || !kept(p) {
+			roots = append(roots, s)
+		} else {
+			children[s.Parent] = append(children[s.Parent], s)
+		}
+	}
+	if len(roots) == 0 {
+		return false
+	}
+	// In the order of the passages in the source, as on the board; those
+	// whose passage is not found go last.
+	at := map[string]int{}
+	for _, s := range roots {
+		at[s.ID] = Locate(source, s.Anchor)
+		if at[s.ID] < 0 {
+			at[s.ID] = len(source)
+		}
+	}
+	slices.SortStableFunc(roots, func(x, y *Sticky) int { return at[x.ID] - at[y.ID] })
+	fmt.Fprintf(sb, "%s %s\n", strings.Repeat("#", level), label(lang, "stickies"))
+	var write func(s *Sticky, level int)
+	write = func(s *Sticky, level int) {
+		fmt.Fprintf(sb, "\n%s %s\n\n", strings.Repeat("#", min(level, 6)), heading(s.Anchor.Exact))
+		sb.WriteString(quote(s.Anchor.Exact))
+		for _, m := range s.Messages {
+			who := "question"
+			if m.Role == Agent {
+				who = "answer"
+			} else if s.Kind == Memo {
+				who = "memo"
+			}
+			who = "**" + label(lang, who) + "**"
+			fmt.Fprintf(sb, "\n%s %s\n", who, strings.TrimSpace(m.Text))
+		}
+		for _, c := range children[s.ID] {
+			write(c, level+1)
+		}
+	}
+	for _, s := range roots {
+		write(s, level+1)
+	}
+	return true
+}
+
+// Appendix returns what closing board b adds at the end of the note it was
+// opened from, in the words of lang: under a heading of the day, the next
+// points (result), the sticky notes chosen to give back (stickies), and a
+// link to the minutes, if they were kept.
+func Appendix(b *Board, source, result string, stickies []string, lang, day string, minutes *NoteRef) string {
+	chosen := make(map[string]bool, len(stickies))
+	for _, id := range stickies {
+		chosen[id] = true
+	}
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "## %s\n", strings.ReplaceAll(label(lang, "discussed"), "{date}", day))
+	if r := strings.TrimSpace(result); r != "" {
+		fmt.Fprintf(&sb, "\n### %s\n\n%s\n", label(lang, "next_points"), r)
+	}
+	var st strings.Builder
+	if writeStickies(&st, b, source, lang, 3, func(s *Sticky) bool { return chosen[s.ID] }) {
+		sb.WriteString("\n")
+		sb.WriteString(st.String())
+	}
+	if minutes != nil {
+		fmt.Fprintf(&sb, "\n%s: %s\n", label(lang, "minutes"), minutes.link())
+	}
 	return sb.String()
 }
 

@@ -473,7 +473,7 @@ func BuildFinishPayload(boardsFinishBody *string, boardsFinishID *string, boards
 		}
 		err = json.Unmarshal([]byte(*boardsFinishBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"lang\": \"ja\",\n      \"notebook\": \"inbox\",\n      \"stickies\": [\n         \"s1a2b3c4d\",\n         \"s1a2b3c4d\",\n         \"s1a2b3c4d\"\n      ],\n      \"text\": \"zln\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"append_to_note\": false,\n      \"lang\": \"ja\",\n      \"notebook\": \"inbox\",\n      \"stickies\": [\n         \"s1a2b3c4d\",\n         \"s1a2b3c4d\",\n         \"s1a2b3c4d\"\n      ],\n      \"text\": \"zln\"\n   }'")
 		}
 		if utf8.RuneCountInString(body.Text) > 65536 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.text", body.Text, utf8.RuneCountInString(body.Text), 65536, false))
@@ -512,9 +512,10 @@ func BuildFinishPayload(boardsFinishBody *string, boardsFinishID *string, boards
 		}
 	}
 	v := &boards.FinishPayload{
-		Text:     body.Text,
-		Notebook: body.Notebook,
-		Lang:     body.Lang,
+		Text:         body.Text,
+		Notebook:     body.Notebook,
+		AppendToNote: body.AppendToNote,
+		Lang:         body.Lang,
 	}
 	if body.Stickies != nil {
 		v.Stickies = make([]string, len(body.Stickies))

@@ -7531,7 +7531,12 @@ function renderBoard() {
     const given = b.result.stickies?.length || 0;
     renderBody(text, b.result.text || (given ? "" : t("boardNothingBack")));
     done.append(text);
-    if (given) done.append(el("p", "board-hint", t("boardStickiesGiven", { n: given })));
+    if (given && !b.result.appended) done.append(el("p", "board-hint", t("boardStickiesGiven", { n: given })));
+    if (b.result.appended && b.source.note_id) {
+      const a = el("a", "", b.source.note_title || b.source.note_id);
+      a.href = "/#note/" + encodeURIComponent(b.source.note_id);
+      done.append(el("p", "board-hint", t("boardAppendedTo"), " ", a));
+    }
     if (b.result.note_id) {
       const a = el("a", "", t("boardSavedNote"));
       a.href = "/#note/" + encodeURIComponent(b.result.note_id);
@@ -7952,6 +7957,10 @@ function renameBoard(h) {
 function openBoardFinish() {
   const b = board.data;
   const dlg = $("board-finish");
+  // A board opened from a note gives back to that note: the next points and
+  // the sticky notes checked are added at its end, unless it is gone.
+  const fromNote = b.source.from === "note";
+  const noteThere = fromNote && (b.source.note_state === "ok" || b.source.note_state === "changed");
   const text = el("textarea");
   text.rows = 8;
   text.placeholder = t("boardBackPlaceholder");
@@ -7986,7 +7995,7 @@ function openBoardFinish() {
     return [row, ...stickyRows(s.id, depth + 1)];
   });
   const picks = b.stickies.length
-    ? el("div", "board-picks", el("p", "board-hint", t(b.from_session ? "boardPickHintSession" : "boardPickHint")), ...stickyRows("", 0))
+    ? el("div", "board-picks", el("p", "board-hint", t(b.from_session ? "boardPickHintSession" : fromNote ? "boardPickHintNote" : "boardPickHint")), ...stickyRows("", 0))
     : null;
   const chosen = () => boxes.filter((x) => x.checked).map((x) => x.value);
 
@@ -8020,10 +8029,22 @@ function openBoardFinish() {
   select.disabled = !save.checked;
   save.addEventListener("change", () => { select.disabled = !save.checked; });
 
+  const append = el("input");
+  append.type = "checkbox";
+  append.checked = noteThere;
+  const appendRow = [];
+  if (noteThere) {
+    appendRow.push(el("label", "board-save", append, t("boardAppendToNote", { title: b.source.note_title || "" })));
+    if (b.source.note_state === "changed") appendRow.push(el("p", "board-hint", t("boardNoteChanged")));
+  } else if (fromNote) {
+    appendRow.push(el("p", "board-hint", t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
+  }
+
   const finish = button(t("boardFinish"), async () => {
     finish.disabled = true;
     const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
     if (save.checked) body.notebook = select.value;
+    if (noteThere && append.checked) body.append_to_note = true;
     try {
       await api(`/boards/${b.id}/finish`, { method: "POST", body });
     } catch (e) {
@@ -8046,8 +8067,9 @@ function openBoardFinish() {
   dlg.replaceChildren(
     el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close())),
     ...(picks ? [picks, el("div", "board-draft", draft)] : []),
-    el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : "boardBackHint")),
+    el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : noteThere ? "boardBackHintNote" : "boardBackHint")),
     text,
+    ...appendRow,
     el("label", "board-save", save, t("boardSaveAsNote"), select),
     err,
     el("div", "files-actions", button(t("cancel"), () => dlg.close()), finish));

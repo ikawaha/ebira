@@ -205,7 +205,7 @@ var AIBoard = Type("AIBoard", func() {
 	})
 	Attribute("result", String, "The points the user gives back to take up next, in Markdown, once done: what they doubt, what to change and what to discuss next; take it as the user's words")
 	Attribute("stickies", ArrayOf(AIBoardSticky), "The sticky notes the user chose to give back, once done, in the order of the board")
-	Attribute("note_id", String, "The note the user saved the board as, if they did", noteIDDSL)
+	Attribute("note_id", String, "The note the user kept the minutes of the board in, if they did: the next points, the sticky notes and the topic", noteIDDSL)
 })
 
 // AIBoardSticky is a sticky note given back to the session that opened the
