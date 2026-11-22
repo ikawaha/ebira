@@ -21,12 +21,25 @@ Choose a passage of the text, and a small box opens.
 
 - **Memo**: keep what you write on the passage.
 - **Ask the assistant**: the assistant answers what you write. The answer is made in the background and shows on the sticky note when it comes (put other sticky notes meanwhile as you like). ⌘Enter (Ctrl+Enter) asks too.
+- **Ask a fork**: on a whiteboard Claude Code opened. A fork of the session that opened it answers, going on from its conversation (see "Asking a fork" below).
 
 The sticky notes line up on the right of the text, beside their passages. A passage has a mark: click it to go to its sticky note, or the quote at the top of a sticky note to go to the passage. A sticky note takes follow-up questions, and choosing a passage of an answer puts a sticky note on that answer.
 
 The assistant reads the passage with the text around it and the sticky note so far, and searches your notes when they may help (not private notebooks). The assistant of the server answers, so asking needs its model API key (without one, memos still work).
 
 > **Mind where it goes.** Asking the assistant sends the passage and the text around it, company code included, to the provider of the assistant (Anthropic, Google or OpenAI).
+
+### Asking a fork
+
+A whiteboard opened with the skill `ebira-whiteboard` of Claude Code keeps the ID of the session that opened it and its working directory. "Ask a fork" forks that session (`claude --resume <session> --fork-session`) and asks the fork. It knows the conversation so far and the files of the working directory, so it answers closer to the context than the assistant. Nothing is added to the main conversation.
+
+- A follow-up question goes on in the same fork. A sticky note on an answer of a fork forks that fork.
+- A fork may only read files (Read, Grep, Glob) and the notes of ebira; it changes neither files nor notes.
+- An answer may take minutes (one at a time, at most 10 minutes). Deleting the sticky note stops it.
+- "Go on in a terminal" on an answered sticky note gives the command to go on with the fork in Claude Code.
+- The sessions of the forks are deleted with the whiteboard. The session that opened it is left as it is.
+
+A fork runs `claude` of the machine of the server, so it works only while you are signed in with a passkey (`ebira auth passkey`). Without passkeys (`auth: none`), the button is disabled. It is billed as Claude Code of that machine is: the `ANTHROPIC_API_KEY` of the assistant, if the server has one, is not passed on to forks.
 
 ## Finishing
 
