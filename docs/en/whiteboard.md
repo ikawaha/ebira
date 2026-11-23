@@ -10,7 +10,7 @@ An explanation, a diff or a plan that AI wrote can open on a whiteboard as the t
 
 - **From AI such as Claude Code**: with ebira connected over MCP ([Using AI](ai.md)), ask for it, such as "open this diff on an ebira whiteboard". The AI sends the text as is to a URL from `start_ai_board` (with `curl -T`, so that the text does not go through the conversation), or gives the text or a note ID to `open_ai_board`, and tells you the URL of the whiteboard.
   - Claude Code has these steps as the skill `ebira-whiteboard`, installed with the registration by `ebira mcp add` or "Register with Claude Code" of the web UI ([Using AI](ai.md)). With the skill, Claude Code tells the whiteboard the ID of its session and its working directory, and `/ebira-whiteboard` calls it.
-- **From a note**: the "Open on a whiteboard" button at the top right of the preview. The body is copied when it opens, so changing the note later leaves the whiteboard as it is. Opening it, Claude reads the note to answer the sticky notes (a private note asks first).
+- **From a note**: the "Open on a whiteboard" button at the top right of the preview. The body is copied when it opens, so changing the note later leaves the whiteboard as it is. Opening it, Claude reads the note to answer the sticky notes (a private note asks first). If a whiteboard of the note is open already, it opens that one rather than a new one; once it is closed, a new one opens.
 - **The list**: the Whiteboards row in the left column (shown while there are whiteboards; the number is of those open).
 
 The topic shows as notes do when it is Markdown; a diff, code and plain text with line numbers. A diff colors the lines added and removed.
@@ -55,7 +55,7 @@ When the discussion is over, click "Close the board" at the top right, and choos
 
 - The sticky notes are listed, all checked at first. Those checked are given back to the AI with their passages, your memos and questions, and the answers of Claude. Uncheck the side trips that were only for you: nothing of a sticky note unchecked is given back.
 - In the next points, write what you want to take up with the AI next (what you doubt, what to change, what to think about), if anything. "Draft from the sticky notes checked" has Claude draft them from those checked. Read and fix the draft rather than giving it back as is.
-- Check "Keep the minutes as a note in" to keep the next points, the sticky notes (passages, messages and those on answers) and the topic, folded, as the minutes: one note in the notebook chosen, tagged `whiteboard`. Unchecked, no minutes are kept. The minutes of a board opened from a note link to that note.
+- Check "Keep the minutes as a note in" to keep the next points, the sticky notes (passages, messages and those on answers) and the topic, folded, as the minutes: one note in the notebook chosen, tagged `whiteboard`. Unchecked, no minutes are kept. With no sticky notes and no next points, no minutes can be kept: they would only copy the topic. The minutes of a board opened from a note link to that note.
 - On a board opened from a note, "Add a link to the minutes in “Appendix: discussions” of the note …", checked at first, adds a line linking to the minutes in the section "Appendix: discussions" at the end of the note; the minutes are kept then, to link to.
 
   ```
