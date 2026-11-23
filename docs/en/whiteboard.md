@@ -63,8 +63,9 @@ Choose whether the note takes what was discussed.
 
 - In the next points, write what Claude should do, such as: add what we discussed to the note.
 - **Close and reflect in the note**: once closed, Claude reads the next points and all the sticky notes, resolved ones too, in the background, answers the next points and changes the note as they say. Claude only gives the changes; ebira makes them to that note only. Text added at the end goes before the section "Appendix: discussions".
-  - The reply of Claude, and whether it changed the note, show under "Reply of Claude" on the closed board.
-  - When someone changed the note after the board was closed, the changes are not made: they show under the reply.
+  - The reply of Claude, and whether it changed the note, show under "Reply of Claude" on the closed board. When the reply comes, the bar at the bottom tells, whatever the page.
+  - The note is changed without a look first: "Compare or put back in the history" compares it with the version before, and puts that back.
+  - When the changes cannot be made, as when someone changed the note after the board was closed, the reason shows, and the changes are at the end of the reply.
   - It can be clicked when there are next points, the note is in a notebook of the collab kind, and Claude can answer. When it cannot, the reason shows above the buttons.
 - **Close without reflecting**: close, leaving the note as it is.
 - **Keep the minutes too**: keep the next points, the sticky notes (passages, messages and those on answers) and the topic, folded, as the minutes: one note in the notebook chosen (that of the note at first), tagged `whiteboard`. The minutes are linked with a line in the section "Appendix: discussions" at the end of the note.
