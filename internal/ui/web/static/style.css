@@ -953,6 +953,7 @@ mark.board-anchor { background: color-mix(in srgb, var(--mark-bg) 55%, transpare
 .board-finish .board-pick-passage { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
 .board-finish .board-pick-message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board-finish .board-save { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.board-finish [hidden] { display: none; }
 .board-finish select { font: inherit; padding: 2px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); color: var(--fg); }
 @media (max-width: 760px) {
   .board-view, .panes.board-open .assistant, .panes.board-open .resizer[data-col="ask"] { grid-column: 1; grid-row: auto; }

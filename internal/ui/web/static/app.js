@@ -8039,8 +8039,8 @@ function openBoardFinish() {
     update();
   }, { title: board.data?.fork?.available ? t("boardDraftTitle") : t(forkReasons[board.data?.fork?.reason] || "boardForkUnavailable") });
 
-  const save = el("input");
-  save.type = "checkbox";
+  // Where the minutes go, when they are kept: the notebook chosen last
+  // time, or that of the note the board was opened from.
   let last = "";
   try { last = localStorage.getItem("ebira.boardNotebook") || ""; } catch (_) { /* not kept */ }
   const nbs = state.notebooks.filter((n) => n.id !== "trash" && !n.archived);
@@ -8050,32 +8050,52 @@ function openBoardFinish() {
     return o;
   }));
   if (nbs.some((n) => n.id === last)) select.value = last;
-  // The minutes of a board opened from a note go with the note by default.
   const near = b.source.note_notebook;
   if (fromNote && nbs.some((n) => n.id === near)) select.value = near;
-  save.checked = !!last;
-  select.disabled = !save.checked;
-  save.addEventListener("change", () => { select.disabled = !save.checked; });
+  const where = el("label", "board-save", t("boardMinutesIn"), select);
 
-  // The line added to the note links to the minutes, so adding it keeps them.
+  // The line added to the note links to the minutes: it goes with them.
   const append = el("input");
   append.type = "checkbox";
   append.checked = noteThere;
+  const appendRow = [];
   if (noteThere) {
-    save.checked = true;
-    select.disabled = false;
+    appendRow.push(el("label", "board-save", append, t("boardAppendToNote", { title: b.source.note_title || "" })));
+  } else if (fromNote) {
+    appendRow.push(el("p", "board-hint", t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
   }
-  append.addEventListener("change", () => {
-    if (append.checked) {
-      save.checked = true;
-      select.disabled = false;
+
+  // close finishes the board; with keep, it keeps the minutes.
+  const buttons = [];
+  const close = async (keep) => {
+    for (const x of buttons) x.disabled = true;
+    const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
+    if (keep) body.notebook = select.value;
+    if (keep && noteThere && append.checked) body.append_to_note = true;
+    try {
+      await api(`/boards/${b.id}/finish`, { method: "POST", body });
+    } catch (e) {
+      err.textContent = t("boardFailed", { error: e.message });
+      for (const x of buttons) x.disabled = false;
+      return;
     }
-  });
-  save.addEventListener("change", () => { if (!save.checked) append.checked = false; });
-  // With no sticky notes and no points, nothing is kept: the minutes would
-  // only copy the topic. With the sticky notes as they were when the board
-  // was opened from its note and no points, nothing was discussed this time:
-  // nothing is kept unless the person asks.
+    if (keep) {
+      try { localStorage.setItem("ebira.boardNotebook", select.value); } catch (_) { /* not kept */ }
+    }
+    dlg.close();
+    showToast(t(b.from_session ? "boardFinishedSession" : "boardFinished"));
+    await loadBoards();
+    loadBoard();
+  };
+  const plain = button(t("boardFinish"), () => close(false), { cls: "primary" });
+  const skip = button(t("boardFinishNoMinutes"), () => close(false));
+  const keep = button(t("boardFinishMinutes"), () => close(true));
+  buttons.push(plain, skip, keep);
+
+  // With no sticky notes and no points, there is nothing to keep: the
+  // minutes would only copy the topic. With the sticky notes as they were
+  // when the board was opened from its note and no points, nothing was
+  // discussed this time: closing without the minutes comes first.
   const nothing = el("p", "board-hint");
   let kept = null;
   const updateKeep = () => {
@@ -8085,55 +8105,14 @@ function openBoardFinish() {
     kept = now;
     nothing.hidden = now === "changed";
     nothing.textContent = now === "empty" ? t("boardNothingToKeep") : now === "unchanged" ? t("boardUnchanged") : "";
-    save.disabled = append.disabled = now === "empty";
-    if (now === "changed") {
-      save.checked = noteThere || !!last;
-      append.checked = noteThere;
-    } else {
-      save.checked = append.checked = false;
-    }
-    select.disabled = !save.checked;
-    updateSkip();
+    const empty = now === "empty";
+    plain.hidden = !empty;
+    skip.hidden = keep.hidden = where.hidden = empty;
+    for (const r of appendRow) r.hidden = empty;
+    skip.classList.toggle("primary", now === "unchanged");
+    keep.classList.toggle("primary", now === "changed");
   };
   text.addEventListener("input", updateKeep);
-  const appendRow = [];
-  if (noteThere) {
-    appendRow.push(el("label", "board-save", append, t("boardAppendToNote", { title: b.source.note_title || "" })));
-  } else if (fromNote) {
-    appendRow.push(el("p", "board-hint", t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
-  }
-
-  // close finishes the board; with keep, it keeps what the boxes say.
-  const close = async (keep) => {
-    finish.disabled = skip.disabled = true;
-    const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
-    if (keep && save.checked) body.notebook = select.value;
-    if (keep && noteThere && append.checked) body.append_to_note = true;
-    try {
-      await api(`/boards/${b.id}/finish`, { method: "POST", body });
-    } catch (e) {
-      err.textContent = t("boardFailed", { error: e.message });
-      finish.disabled = skip.disabled = false;
-      return;
-    }
-    // The notebook chosen is remembered only when the minutes were kept.
-    if (keep) {
-      try { localStorage.setItem("ebira.boardNotebook", save.checked ? select.value : ""); } catch (_) { /* not kept */ }
-    }
-    dlg.close();
-    showToast(t(b.from_session ? "boardFinishedSession" : "boardFinished"));
-    await loadBoards();
-    loadBoard();
-  };
-  const finish = button(t("boardFinish"), () => close(true), { cls: "primary" });
-  // Closing without the minutes, whatever the boxes say; shown only when
-  // they would keep something.
-  const skip = button(t("boardFinishNoMinutes"), () => close(false));
-  function updateSkip() {
-    skip.hidden = !save.checked && !append.checked;
-  }
-  save.addEventListener("change", updateSkip);
-  append.addEventListener("change", updateSkip);
 
   function update() {
     if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || !board.data?.fork?.available;
@@ -8146,10 +8125,10 @@ function openBoardFinish() {
     el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : noteThere ? "boardBackHintNote" : "boardBackHint")),
     text,
     nothing,
+    where,
     ...appendRow,
-    el("label", "board-save", save, t("boardSaveAsNote"), select),
     err,
-    el("div", "files-actions", button(t("cancel"), () => dlg.close()), skip, finish));
+    el("div", "files-actions", button(t("cancel"), () => dlg.close()), plain, skip, keep));
   updateKeep();
   dlg.showModal();
   text.focus();
