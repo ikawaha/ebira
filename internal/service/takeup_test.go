@@ -187,9 +187,25 @@ func TestAddBeforeDiscussions(t *testing.T) {
 		{"", "More.\n"},
 		{"Text.\n\n## 補足：議論\n\n- a\n", "Text.\n\nMore.\n\n## 補足：議論\n\n- a\n"},
 		{"Text.\n\n## Appendix: discussions\n\n- a\n\n## Mine\n\nx\n", "Text.\n\n## Appendix: discussions\n\n- a\n\n## Mine\n\nx\n\nMore.\n"},
+		// A heading in a code block is text: the section still runs to the end.
+		{"Text.\n\n## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n", "Text.\n\nMore.\n\n## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n"},
+		{"```md\n## 補足：議論\n```\n", "```md\n## 補足：議論\n```\n\nMore.\n"},
 	} {
 		if got := board.AddBeforeDiscussions(c.body, "More.\n"); got != c.want {
 			t.Errorf("AddBeforeDiscussions(%q) = %q, want %q", c.body, got, c.want)
 		}
+	}
+}
+
+func TestProposed(t *testing.T) {
+	c := &board.NoteChange{Append: "Run:\n\n```sh\nebira serve\n```"}
+	c.Edits = append(c.Edits, struct {
+		Old string `json:"old"`
+		New string `json:"new"`
+	}{"a", "b"})
+	got := proposed(c)
+	want := "````diff\n- a\n+ b\n````\n\n````markdown\nRun:\n\n```sh\nebira serve\n```\n````"
+	if got != want {
+		t.Errorf("proposed = %q, want %q", got, want)
 	}
 }

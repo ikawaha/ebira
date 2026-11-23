@@ -1283,16 +1283,21 @@ func (s *Notes) takeUp(id string, note board.NoteRef) {
 		case <-ctx.Done():
 			return
 		}
-		actx, acancel := context.WithTimeout(ctx, boardForkTime)
+		// Reading the note, when the board has no session yet, and the
+		// answer each have their time.
 		var reply string
-		b, err := s.seed(actx, id)
+		sctx, scancel := context.WithTimeout(ctx, boardForkTime)
+		b, err := s.seed(sctx, id)
+		timedOut := errors.Is(sctx.Err(), context.DeadlineExceeded)
+		scancel()
 		if err == nil {
+			actx, acancel := context.WithTimeout(ctx, boardForkTime)
 			session := uuid.NewString()
 			reply, err = bs.forker().Ask(actx, ForkAsk{Cwd: b.Origin.Cwd, Resume: b.Origin.SessionID, Session: session, Question: board.CloseQuestion(b, b.Result.Text, note)})
 			_ = bs.forker().Remove(session)
+			timedOut = errors.Is(actx.Err(), context.DeadlineExceeded)
+			acancel()
 		}
-		timedOut := errors.Is(actx.Err(), context.DeadlineExceeded)
-		acancel()
 		if bs.ctx.Err() != nil || ctx.Err() != nil {
 			return // the server stops, or the board was deleted
 		}
@@ -1370,19 +1375,29 @@ func (s *Notes) changeNote(id, version string, change *board.NoteChange) (string
 
 // proposed shows change, not made, for the person to make by hand.
 func proposed(c *board.NoteChange) string {
+	// Each block is fenced longer than any fence inside.
+	f := "```"
+	for _, e := range c.Edits {
+		for strings.Contains(e.Old, f) || strings.Contains(e.New, f) {
+			f += "`"
+		}
+	}
+	for strings.Contains(c.Append, f) {
+		f += "`"
+	}
 	var sb strings.Builder
 	for _, e := range c.Edits {
-		sb.WriteString("```diff\n")
+		sb.WriteString(f + "diff\n")
 		for l := range strings.SplitSeq(e.Old, "\n") {
 			sb.WriteString("- " + l + "\n")
 		}
 		for l := range strings.SplitSeq(e.New, "\n") {
 			sb.WriteString("+ " + l + "\n")
 		}
-		sb.WriteString("```\n\n")
+		sb.WriteString(f + "\n\n")
 	}
 	if a := strings.TrimSpace(c.Append); a != "" {
-		sb.WriteString("```markdown\n" + a + "\n```\n")
+		sb.WriteString(f + "markdown\n" + a + "\n" + f + "\n")
 	}
 	return strings.TrimSpace(sb.String())
 }

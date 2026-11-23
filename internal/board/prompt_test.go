@@ -187,6 +187,10 @@ func TestAddDiscussion(t *testing.T) {
 			"## 補足：議論\n\n- a\n\n### old\n\n- b\n- 2026-11-23 [Plan](/#note/m1)\n"},
 		{"empty section", "## 補足：議論\n## Later\n", "ja",
 			"## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n"},
+		{"in a code block", "```md\n## 補足：議論\n```\n", "ja",
+			"```md\n## 補足：議論\n```\n\n## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"code block inside", "## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n\n## Later\n", "ja",
+			"## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n"},
 	} {
 		if got := AddDiscussion(c.body, c.lang, "2026-11-23", m); got != c.want {
 			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)

@@ -148,9 +148,10 @@ func writeStickies(sb *strings.Builder, b *Board, source, lang string, level int
 func AddDiscussion(body, lang, day string, minutes NoteRef) string {
 	line := "- " + day + " " + minutes.link()
 	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")
+	code := inCode(lines)
 	at := -1
 	for i, l := range lines {
-		if isDiscussions(l) {
+		if !code[i] && isDiscussions(l) {
 			at = i
 		}
 	}
@@ -164,7 +165,7 @@ func AddDiscussion(body, lang, day string, minutes NoteRef) string {
 	// The section runs to the next heading of its level or above.
 	end := len(lines)
 	for i := at + 1; i < len(lines); i++ {
-		if m := headingLevel.FindString(lines[i]); m != "" && len(strings.TrimSpace(m)) <= 2 {
+		if m := headingLevel.FindString(lines[i]); m != "" && !code[i] && len(strings.TrimSpace(m)) <= 2 {
 			end = i
 			break
 		}
@@ -183,6 +184,34 @@ func AddDiscussion(body, lang, day string, minutes NoteRef) string {
 	out := append(append(append([]string{}, lines[:last]...), add...), lines[last:]...)
 	return strings.Join(out, "\n") + "\n"
 }
+
+// inCode tells which of lines are in a fenced code block, its fences
+// included: a heading there is text, not a heading.
+func inCode(lines []string) []bool {
+	code := make([]bool, len(lines))
+	open := ""
+	for i, l := range lines {
+		t := strings.TrimLeft(l, " ")
+		if len(l)-len(t) > 3 {
+			code[i] = open != ""
+			continue
+		}
+		m := codeFence.FindString(t)
+		switch {
+		case open == "" && m != "":
+			open, code[i] = m, true
+		case open != "":
+			code[i] = true
+			if m != "" && m[0] == open[0] && len(m) >= len(open) && strings.TrimSpace(t[len(m):]) == "" {
+				open = ""
+			}
+		}
+	}
+	return code
+}
+
+// codeFence matches the fence of a fenced code block.
+var codeFence = regexp.MustCompile("^(```+|~~~+)")
 
 // headingLevel matches the marks of an ATX heading.
 var headingLevel = regexp.MustCompile(`^#{1,6}\s`)
@@ -207,17 +236,18 @@ func AddBeforeDiscussions(body, text string) string {
 		return body
 	}
 	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")
+	code := inCode(lines)
 	at := -1
 	for i, l := range lines {
-		if isDiscussions(l) {
+		if !code[i] && isDiscussions(l) {
 			at = i
 		}
 	}
 	// Only a section that runs to the end: one followed by another of its
 	// level, or above, is the person's own.
 	if at >= 0 {
-		for _, l := range lines[at+1:] {
-			if m := headingLevel.FindString(l); m != "" && len(strings.TrimSpace(m)) <= 2 {
+		for i := at + 1; i < len(lines); i++ {
+			if m := headingLevel.FindString(lines[i]); m != "" && !code[i] && len(strings.TrimSpace(m)) <= 2 {
 				at = -1
 				break
 			}
