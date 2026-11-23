@@ -1141,6 +1141,7 @@ paths:
                                     claude:
                                         edited: true
                                         error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        reason: changed
                                         state: waiting
                                         text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
@@ -1360,6 +1361,7 @@ paths:
                                     claude:
                                         edited: true
                                         error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        reason: changed
                                         state: waiting
                                         text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
@@ -1549,6 +1551,7 @@ paths:
                                     claude:
                                         edited: true
                                         error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        reason: changed
                                         state: waiting
                                         text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
@@ -1805,6 +1808,7 @@ paths:
                                     claude:
                                         edited: true
                                         error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        reason: changed
                                         state: waiting
                                         text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
@@ -7689,6 +7693,7 @@ components:
                     claude:
                         edited: true
                         error: Tenetur culpa mollitia fuga rerum vero rerum.
+                        reason: changed
                         state: waiting
                         text: Officiis exercitationem earum cumque fugiat quis.
                     finished_at: "2026-10-16T09:30:00Z"
@@ -7848,8 +7853,20 @@ components:
                     example: true
                 error:
                     type: string
-                    description: Why Claude did not reply, or why its changes were not made to the note
+                    description: Why Claude did not reply, or why its changes were not made to the note, in words (reason)
                     example: Tenetur culpa mollitia fuga rerum vero rerum.
+                reason:
+                    type: string
+                    description: 'Why Claude did not reply, or why its changes were not made to the note: the server stopped (interrupted), no reply in time (timeout), Claude could not be asked (failed), the changes are not valid (invalid), the note changed after the board was closed (changed), the note is no longer in a notebook of the collab kind (not_collab), or the changes do not fit the note (not_made)'
+                    example: changed
+                    enum:
+                        - interrupted
+                        - timeout
+                        - failed
+                        - invalid
+                        - changed
+                        - not_collab
+                        - not_made
                 state:
                     type: string
                     description: waiting while Claude works, idle once done, or error
@@ -7865,6 +7882,7 @@ components:
             example:
                 edited: true
                 error: Tenetur culpa mollitia fuga rerum vero rerum.
+                reason: changed
                 state: waiting
                 text: Officiis exercitationem earum cumque fugiat quis.
             required:
@@ -7979,6 +7997,7 @@ components:
                 claude:
                     edited: true
                     error: Tenetur culpa mollitia fuga rerum vero rerum.
+                    reason: changed
                     state: waiting
                     text: Officiis exercitationem earum cumque fugiat quis.
                 finished_at: "2026-10-16T09:30:00Z"

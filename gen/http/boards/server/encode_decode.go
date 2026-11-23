@@ -1336,6 +1336,7 @@ func marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody(v *boards.Board
 		State:  v.State,
 		Text:   v.Text,
 		Edited: v.Edited,
+		Reason: v.Reason,
 		Error:  v.Error,
 	}
 

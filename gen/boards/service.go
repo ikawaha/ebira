@@ -166,7 +166,14 @@ type BoardClaudeReply struct {
 	Text *string
 	// Whether the changes of Claude were made to the note the board was opened from
 	Edited bool
-	// Why Claude did not reply, or why its changes were not made to the note
+	// Why Claude did not reply, or why its changes were not made to the note: the
+	// server stopped (interrupted), no reply in time (timeout), Claude could not
+	// be asked (failed), the changes are not valid (invalid), the note changed
+	// after the board was closed (changed), the note is no longer in a notebook of
+	// the collab kind (not_collab), or the changes do not fit the note (not_made)
+	Reason *string
+	// Why Claude did not reply, or why its changes were not made to the note, in
+	// words (reason)
 	Error *string
 }
 
@@ -486,7 +493,14 @@ type jsonBoardClaudeReplyTransport struct {
 	Text *string `json:"text,omitempty"`
 	// Whether the changes of Claude were made to the note the board was opened from
 	Edited *bool `json:"edited"`
-	// Why Claude did not reply, or why its changes were not made to the note
+	// Why Claude did not reply, or why its changes were not made to the note: the
+	// server stopped (interrupted), no reply in time (timeout), Claude could not
+	// be asked (failed), the changes are not valid (invalid), the note changed
+	// after the board was closed (changed), the note is no longer in a notebook of
+	// the collab kind (not_collab), or the changes do not fit the note (not_made)
+	Reason *string `json:"reason,omitempty"`
+	// Why Claude did not reply, or why its changes were not made to the note, in
+	// words (reason)
 	Error *string `json:"error,omitempty"`
 }
 
@@ -504,6 +518,11 @@ func validatejsonBoardClaudeReplyTransport(value *jsonBoardClaudeReplyTransport)
 	if value.State != nil {
 		if !(*value.State == "idle" || *value.State == "waiting" || *value.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *value.State, []any{"idle", "waiting", "error"}))
+		}
+	}
+	if value.Reason != nil {
+		if !(*value.Reason == "interrupted" || *value.Reason == "timeout" || *value.Reason == "failed" || *value.Reason == "invalid" || *value.Reason == "changed" || *value.Reason == "not_collab" || *value.Reason == "not_made") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.reason", *value.Reason, []any{"interrupted", "timeout", "failed", "invalid", "changed", "not_collab", "not_made"}))
 		}
 	}
 	return err
@@ -1107,6 +1126,11 @@ func validateBoardClaudeReplyOriginal(value *BoardClaudeReply) (err error) {
 	if !(value.State == "idle" || value.State == "waiting" || value.State == "error") {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.state", value.State, []any{"idle", "waiting", "error"}))
 	}
+	if value.Reason != nil {
+		if !(*value.Reason == "interrupted" || *value.Reason == "timeout" || *value.Reason == "failed" || *value.Reason == "invalid" || *value.Reason == "changed" || *value.Reason == "not_collab" || *value.Reason == "not_made") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("value.reason", *value.Reason, []any{"interrupted", "timeout", "failed", "invalid", "changed", "not_collab", "not_made"}))
+		}
+	}
 	return err
 }
 
@@ -1380,6 +1404,7 @@ func EncodeBoardClaudeReply(in *BoardClaudeReply) ([]byte, error) {
 			State:  &in.State,
 			Text:   in.Text,
 			Edited: &in.Edited,
+			Reason: in.Reason,
 			Error:  in.Error,
 		}
 	}
@@ -1414,6 +1439,7 @@ func ValidateBoardClaudeReplyValue(in *BoardClaudeReply) error {
 			State:  &in.State,
 			Text:   in.Text,
 			Edited: &in.Edited,
+			Reason: in.Reason,
 			Error:  in.Error,
 		}
 	}
@@ -1452,6 +1478,7 @@ func DecodeBoardClaudeReply(data []byte) (out *BoardClaudeReply, err error) {
 			State:  *body.State,
 			Text:   body.Text,
 			Edited: *body.Edited,
+			Reason: body.Reason,
 			Error:  body.Error,
 		}
 	}
@@ -2112,6 +2139,7 @@ func decodeBoardClaudeReplyTransportToBoardClaudeReply(v *jsonBoardClaudeReplyTr
 		State:  *v.State,
 		Text:   v.Text,
 		Edited: *v.Edited,
+		Reason: v.Reason,
 		Error:  v.Error,
 	}
 
@@ -2211,6 +2239,7 @@ func encodeBoardClaudeReplyToBoardClaudeReplyTransport(v *BoardClaudeReply) *jso
 		State:  &v.State,
 		Text:   v.Text,
 		Edited: &v.Edited,
+		Reason: v.Reason,
 		Error:  v.Error,
 	}
 
@@ -2610,7 +2639,14 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 		case "error":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
-				typed[key], "Why Claude did not reply, or why its changes were not made to the note",
+				typed[key], "Why Claude did not reply, or why its changes were not made to the note, in words (reason)",
+			); err != nil {
+				return err
+			}
+		case "reason":
+			if err := validateBoardJSONValue2(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Why Claude did not reply, or why its changes were not made to the note: the server stopped (interrupted), no reply in time (timeout), Claude could not be asked (failed), the changes are not valid (invalid), the note changed after the board was closed (changed), the note is no longer in a notebook of the collab kind (not_collab), or the changes do not fit the note (not_made)",
 			); err != nil {
 				return err
 			}
@@ -2632,6 +2668,7 @@ func validateBoardJSONValue10(path string, value any, description string) error 
 			return unknownJSONFieldError(path, key, []string{
 				"edited",
 				"error",
+				"reason",
 				"state",
 				"text",
 			})
@@ -3562,6 +3599,11 @@ func checkBoardBoardClaudeReplyValue(in *BoardClaudeReply, field string, active 
 		if in.Text != nil {
 			if !utf8.ValidString(string(*in.Text)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "text", false))
+			}
+		}
+		if in.Reason != nil {
+			if !utf8.ValidString(string(*in.Reason)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "reason", false))
 			}
 		}
 		if in.Error != nil {

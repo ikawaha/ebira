@@ -70,7 +70,10 @@ var BoardClaudeReply = Type("BoardClaudeReply", func() {
 	})
 	Attribute("text", String, "The reply of Claude to the person, in Markdown")
 	RequiredAttribute("edited", Boolean, "Whether the changes of Claude were made to the note the board was opened from")
-	Attribute("error", String, "Why Claude did not reply, or why its changes were not made to the note")
+	Attribute("reason", String, "Why Claude did not reply, or why its changes were not made to the note: the server stopped (interrupted), no reply in time (timeout), Claude could not be asked (failed), the changes are not valid (invalid), the note changed after the board was closed (changed), the note is no longer in a notebook of the collab kind (not_collab), or the changes do not fit the note (not_made)", func() {
+		Enum("interrupted", "timeout", "failed", "invalid", "changed", "not_collab", "not_made")
+	})
+	Attribute("error", String, "Why Claude did not reply, or why its changes were not made to the note, in words (reason)")
 })
 
 var BoardSource = Type("BoardSource", func() {

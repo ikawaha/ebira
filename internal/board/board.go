@@ -230,9 +230,24 @@ type Reply struct {
 	State string `json:"state"` // Waiting, Idle once done, or Failed
 	Text  string `json:"text,omitempty"`
 	// Edited tells whether the changes of Claude were made to the note.
-	Edited bool   `json:"edited,omitempty"`
+	Edited bool `json:"edited,omitempty"`
+	// Reason tells, as one of the Reason values, why Claude did not reply
+	// or its changes were not made; Error says it in words.
+	Reason string `json:"reason,omitempty"`
 	Error  string `json:"error,omitempty"`
 }
+
+// Why Claude did not reply to the next points, or its changes were not made
+// to the note (Reply.Reason).
+const (
+	ReasonInterrupted = "interrupted" // the server stopped before the reply
+	ReasonTimeout     = "timeout"     // no reply in time
+	ReasonFailed      = "failed"      // Claude could not be asked
+	ReasonInvalid     = "invalid"     // the block of changes is not valid
+	ReasonChanged     = "changed"     // the note changed after the close
+	ReasonNotCollab   = "not_collab"  // the note left the collab notebooks
+	ReasonNotMade     = "not_made"    // the changes do not fit the note
+)
 
 var (
 	idPattern      = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
@@ -634,7 +649,7 @@ func (s *Store) Interrupt(reason string) error {
 			}
 		}
 		if r := b.Result; r != nil && r.Claude != nil && r.Claude.State == Waiting {
-			r.Claude.State, r.Claude.Error = Failed, reason
+			r.Claude.State, r.Claude.Reason, r.Claude.Error = Failed, ReasonInterrupted, reason
 			changed = true
 		}
 		if changed {

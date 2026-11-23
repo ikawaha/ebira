@@ -1007,7 +1007,14 @@ type BoardClaudeReplyResponseBody struct {
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 	// Whether the changes of Claude were made to the note the board was opened from
 	Edited bool `form:"edited" json:"edited" xml:"edited"`
-	// Why Claude did not reply, or why its changes were not made to the note
+	// Why Claude did not reply, or why its changes were not made to the note: the
+	// server stopped (interrupted), no reply in time (timeout), Claude could not
+	// be asked (failed), the changes are not valid (invalid), the note changed
+	// after the board was closed (changed), the note is no longer in a notebook of
+	// the collab kind (not_collab), or the changes do not fit the note (not_made)
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+	// Why Claude did not reply, or why its changes were not made to the note, in
+	// words (reason)
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
 }
 

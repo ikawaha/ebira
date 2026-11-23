@@ -102,7 +102,7 @@ func TestTakeUpOnClose(t *testing.T) {
 		t.Fatalf("closed = %+v", done.Result)
 	}
 	c := waitClaude(t, svc, b.ID)
-	if c.State != board.Idle || !c.Edited || deref(c.Text) != "Added the summary." || c.Error != nil {
+	if c.State != board.Idle || !c.Edited || deref(c.Text) != "Added the summary." || c.Error != nil || c.Reason != nil {
 		t.Errorf("reply = %+v", c)
 	}
 	if a := f.lastAsk(); !strings.Contains(a.Question, "add what we discussed") || !strings.Contains(a.Question, "a trie keeps prefixes") || !strings.Contains(a.Question, n.ID) {
@@ -133,11 +133,38 @@ func TestTakeUpOnClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	c = waitClaude(t, svc, b2.ID)
-	if c.Edited || c.Error == nil || !strings.Contains(deref(c.Text), "more") {
+	if c.Edited || c.Error == nil || deref(c.Reason) != board.ReasonChanged || !strings.Contains(deref(c.Text), "more") {
 		t.Errorf("reply on a changed note = %+v", c)
 	}
 	if got, _ := svc.Get(person, &gennotes.GetPayload{ID: n2.ID}); got.Body != "changed\n" {
 		t.Errorf("changed note = %q", got.Body)
+	}
+
+	// Changes that do not fit the note, or are not valid, are not made.
+	for _, c := range []struct{ block, reason string }{
+		{`{"edits": [{"old": "not in the note", "new": "x"}]}`, board.ReasonNotMade},
+		{"not json", board.ReasonInvalid},
+	} {
+		n := note(collab.ID, "plan-"+c.reason)
+		b := open(n)
+		f.mu.Lock()
+		f.reply = func(a ForkAsk) string {
+			if !strings.Contains(a.Question, "take up the next points") {
+				return "read"
+			}
+			return "Done.\n\n```" + board.NoteFence + "\n" + c.block + "\n```"
+		}
+		f.mu.Unlock()
+		if _, err := finish(b.ID, "- change it"); err != nil {
+			t.Fatal(err)
+		}
+		r := waitClaude(t, svc, b.ID)
+		if r.State != board.Idle || r.Edited || deref(r.Reason) != c.reason || r.Error == nil {
+			t.Errorf("reply with %s = %+v", c.block, r)
+		}
+		if got, _ := svc.Get(person, &gennotes.GetPayload{ID: n.ID}); got.Body != n.Body {
+			t.Errorf("note with %s = %q", c.block, got.Body)
+		}
 	}
 }
 

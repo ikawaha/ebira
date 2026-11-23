@@ -320,6 +320,23 @@ func TestInterrupt(t *testing.T) {
 	if st := got.Stickies[1]; st.State != Idle {
 		t.Errorf("idle sticky note: %+v", st)
 	}
+
+	// Claude, taking up the points of a closed board, replies no more.
+	closed := open(t, s, "closed", "x")
+	if _, err := s.Update(closed.ID, func(b *Board) error {
+		b.Status = Done
+		b.Result = &Result{Text: "- add it", FinishedAt: s.Now(), Claude: &Reply{State: Waiting}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Interrupt("the server stopped"); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.Get(closed.ID)
+	if c := got.Result.Claude; c.State != Failed || c.Reason != ReasonInterrupted || c.Error != "the server stopped" {
+		t.Errorf("waiting reply: %+v", c)
+	}
 }
 
 func TestSweep(t *testing.T) {

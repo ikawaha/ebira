@@ -7550,6 +7550,14 @@ function renderBoard() {
       if (c.state === "waiting") {
         reply.append(el("p", "sticky-wait", t("boardClaudeWorking")));
       } else {
+        // Why it did not reply, or the note was left as it was, first: the
+        // changes not made then follow the reply. The words of the server
+        // stay at hand for the details.
+        if (c.error) {
+          const why = el("p", "error", c.reason ? t("boardClaudeWhy_" + c.reason) : c.error);
+          why.title = c.error;
+          reply.append(why);
+        }
         if (c.text) {
           const body = el("div", "body");
           renderBody(body, c.text);
@@ -7560,7 +7568,6 @@ function renderBoard() {
           a.href = "/#note/" + encodeURIComponent(b.source.note_id);
           reply.append(el("p", "board-hint", t("boardClaudeEdited"), " ", a));
         }
-        if (c.error) reply.append(el("p", "error", c.state === "error" ? t("boardClaudeFailed", { error: c.error }) : c.error));
       }
       done.append(reply);
     }
@@ -8146,7 +8153,7 @@ function openBoardFinish() {
       const empty = now === "empty";
       showNothing(now === "unchanged" ? "changed" : now);
       // Why the note cannot take it, first what the person can do.
-      const reason = !noteThere ? ""
+      const reason = !noteThere ? t(b.source.note_state === "trash" ? "boardReflectInTrash" : "boardReflectMissing")
         : !collab ? t("boardReflectNotCollab")
         : !board.data?.fork?.available ? t(forkReasons[board.data?.fork?.reason] || "boardForkUnavailable")
         : blank ? t("boardReflectNeedsPoints") : "";
@@ -8172,7 +8179,7 @@ function openBoardFinish() {
       ? el("details", "board-later", el("summary", "", t("boardPicksLater", { n: b.stickies.length })), picks, el("div", "board-draft", draft))
       : null;
     dlg.replaceChildren(head,
-      el("p", "board-hint", t("boardBackHintReflect")),
+      el("p", "board-hint", t(noteThere ? "boardBackHintReflect" : "boardBackHint")),
       text,
       nothing,
       minutesRow,

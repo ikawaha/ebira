@@ -1671,6 +1671,7 @@ func unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply(v *BoardClaud
 		State:  *v.State,
 		Text:   v.Text,
 		Edited: *v.Edited,
+		Reason: v.Reason,
 		Error:  v.Error,
 	}
 

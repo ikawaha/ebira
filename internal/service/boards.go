@@ -472,7 +472,7 @@ func (s *Notes) fullBoard(ctx context.Context, st *board.Store, b *board.Board) 
 	if r := b.Result; r != nil {
 		res.Result = &genboards.BoardResult{Text: r.Text, Stickies: append([]string{}, r.Stickies...), NoteID: optional(r.NoteID), Appended: r.Appended, FinishedAt: store.FormatTime(r.FinishedAt)}
 		if c := r.Claude; c != nil {
-			res.Result.Claude = &genboards.BoardClaudeReply{State: c.State, Text: optional(c.Text), Edited: c.Edited, Error: optional(c.Error)}
+			res.Result.Claude = &genboards.BoardClaudeReply{State: c.State, Text: optional(c.Text), Edited: c.Edited, Reason: optional(c.Reason), Error: optional(c.Error)}
 		}
 	}
 	return res, nil
@@ -1296,21 +1296,21 @@ func (s *Notes) takeUp(id string, note board.NoteRef) {
 		if bs.ctx.Err() != nil || ctx.Err() != nil {
 			return // the server stops, or the board was deleted
 		}
-		if timedOut {
-			err = fmt.Errorf("no reply in %v", boardForkTime)
-		}
 		res := board.Reply{State: board.Idle}
-		if err != nil {
-			res.State, res.Error = board.Failed, err.Error()
-		} else {
+		switch {
+		case timedOut:
+			res.State, res.Reason, res.Error = board.Failed, board.ReasonTimeout, fmt.Sprintf("no reply in %v", boardForkTime)
+		case err != nil:
+			res.State, res.Reason, res.Error = board.Failed, board.ReasonFailed, err.Error()
+		default:
 			text, change, cerr := board.SplitReply(reply)
 			res.Text = text
 			switch {
 			case cerr != nil:
-				res.Error = cerr.Error()
+				res.Reason, res.Error = board.ReasonInvalid, cerr.Error()
 			case change != nil:
-				if eerr := s.changeNote(note.ID, version, change); eerr != nil {
-					res.Error = eerr.Error()
+				if reason, eerr := s.changeNote(note.ID, version, change); eerr != nil {
+					res.Reason, res.Error = reason, eerr.Error()
 					res.Text += "\n\n" + proposed(change)
 				} else {
 					res.Edited = true
@@ -1335,15 +1335,16 @@ func (s *Notes) takeUp(id string, note board.NoteRef) {
 // changeNote makes change, of Claude, to note id at version, as an AI client
 // does: only to a note of a notebook of the collab kind, which nobody
 // changed since. What Claude adds goes before the section of discussions
-// at the end, which links the minutes.
-func (s *Notes) changeNote(id, version string, change *board.NoteChange) error {
+// at the end, which links the minutes. When the change is not made, it
+// tells why as a reason of board.Reply.
+func (s *Notes) changeNote(id, version string, change *board.NoteChange) (string, error) {
 	ctx := s.boards.ctx
 	n, err := s.Get(ctx, &gennotes.GetPayload{ID: id})
 	if err != nil {
-		return fmt.Errorf("the changes were not made: %w", err)
+		return board.ReasonNotMade, fmt.Errorf("the changes were not made: %w", err)
 	}
 	if !store.MatchVersion(version, n.Version) {
-		return errors.New("the note changed after the board was closed: the changes were not made")
+		return board.ReasonChanged, errors.New("the note changed after the board was closed: the changes were not made")
 	}
 	edits := make([]*gennotes.NoteEdit, 0, len(change.Edits))
 	for _, e := range change.Edits {
@@ -1351,20 +1352,20 @@ func (s *Notes) changeNote(id, version string, change *board.NoteChange) error {
 	}
 	body, err := changedBody(n.Body, nil, edits)
 	if err != nil {
-		return fmt.Errorf("the changes were not made: %w", err)
+		return board.ReasonNotMade, fmt.Errorf("the changes were not made: %w", err)
 	}
 	body = board.AddBeforeDiscussions(body, change.Append)
 	_, err = s.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: id, Version: n.Version, Body: &body})
 	var se *goa.ServiceError
 	switch {
 	case err == nil:
-		return nil
+		return "", nil
 	case errors.As(err, &se) && se.Name == "precondition_failed":
-		return errors.New("the note changed after the board was closed: the changes were not made")
+		return board.ReasonChanged, errors.New("the note changed after the board was closed: the changes were not made")
 	case errors.As(err, &se) && se.Name == "forbidden":
-		return errors.New("the note is no longer in a notebook of the collab kind: the changes were not made")
+		return board.ReasonNotCollab, errors.New("the note is no longer in a notebook of the collab kind: the changes were not made")
 	}
-	return fmt.Errorf("the changes were not made: %w", err)
+	return board.ReasonNotMade, fmt.Errorf("the changes were not made: %w", err)
 }
 
 // proposed shows change, not made, for the person to make by hand.

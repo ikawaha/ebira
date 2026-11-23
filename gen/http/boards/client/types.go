@@ -1003,7 +1003,14 @@ type BoardClaudeReplyResponseBody struct {
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 	// Whether the changes of Claude were made to the note the board was opened from
 	Edited *bool `form:"edited,omitempty" json:"edited,omitempty" xml:"edited,omitempty"`
-	// Why Claude did not reply, or why its changes were not made to the note
+	// Why Claude did not reply, or why its changes were not made to the note: the
+	// server stopped (interrupted), no reply in time (timeout), Claude could not
+	// be asked (failed), the changes are not valid (invalid), the note changed
+	// after the board was closed (changed), the note is no longer in a notebook of
+	// the collab kind (not_collab), or the changes do not fit the note (not_made)
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+	// Why Claude did not reply, or why its changes were not made to the note, in
+	// words (reason)
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
 }
 
@@ -3539,6 +3546,11 @@ func ValidateBoardClaudeReplyResponseBody(body *BoardClaudeReplyResponseBody) (e
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *body.State, []any{"idle", "waiting", "error"}))
 		}
 	}
+	if body.Reason != nil {
+		if !(*body.Reason == "interrupted" || *body.Reason == "timeout" || *body.Reason == "failed" || *body.Reason == "invalid" || *body.Reason == "changed" || *body.Reason == "not_collab" || *body.Reason == "not_made") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.reason", *body.Reason, []any{"interrupted", "timeout", "failed", "invalid", "changed", "not_collab", "not_made"}))
+		}
+	}
 	return
 }
 
@@ -3554,6 +3566,11 @@ func validateBoardClaudeReplyResponseBody(body *BoardClaudeReplyResponseBody, pa
 	if body.State != nil {
 		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".state", *body.State, []any{"idle", "waiting", "error"}))
+		}
+	}
+	if body.Reason != nil {
+		if !(*body.Reason == "interrupted" || *body.Reason == "timeout" || *body.Reason == "failed" || *body.Reason == "invalid" || *body.Reason == "changed" || *body.Reason == "not_collab" || *body.Reason == "not_made") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".reason", *body.Reason, []any{"interrupted", "timeout", "failed", "invalid", "changed", "not_collab", "not_made"}))
 		}
 	}
 	return
