@@ -191,6 +191,8 @@ func TestAddDiscussion(t *testing.T) {
 			"```md\n## 補足：議論\n```\n\n## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
 		{"code block inside", "## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n\n## Later\n", "ja",
 			"## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n"},
+		{"indented heading after", "## 補足：議論\n\n- a\n\n  ## Later\n\nmore\n", "ja",
+			"## 補足：議論\n\n- a\n- 2026-11-23 [Plan](/#note/m1)\n\n  ## Later\n\nmore\n"},
 	} {
 		if got := AddDiscussion(c.body, c.lang, "2026-11-23", m); got != c.want {
 			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
@@ -255,6 +257,20 @@ func TestCloseQuestionKeepsThePoints(t *testing.T) {
 	}
 	if len(q) > len(points)+MaxQuestion+2<<10 {
 		t.Errorf("close question of %d bytes", len(q))
+	}
+}
+
+// TestAddBeforeDiscussionsIndentedHeading checks that a heading indented by
+// up to three spaces ends the section of discussions.
+func TestAddBeforeDiscussionsIndentedHeading(t *testing.T) {
+	body := "x\n\n## 補足：議論\n\n- a\n\n   ## Later\n\nmore\n"
+	if got, want := AddBeforeDiscussions(body, "added"), body+"\nadded\n"; got != want {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+	// Four spaces make code, not a heading.
+	body = "x\n\n## 補足：議論\n\n- a\n\n    ## code\n"
+	if got, want := AddBeforeDiscussions(body, "added"), "x\n\nadded\n\n## 補足：議論\n\n- a\n\n    ## code\n"; got != want {
+		t.Errorf("got %q\nwant %q", got, want)
 	}
 }
 

@@ -213,8 +213,9 @@ func inCode(lines []string) []bool {
 // codeFence matches the fence of a fenced code block.
 var codeFence = regexp.MustCompile("^(```+|~~~+)")
 
-// headingLevel matches the marks of an ATX heading.
-var headingLevel = regexp.MustCompile(`^#{1,6}\s`)
+// headingLevel matches the marks of an ATX heading, which may be indented
+// by up to three spaces.
+var headingLevel = regexp.MustCompile(`^ {0,3}#{1,6}(\s|$)`)
 
 // isDiscussions reports whether line is the heading of the section of
 // discussions, in any language.
