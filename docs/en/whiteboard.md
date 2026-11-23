@@ -24,6 +24,8 @@ Select text in the topic, and a small box opens.
 
 The sticky notes line up on the right of the topic, beside their passages. A passage with a sticky note has a line under it: click it to go to the sticky note, or the quote at the top of a sticky note to go to the passage. A sticky note takes follow-up questions, and selecting text in an answer puts a sticky note on that answer.
 
+Check "Resolved" at the bottom of a sticky note when you understood it and are satisfied. The sticky note fades, its heading in the minutes gets "(resolved)", and the AI is told it is resolved. Asking a resolved sticky note again unchecks it.
+
 ### How Claude answers
 
 A fork of the conversation of the whiteboard, a Claude Code session, answers the questions of the sticky notes (`claude --resume <session> --fork-session`). Nothing is added to the main conversation.
@@ -53,7 +55,7 @@ Claude runs as `claude` (Claude Code) of the machine of the server.
 
 When the discussion is over, click "Close the board" at the top right, and choose what to give back to the AI.
 
-- The sticky notes are listed, all checked at first. Those checked are given back to the AI with their passages, your memos and questions, and the answers of Claude. Uncheck the side trips that were only for you: nothing of a sticky note unchecked is given back.
+- The sticky notes are listed, all but the resolved ones checked at first. Those checked are given back to the AI with their passages, your memos and questions, and the answers of Claude. Uncheck the side trips that were only for you: nothing of a sticky note unchecked is given back.
 - In the next points, write what you want to take up with the AI next (what you doubt, what to change, what to think about), if anything. "Draft from the sticky notes checked" has Claude draft them from those checked. Read and fix the draft rather than giving it back as is.
 - Check "Keep the minutes as a note in" to keep the next points, the sticky notes (passages, messages and those on answers) and the topic, folded, as the minutes: one note in the notebook chosen, tagged `whiteboard`. Unchecked, no minutes are kept. With no sticky notes and no next points, no minutes can be kept: they would only copy the topic. When the sticky notes are as they were when the board was opened from its note and there are no next points, nothing was discussed: the window opens with both boxes unchecked (check them to keep the minutes anyway). Whatever the boxes say, "Close without minutes" closes the board keeping neither the minutes nor the link. The minutes of a board opened from a note link to that note.
 - On a board opened from a note, "Add a link to the minutes in “Appendix: discussions” of the note …", checked at first, adds a line linking to the minutes in the section "Appendix: discussions" at the end of the note; the minutes are kept then, to link to.
