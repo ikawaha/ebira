@@ -111,6 +111,9 @@ type GetResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
@@ -138,6 +141,9 @@ type OpenResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
@@ -165,6 +171,9 @@ type SaveResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
@@ -280,6 +289,9 @@ type FinishResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
@@ -1014,6 +1026,7 @@ func NewGetResponseBody(res *boards.Board) *GetResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -1050,6 +1063,7 @@ func NewOpenResponseBody(res *boards.Board) *OpenResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -1086,6 +1100,7 @@ func NewSaveResponseBody(res *boards.Board) *SaveResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -1224,6 +1239,7 @@ func NewFinishResponseBody(res *boards.Board) *FinishResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)

@@ -1223,6 +1223,7 @@ paths:
                                       updated_at: "2026-10-16T09:30:00Z"
                                 text: Illo tempore occaecati non.
                                 title: Neque consequatur dolor quo et.
+                                unchanged: true
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The body of the note is empty, or too many boards are open'
@@ -1455,6 +1456,7 @@ paths:
                                       updated_at: "2026-10-16T09:30:00Z"
                                 text: Ut labore minima quo et voluptatem.
                                 title: Eaque ad eos quo dolore et voluptatem.
+                                unchanged: true
                                 updated_at: "2026-10-16T09:30:00Z"
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
@@ -1590,6 +1592,7 @@ paths:
                                       updated_at: "2026-10-16T09:30:00Z"
                                 text: Quia nihil corporis voluptatem.
                                 title: Consequatur harum dolorum ullam.
+                                unchanged: false
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The title is empty'
@@ -1881,6 +1884,7 @@ paths:
                                       updated_at: "2026-10-16T09:30:00Z"
                                 text: Porro fugiat sequi.
                                 title: Ut quam aperiam commodi consequuntur.
+                                unchanged: true
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
                     description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there or the minutes are not kept (append_to_note)'
@@ -7610,6 +7614,10 @@ components:
                     type: string
                     description: Title
                     example: Eaque ad eos quo dolore et voluptatem.
+                unchanged:
+                    type: boolean
+                    description: 'Whether the sticky notes are as they were when a person last opened the board from its note: closing it as it is then keeps no minutes by default'
+                    example: true
                 updated_at:
                     type: string
                     description: Last update time
@@ -7732,6 +7740,7 @@ components:
                       updated_at: "2026-10-16T09:30:00Z"
                 text: Ut labore minima quo et voluptatem.
                 title: Eaque ad eos quo dolore et voluptatem.
+                unchanged: true
                 updated_at: "2026-10-16T09:30:00Z"
             required:
                 - id
@@ -7743,6 +7752,7 @@ components:
                 - text
                 - stickies
                 - from_session
+                - unchanged
                 - fork
         BoardAnchor:
             type: object

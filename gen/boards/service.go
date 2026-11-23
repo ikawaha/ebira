@@ -140,6 +140,9 @@ type Board struct {
 	Result *BoardResult
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardFork
 }
@@ -806,6 +809,9 @@ type jsonBoardTransport struct {
 	Result *jsonBoardResultTransport `json:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `json:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged *bool `json:"unchanged"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *jsonBoardForkTransport `json:"fork"`
 }
@@ -841,6 +847,9 @@ func validatejsonBoardTransport(value *jsonBoardTransport) (err error) {
 	}
 	if value.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
+	}
+	if value.Unchanged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unchanged", "body"))
 	}
 	if value.Fork == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
@@ -1060,6 +1069,7 @@ func EncodeBoard(in *Board) ([]byte, error) {
 			UpdatedAt:   &in.UpdatedAt,
 			Text:        &in.Text,
 			FromSession: &in.FromSession,
+			Unchanged:   &in.Unchanged,
 		}
 		body.Source = encodeBoardSourceToBoardSourceTransport(in.Source)
 		body.Stickies = make([]*jsonBoardStickyTransport, len(in.Stickies))
@@ -1110,6 +1120,7 @@ func ValidateBoardValue(in *Board) error {
 			UpdatedAt:   &in.UpdatedAt,
 			Text:        &in.Text,
 			FromSession: &in.FromSession,
+			Unchanged:   &in.Unchanged,
 		}
 		body.Source = encodeBoardSourceToBoardSourceTransport(in.Source)
 		body.Stickies = make([]*jsonBoardStickyTransport, len(in.Stickies))
@@ -1164,6 +1175,7 @@ func DecodeBoard(data []byte) (out *Board, err error) {
 			UpdatedAt:   *body.UpdatedAt,
 			Text:        *body.Text,
 			FromSession: *body.FromSession,
+			Unchanged:   *body.Unchanged,
 		}
 		out.Source = decodeBoardSourceTransportToBoardSource(body.Source)
 		out.Stickies = make([]*BoardSticky, len(body.Stickies))
@@ -2157,6 +2169,13 @@ func validateBoardJSONValue(path string, value any, description string) error {
 			); err != nil {
 				return err
 			}
+		case "unchanged":
+			if err := validateBoardJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the sticky notes are as they were when a person last opened the board from its note: closing it as it is then keeps no minutes by default",
+			); err != nil {
+				return err
+			}
 		case "updated_at":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
@@ -2176,6 +2195,7 @@ func validateBoardJSONValue(path string, value any, description string) error {
 				"stickies",
 				"text",
 				"title",
+				"unchanged",
 				"updated_at",
 			})
 		}

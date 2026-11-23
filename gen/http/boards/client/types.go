@@ -107,6 +107,9 @@ type GetResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged *bool `form:"unchanged,omitempty" json:"unchanged,omitempty" xml:"unchanged,omitempty"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
@@ -134,6 +137,9 @@ type OpenResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged *bool `form:"unchanged,omitempty" json:"unchanged,omitempty" xml:"unchanged,omitempty"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
@@ -161,6 +167,9 @@ type SaveResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged *bool `form:"unchanged,omitempty" json:"unchanged,omitempty" xml:"unchanged,omitempty"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
@@ -276,6 +285,9 @@ type FinishResponseBody struct {
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
 	// Whether an AI client opened the board, and waits for what is given back
 	FromSession *bool `form:"from_session,omitempty" json:"from_session,omitempty" xml:"from_session,omitempty"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged *bool `form:"unchanged,omitempty" json:"unchanged,omitempty" xml:"unchanged,omitempty"`
 	// Whether sticky notes of the fork kind can be put on the board
 	Fork *BoardForkResponseBody `form:"fork,omitempty" json:"fork,omitempty" xml:"fork,omitempty"`
 }
@@ -1115,6 +1127,7 @@ func NewGetBoardOK(body *GetResponseBody) *boards.Board {
 		UpdatedAt:   *body.UpdatedAt,
 		Text:        *body.Text,
 		FromSession: *body.FromSession,
+		Unchanged:   *body.Unchanged,
 	}
 	v.Source = unmarshalBoardSourceResponseBodyToBoardsBoardSource(body.Source)
 	v.Stickies = make([]*boards.BoardSticky, len(body.Stickies))
@@ -1172,6 +1185,7 @@ func NewOpenBoardCreated(body *OpenResponseBody) *boards.Board {
 		UpdatedAt:   *body.UpdatedAt,
 		Text:        *body.Text,
 		FromSession: *body.FromSession,
+		Unchanged:   *body.Unchanged,
 	}
 	v.Source = unmarshalBoardSourceResponseBodyToBoardsBoardSource(body.Source)
 	v.Stickies = make([]*boards.BoardSticky, len(body.Stickies))
@@ -1243,6 +1257,7 @@ func NewSaveBoardOK(body *SaveResponseBody) *boards.Board {
 		UpdatedAt:   *body.UpdatedAt,
 		Text:        *body.Text,
 		FromSession: *body.FromSession,
+		Unchanged:   *body.Unchanged,
 	}
 	v.Source = unmarshalBoardSourceResponseBodyToBoardsBoardSource(body.Source)
 	v.Stickies = make([]*boards.BoardSticky, len(body.Stickies))
@@ -1698,6 +1713,7 @@ func NewFinishBoardOK(body *FinishResponseBody) *boards.Board {
 		UpdatedAt:   *body.UpdatedAt,
 		Text:        *body.Text,
 		FromSession: *body.FromSession,
+		Unchanged:   *body.Unchanged,
 	}
 	v.Source = unmarshalBoardSourceResponseBodyToBoardsBoardSource(body.Source)
 	v.Stickies = make([]*boards.BoardSticky, len(body.Stickies))
@@ -1789,6 +1805,9 @@ func ValidateGetResponseBody(body *GetResponseBody) (err error) {
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
 	}
+	if body.Unchanged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unchanged", "body"))
+	}
 	if body.Fork == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
 	}
@@ -1860,6 +1879,9 @@ func ValidateOpenResponseBody(body *OpenResponseBody) (err error) {
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
 	}
+	if body.Unchanged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unchanged", "body"))
+	}
 	if body.Fork == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
 	}
@@ -1930,6 +1952,9 @@ func ValidateSaveResponseBody(body *SaveResponseBody) (err error) {
 	}
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
+	}
+	if body.Unchanged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unchanged", "body"))
 	}
 	if body.Fork == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))
@@ -2201,6 +2226,9 @@ func ValidateFinishResponseBody(body *FinishResponseBody) (err error) {
 	}
 	if body.FromSession == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("from_session", "body"))
+	}
+	if body.Unchanged == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("unchanged", "body"))
 	}
 	if body.Fork == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("fork", "body"))

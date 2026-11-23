@@ -8043,22 +8043,27 @@ function openBoardFinish() {
   });
   save.addEventListener("change", () => { if (!save.checked) append.checked = false; });
   // With no sticky notes and no points, nothing is kept: the minutes would
-  // only copy the topic.
-  const nothing = el("p", "board-hint", t("boardNothingToKeep"));
-  let empty = null;
+  // only copy the topic. With the sticky notes as they were when the board
+  // was opened from its note and no points, nothing was discussed this time:
+  // nothing is kept unless the person asks.
+  const nothing = el("p", "board-hint");
+  let kept = null;
   const updateKeep = () => {
-    const now = b.stickies.length === 0 && !text.value.trim();
-    if (now === empty) return;
-    empty = now;
-    nothing.hidden = !now;
-    save.disabled = append.disabled = now;
-    if (now) {
-      save.checked = append.checked = false;
-    } else {
+    const blank = !text.value.trim();
+    const now = b.stickies.length === 0 && blank ? "empty" : b.unchanged && blank ? "unchanged" : "changed";
+    if (now === kept) return;
+    kept = now;
+    nothing.hidden = now === "changed";
+    nothing.textContent = now === "empty" ? t("boardNothingToKeep") : now === "unchanged" ? t("boardUnchanged") : "";
+    save.disabled = append.disabled = now === "empty";
+    if (now === "changed") {
       save.checked = noteThere || !!last;
       append.checked = noteThere;
+    } else {
+      save.checked = append.checked = false;
     }
     select.disabled = !save.checked;
+    updateSkip();
   };
   text.addEventListener("input", updateKeep);
   const appendRow = [];
@@ -8068,24 +8073,37 @@ function openBoardFinish() {
     appendRow.push(el("p", "board-hint", t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
   }
 
-  const finish = button(t("boardFinish"), async () => {
-    finish.disabled = true;
+  // close finishes the board; with keep, it keeps what the boxes say.
+  const close = async (keep) => {
+    finish.disabled = skip.disabled = true;
     const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
-    if (save.checked) body.notebook = select.value;
-    if (noteThere && append.checked) body.append_to_note = true;
+    if (keep && save.checked) body.notebook = select.value;
+    if (keep && noteThere && append.checked) body.append_to_note = true;
     try {
       await api(`/boards/${b.id}/finish`, { method: "POST", body });
     } catch (e) {
       err.textContent = t("boardFailed", { error: e.message });
-      finish.disabled = false;
+      finish.disabled = skip.disabled = false;
       return;
     }
-    try { localStorage.setItem("ebira.boardNotebook", save.checked ? select.value : ""); } catch (_) { /* not kept */ }
+    // The notebook chosen is remembered only when the minutes were kept.
+    if (keep) {
+      try { localStorage.setItem("ebira.boardNotebook", save.checked ? select.value : ""); } catch (_) { /* not kept */ }
+    }
     dlg.close();
     showToast(t(b.from_session ? "boardFinishedSession" : "boardFinished"));
     await loadBoards();
     loadBoard();
-  }, { cls: "primary" });
+  };
+  const finish = button(t("boardFinish"), () => close(true), { cls: "primary" });
+  // Closing without the minutes, whatever the boxes say; shown only when
+  // they would keep something.
+  const skip = button(t("boardFinishNoMinutes"), () => close(false));
+  function updateSkip() {
+    skip.hidden = !save.checked && !append.checked;
+  }
+  save.addEventListener("change", updateSkip);
+  append.addEventListener("change", updateSkip);
 
   function update() {
     if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || !board.data?.fork?.available;
@@ -8101,7 +8119,7 @@ function openBoardFinish() {
     ...appendRow,
     el("label", "board-save", save, t("boardSaveAsNote"), select),
     err,
-    el("div", "files-actions", button(t("cancel"), () => dlg.close()), finish));
+    el("div", "files-actions", button(t("cancel"), () => dlg.close()), skip, finish));
   updateKeep();
   dlg.showModal();
   text.focus();

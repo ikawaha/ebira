@@ -459,6 +459,7 @@ func (s *Notes) fullBoard(ctx context.Context, st *board.Store, b *board.Board) 
 		Text:        text,
 		Stickies:    make([]*genboards.BoardSticky, 0, len(b.Stickies)),
 		FromSession: b.Origin.AI,
+		Unchanged:   b.Unchanged(),
 		Fork:        s.forkState(ctx, b),
 	}
 	if b.Source.NoteID != "" {
@@ -554,6 +555,16 @@ func (r Boards) Open(ctx context.Context, p *genboards.OpenPayload) (*genboards.
 	if b, err := s.openBoardOf(n.ID); err != nil {
 		return nil, err
 	} else if b != nil {
+		// What it has now was there before: closing it as it is keeps
+		// nothing by default.
+		b, err := s.boards.store.Update(b.ID, func(b *board.Board) error {
+			b.Opened = b.StickiesDigest()
+			return nil
+		})
+		if err != nil {
+			return nil, boardErr(err)
+		}
+		s.events.publish(eventBoard, b.ID)
 		if b.Origin.SessionID == "" && s.forkState(ctx, b).Available {
 			s.seedLater(b.ID)
 		}
@@ -566,6 +577,7 @@ func (r Boards) Open(ctx context.Context, p *genboards.OpenPayload) (*genboards.
 	nb, err := s.openBoard(board.Board{
 		Title:  title,
 		Source: board.Source{From: board.FromNote, NoteID: n.ID, NoteVersion: n.Version, Format: board.Markdown},
+		Opened: (&board.Board{}).StickiesDigest(),
 	}, n.Body)
 	if err != nil {
 		return nil, err

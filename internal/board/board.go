@@ -11,6 +11,8 @@
 package board
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -119,6 +121,31 @@ type Board struct {
 	Origin    Origin    `json:"origin,omitzero"`
 	Stickies  []Sticky  `json:"stickies"`
 	Result    *Result   `json:"result,omitempty"`
+	// Opened is the digest of the sticky notes when a person last opened
+	// the board from its note (see StickiesDigest), to tell whether they
+	// changed since.
+	Opened string `json:"opened,omitempty"`
+}
+
+// StickiesDigest returns a digest of the sticky notes of b, with their
+// messages and states.
+func (b *Board) StickiesDigest() string {
+	stickies := b.Stickies
+	if stickies == nil {
+		stickies = []Sticky{}
+	}
+	data, err := json.Marshal(stickies)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// Unchanged tells whether the sticky notes of b are as they were when a
+// person last opened it from its note.
+func (b *Board) Unchanged() bool {
+	return b.Opened != "" && b.Opened == b.StickiesDigest()
 }
 
 // Source tells where the source came from and how to show it.

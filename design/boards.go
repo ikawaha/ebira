@@ -105,6 +105,7 @@ var Board = Type("Board", func() {
 	RequiredAttribute("stickies", ArrayOf(BoardSticky), "The sticky notes, in the order they were added")
 	Attribute("result", BoardResult, "What was given back, once finished")
 	RequiredAttribute("from_session", Boolean, "Whether an AI client opened the board, and waits for what is given back")
+	RequiredAttribute("unchanged", Boolean, "Whether the sticky notes are as they were when a person last opened the board from its note: closing it as it is then keeps no minutes by default")
 	RequiredAttribute("fork", BoardFork, "Whether sticky notes of the fork kind can be put on the board")
 })
 

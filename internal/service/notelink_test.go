@@ -240,6 +240,12 @@ func TestOneBoardPerNote(t *testing.T) {
 	if first.ID == byAI.ID {
 		t.Error("opening the note reused the board of an AI")
 	}
+	if !first.Unchanged {
+		t.Error("a new board is not unchanged")
+	}
+	if got, _ := boardsOf(svc).Get(ai, &genboards.GetPayload{ID: byAI.ID}); got != nil && got.Unchanged {
+		t.Error("the board of an AI is unchanged")
+	}
 	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: first.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}, Text: ptr("why?")}); err != nil {
 		t.Fatal(err)
 	}
@@ -255,6 +261,17 @@ func TestOneBoardPerNote(t *testing.T) {
 	}
 	if again.ID != first.ID || len(again.Stickies) != 1 || deref(again.Source.NoteState) != "changed" {
 		t.Errorf("opened again = %s (%d sticky notes, %s), want %s", again.ID, len(again.Stickies), deref(again.Source.NoteState), first.ID)
+	}
+	// The sticky note was there when it was opened again: nothing changed
+	// since, until another one comes.
+	if !again.Unchanged {
+		t.Error("the board opened again is not unchanged")
+	}
+	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: first.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "map"}, Text: ptr("why not?")}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := boardsOf(svc).Get(person, &genboards.GetPayload{ID: first.ID}); got.Unchanged {
+		t.Error("the board is unchanged after a sticky note was added")
 	}
 
 	// Once it is closed, a new one opens, on the note as it is now.
