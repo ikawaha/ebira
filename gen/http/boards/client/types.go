@@ -49,6 +49,9 @@ type AddStickyRequestBody struct {
 type SaveStickyRequestBody struct {
 	// The new text of a memo; empty to leave only the mark on the passage
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
+	// Whether the sticky note is resolved: the person understood it and is
+	// satisfied
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 }
 
 // AskStickyRequestBody is the type of the "boards" service "ask_sticky"
@@ -192,6 +195,9 @@ type AddStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -219,6 +225,9 @@ type SaveStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -246,6 +255,9 @@ type AskStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -929,6 +941,9 @@ type BoardStickyResponseBody struct {
 	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -1034,7 +1049,8 @@ func NewAddStickyRequestBody(p *boards.AddStickyPayload) *AddStickyRequestBody {
 // the "save_sticky" endpoint of the "boards" service.
 func NewSaveStickyRequestBody(p *boards.SaveStickyPayload) *SaveStickyRequestBody {
 	body := &SaveStickyRequestBody{
-		Text: p.Text,
+		Text:     p.Text,
+		Resolved: p.Resolved,
 	}
 	return body
 }
@@ -1356,6 +1372,7 @@ func NewAddStickyBoardStickyCreated(body *AddStickyResponseBody) *boards.BoardSt
 		Kind:      *body.Kind,
 		State:     *body.State,
 		Error:     body.Error,
+		Resolved:  *body.Resolved,
 		Session:   body.Session,
 		CreatedAt: *body.CreatedAt,
 		UpdatedAt: *body.UpdatedAt,
@@ -1442,6 +1459,7 @@ func NewSaveStickyBoardStickyOK(body *SaveStickyResponseBody) *boards.BoardStick
 		Kind:      *body.Kind,
 		State:     *body.State,
 		Error:     body.Error,
+		Resolved:  *body.Resolved,
 		Session:   body.Session,
 		CreatedAt: *body.CreatedAt,
 		UpdatedAt: *body.UpdatedAt,
@@ -1558,6 +1576,7 @@ func NewAskStickyBoardStickyOK(body *AskStickyResponseBody) *boards.BoardSticky 
 		Kind:      *body.Kind,
 		State:     *body.State,
 		Error:     body.Error,
+		Resolved:  *body.Resolved,
 		Session:   body.Session,
 		CreatedAt: *body.CreatedAt,
 		UpdatedAt: *body.UpdatedAt,
@@ -2016,6 +2035,9 @@ func ValidateAddStickyResponseBody(body *AddStickyResponseBody) (err error) {
 	if body.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
 	}
+	if body.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
+	}
 	if body.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
 	}
@@ -2080,6 +2102,9 @@ func ValidateSaveStickyResponseBody(body *SaveStickyResponseBody) (err error) {
 	if body.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
 	}
+	if body.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
+	}
 	if body.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
 	}
@@ -2143,6 +2168,9 @@ func ValidateAskStickyResponseBody(body *AskStickyResponseBody) (err error) {
 	}
 	if body.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
+	}
+	if body.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
 	}
 	if body.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
@@ -3225,6 +3253,9 @@ func ValidateBoardStickyResponseBody(body *BoardStickyResponseBody) (err error) 
 	if body.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
 	}
+	if body.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
+	}
 	if body.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
 	}
@@ -3288,6 +3319,9 @@ func validateBoardStickyResponseBody(body *BoardStickyResponseBody, path string)
 	}
 	if body.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", path))
+	}
+	if body.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", path))
 	}
 	if body.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", path))

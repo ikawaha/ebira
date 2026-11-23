@@ -1174,6 +1174,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1196,6 +1197,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1218,6 +1220,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1385,6 +1388,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1407,6 +1411,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1429,6 +1434,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1451,6 +1457,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1565,6 +1572,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1587,6 +1595,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1813,6 +1822,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1835,6 +1845,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1857,6 +1868,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1879,6 +1891,7 @@ paths:
                                           role: assistant
                                           text: Eum quaerat rerum illo natus.
                                       parent: s1a2b3c4d
+                                      resolved: true
                                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                                       state: error
                                       updated_at: "2026-10-16T09:30:00Z"
@@ -1987,6 +2000,7 @@ paths:
                                       role: assistant
                                       text: Eum quaerat rerum illo natus.
                                 parent: s1a2b3c4d
+                                resolved: true
                                 session: 824f3e9c-1804-4dd1-9b24-fc6e12a984ee
                                 state: error
                                 updated_at: "2026-10-16T09:30:00Z"
@@ -2120,7 +2134,7 @@ paths:
             tags:
                 - boards
             summary: save_sticky boards
-            description: Change the text of a memo.
+            description: Change the text of a memo, or mark a sticky note resolved or not.
             operationId: boards#save_sticky
             parameters:
                 - name: id
@@ -2151,6 +2165,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/SaveStickyRequestBody'
                         example:
+                            resolved: true
                             text: 1l5
             responses:
                 "200":
@@ -2176,6 +2191,7 @@ paths:
                                       role: assistant
                                       text: Eum quaerat rerum illo natus.
                                 parent: s1a2b3c4d
+                                resolved: false
                                 session: 287a523f-4402-42f2-936c-1ebeb51c5d5c
                                 state: error
                                 updated_at: "2026-10-16T09:30:00Z"
@@ -2254,7 +2270,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/SaveStickyRequestBody'
+                            $ref: '#/components/schemas/AskStickyRequestBody'
                         example:
                             text: aam
             responses:
@@ -2284,6 +2300,7 @@ paths:
                                       role: assistant
                                       text: Eum quaerat rerum illo natus.
                                 parent: s1a2b3c4d
+                                resolved: true
                                 session: 2cad1778-4a9a-4dd7-abc1-76d61d3466d5
                                 state: error
                                 updated_at: "2026-10-16T09:30:00Z"
@@ -7482,6 +7499,17 @@ components:
                 answer: Quia molestiae nesciunt qui dignissimos vel.
             required:
                 - answer
+        AskStickyRequestBody:
+            type: object
+            properties:
+                text:
+                    type: string
+                    description: The message
+                    example: aam
+                    maxLength: 10240
+            description: Request body for ask_sticky.
+            example:
+                text: aam
         Board:
             type: object
             properties:
@@ -7537,6 +7565,7 @@ components:
                               role: assistant
                               text: Eum quaerat rerum illo natus.
                           parent: s1a2b3c4d
+                          resolved: true
                           session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                           state: error
                           updated_at: "2026-10-16T09:30:00Z"
@@ -7559,6 +7588,7 @@ components:
                               role: assistant
                               text: Eum quaerat rerum illo natus.
                           parent: s1a2b3c4d
+                          resolved: true
                           session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                           state: error
                           updated_at: "2026-10-16T09:30:00Z"
@@ -7581,6 +7611,7 @@ components:
                               role: assistant
                               text: Eum quaerat rerum illo natus.
                           parent: s1a2b3c4d
+                          resolved: true
                           session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                           state: error
                           updated_at: "2026-10-16T09:30:00Z"
@@ -7603,6 +7634,7 @@ components:
                               role: assistant
                               text: Eum quaerat rerum illo natus.
                           parent: s1a2b3c4d
+                          resolved: true
                           session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                           state: error
                           updated_at: "2026-10-16T09:30:00Z"
@@ -7669,6 +7701,7 @@ components:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -7691,6 +7724,7 @@ components:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -7713,6 +7747,7 @@ components:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -7735,6 +7770,7 @@ components:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -8004,6 +8040,10 @@ components:
                     description: The sticky note this one is on, for one on a passage of an answer
                     example: s1a2b3c4d
                     pattern: ^s[0-9a-f]{8}$
+                resolved:
+                    type: boolean
+                    description: 'Whether the person marked the sticky note resolved: they understood it and are satisfied. Asking it again clears it'
+                    example: true
                 session:
                     type: string
                     description: The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with
@@ -8043,6 +8083,7 @@ components:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                 parent: s1a2b3c4d
+                resolved: true
                 session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                 state: error
                 updated_at: "2026-10-16T09:30:00Z"
@@ -8052,6 +8093,7 @@ components:
                 - kind
                 - messages
                 - state
+                - resolved
                 - created_at
                 - updated_at
         BoardSummary:
@@ -10409,6 +10451,10 @@ components:
         SaveStickyRequestBody:
             type: object
             properties:
+                resolved:
+                    type: boolean
+                    description: 'Whether the sticky note is resolved: the person understood it and is satisfied'
+                    example: true
                 text:
                     type: string
                     description: The new text of a memo; empty to leave only the mark on the passage
@@ -10416,6 +10462,7 @@ components:
                     maxLength: 10240
             description: Request body for save_sticky.
             example:
+                resolved: true
                 text: 1l5
         SearchResult:
             type: object

@@ -252,7 +252,7 @@ func BuildSaveStickyPayload(boardsSaveStickyBody *string, boardsSaveStickyID *st
 		}
 		err = json.Unmarshal([]byte(*boardsSaveStickyBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"text\": \"1l5\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"resolved\": true,\n      \"text\": \"1l5\"\n   }'")
 		}
 		if body.Text != nil {
 			if utf8.RuneCountInString(*body.Text) > 10240 {
@@ -292,7 +292,8 @@ func BuildSaveStickyPayload(boardsSaveStickyBody *string, boardsSaveStickyID *st
 		}
 	}
 	v := &boards.SaveStickyPayload{
-		Text: body.Text,
+		Text:     body.Text,
+		Resolved: body.Resolved,
 	}
 	v.ID = id
 	v.Sticky = sticky

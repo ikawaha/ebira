@@ -7704,6 +7704,7 @@ function stickyCard(s, children, open) {
   // The state is a class of its own name: .error colors the whole card.
   const card = el("div", `sticky ${s.kind} state-${s.state}`);
   card.dataset.sticky = s.id;
+  card.classList.toggle("resolved", !!s.resolved);
   const quote = el("blockquote", "sticky-quote", s.anchor.exact.replace(/\s+/g, " ").slice(0, 120));
   quote.title = t("boardShowPassage");
   quote.addEventListener("click", () => showPassage(s.id));
@@ -7754,8 +7755,22 @@ function stickyCard(s, children, open) {
       copyRow((cwd ? `cd '${cwd.replace(/'/g, "'\\''")}' && ` : "") + `claude --resume ${s.session}`));
     card.append(resume);
   }
-  if (open) card.append(el("div", "sticky-foot", iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s))));
-  else if (board.data?.result?.stickies?.includes(s.id)) card.append(el("div", "sticky-foot sticky-given", t("boardStickyGiven")));
+  // Resolved: the person understood it and is satisfied.
+  if (open) {
+    const done = el("input");
+    done.type = "checkbox";
+    done.checked = !!s.resolved;
+    done.disabled = s.state === "waiting";
+    done.addEventListener("change", () => resolveSticky(s, done));
+    const resolved = el("label", "sticky-resolved", done, t("boardStickyResolved"));
+    resolved.title = t("boardStickyResolvedTitle");
+    card.append(el("div", "sticky-foot", resolved, iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s))));
+  } else {
+    const foot = [];
+    if (s.resolved) foot.push(el("span", "sticky-resolved", "\u2713 " + t("boardStickyResolved")));
+    if (board.data?.result?.stickies?.includes(s.id)) foot.push(el("span", "sticky-given", t("boardStickyGiven")));
+    if (foot.length) card.append(el("div", "sticky-foot", ...foot));
+  }
   const kids = children.get(s.id) || [];
   if (kids.length) card.append(el("div", "sticky-children", ...kids.map((k) => stickyCard(k, children, open))));
   return card;
@@ -7902,6 +7917,20 @@ async function saveSticky(s, body) {
   await loadBoard();
 }
 
+// resolveSticky marks sticky note s resolved or not, as box says.
+async function resolveSticky(s, box) {
+  box.disabled = true;
+  try {
+    await api(`/boards/${board.data.id}/stickies/${s.id}`, { method: "PATCH", body: { resolved: box.checked } });
+  } catch (e) {
+    box.checked = !box.checked;
+    box.disabled = false;
+    alert(t("boardFailed", { error: e.message }));
+    return;
+  }
+  await loadBoard();
+}
+
 async function deleteSticky(s) {
   const kids = board.data.stickies.some((x) => x.parent === s.id);
   if (!confirm(t(kids ? "boardStickyDeleteChildren" : "boardStickyDeleteConfirm"))) return;
@@ -7979,12 +8008,13 @@ function openBoardFinish() {
   const stickyRows = (parent, depth) => (kids.get(parent) || []).flatMap((s) => {
     const box = el("input");
     box.type = "checkbox";
-    box.checked = true;
+    // A resolved one needs no more work: it stays here unless chosen.
+    box.checked = !s.resolved;
     box.value = s.id;
     box.addEventListener("change", update);
     boxes.push(box);
     const row = el("label", "board-pick", box,
-      el("span", "board-pick-passage", "\u201c" + clip(s.anchor.exact, 60) + "\u201d"),
+      el("span", "board-pick-passage", (s.resolved ? "\u2713 " : "") + "\u201c" + clip(s.anchor.exact, 60) + "\u201d"),
       el("span", "board-pick-message", clip(s.messages[0]?.text || "", 80)));
     row.style.paddingLeft = `${depth * 16}px`;
     return [row, ...stickyRows(s.id, depth + 1)];

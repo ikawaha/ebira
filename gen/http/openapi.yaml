@@ -1160,6 +1160,7 @@ paths:
                             - kind
                             - messages
                             - state
+                            - resolved
                             - created_at
                             - updated_at
                 "400":
@@ -1281,7 +1282,7 @@ paths:
             tags:
                 - boards
             summary: save_sticky boards
-            description: Change the text of a memo.
+            description: Change the text of a memo, or mark a sticky note resolved or not.
             operationId: boards#save_sticky
             parameters:
                 - name: id
@@ -1312,6 +1313,7 @@ paths:
                             - kind
                             - messages
                             - state
+                            - resolved
                             - created_at
                             - updated_at
                 "400":
@@ -1390,6 +1392,7 @@ paths:
                             - kind
                             - messages
                             - state
+                            - resolved
                             - created_at
                             - updated_at
                 "400":
@@ -6118,6 +6121,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -6140,6 +6144,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -6162,6 +6167,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -6184,6 +6190,7 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
+                      resolved: true
                       session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
@@ -6250,6 +6257,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  resolved: true
                   session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
@@ -6272,6 +6280,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  resolved: true
                   session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
@@ -6294,6 +6303,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  resolved: true
                   session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
@@ -6316,6 +6326,7 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
+                  resolved: true
                   session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
@@ -6592,6 +6603,10 @@ definitions:
                 description: The sticky note this one is on, for one on a passage of an answer
                 example: s1a2b3c4d
                 pattern: ^s[0-9a-f]{8}$
+            resolved:
+                type: boolean
+                description: 'Whether the person marked the sticky note resolved: they understood it and are satisfied. Asking it again clears it'
+                example: true
             session:
                 type: string
                 description: The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with
@@ -6631,6 +6646,7 @@ definitions:
                   role: assistant
                   text: Eum quaerat rerum illo natus.
             parent: s1a2b3c4d
+            resolved: true
             session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
             state: error
             updated_at: "2026-10-16T09:30:00Z"
@@ -6640,6 +6656,7 @@ definitions:
             - kind
             - messages
             - state
+            - resolved
             - created_at
             - updated_at
     BoardSummary:
@@ -8163,12 +8180,17 @@ definitions:
         title: BoardsSaveStickyRequestBody
         type: object
         properties:
+            resolved:
+                type: boolean
+                description: 'Whether the sticky note is resolved: the person understood it and is satisfied'
+                example: true
             text:
                 type: string
                 description: The new text of a memo; empty to leave only the mark on the passage
                 example: 1l5
                 maxLength: 10240
         example:
+            resolved: true
             text: 1l5
     BoardsSaveStickyUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'

@@ -1279,6 +1279,9 @@ func ValidateAIBoardStickyTransport(body *AIBoardStickyTransport) (err error) {
 	if body.Messages == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("messages", "body"))
 	}
+	if body.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
+	}
 	if body.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^s[0-9a-f]{8}$"))
 	}

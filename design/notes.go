@@ -230,6 +230,7 @@ var AIBoardSticky = Type("AIBoardSticky", func() {
 	Attribute("parent", String, "The sticky note whose answer this one is on", stickyIDDSL)
 	RequiredAttribute("passage", String, "The passage the sticky note is on: of the text of the board, or of the answer of its parent")
 	RequiredAttribute("messages", ArrayOf(AIBoardMessage), "The messages of the sticky note, oldest first")
+	RequiredAttribute("resolved", Boolean, "Whether the user marked the sticky note resolved: they understood the answer and are satisfied, so it needs no more work")
 })
 
 var AIBoardMessage = Type("AIBoardMessage", func() {

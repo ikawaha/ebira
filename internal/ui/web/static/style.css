@@ -937,6 +937,10 @@ mark.board-anchor { background: color-mix(in srgb, var(--mark-bg) 55%, transpare
 .sticky-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; color: var(--fg-muted); font-size: var(--fs-xs); }
 .sticky-foot label { display: inline-flex; align-items: center; gap: 4px; }
 .sticky-foot .icon-button svg { width: 14px; height: 14px; }
+.sticky-foot .sticky-resolved { cursor: pointer; }
+.sticky-foot span.sticky-resolved { cursor: default; color: var(--ok); }
+/* A resolved sticky note fades, but not those on its answer. */
+.sticky.resolved > .sticky-quote, .sticky.resolved > .sticky-messages, .sticky.resolved > .sticky-kind { opacity: .55; }
 .board-compose { position: absolute; z-index: 20; width: min(360px, calc(100% - 16px)); padding: 8px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg); box-shadow: 0 4px 12px rgb(0 0 0 / .18); }
 .board-compose .buttons { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; }
 .flash { animation: board-flash 1s ease-out; }

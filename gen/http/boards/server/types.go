@@ -49,6 +49,9 @@ type AddStickyRequestBody struct {
 type SaveStickyRequestBody struct {
 	// The new text of a memo; empty to leave only the mark on the passage
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
+	// Whether the sticky note is resolved: the person understood it and is
+	// satisfied
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 }
 
 // AskStickyRequestBody is the type of the "boards" service "ask_sticky"
@@ -196,6 +199,9 @@ type AddStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -223,6 +229,9 @@ type SaveStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -250,6 +259,9 @@ type AskStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -933,6 +945,9 @@ type BoardStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
@@ -1135,6 +1150,7 @@ func NewAddStickyResponseBody(res *boards.BoardSticky) *AddStickyResponseBody {
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
+		Resolved:  res.Resolved,
 		Session:   res.Session,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
@@ -1166,6 +1182,7 @@ func NewSaveStickyResponseBody(res *boards.BoardSticky) *SaveStickyResponseBody 
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
+		Resolved:  res.Resolved,
 		Session:   res.Session,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
@@ -1197,6 +1214,7 @@ func NewAskStickyResponseBody(res *boards.BoardSticky) *AskStickyResponseBody {
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
+		Resolved:  res.Resolved,
 		Session:   res.Session,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
@@ -1778,7 +1796,8 @@ func NewAddStickyPayload(body *AddStickyRequestBody, id string, session *string)
 // NewSaveStickyPayload builds a boards service save_sticky endpoint payload.
 func NewSaveStickyPayload(body *SaveStickyRequestBody, id string, sticky string, session *string) *boards.SaveStickyPayload {
 	v := &boards.SaveStickyPayload{
-		Text: body.Text,
+		Text:     body.Text,
+		Resolved: body.Resolved,
 	}
 	v.ID = id
 	v.Sticky = sticky

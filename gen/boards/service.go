@@ -46,7 +46,7 @@ type Service interface {
 	// session signed in with a passkey: they come back waiting, and the answer
 	// comes later, told by an event of type board on /events.
 	AddSticky(context.Context, *AddStickyPayload) (res *BoardSticky, err error)
-	// Change the text of a memo.
+	// Change the text of a memo, or mark a sticky note resolved or not.
 	SaveSticky(context.Context, *SaveStickyPayload) (res *BoardSticky, err error)
 	// Delete a sticky note, with the sticky notes on its answer.
 	DeleteSticky(context.Context, *DeleteStickyPayload) (err error)
@@ -235,6 +235,9 @@ type BoardSticky struct {
 	State string
 	// Why the last answer failed
 	Error *string
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string
@@ -365,6 +368,9 @@ type SaveStickyPayload struct {
 	Sticky string
 	// The new text of a memo; empty to leave only the mark on the passage
 	Text *string
+	// Whether the sticky note is resolved: the person understood it and is
+	// satisfied
+	Resolved *bool
 }
 
 // MakeUnauthorized builds a goa.ServiceError from an error.
@@ -641,6 +647,9 @@ type jsonBoardStickyTransport struct {
 	State *string `json:"state"`
 	// Why the last answer failed
 	Error *string `json:"error,omitempty"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved *bool `json:"resolved"`
 	// The Claude Code session that answers a sticky note of the fork kind, which
 	// claude --resume goes on with
 	Session *string `json:"session,omitempty"`
@@ -669,6 +678,9 @@ func validatejsonBoardStickyTransport(value *jsonBoardStickyTransport) (err erro
 	}
 	if value.State == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
+	}
+	if value.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
 	}
 	if value.CreatedAt == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("created_at", "body"))
@@ -1687,6 +1699,7 @@ func EncodeBoardSticky(in *BoardSticky) ([]byte, error) {
 			Kind:      &in.Kind,
 			State:     &in.State,
 			Error:     in.Error,
+			Resolved:  &in.Resolved,
 			Session:   in.Session,
 			CreatedAt: &in.CreatedAt,
 			UpdatedAt: &in.UpdatedAt,
@@ -1734,6 +1747,7 @@ func ValidateBoardStickyValue(in *BoardSticky) error {
 			Kind:      &in.Kind,
 			State:     &in.State,
 			Error:     in.Error,
+			Resolved:  &in.Resolved,
 			Session:   in.Session,
 			CreatedAt: &in.CreatedAt,
 			UpdatedAt: &in.UpdatedAt,
@@ -1785,6 +1799,7 @@ func DecodeBoardSticky(data []byte) (out *BoardSticky, err error) {
 			Kind:      *body.Kind,
 			State:     *body.State,
 			Error:     body.Error,
+			Resolved:  *body.Resolved,
 			Session:   body.Session,
 			CreatedAt: *body.CreatedAt,
 			UpdatedAt: *body.UpdatedAt,
@@ -1977,6 +1992,7 @@ func decodeBoardStickyTransportToBoardSticky(v *jsonBoardStickyTransport) *Board
 		Kind:      *v.Kind,
 		State:     *v.State,
 		Error:     v.Error,
+		Resolved:  *v.Resolved,
 		Session:   v.Session,
 		CreatedAt: *v.CreatedAt,
 		UpdatedAt: *v.UpdatedAt,
@@ -2062,6 +2078,7 @@ func encodeBoardStickyToBoardStickyTransport(v *BoardSticky) *jsonBoardStickyTra
 		Kind:      &v.Kind,
 		State:     &v.State,
 		Error:     v.Error,
+		Resolved:  &v.Resolved,
 		Session:   v.Session,
 		CreatedAt: &v.CreatedAt,
 		UpdatedAt: &v.UpdatedAt,
@@ -2583,6 +2600,13 @@ func validateBoardJSONValue13(path string, value any, description string) error 
 			); err != nil {
 				return err
 			}
+		case "resolved":
+			if err := validateBoardJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the person marked the sticky note resolved: they understood it and are satisfied. Asking it again clears it",
+			); err != nil {
+				return err
+			}
 		case "session":
 			if err := validateBoardJSONValue2(
 				generatedJSONChildPath(path, key, false),
@@ -2613,6 +2637,7 @@ func validateBoardJSONValue13(path string, value any, description string) error 
 				"kind",
 				"messages",
 				"parent",
+				"resolved",
 				"session",
 				"state",
 				"updated_at",

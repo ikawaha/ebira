@@ -641,6 +641,8 @@
   "boardSend": "Ask",
   "boardAdd": "Add",
   "boardStickyDelete": "Delete the sticky note",
+  "boardStickyResolved": "Resolved",
+  "boardStickyResolvedTitle": "Check it when you understood and are satisfied. A resolved sticky note starts unchecked among those given to AI when the board is closed.",
   "boardStickyDeleteConfirm": "Delete the sticky note?",
   "boardStickyDeleteChildren": "Delete the sticky note, with the sticky notes on its answer?",
   "boardComposePlaceholder": "A memo, or a question to Claude (⌘Enter)",

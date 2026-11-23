@@ -508,6 +508,9 @@ type AIBoardSticky struct {
 	Passage string
 	// The messages of the sticky note, oldest first
 	Messages []*AIBoardMessage
+	// Whether the user marked the sticky note resolved: they understood the answer
+	// and are satisfied, so it needs no more work
+	Resolved bool
 }
 
 type AIBoardSummary struct {
@@ -2261,6 +2264,9 @@ type jsonAIBoardStickyTransport struct {
 	Passage *string `json:"passage"`
 	// The messages of the sticky note, oldest first
 	Messages []*jsonAIBoardMessageTransport `json:"messages"`
+	// Whether the user marked the sticky note resolved: they understood the answer
+	// and are satisfied, so it needs no more work
+	Resolved *bool `json:"resolved"`
 }
 
 // validatejsonAIBoardStickyTransport checks decoded JSON before it becomes a service value.
@@ -2276,6 +2282,9 @@ func validatejsonAIBoardStickyTransport(value *jsonAIBoardStickyTransport) (err 
 	}
 	if value.Messages == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("messages", "body"))
+	}
+	if value.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^s[0-9a-f]{8}$"))
@@ -5161,9 +5170,10 @@ func EncodeAIBoardSticky(in *AIBoardSticky) ([]byte, error) {
 	var body *jsonAIBoardStickyTransport
 	{
 		body = &jsonAIBoardStickyTransport{
-			ID:      &in.ID,
-			Parent:  in.Parent,
-			Passage: &in.Passage,
+			ID:       &in.ID,
+			Parent:   in.Parent,
+			Passage:  &in.Passage,
+			Resolved: &in.Resolved,
 		}
 		body.Messages = make([]*jsonAIBoardMessageTransport, len(in.Messages))
 		for i, val := range in.Messages {
@@ -5202,9 +5212,10 @@ func ValidateAIBoardStickyValue(in *AIBoardSticky) error {
 	var body *jsonAIBoardStickyTransport
 	{
 		body = &jsonAIBoardStickyTransport{
-			ID:      &in.ID,
-			Parent:  in.Parent,
-			Passage: &in.Passage,
+			ID:       &in.ID,
+			Parent:   in.Parent,
+			Passage:  &in.Passage,
+			Resolved: &in.Resolved,
 		}
 		body.Messages = make([]*jsonAIBoardMessageTransport, len(in.Messages))
 		for i, val := range in.Messages {
@@ -5247,9 +5258,10 @@ func DecodeAIBoardSticky(data []byte) (out *AIBoardSticky, err error) {
 	}
 	{
 		out = &AIBoardSticky{
-			ID:      *body.ID,
-			Parent:  body.Parent,
-			Passage: *body.Passage,
+			ID:       *body.ID,
+			Parent:   body.Parent,
+			Passage:  *body.Passage,
+			Resolved: *body.Resolved,
 		}
 		out.Messages = make([]*AIBoardMessage, len(body.Messages))
 		for i, val := range body.Messages {
@@ -9526,9 +9538,10 @@ func decodeAIBoardMessageTransportToAIBoardMessage(v *jsonAIBoardMessageTranspor
 
 func decodeAIBoardStickyTransportToAIBoardSticky(v *jsonAIBoardStickyTransport) *AIBoardSticky {
 	res := &AIBoardSticky{
-		ID:      *v.ID,
-		Parent:  v.Parent,
-		Passage: *v.Passage,
+		ID:       *v.ID,
+		Parent:   v.Parent,
+		Passage:  *v.Passage,
+		Resolved: *v.Resolved,
 	}
 	res.Messages = make([]*AIBoardMessage, len(v.Messages))
 	for i, val := range v.Messages {
@@ -9799,9 +9812,10 @@ func encodeAIBoardMessageToAIBoardMessageTransport(v *AIBoardMessage) *jsonAIBoa
 
 func encodeAIBoardStickyToAIBoardStickyTransport(v *AIBoardSticky) *jsonAIBoardStickyTransport {
 	res := &jsonAIBoardStickyTransport{
-		ID:      &v.ID,
-		Parent:  v.Parent,
-		Passage: &v.Passage,
+		ID:       &v.ID,
+		Parent:   v.Parent,
+		Passage:  &v.Passage,
+		Resolved: &v.Resolved,
 	}
 	res.Messages = make([]*jsonAIBoardMessageTransport, len(v.Messages))
 	for i, val := range v.Messages {
@@ -10323,12 +10337,20 @@ func validateAIBoardJSONValue4(path string, value any, description string) error
 			); err != nil {
 				return err
 			}
+		case "resolved":
+			if err := validateAIBoardJSONValue7(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the user marked the sticky note resolved: they understood the answer and are satisfied, so it needs no more work",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"id",
 				"messages",
 				"parent",
 				"passage",
+				"resolved",
 			})
 		}
 	}
@@ -10402,6 +10424,22 @@ func validateAIBoardJSONValue6(path string, value any, description string) error
 				"text",
 			})
 		}
+	}
+	return nil
+}
+
+// validateAIBoardJSONValue7 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateAIBoardJSONValue7(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
+	}
+	_, ok := value.(bool)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
 	}
 	return nil
 }
@@ -10840,7 +10878,7 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 				return err
 			}
 		case "in_history":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether an earlier version of a note, kept on this device, refers to the file, which putting that version back would need",
 			); err != nil {
@@ -10868,7 +10906,7 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 				return err
 			}
 		case "recent":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the file was added within the last hour, such as to a note still being edited, whose body does not refer to it until saved",
 			); err != nil {
@@ -10904,22 +10942,6 @@ func validateFileCheckJSONValue4(path string, value any, description string) err
 	return nil
 }
 
-// validateFileCheckJSONValue5 checks one value whose JSON shape is fixed by the generated Goa type.
-func validateFileCheckJSONValue5(path string, value any, description string) error {
-	field := path
-	if field == "" {
-		field = "$payload"
-	}
-	if value == nil {
-		return invalidGeneratedFieldTypeError(field, "boolean", "null", description)
-	}
-	_, ok := value.(bool)
-	if !ok {
-		return invalidGeneratedFieldTypeError(field, "boolean", decodedJSONType(value), description)
-	}
-	return nil
-}
-
 // validateFileVersionJSONValue checks one value whose JSON shape is fixed by the generated Goa type.
 func validateFileVersionJSONValue(path string, value any, description string) error {
 	field := path
@@ -10941,7 +10963,7 @@ func validateFileVersionJSONValue(path string, value any, description string) er
 	for _, key := range keys {
 		switch key {
 		case "current":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the note has a file of the same name now, which putting this one back replaces",
 			); err != nil {
@@ -11061,7 +11083,7 @@ func validateGitStatusJSONValue(path string, value any, description string) erro
 	for _, key := range keys {
 		switch key {
 		case "repository":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the notes are in a git repository, so that git_sync can sync them; git is optional",
 			); err != nil {
@@ -11133,7 +11155,7 @@ func validateGitSyncResultJSONValue(path string, value any, description string) 
 				return err
 			}
 		case "pushed":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether commits were pushed",
 			); err != nil {
@@ -11308,7 +11330,7 @@ func validateImportResultJSONValue2(path string, value any, description string) 
 	for _, key := range keys {
 		switch key {
 		case "archived":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 			); err != nil {
@@ -11618,7 +11640,7 @@ func validateImportResultJSONValue8(path string, value any, description string) 
 	for _, key := range keys {
 		switch key {
 		case "changed":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the title or the body of the note changed since it was written to Zenn last, so that the article lags behind the note until it is written again",
 			); err != nil {
@@ -11632,7 +11654,7 @@ func validateImportResultJSONValue8(path string, value any, description string) 
 				return err
 			}
 		case "published":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the article is published, rather than a draft",
 			); err != nil {
@@ -11822,7 +11844,7 @@ func validateListenEventJSONValue3(path string, value any, description string) e
 	for _, key := range keys {
 		switch key {
 		case "toolsListChanged":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Tool list changes are accepted",
 			); err != nil {
@@ -11941,7 +11963,7 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 				return err
 			}
 		case "watch":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the server watches the notes directory; left out for true",
 			); err != nil {
@@ -12171,7 +12193,7 @@ func validateNoteFileJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "replaced":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "True when the file took the place of a file of the same name, which people can put back",
 			); err != nil {
@@ -12288,7 +12310,7 @@ func validateNoteListJSONValue3(path string, value any, description string) erro
 	for _, key := range keys {
 		switch key {
 		case "archived":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the note is in the archive, put there on its own or with its notebook: kept, but left out of lists and searches unless they ask for it; absent when it is not",
 			); err != nil {
@@ -12793,7 +12815,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 	for _, key := range keys {
 		switch key {
 		case "archived":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the notebook is in the archive, put there itself or with its parent; absent when it is not. Lists and searches leave its notes out unless they ask for the archive",
 			); err != nil {
@@ -12863,7 +12885,7 @@ func validateNotebookJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "reserved":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether this is a system notebook (inbox or trash)",
 			); err != nil {
@@ -13052,7 +13074,7 @@ func validatePreviewStyleJSONValue(path string, value any, description string) e
 				return err
 			}
 		case "modified":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the file differs from the built-in style it was made from",
 			); err != nil {
@@ -13256,14 +13278,14 @@ func validateSettingsJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "passkeys":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether a passkey is registered, which auth: passkey needs to sign in",
 			); err != nil {
 				return err
 			}
 		case "restart":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether restart_server can start the server again",
 			); err != nil {
@@ -13580,7 +13602,7 @@ func validateZennExportJSONValue(path string, value any, description string) err
 				return err
 			}
 		case "pushed":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether a commit was pushed: false when the article was in the repository already as it is",
 			); err != nil {
@@ -13703,14 +13725,14 @@ func validateZennStatusJSONValue(path string, value any, description string) err
 				return err
 			}
 		case "configured":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether notes can be written to Zenn: the repository is set, as zenn_repo of the settings",
 			); err != nil {
 				return err
 			}
 		case "git":
-			if err := validateFileCheckJSONValue5(
+			if err := validateAIBoardJSONValue7(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Whether the server finds the git command, which writing to the repository needs",
 			); err != nil {

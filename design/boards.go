@@ -47,6 +47,7 @@ var BoardSticky = Type("BoardSticky", func() {
 		Enum("idle", "waiting", "error")
 	})
 	Attribute("error", String, "Why the last answer failed")
+	RequiredAttribute("resolved", Boolean, "Whether the person marked the sticky note resolved: they understood it and are satisfied. Asking it again clears it")
 	Attribute("session", String, "The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with", func() {
 		Format(FormatUUID)
 	})
@@ -239,7 +240,7 @@ var _ = Service("boards", func() {
 	})
 
 	Method("save_sticky", func() {
-		Description("Change the text of a memo.")
+		Description("Change the text of a memo, or mark a sticky note resolved or not.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, boardIDDesc, boardIDDSL)
@@ -247,6 +248,7 @@ var _ = Service("boards", func() {
 			Attribute("text", String, "The new text of a memo; empty to leave only the mark on the passage", func() {
 				MaxLength(10 << 10)
 			})
+			Attribute("resolved", Boolean, "Whether the sticky note is resolved: the person understood it and is satisfied")
 		})
 		Result(BoardSticky)
 		Error("not_found", ErrorResult, "The board or the sticky note does not exist")

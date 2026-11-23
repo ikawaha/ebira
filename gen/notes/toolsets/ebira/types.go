@@ -757,6 +757,9 @@ type (
 		Passage string
 		// The messages of the sticky note, oldest first
 		Messages []*AIBoardMessage
+		// Whether the user marked the sticky note resolved: they understood the answer
+		// and are satisfied, so it needs no more work
+		Resolved bool
 	}
 	// AIBoardSummary is a nested type used by the generated JSON contract.
 	AIBoardSummary = struct {

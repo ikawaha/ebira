@@ -813,6 +813,9 @@ type GetAiBoardResultAIBoardStickyTransport struct {
 	Passage *string `json:"passage"`
 	// The messages of the sticky note, oldest first
 	Messages []*GetAiBoardResultAIBoardMessageTransport `json:"messages"`
+	// Whether the user marked the sticky note resolved: they understood the answer
+	// and are satisfied, so it needs no more work
+	Resolved *bool `json:"resolved"`
 }
 
 // ValidateGetAiBoardResultAIBoardStickyTransport checks decoded JSON before it becomes a service value.
@@ -828,6 +831,9 @@ func ValidateGetAiBoardResultAIBoardStickyTransport(value *GetAiBoardResultAIBoa
 	}
 	if value.Messages == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("messages", "body"))
+	}
+	if value.Resolved == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("resolved", "body"))
 	}
 	if value.ID != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *value.ID, "^s[0-9a-f]{8}$"))
@@ -5481,9 +5487,10 @@ func encodeAIBoardMessageToGetAiBoardResultAIBoardMessageTransport(v *notes.AIBo
 
 func encodeAIBoardStickyToGetAiBoardResultAIBoardStickyTransport(v *notes.AIBoardSticky) *GetAiBoardResultAIBoardStickyTransport {
 	res := &GetAiBoardResultAIBoardStickyTransport{
-		ID:      &v.ID,
-		Parent:  v.Parent,
-		Passage: &v.Passage,
+		ID:       &v.ID,
+		Parent:   v.Parent,
+		Passage:  &v.Passage,
+		Resolved: &v.Resolved,
 	}
 	res.Messages = make([]*GetAiBoardResultAIBoardMessageTransport, len(v.Messages))
 	for i, val := range v.Messages {

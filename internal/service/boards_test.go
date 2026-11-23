@@ -288,6 +288,13 @@ func TestBoardStickies(t *testing.T) {
 	if m, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: b.ID, Sticky: memo.ID, Text: ptr("checked")}); err != nil || m.Messages[0].Text != "checked" {
 		t.Errorf("memo saved = %+v, %v", m, err)
 	}
+	// Resolved, with the text kept; adding to it again clears it.
+	if m, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: b.ID, Sticky: memo.ID, Resolved: ptr(true)}); err != nil || !m.Resolved || m.Messages[0].Text != "checked" {
+		t.Errorf("memo resolved = %+v, %v", m, err)
+	}
+	if m, err := boardsOf(svc).AskSticky(person, &genboards.AskStickyPayload{ID: b.ID, Sticky: memo.ID, Text: ptr("and more")}); err != nil || m.Resolved {
+		t.Errorf("memo added to after resolved = %+v, %v", m, err)
+	}
 
 	// The draft is from the sticky notes chosen, which exist.
 	for _, ids := range [][]string{nil, {q.ID, "s00000000"}} {
@@ -338,6 +345,9 @@ func TestFinishBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: opened.ID, Sticky: given.ID, Resolved: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: opened.ID, Text: "x", Stickies: []string{given.ID, "s00000000"}}); errorName(err) != "bad_request" {
 		t.Errorf("finishing with a missing sticky note = %v", err)
 	}
@@ -353,7 +363,8 @@ func TestFinishBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n.Notebook != nb.ID || n.Title != "Plan" || len(n.Tags) != 1 || n.Tags[0] != board.Tag ||
-		!strings.HasPrefix(n.Body, "## Next points\n\nUse a map instead.") || !strings.Contains(n.Body, "why not a map?") || !strings.Contains(n.Body, "Use a trie.") {
+		!strings.HasPrefix(n.Body, "## Next points\n\nUse a map instead.") || !strings.Contains(n.Body, "why not a map?") ||
+		!strings.Contains(n.Body, "### “trie” (resolved)\n") || strings.Contains(n.Body, "“Use” (resolved)") || !strings.Contains(n.Body, "Use a trie.") {
 		t.Errorf("note = %+v", n)
 	}
 
@@ -365,7 +376,7 @@ func TestFinishBoard(t *testing.T) {
 	if len(res.Stickies) != 1 {
 		t.Fatalf("sticky notes given back = %d", len(res.Stickies))
 	}
-	if st := res.Stickies[0]; st.ID != given.ID || st.Passage != "trie" || st.Parent != nil ||
+	if st := res.Stickies[0]; st.ID != given.ID || st.Passage != "trie" || st.Parent != nil || !st.Resolved ||
 		len(st.Messages) != 1 || st.Messages[0].Role != "user" || st.Messages[0].Text != "why not a map?" {
 		t.Errorf("sticky note given back = %+v", st)
 	}

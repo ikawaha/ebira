@@ -379,7 +379,7 @@ func givenBack(b *board.Board) []*gennotes.AIBoardSticky {
 		if !chosen[st.ID] {
 			continue
 		}
-		s := &gennotes.AIBoardSticky{ID: st.ID, Parent: optional(st.Parent), Passage: st.Anchor.Exact, Messages: make([]*gennotes.AIBoardMessage, 0, len(st.Messages))}
+		s := &gennotes.AIBoardSticky{ID: st.ID, Parent: optional(st.Parent), Passage: st.Anchor.Exact, Resolved: st.Resolved, Messages: make([]*gennotes.AIBoardMessage, 0, len(st.Messages))}
 		for _, m := range st.Messages {
 			s.Messages = append(s.Messages, &gennotes.AIBoardMessage{Role: m.Role, Text: m.Text})
 		}
@@ -522,7 +522,7 @@ func apiSticky(s *board.Sticky) *genboards.BoardSticky {
 		ID: s.ID, Parent: optional(s.Parent),
 		Anchor: &genboards.BoardAnchor{Exact: s.Anchor.Exact, Prefix: optional(s.Anchor.Prefix), Suffix: optional(s.Anchor.Suffix)},
 		Kind:   s.Kind, Messages: make([]*genboards.BoardMessage, 0, len(s.Messages)),
-		State: s.State, Error: optional(s.Error), Session: optional(s.Session),
+		State: s.State, Error: optional(s.Error), Resolved: s.Resolved, Session: optional(s.Session),
 		CreatedAt: store.FormatTime(s.CreatedAt), UpdatedAt: store.FormatTime(s.UpdatedAt),
 	}
 	for _, m := range s.Messages {
@@ -764,6 +764,9 @@ func (r Boards) SaveSticky(ctx context.Context, p *genboards.SaveStickyPayload) 
 				st.Messages = []board.Message{{Role: board.User, Text: t, At: st.Messages[0].At}}
 			}
 		}
+		if p.Resolved != nil {
+			st.Resolved = *p.Resolved
+		}
 		st.UpdatedAt = s.now()
 		saved = *st
 		return nil
@@ -810,6 +813,8 @@ func (r Boards) AskSticky(ctx context.Context, p *genboards.AskStickyPayload) (*
 		if st.State == board.Waiting {
 			return fmt.Errorf("%w: the sticky note waits for an answer", board.ErrInvalid)
 		}
+		// Asking again tells it is not resolved.
+		st.Resolved = false
 		if st.Kind == board.Assistant || st.Kind == board.Fork {
 			if st.Kind == board.Assistant {
 				if err := s.requireAsker(); err != nil {

@@ -8,7 +8,8 @@
     "memo": "Memo",
     "from_note": "From the note",
     "discussions": "Appendix: discussions",
-    "points": "Next points"
+    "points": "Next points",
+    "resolved": "(resolved)"
   },
   "ja": {
     "stickies": "付箋",
@@ -19,6 +20,7 @@
     "memo": "メモ",
     "from_note": "元のノート",
     "discussions": "補足：議論",
-    "points": "論点"
+    "points": "論点",
+    "resolved": "（解決）"
   }
 }

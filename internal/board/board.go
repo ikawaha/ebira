@@ -182,6 +182,9 @@ type Sticky struct {
 	Messages []Message `json:"messages"`
 	State    string    `json:"state"`
 	Error    string    `json:"error,omitempty"`
+	// Resolved tells that the person understood what the sticky note asked
+	// and is satisfied: asking it again clears it.
+	Resolved bool `json:"resolved,omitempty"`
 	// Session is the Claude Code session that answers a sticky note of kind
 	// fork: a fork of the session of the board, or of that of its parent.
 	Session   string    `json:"session,omitempty"`

@@ -114,7 +114,11 @@ func writeStickies(sb *strings.Builder, b *Board, source, lang string, level int
 	fmt.Fprintf(sb, "%s %s\n", strings.Repeat("#", level), label(lang, "stickies"))
 	var write func(s *Sticky, level int)
 	write = func(s *Sticky, level int) {
-		fmt.Fprintf(sb, "\n%s %s\n\n", strings.Repeat("#", min(level, 6)), heading(s.Anchor.Exact))
+		h := heading(s.Anchor.Exact)
+		if s.Resolved {
+			h += " " + label(lang, "resolved")
+		}
+		fmt.Fprintf(sb, "\n%s %s\n\n", strings.Repeat("#", min(level, 6)), h)
 		sb.WriteString(quote(s.Anchor.Exact))
 		for _, m := range s.Messages {
 			who := "question"

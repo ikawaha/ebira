@@ -1591,6 +1591,11 @@ var getAiBoardResultFields = []tools.FieldMetadata{
 		Description: "Text in Markdown",
 	},
 	{
+		Path:        []tools.FieldPathSegment{tools.FixedField("stickies"), tools.DynamicField{}, tools.FixedField("resolved")},
+		JSONType:    "boolean",
+		Description: "Whether the user marked the sticky note resolved: they understood the answer and are satisfied, so it needs no more work",
+	},
+	{
 		Path:        []tools.FieldPathSegment{tools.FixedField("note_id")},
 		JSONType:    "string",
 		Description: "The note the user kept the minutes of the board in, if they did: the next points, the sticky notes and the topic",
@@ -10910,12 +10915,20 @@ func validateGetAiBoardResultAIBoardStickyTransportJSONValue(path string, value 
 			); err != nil {
 				return err
 			}
+		case "resolved":
+			if err := validateBooleanJSONValue(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether the user marked the sticky note resolved: they understood the answer and are satisfied, so it needs no more work",
+			); err != nil {
+				return err
+			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
 				"id",
 				"messages",
 				"parent",
 				"passage",
+				"resolved",
 			})
 		}
 	}
@@ -11919,9 +11932,10 @@ func encodeTextRangeToTextRangeTransport(v *TextRange) *toolhttp.TextRangeTransp
 }
 func decodeAIBoardStickyTransportToAIBoardSticky(v *toolhttp.AIBoardStickyTransport) *AIBoardSticky {
 	res := &AIBoardSticky{
-		ID:      *v.ID,
-		Parent:  v.Parent,
-		Passage: *v.Passage,
+		ID:       *v.ID,
+		Parent:   v.Parent,
+		Passage:  *v.Passage,
+		Resolved: *v.Resolved,
 	}
 	res.Messages = make([]*AIBoardMessage, len(v.Messages))
 	for i, val := range v.Messages {
@@ -11944,9 +11958,10 @@ func decodeAIBoardMessageTransportToAIBoardMessage(v *toolhttp.AIBoardMessageTra
 }
 func encodeAIBoardStickyToAIBoardStickyTransport(v *AIBoardSticky) *toolhttp.AIBoardStickyTransport {
 	res := &toolhttp.AIBoardStickyTransport{
-		ID:      &v.ID,
-		Parent:  v.Parent,
-		Passage: &v.Passage,
+		ID:       &v.ID,
+		Parent:   v.Parent,
+		Passage:  &v.Passage,
+		Resolved: &v.Resolved,
 	}
 	res.Messages = make([]*toolhttp.AIBoardMessageTransport, len(v.Messages))
 	for i, val := range v.Messages {

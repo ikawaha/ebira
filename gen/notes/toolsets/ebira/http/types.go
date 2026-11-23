@@ -901,6 +901,9 @@ type (
 		Passage *string `json:"passage"`
 		// The messages of the sticky note, oldest first
 		Messages []*AIBoardMessageTransport `json:"messages"`
+		// Whether the user marked the sticky note resolved: they understood the answer
+		// and are satisfied, so it needs no more work
+		Resolved *bool `json:"resolved"`
 	}
 	// AIBoardSummaryTransport is the internal JSON transport type for AIBoardSummaryTransport.
 	// It lives in the toolset-local http package and is used only for JSON

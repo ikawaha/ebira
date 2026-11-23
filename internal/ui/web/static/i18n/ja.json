@@ -641,6 +641,8 @@
   "boardSend": "聞く",
   "boardAdd": "足す",
   "boardStickyDelete": "付箋を削除",
+  "boardStickyResolved": "解決",
+  "boardStickyResolvedTitle": "理解して納得したらチェックします。チェックした付箋は、閉じるときに AI へ渡す付箋から外れた状態で始まります。",
   "boardStickyDeleteConfirm": "付箋を削除しますか？",
   "boardStickyDeleteChildren": "付箋を、その答えに付けた付箋ごと削除しますか？",
   "boardComposePlaceholder": "メモか、Claude への質問（⌘Enter）",

@@ -1256,6 +1256,7 @@ func marshalBoardsBoardStickyToBoardStickyResponseBody(v *boards.BoardSticky) *B
 		Kind:      v.Kind,
 		State:     v.State,
 		Error:     v.Error,
+		Resolved:  v.Resolved,
 		Session:   v.Session,
 		CreatedAt: v.CreatedAt,
 		UpdatedAt: v.UpdatedAt,
