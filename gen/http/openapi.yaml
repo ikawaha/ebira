@@ -722,7 +722,7 @@ paths:
             tags:
                 - boards
             summary: open boards
-            description: Open a whiteboard on the body of a note, copied as it is now.
+            description: Open a whiteboard on the body of a note, copied as it is now; or the whiteboard of the note open already, if a person opened one and has not closed it.
             operationId: boards#open
             parameters:
                 - name: OpenRequestBody
@@ -7612,7 +7612,7 @@ definitions:
                     - ja
             notebook:
                 type: string
-                description: Notebook to save the board in as a note; not saved when omitted
+                description: Notebook to keep the minutes of the board in, as a note; not kept when omitted, nor for a board with no sticky notes and no next points
                 example: inbox
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             stickies:

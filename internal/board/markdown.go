@@ -61,8 +61,7 @@ func NoteBody(b *Board, source, result, lang string, from *NoteRef) string {
 		fmt.Fprintf(&sb, "%s: %s\n\n", label(lang, "from_note"), from.link())
 	}
 	if r := strings.TrimSpace(result); r != "" {
-		sb.WriteString(r)
-		sb.WriteString("\n\n")
+		fmt.Fprintf(&sb, "## %s\n\n%s\n\n", label(lang, "points"), r)
 	}
 	if writeStickies(&sb, b, source, lang, 2, nil) {
 		sb.WriteString("\n")

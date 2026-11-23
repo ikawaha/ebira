@@ -156,7 +156,7 @@ var _ = Service("boards", func() {
 	})
 
 	Method("open", func() {
-		Description("Open a whiteboard on the body of a note, copied as it is now.")
+		Description("Open a whiteboard on the body of a note, copied as it is now; or the whiteboard of the note open already, if a person opened one and has not closed it.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("note_id", String, "The note", noteIDDSL)
@@ -334,7 +334,7 @@ var _ = Service("boards", func() {
 			Attribute("stickies", ArrayOf(String, stickyIDDSL), "The sticky notes to give back: the session reads their passages and messages, those of the assistant too. The others are not given back", func() {
 				MaxLength(200)
 			})
-			Attribute("notebook", String, "Notebook to save the board in as a note; not saved when omitted", notebookIDDSL)
+			Attribute("notebook", String, "Notebook to keep the minutes of the board in, as a note; not kept when omitted, nor for a board with no sticky notes and no next points", notebookIDDSL)
 			Attribute("append_to_note", Boolean, "Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)")
 			Attribute("lang", String, "Language of the headings of the note, that of the UI", func() {
 				Enum("en", "ja")

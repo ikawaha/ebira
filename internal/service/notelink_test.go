@@ -93,8 +93,23 @@ func TestBoardAppendRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: kb.ID, AppendToNote: ptr(true)}); errorName(err) != "bad_request" {
+	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: kb.ID, Text: "- a point", AppendToNote: ptr(true)}); errorName(err) != "bad_request" {
 		t.Errorf("adding without the minutes = %v", err)
+	}
+
+	// With no sticky notes and no points, nothing is kept nor added, even
+	// when asked.
+	cur, _ := svc.Get(person, &gennotes.GetPayload{ID: kept.ID})
+	nb, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "minutes", Kind: "default"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: kb.ID, Notebook: &nb.ID, AppendToNote: ptr(true)})
+	if err != nil || done.Result.NoteID != nil || done.Result.Appended {
+		t.Errorf("closing an empty board = %+v, %v", done, err)
+	}
+	if after, _ := svc.Get(person, &gennotes.GetPayload{ID: kept.ID}); after.Body != cur.Body {
+		t.Errorf("the note changed:\n%s", after.Body)
 	}
 
 	// Nor one whose note is in the trash.
@@ -198,5 +213,59 @@ func TestAIReadsBoardsOnNotes(t *testing.T) {
 	}
 	if _, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: onShared.ID}); errorName(err) != "not_found" {
 		t.Errorf("board on a note made private = %v", err)
+	}
+}
+
+func TestOneBoardPerNote(t *testing.T) {
+	svc, _ := newBoardService(t, nil)
+	person := AsPerson(context.Background())
+	ai := WithBaseURL(context.Background(), "http://localhost:13579")
+	work, err := svc.CreateNotebook(person, &gennotes.CreateNotebookPayload{Name: "work", Kind: "default"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := svc.Create(person, &gennotes.CreatePayload{ID: ptr("plan"), Notebook: &work.ID, Title: "Plan", Body: ptr("Use a trie.\n")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A board an AI opened on the note is of its conversation: not reused.
+	byAI, err := svc.OpenAiBoard(ai, &gennotes.OpenAiBoardPayload{Title: "Plan", Format: "markdown", NoteID: &n.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := boardsOf(svc).Open(person, &genboards.OpenPayload{NoteID: n.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == byAI.ID {
+		t.Error("opening the note reused the board of an AI")
+	}
+	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: first.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}, Text: ptr("why?")}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Opening the note again, even changed, shows the board open on it.
+	cur, _ := svc.Get(person, &gennotes.GetPayload{ID: n.ID})
+	if _, err := svc.Update(person, &gennotes.UpdatePayload{ID: n.ID, Body: ptr("Use a map.\n"), IfMatch: &cur.Version}); err != nil {
+		t.Fatal(err)
+	}
+	again, err := boardsOf(svc).Open(person, &genboards.OpenPayload{NoteID: n.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.ID != first.ID || len(again.Stickies) != 1 || deref(again.Source.NoteState) != "changed" {
+		t.Errorf("opened again = %s (%d sticky notes, %s), want %s", again.ID, len(again.Stickies), deref(again.Source.NoteState), first.ID)
+	}
+
+	// Once it is closed, a new one opens, on the note as it is now.
+	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: first.ID}); err != nil {
+		t.Fatal(err)
+	}
+	next, err := boardsOf(svc).Open(person, &genboards.OpenPayload{NoteID: n.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.ID == first.ID || next.Text != "Use a map.\n" {
+		t.Errorf("opened after closing = %s %q", next.ID, next.Text)
 	}
 }

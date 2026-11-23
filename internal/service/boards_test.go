@@ -353,7 +353,7 @@ func TestFinishBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n.Notebook != nb.ID || n.Title != "Plan" || len(n.Tags) != 1 || n.Tags[0] != board.Tag ||
-		!strings.HasPrefix(n.Body, "Use a map instead.") || !strings.Contains(n.Body, "why not a map?") || !strings.Contains(n.Body, "Use a trie.") {
+		!strings.HasPrefix(n.Body, "## Next points\n\nUse a map instead.") || !strings.Contains(n.Body, "why not a map?") || !strings.Contains(n.Body, "Use a trie.") {
 		t.Errorf("note = %+v", n)
 	}
 

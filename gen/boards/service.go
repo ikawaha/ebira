@@ -30,7 +30,9 @@ type Service interface {
 	List(context.Context, *ListPayload) (res []*BoardSummary, err error)
 	// Get a whiteboard with its source and sticky notes.
 	Get(context.Context, *GetPayload) (res *Board, err error)
-	// Open a whiteboard on the body of a note, copied as it is now.
+	// Open a whiteboard on the body of a note, copied as it is now; or the
+	// whiteboard of the note open already, if a person opened one and has not
+	// closed it.
 	Open(context.Context, *OpenPayload) (res *Board, err error)
 	// Rename a whiteboard.
 	Save(context.Context, *SavePayload) (res *Board, err error)
@@ -304,7 +306,8 @@ type FinishPayload struct {
 	// The sticky notes to give back: the session reads their passages and
 	// messages, those of the assistant too. The others are not given back
 	Stickies []string
-	// Notebook to save the board in as a note; not saved when omitted
+	// Notebook to keep the minutes of the board in, as a note; not kept when
+	// omitted, nor for a board with no sticky notes and no next points
 	Notebook *string
 	// Add a line linking to the minutes, which are then to be kept (notebook), in
 	// the section of discussions at the end of the note the board was opened from

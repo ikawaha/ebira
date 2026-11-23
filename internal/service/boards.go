@@ -93,6 +93,8 @@ type boards struct {
 
 	mu      sync.Mutex
 	running map[string]context.CancelFunc // answers under way, by board and sticky note
+
+	opening sync.Mutex // one note opened at a time, not to open two boards of it
 }
 
 // SetBoards gives the service the whiteboards of st, with ask answering the
@@ -545,6 +547,18 @@ func (r Boards) Open(ctx context.Context, p *genboards.OpenPayload) (*genboards.
 	if err != nil {
 		return nil, err
 	}
+	// A note has one whiteboard open at a time: opening it again shows that
+	// one, with its sticky notes, rather than a second copy.
+	s.boards.opening.Lock()
+	defer s.boards.opening.Unlock()
+	if b, err := s.openBoardOf(n.ID); err != nil {
+		return nil, err
+	} else if b != nil {
+		if b.Origin.SessionID == "" && s.forkState(ctx, b).Available {
+			s.seedLater(b.ID)
+		}
+		return s.fullBoard(ctx, s.boards.store, b)
+	}
 	title := strings.TrimSpace(deref(p.Title))
 	if title == "" {
 		title = n.Title
@@ -561,6 +575,21 @@ func (r Boards) Open(ctx context.Context, p *genboards.OpenPayload) (*genboards.
 		s.seedLater(nb.ID)
 	}
 	return s.fullBoard(ctx, s.boards.store, nb)
+}
+
+// openBoardOf returns the whiteboard a person opened on note id and has not
+// closed, or nil.
+func (s *Notes) openBoardOf(id string) (*board.Board, error) {
+	list, err := s.boards.store.List()
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		if b := &list[i]; b.Status == board.Open && b.Source.From == board.FromNote && b.Source.NoteID == id && !b.Origin.AI {
+			return b, nil
+		}
+	}
+	return nil, nil
 }
 
 // changeBoard changes board id with change, for people, and tells the
@@ -1134,6 +1163,12 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 	appendToNote := p.AppendToNote != nil && *p.AppendToNote
 	if appendToNote && from == nil {
 		return nil, gennotes.MakeBadRequest(errors.New("the board was not opened from a note, or the note is in the trash or deleted"))
+	}
+	// A board closed with no sticky notes and no points has nothing to keep:
+	// its minutes would only copy the topic, and a link to them clutter the
+	// note.
+	if len(b.Stickies) == 0 && strings.TrimSpace(p.Text) == "" {
+		p.Notebook, appendToNote = nil, false
 	}
 	if appendToNote && p.Notebook == nil {
 		return nil, gennotes.MakeBadRequest(errors.New("the note links to the minutes: keep them in a notebook"))

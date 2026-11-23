@@ -8042,6 +8042,25 @@ function openBoardFinish() {
     }
   });
   save.addEventListener("change", () => { if (!save.checked) append.checked = false; });
+  // With no sticky notes and no points, nothing is kept: the minutes would
+  // only copy the topic.
+  const nothing = el("p", "board-hint", t("boardNothingToKeep"));
+  let empty = null;
+  const updateKeep = () => {
+    const now = b.stickies.length === 0 && !text.value.trim();
+    if (now === empty) return;
+    empty = now;
+    nothing.hidden = !now;
+    save.disabled = append.disabled = now;
+    if (now) {
+      save.checked = append.checked = false;
+    } else {
+      save.checked = noteThere || !!last;
+      append.checked = noteThere;
+    }
+    select.disabled = !save.checked;
+  };
+  text.addEventListener("input", updateKeep);
   const appendRow = [];
   if (noteThere) {
     appendRow.push(el("label", "board-save", append, t("boardAppendToNote", { title: b.source.note_title || "" })));
@@ -8078,10 +8097,12 @@ function openBoardFinish() {
     ...(picks ? [picks, el("div", "board-draft", draft)] : []),
     el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : noteThere ? "boardBackHintNote" : "boardBackHint")),
     text,
+    nothing,
     ...appendRow,
     el("label", "board-save", save, t("boardSaveAsNote"), select),
     err,
     el("div", "files-actions", button(t("cancel"), () => dlg.close()), finish));
+  updateKeep();
   dlg.showModal();
   text.focus();
 }

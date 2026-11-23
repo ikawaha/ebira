@@ -73,7 +73,8 @@ type FinishRequestBody struct {
 	// The sticky notes to give back: the session reads their passages and
 	// messages, those of the assistant too. The others are not given back
 	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
-	// Notebook to save the board in as a note; not saved when omitted
+	// Notebook to keep the minutes of the board in, as a note; not kept when
+	// omitted, nor for a board with no sticky notes and no next points
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
 	// Add a line linking to the minutes, which are then to be kept (notebook), in
 	// the section of discussions at the end of the note the board was opened from

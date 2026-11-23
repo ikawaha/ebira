@@ -669,6 +669,7 @@
   "boardNoteInTrash": "元のノートはゴミ箱にあるので、リンクを足せません。",
   "boardNoteMissing": "元のノートが見つからないので、リンクを足せません。",
   "boardAppendedTo": "元のノートに議事録へのリンクを足しました:",
+  "boardNothingToKeep": "付箋も論点も無いので、議事録は残しません。",
   "boardSaveAsNote": "議事録をノートに残す:",
   "boardFinished": "ホワイトボードを閉じました。",
   "boardFinishedSession": "ホワイトボードを閉じました。AI に、終わったと伝えてください。",

@@ -95,7 +95,7 @@ func TestNoteBody(t *testing.T) {
 
 	got := NoteBody(b, "func main() {\n```\n}\n", "  Given back.  ", "en", nil)
 	for _, want := range []string{
-		"Given back.\n\n## Sticky notes\n",
+		"## Next points\n\nGiven back.\n\n## Sticky notes\n",
 		"### \u201cfunc main() { }\u201d\n\n> func main() {\n> }\n",
 		"**Q** what?\n", "**A** The entry point.\n",
 		"#### \u201centry\u201d\n", "**Memo** see the spec\n",

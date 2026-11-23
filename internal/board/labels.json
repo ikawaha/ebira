@@ -7,7 +7,8 @@
     "answer": "A",
     "memo": "Memo",
     "from_note": "From the note",
-    "discussions": "Appendix: discussions"
+    "discussions": "Appendix: discussions",
+    "points": "Next points"
   },
   "ja": {
     "stickies": "付箋",
@@ -17,6 +18,7 @@
     "answer": "答",
     "memo": "メモ",
     "from_note": "元のノート",
-    "discussions": "補足：議論"
+    "discussions": "補足：議論",
+    "points": "論点"
   }
 }
