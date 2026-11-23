@@ -856,6 +856,7 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 12px 8px 16px; border-radius: var(--r-lg); background: var(--fg); color: var(--bg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); font-size: var(--fs-sm); }
 .toast[hidden] { display: none; }
 .toast .toast-msg { overflow-wrap: anywhere; }
+.toast .toast-msg a { color: var(--bg); font-weight: 600; text-decoration: underline; }
 .toast button { flex: none; font-size: var(--fs-sm); padding: 4px 12px; background: transparent; color: var(--bg); border: 1px solid currentColor; border-radius: var(--r-md); cursor: pointer; }
 .auth { max-width: 420px; }
 .auth .files-actions { gap: 8px; }

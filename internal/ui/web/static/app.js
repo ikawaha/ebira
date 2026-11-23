@@ -4744,6 +4744,13 @@ function noteAnchor(id, title, d) {
 // note replaced by one of the same name or deleted, by people or AI clients,
 // which can be put back too.
 
+// openHistoryOf shows note id in the preview, then its history.
+async function openHistoryOf(id) {
+  selectNote(id);
+  for (let i = 0; i < 100 && state.note?.id !== id; i++) await new Promise((r) => setTimeout(r, 50));
+  if (state.note?.id === id) openHistory();
+}
+
 async function openHistory() {
   const n = state.note;
   if (!n) return;
@@ -5416,6 +5423,20 @@ function notePrivateLost(id) {
       loadNotebooks().catch(() => {});
     }, PRIVATE_LOST_MS);
   }, 300);
+}
+
+// showToastLink shows message in the bar for a while, with a link to href.
+function showToastLink(message, label, href, ms = 15000) {
+  undoAction = null;
+  const bar = $("toast");
+  const a = el("a", "", label);
+  a.href = href;
+  a.addEventListener("click", () => hideToast());
+  bar.querySelector(".toast-msg").replaceChildren(message, " ", a);
+  bar.querySelector("button").hidden = true;
+  bar.hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideToast, ms);
 }
 
 // showToast shows message in the bar for a moment, without an undo.
@@ -7566,7 +7587,15 @@ function renderBoard() {
         if (c.edited && b.source.note_id) {
           const a = el("a", "", b.source.note_title || b.source.note_id);
           a.href = "/#note/" + encodeURIComponent(b.source.note_id);
-          reply.append(el("p", "board-hint", t("boardClaudeEdited"), " ", a));
+          // The note was changed without a look first: its history has the
+          // version before, to compare or put back.
+          const back = el("a", "", t("boardClaudeHistory"));
+          back.href = "#";
+          back.addEventListener("click", (e) => {
+            e.preventDefault();
+            openHistoryOf(b.source.note_id);
+          });
+          reply.append(el("p", "board-hint", t("boardClaudeEdited"), " ", a, " · ", back));
         }
       }
       done.append(reply);
@@ -8102,6 +8131,7 @@ function openBoardFinish() {
       try { localStorage.setItem("ebira.boardNotebook", select.value); } catch (_) { /* not kept */ }
     }
     dlg.close();
+    if (reflect) reflecting.set(b.id, b.source.note_title || "");
     showToast(t(reflect ? "boardFinishedReflect" : b.from_session ? "boardFinishedSession" : "boardFinished"));
     await loadBoards();
     loadBoard();
@@ -8229,7 +8259,28 @@ let boardReload;
 
 // boardChanged follows an event of type board: a board was opened, changed or
 // deleted, such as when an answer came to a sticky note.
+// Boards closed here with the note to take what was discussed: once Claude
+// is done, the bar tells, wherever the person is.
+const reflecting = new Map();
+
+async function tellReflected(id) {
+  const title = reflecting.get(id);
+  let b;
+  try {
+    b = await api(`/boards/${encodeURIComponent(id)}`);
+  } catch (_) {
+    reflecting.delete(id); // deleted
+    return;
+  }
+  const c = b.result?.claude;
+  if (!reflecting.has(id) || !c || c.state === "waiting") return;
+  reflecting.delete(id);
+  if (c.edited) showToastLink(t("boardReflected", { title }), t("boardReflectedOpen"), "/#note/" + encodeURIComponent(b.source.note_id));
+  else showToastLink(t("boardNotReflected", { title }), t("boardNotReflectedReply"), "#board/" + encodeURIComponent(id));
+}
+
 function boardChanged(id) {
+  for (const r of reflecting.keys()) if (!id || id === r) tellReflected(r);
   clearTimeout(boardReload);
   boardReload = setTimeout(async () => {
     await loadBoards();
