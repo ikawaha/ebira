@@ -197,3 +197,63 @@ func TestAddDiscussion(t *testing.T) {
 		}
 	}
 }
+
+// TestQuestionKeepsTheAsk checks that long answers before it do not push
+// the last question, and what to do, out of the question.
+func TestQuestionKeepsTheAsk(t *testing.T) {
+	now := time.Now()
+	b := &Board{Title: "PR", Status: Open, Source: Source{Format: Markdown}}
+	s, _ := b.Add(Sticky{Kind: Fork, Anchor: Anchor{Exact: "passage"}, Messages: []Message{{Text: "first?"}}}, now)
+	s.Messages = append(s.Messages,
+		Message{Role: Agent, Text: "early " + strings.Repeat("a", MaxAnswer)},
+		Message{Role: User, Text: "the last question"})
+	for _, q := range []string{Question(b, "the passage", s), ForkQuestion(b, "the passage", s, false)} {
+		if len(q) > MaxQuestion {
+			t.Errorf("question of %d bytes", len(q))
+		}
+		for _, want := range []string{"<<<passage>>>", "Person: first?", "early aaa", "The person asks: the last question", "Answer in the language"} {
+			if !strings.Contains(q, want) {
+				t.Errorf("question lacks %q", want)
+			}
+		}
+	}
+}
+
+// TestDraftQuestionKeepsEverySticky checks that a long answer on one sticky
+// note does not leave out the others chosen.
+func TestDraftQuestionKeepsEverySticky(t *testing.T) {
+	now := time.Now()
+	b := &Board{Title: "t", Status: Open}
+	a, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "long"}, Messages: []Message{{Text: "why?"}}}, now)
+	a.Messages = append(a.Messages, Message{Role: Agent, Text: strings.Repeat("a", MaxAnswer)})
+	c, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "short"}, Messages: []Message{{Text: "keep this point"}}}, now)
+	q := DraftQuestion(b, []string{a.ID, c.ID})
+	if len(q) > MaxQuestion {
+		t.Errorf("draft question of %d bytes", len(q))
+	}
+	for _, want := range []string{"On the passage: long", "Person: why?", "Assistant: aaa", "On the passage: short", "Person: keep this point", "</material>"} {
+		if !strings.Contains(q, want) {
+			t.Errorf("draft question lacks %q", want)
+		}
+	}
+}
+
+// TestCloseQuestionKeepsThePoints checks that the next points are given
+// whole, however long, and the sticky notes clipped.
+func TestCloseQuestionKeepsThePoints(t *testing.T) {
+	now := time.Now()
+	b := &Board{Title: "t", Status: Open}
+	s, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "here"}, Messages: []Message{{Text: "why?"}}}, now)
+	s.Messages = append(s.Messages, Message{Role: Agent, Text: strings.Repeat("a", MaxAnswer)})
+	points := strings.Repeat("p", MaxResult-20) + " the last point"
+	q := CloseQuestion(b, points, NoteRef{ID: "n1", Title: "Note"})
+	if !strings.Contains(q, points+"\n</points>") {
+		t.Error("the points are not whole")
+	}
+	if !strings.Contains(q, "On the passage: here") || !strings.Contains(q, "</material>") {
+		t.Error("the sticky notes are missing")
+	}
+	if len(q) > len(points)+MaxQuestion+2<<10 {
+		t.Errorf("close question of %d bytes", len(q))
+	}
+}
