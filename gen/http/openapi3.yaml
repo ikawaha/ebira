@@ -1137,6 +1137,11 @@ paths:
                                 id: 3f9c2a7b1d4e6f
                                 result:
                                     appended: false
+                                    claude:
+                                        edited: true
+                                        error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        state: waiting
+                                        text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1351,6 +1356,11 @@ paths:
                                 id: 3f9c2a7b1d4e6f
                                 result:
                                     appended: false
+                                    claude:
+                                        edited: true
+                                        error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        state: waiting
+                                        text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1535,6 +1545,11 @@ paths:
                                 id: 3f9c2a7b1d4e6f
                                 result:
                                     appended: false
+                                    claude:
+                                        edited: true
+                                        error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        state: waiting
+                                        text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1761,6 +1776,7 @@ paths:
                             $ref: '#/components/schemas/FinishRequestBody'
                         example:
                             append_to_note: false
+                            ask_claude: true
                             lang: ja
                             notebook: inbox
                             stickies:
@@ -1785,6 +1801,11 @@ paths:
                                 id: 3f9c2a7b1d4e6f
                                 result:
                                     appended: false
+                                    claude:
+                                        edited: true
+                                        error: Tenetur culpa mollitia fuga rerum vero rerum.
+                                        state: waiting
+                                        text: Officiis exercitationem earum cumque fugiat quis.
                                     finished_at: "2026-10-16T09:30:00Z"
                                     note_id: be4c1193735ee1
                                     stickies:
@@ -1899,7 +1920,7 @@ paths:
                                 unchanged: true
                                 updated_at: "2026-10-16T09:30:00Z"
                 "400":
-                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there or the minutes are not kept (append_to_note)'
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, the note to add to is not there or the minutes are not kept (append_to_note), or Claude cannot take up the next points (ask_claude)'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -7648,6 +7669,11 @@ components:
                 id: 3f9c2a7b1d4e6f
                 result:
                     appended: false
+                    claude:
+                        edited: true
+                        error: Tenetur culpa mollitia fuga rerum vero rerum.
+                        state: waiting
+                        text: Officiis exercitationem earum cumque fugiat quis.
                     finished_at: "2026-10-16T09:30:00Z"
                     note_id: be4c1193735ee1
                     stickies:
@@ -7796,6 +7822,37 @@ components:
                 suffix: Eveniet corporis nobis explicabo et sit.
             required:
                 - exact
+        BoardClaudeReply:
+            type: object
+            properties:
+                edited:
+                    type: boolean
+                    description: Whether the changes of Claude were made to the note the board was opened from
+                    example: true
+                error:
+                    type: string
+                    description: Why Claude did not reply, or why its changes were not made to the note
+                    example: Tenetur culpa mollitia fuga rerum vero rerum.
+                state:
+                    type: string
+                    description: waiting while Claude works, idle once done, or error
+                    example: waiting
+                    enum:
+                        - idle
+                        - waiting
+                        - error
+                text:
+                    type: string
+                    description: The reply of Claude to the person, in Markdown
+                    example: Officiis exercitationem earum cumque fugiat quis.
+            example:
+                edited: true
+                error: Tenetur culpa mollitia fuga rerum vero rerum.
+                state: waiting
+                text: Officiis exercitationem earum cumque fugiat quis.
+            required:
+                - state
+                - edited
         BoardFork:
             type: object
             properties:
@@ -7874,6 +7931,8 @@ components:
                     type: boolean
                     description: Whether a link to the minutes was added to the note the board was opened from
                     example: false
+                claude:
+                    $ref: '#/components/schemas/BoardClaudeReply'
                 finished_at:
                     type: string
                     description: When the board was finished
@@ -7900,6 +7959,11 @@ components:
                     example: Cumque accusantium doloremque eaque.
             example:
                 appended: false
+                claude:
+                    edited: true
+                    error: Tenetur culpa mollitia fuga rerum vero rerum.
+                    state: waiting
+                    text: Officiis exercitationem earum cumque fugiat quis.
                 finished_at: "2026-10-16T09:30:00Z"
                 note_id: be4c1193735ee1
                 stickies:
@@ -8692,6 +8756,10 @@ components:
                     type: boolean
                     description: 'Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)'
                     example: false
+                ask_claude:
+                    type: boolean
+                    description: 'Ask Claude, in the background, to take up the next points of a board opened on a note of a notebook of the collab kind: it replies, and the changes it gives are made to that note. The next points must not be empty, and Claude must be able to answer (see fork of the board)'
+                    example: true
                 lang:
                     type: string
                     description: Language of the headings of the note, that of the UI
@@ -8725,6 +8793,7 @@ components:
             description: Request body for finish.
             example:
                 append_to_note: false
+                ask_claude: true
                 lang: ja
                 notebook: inbox
                 stickies:

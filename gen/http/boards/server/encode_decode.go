@@ -1321,6 +1321,23 @@ func marshalBoardsBoardResultToBoardResultResponseBody(v *boards.BoardResult) *B
 	} else {
 		res.Stickies = []string{}
 	}
+	if v.Claude != nil {
+		res.Claude = marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody(v.Claude)
+	}
+
+	return res
+}
+
+// marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody builds a value
+// of type *BoardClaudeReplyResponseBody from a value of type
+// *boards.BoardClaudeReply.
+func marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody(v *boards.BoardClaudeReply) *BoardClaudeReplyResponseBody {
+	res := &BoardClaudeReplyResponseBody{
+		State:  v.State,
+		Text:   v.Text,
+		Edited: v.Edited,
+		Error:  v.Error,
+	}
 
 	return res
 }

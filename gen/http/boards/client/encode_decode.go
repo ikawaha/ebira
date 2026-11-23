@@ -1656,6 +1656,23 @@ func unmarshalBoardResultResponseBodyToBoardsBoardResult(v *BoardResultResponseB
 	for i, val := range v.Stickies {
 		res.Stickies[i] = val
 	}
+	if v.Claude != nil {
+		res.Claude = unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply(v.Claude)
+	}
+
+	return res
+}
+
+// unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply builds a value
+// of type *boards.BoardClaudeReply from a value of type
+// *BoardClaudeReplyResponseBody.
+func unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply(v *BoardClaudeReplyResponseBody) *boards.BoardClaudeReply {
+	res := &boards.BoardClaudeReply{
+		State:  *v.State,
+		Text:   v.Text,
+		Edited: *v.Edited,
+		Error:  v.Error,
+	}
 
 	return res
 }

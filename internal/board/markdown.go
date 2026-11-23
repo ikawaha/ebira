@@ -198,6 +198,45 @@ func isDiscussions(line string) bool {
 	return false
 }
 
+// AddBeforeDiscussions returns body with text added at the end of what the
+// person wrote: before its section of discussions (Appendix: discussions)
+// when that section is the last one, else at the end.
+func AddBeforeDiscussions(body, text string) string {
+	text = strings.Trim(text, "\n")
+	if text == "" {
+		return body
+	}
+	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")
+	at := -1
+	for i, l := range lines {
+		if isDiscussions(l) {
+			at = i
+		}
+	}
+	// Only a section that runs to the end: one followed by another of its
+	// level, or above, is the person's own.
+	if at >= 0 {
+		for _, l := range lines[at+1:] {
+			if m := headingLevel.FindString(l); m != "" && len(strings.TrimSpace(m)) <= 2 {
+				at = -1
+				break
+			}
+		}
+	}
+	if at < 0 {
+		head := strings.TrimRight(body, "\n")
+		if head != "" {
+			head += "\n\n"
+		}
+		return head + text + "\n"
+	}
+	head := strings.TrimRight(strings.Join(lines[:at], "\n"), "\n")
+	if head != "" {
+		head += "\n\n"
+	}
+	return head + text + "\n\n" + strings.Join(lines[at:], "\n") + "\n"
+}
+
 // heading returns the heading of a sticky note on passage: its start, quoted.
 func heading(passage string) string {
 	return "“" + escapeInline(oneLine(passage, 40)) + "”"

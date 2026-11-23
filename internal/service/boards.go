@@ -471,6 +471,9 @@ func (s *Notes) fullBoard(ctx context.Context, st *board.Store, b *board.Board) 
 	}
 	if r := b.Result; r != nil {
 		res.Result = &genboards.BoardResult{Text: r.Text, Stickies: append([]string{}, r.Stickies...), NoteID: optional(r.NoteID), Appended: r.Appended, FinishedAt: store.FormatTime(r.FinishedAt)}
+		if c := r.Claude; c != nil {
+			res.Result.Claude = &genboards.BoardClaudeReply{State: c.State, Text: optional(c.Text), Edited: c.Edited, Error: optional(c.Error)}
+		}
 	}
 	return res, nil
 }
@@ -1172,9 +1175,26 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 	// The note the board was opened from, which the minutes link to and the
 	// next points may be added to, unless it is in the trash or gone.
 	var from *board.NoteRef
+	fromNotebook := ""
 	if b.Source.NoteID != "" {
 		if n, err := s.Get(ctx, &gennotes.GetPayload{ID: b.Source.NoteID}); err == nil && n.Notebook != store.Trash {
 			from = &board.NoteRef{ID: n.ID, Title: n.Title}
+			fromNotebook = n.Notebook
+		}
+	}
+	// Claude takes up the next points of a board on a note it may change,
+	// and changes only that note.
+	askClaude := p.AskClaude != nil && *p.AskClaude
+	if askClaude {
+		switch {
+		case b.Source.From != board.FromNote || b.Origin.AI || from == nil:
+			return nil, gennotes.MakeBadRequest(errors.New("Claude takes up the next points of a board a person opened on a note that is there"))
+		case strings.TrimSpace(p.Text) == "":
+			return nil, gennotes.MakeBadRequest(errors.New("write the next points for Claude to take up"))
+		case s.requireAINotebook(fromNotebook) != nil:
+			return nil, gennotes.MakeBadRequest(errors.New("Claude changes only notes in a notebook of the collab kind"))
+		case s.requireFork(ctx, b) != nil:
+			return nil, gennotes.MakeBadRequest(errors.New(forkErrors[*s.forkState(ctx, b).Reason]))
 		}
 	}
 	appendToNote := p.AppendToNote != nil && *p.AppendToNote
@@ -1220,10 +1240,148 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 		}
 		b.Status = board.Done
 		b.Result = &board.Result{Text: p.Text, Stickies: given, NoteID: noteID, Appended: appendToNote, FinishedAt: s.now()}
+		if askClaude {
+			b.Result.Claude = &board.Reply{State: board.Waiting}
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	if askClaude {
+		s.takeUp(b.ID, *from)
+	}
 	return s.fullBoard(ctx, st, b)
+}
+
+// takeUp asks Claude, in the background, to take up the next points of
+// board id, closed on note, and makes the changes it gives to that note, if
+// nobody changed it since. Deleting the board stops it.
+func (s *Notes) takeUp(id string, note board.NoteRef) {
+	bs := s.boards
+	// The version the changes are made to: that of the note as the board
+	// was closed, with the link to the minutes.
+	version := ""
+	if n, err := s.Get(bs.ctx, &gennotes.GetPayload{ID: note.ID}); err == nil {
+		version = n.Version
+	}
+	ctx, cancel := context.WithCancel(bs.ctx)
+	key := runKey(id, "close")
+	bs.mu.Lock()
+	bs.running[key] = cancel
+	bs.mu.Unlock()
+	go func() {
+		defer func() {
+			bs.mu.Lock()
+			delete(bs.running, key)
+			bs.mu.Unlock()
+			cancel()
+		}()
+		select {
+		case bs.forks <- struct{}{}:
+			defer func() { <-bs.forks }()
+		case <-ctx.Done():
+			return
+		}
+		actx, acancel := context.WithTimeout(ctx, boardForkTime)
+		var reply string
+		b, err := s.seed(actx, id)
+		if err == nil {
+			session := uuid.NewString()
+			reply, err = bs.forker().Ask(actx, ForkAsk{Cwd: b.Origin.Cwd, Resume: b.Origin.SessionID, Session: session, Question: board.CloseQuestion(b, b.Result.Text, note)})
+			_ = bs.forker().Remove(session)
+		}
+		timedOut := errors.Is(actx.Err(), context.DeadlineExceeded)
+		acancel()
+		if bs.ctx.Err() != nil || ctx.Err() != nil {
+			return // the server stops, or the board was deleted
+		}
+		if timedOut {
+			err = fmt.Errorf("no reply in %v", boardForkTime)
+		}
+		res := board.Reply{State: board.Idle}
+		if err != nil {
+			res.State, res.Error = board.Failed, err.Error()
+		} else {
+			text, change, cerr := board.SplitReply(reply)
+			res.Text = text
+			switch {
+			case cerr != nil:
+				res.Error = cerr.Error()
+			case change != nil:
+				if eerr := s.changeNote(note.ID, version, change); eerr != nil {
+					res.Error = eerr.Error()
+					res.Text += "\n\n" + proposed(change)
+				} else {
+					res.Edited = true
+				}
+			}
+		}
+		if res.Error != "" {
+			log.Printf("whiteboard %s: taking up the next points: %s", id, res.Error)
+		}
+		if _, err := bs.store.Update(id, func(b *board.Board) error {
+			if b.Result == nil || b.Result.Claude == nil {
+				return errGone
+			}
+			b.Result.Claude = &res
+			return nil
+		}); err == nil {
+			s.events.publish(eventBoard, id)
+		}
+	}()
+}
+
+// changeNote makes change, of Claude, to note id at version, as an AI client
+// does: only to a note of a notebook of the collab kind, which nobody
+// changed since. What Claude adds goes before the section of discussions
+// at the end, which links the minutes.
+func (s *Notes) changeNote(id, version string, change *board.NoteChange) error {
+	ctx := s.boards.ctx
+	n, err := s.Get(ctx, &gennotes.GetPayload{ID: id})
+	if err != nil {
+		return fmt.Errorf("the changes were not made: %w", err)
+	}
+	if !store.MatchVersion(version, n.Version) {
+		return errors.New("the note changed after the board was closed: the changes were not made")
+	}
+	edits := make([]*gennotes.NoteEdit, 0, len(change.Edits))
+	for _, e := range change.Edits {
+		edits = append(edits, &gennotes.NoteEdit{Old: e.Old, New: e.New})
+	}
+	body, err := changedBody(n.Body, nil, edits)
+	if err != nil {
+		return fmt.Errorf("the changes were not made: %w", err)
+	}
+	body = board.AddBeforeDiscussions(body, change.Append)
+	_, err = s.UpdateAiNote(ctx, &gennotes.UpdateAiNotePayload{ID: id, Version: n.Version, Body: &body})
+	var se *goa.ServiceError
+	switch {
+	case err == nil:
+		return nil
+	case errors.As(err, &se) && se.Name == "precondition_failed":
+		return errors.New("the note changed after the board was closed: the changes were not made")
+	case errors.As(err, &se) && se.Name == "forbidden":
+		return errors.New("the note is no longer in a notebook of the collab kind: the changes were not made")
+	}
+	return fmt.Errorf("the changes were not made: %w", err)
+}
+
+// proposed shows change, not made, for the person to make by hand.
+func proposed(c *board.NoteChange) string {
+	var sb strings.Builder
+	for _, e := range c.Edits {
+		sb.WriteString("```diff\n")
+		for l := range strings.SplitSeq(e.Old, "\n") {
+			sb.WriteString("- " + l + "\n")
+		}
+		for l := range strings.SplitSeq(e.New, "\n") {
+			sb.WriteString("+ " + l + "\n")
+		}
+		sb.WriteString("```\n\n")
+	}
+	if a := strings.TrimSpace(c.Append); a != "" {
+		sb.WriteString("```markdown\n" + a + "\n```\n")
+	}
+	return strings.TrimSpace(sb.String())
 }

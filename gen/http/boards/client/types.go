@@ -83,6 +83,11 @@ type FinishRequestBody struct {
 	// the section of discussions at the end of the note the board was opened from
 	// (Appendix: discussions)
 	AppendToNote *bool `form:"append_to_note,omitempty" json:"append_to_note,omitempty" xml:"append_to_note,omitempty"`
+	// Ask Claude, in the background, to take up the next points of a board opened
+	// on a note of a notebook of the collab kind: it replies, and the changes it
+	// gives are made to that note. The next points must not be empty, and Claude
+	// must be able to answer (see fork of the board)
+	AskClaude *bool `form:"ask_claude,omitempty" json:"ask_claude,omitempty" xml:"ask_claude,omitempty"`
 	// Language of the headings of the note, that of the UI
 	Lang string `form:"lang" json:"lang" xml:"lang"`
 }
@@ -985,6 +990,21 @@ type BoardResultResponseBody struct {
 	Appended *bool `form:"appended,omitempty" json:"appended,omitempty" xml:"appended,omitempty"`
 	// When the board was finished
 	FinishedAt *string `form:"finished_at,omitempty" json:"finished_at,omitempty" xml:"finished_at,omitempty"`
+	// What Claude made of the next points, when asked to take them up as the board
+	// was closed (ask_claude)
+	Claude *BoardClaudeReplyResponseBody `form:"claude,omitempty" json:"claude,omitempty" xml:"claude,omitempty"`
+}
+
+// BoardClaudeReplyResponseBody is used to define fields on response body types.
+type BoardClaudeReplyResponseBody struct {
+	// waiting while Claude works, idle once done, or error
+	State *string `form:"state,omitempty" json:"state,omitempty" xml:"state,omitempty"`
+	// The reply of Claude to the person, in Markdown
+	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
+	// Whether the changes of Claude were made to the note the board was opened from
+	Edited *bool `form:"edited,omitempty" json:"edited,omitempty" xml:"edited,omitempty"`
+	// Why Claude did not reply, or why its changes were not made to the note
+	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
 }
 
 // BoardForkResponseBody is used to define fields on response body types.
@@ -1086,6 +1106,7 @@ func NewFinishRequestBody(p *boards.FinishPayload) *FinishRequestBody {
 		Text:         p.Text,
 		Notebook:     p.Notebook,
 		AppendToNote: p.AppendToNote,
+		AskClaude:    p.AskClaude,
 		Lang:         p.Lang,
 	}
 	if p.Stickies != nil {
@@ -3464,6 +3485,11 @@ func ValidateBoardResultResponseBody(body *BoardResultResponseBody) (err error) 
 	if body.FinishedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("body.finished_at", *body.FinishedAt, goa.FormatDateTime))
 	}
+	if body.Claude != nil {
+		if err2 := validateBoardClaudeReplyResponseBody(body.Claude, "body.claude"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	return
 }
 
@@ -3490,6 +3516,45 @@ func validateBoardResultResponseBody(body *BoardResultResponseBody, path string)
 	}
 	if body.FinishedAt != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat(path+".finished_at", *body.FinishedAt, goa.FormatDateTime))
+	}
+	if body.Claude != nil {
+		if err2 := validateBoardClaudeReplyResponseBody(body.Claude, path+".claude"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateBoardClaudeReplyResponseBody runs the validations defined on
+// BoardClaudeReply
+func ValidateBoardClaudeReplyResponseBody(body *BoardClaudeReplyResponseBody) (err error) {
+	if body.State == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("state", "body"))
+	}
+	if body.Edited == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("edited", "body"))
+	}
+	if body.State != nil {
+		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.state", *body.State, []any{"idle", "waiting", "error"}))
+		}
+	}
+	return
+}
+
+// validateBoardClaudeReplyResponseBody checks BoardClaudeReply and reports
+// errors using the path supplied by its caller
+func validateBoardClaudeReplyResponseBody(body *BoardClaudeReplyResponseBody, path string) (err error) {
+	if body.State == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("state", path))
+	}
+	if body.Edited == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("edited", path))
+	}
+	if body.State != nil {
+		if !(*body.State == "idle" || *body.State == "waiting" || *body.State == "error") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(path+".state", *body.State, []any{"idle", "waiting", "error"}))
+		}
 	}
 	return
 }

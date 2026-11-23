@@ -23,6 +23,8 @@ type fakeForker struct {
 	asks     []ForkAsk
 	removed  []string
 	block    bool
+	// reply, if set, gives the reply to a question instead of the usual.
+	reply func(ForkAsk) string
 }
 
 func newFakeForker() *fakeForker {
@@ -35,11 +37,14 @@ func (f *fakeForker) Ask(ctx context.Context, a ForkAsk) (string, error) {
 	if a.Session != "" {
 		f.sessions[a.Session] = true
 	}
-	block := f.block
+	block, reply := f.block, f.reply
 	f.mu.Unlock()
 	if block {
 		<-ctx.Done()
 		return "", ctx.Err()
+	}
+	if reply != nil {
+		return reply(a), nil
 	}
 	return "answered in " + a.Resume, nil
 }

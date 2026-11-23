@@ -68,5 +68,7 @@ it, then ask you to read it, such as "read the whiteboard I closed". Find it
 with `list_ai_boards` (newest first; `opened_by: note`, with the note in
 `from_note`), and ask which one if it is not clear. Read it with
 `get_ai_board` as above, and the note with `get_note` if it helps. Then answer
-the points and the sticky notes in the conversation. The points were also added
-at the end of the note; change the note only if the user asks you to.
+the points and the sticky notes in the conversation. The points and all the
+sticky notes are also in the minutes, a note whose ID is `note_id` when the
+user kept them, and the note links to them at its end. Change the note only if
+the user asks you to, as the points may.

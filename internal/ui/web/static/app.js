@@ -7543,6 +7543,27 @@ function renderBoard() {
       a.href = "/#note/" + encodeURIComponent(b.result.note_id);
       done.append(el("p", "", a));
     }
+    // What Claude made of the points, when asked as the board was closed.
+    const c = b.result.claude;
+    if (c) {
+      const reply = el("div", "board-claude", el("h3", "", t("boardClaudeReply")));
+      if (c.state === "waiting") {
+        reply.append(el("p", "sticky-wait", t("boardClaudeWorking")));
+      } else {
+        if (c.text) {
+          const body = el("div", "body");
+          renderBody(body, c.text);
+          reply.append(body);
+        }
+        if (c.edited && b.source.note_id) {
+          const a = el("a", "", b.source.note_title || b.source.note_id);
+          a.href = "/#note/" + encodeURIComponent(b.source.note_id);
+          reply.append(el("p", "board-hint", t("boardClaudeEdited"), " ", a));
+        }
+        if (c.error) reply.append(el("p", "error", c.state === "error" ? t("boardClaudeFailed", { error: c.error }) : c.error));
+      }
+      done.append(reply);
+    }
     parts.push(done);
   } else if (open) {
     parts.push(el("p", "board-hint", t(b.from_session ? "boardHintSession" : "boardHint")));
@@ -8052,26 +8073,17 @@ function openBoardFinish() {
   if (nbs.some((n) => n.id === last)) select.value = last;
   const near = b.source.note_notebook;
   if (fromNote && nbs.some((n) => n.id === near)) select.value = near;
-  const where = el("label", "board-save", t("boardMinutesIn"), select);
 
-  // The line added to the note links to the minutes: it goes with them.
-  const append = el("input");
-  append.type = "checkbox";
-  append.checked = noteThere;
-  const appendRow = [];
-  if (noteThere) {
-    appendRow.push(el("label", "board-save", append, t("boardAppendToNote", { title: b.source.note_title || "" })));
-  } else if (fromNote) {
-    appendRow.push(el("p", "board-hint", t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
-  }
-
-  // close finishes the board; with keep, it keeps the minutes.
+  // close finishes the board: keep keeps the minutes, linked from the note
+  // the board was opened from; reflect asks Claude to take up the points
+  // and change that note.
   const buttons = [];
-  const close = async (keep) => {
+  const close = async ({ keep = false, reflect = false } = {}) => {
     for (const x of buttons) x.disabled = true;
     const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
     if (keep) body.notebook = select.value;
-    if (keep && noteThere && append.checked) body.append_to_note = true;
+    if (keep && noteThere) body.append_to_note = true;
+    if (reflect) body.ask_claude = true;
     try {
       await api(`/boards/${b.id}/finish`, { method: "POST", body });
     } catch (e) {
@@ -8083,50 +8095,122 @@ function openBoardFinish() {
       try { localStorage.setItem("ebira.boardNotebook", select.value); } catch (_) { /* not kept */ }
     }
     dlg.close();
-    showToast(t(b.from_session ? "boardFinishedSession" : "boardFinished"));
+    showToast(t(reflect ? "boardFinishedReflect" : b.from_session ? "boardFinishedSession" : "boardFinished"));
     await loadBoards();
     loadBoard();
   };
-  const plain = button(t("boardFinish"), () => close(false), { cls: "primary" });
-  const skip = button(t("boardFinishNoMinutes"), () => close(false));
-  const keep = button(t("boardFinishMinutes"), () => close(true));
-  buttons.push(plain, skip, keep);
+  const plain = button(t("boardFinish"), () => close(), { cls: "primary" });
+  buttons.push(plain);
 
   // With no sticky notes and no points, there is nothing to keep: the
   // minutes would only copy the topic. With the sticky notes as they were
   // when the board was opened from its note and no points, nothing was
-  // discussed this time: closing without the minutes comes first.
+  // discussed this time.
   const nothing = el("p", "board-hint");
-  let kept = null;
-  const updateKeep = () => {
+  const stateNow = () => {
     const blank = !text.value.trim();
-    const now = b.stickies.length === 0 && blank ? "empty" : b.unchanged && blank ? "unchanged" : "changed";
-    if (now === kept) return;
-    kept = now;
+    return b.stickies.length === 0 && blank ? "empty" : b.unchanged && blank ? "unchanged" : "changed";
+  };
+  const showNothing = (now) => {
     nothing.hidden = now === "changed";
     nothing.textContent = now === "empty" ? t("boardNothingToKeep") : now === "unchanged" ? t("boardUnchanged") : "";
-    const empty = now === "empty";
-    plain.hidden = !empty;
-    skip.hidden = keep.hidden = where.hidden = empty;
-    for (const r of appendRow) r.hidden = empty;
-    skip.classList.toggle("primary", now === "unchanged");
-    keep.classList.toggle("primary", now === "changed");
   };
-  text.addEventListener("input", updateKeep);
 
   function update() {
     if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || !board.data?.fork?.available;
   }
   update();
+  const head = el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close()));
 
-  dlg.replaceChildren(
-    el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close())),
+  if (fromNote && !b.from_session) {
+    // On a board a person opened from a note, what matters is whether the note
+    // takes what was discussed: Claude reads the points and changes the
+    // note, if it may (a notebook of the collab kind). The minutes are kept
+    // besides, linked from the note; the sticky notes to give back to an AI
+    // later are folded away.
+    const collab = state.notebooks.find((n) => n.id === b.source.note_notebook)?.kind === "collab";
+    const minutes = el("input");
+    minutes.type = "checkbox";
+    const minutesRow = el("div", "board-minutes",
+      el("label", "board-save", minutes, t("boardKeepMinutes"), select),
+      el("p", "board-hint", noteThere ? t("boardMinutesLinked")
+        : t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
+    const why = el("p", "board-hint");
+    const skip = button(t("boardCloseNoReflect"), () => close({ keep: minutes.checked }));
+    const reflect = button(t("boardCloseReflect"), () => close({ keep: minutes.checked, reflect: true }));
+    buttons.push(skip, reflect);
+    let kept = null;
+    const updateNote = () => {
+      const now = stateNow();
+      const blank = !text.value.trim();
+      const empty = now === "empty";
+      showNothing(now === "unchanged" ? "changed" : now);
+      // Why the note cannot take it, first what the person can do.
+      const reason = !noteThere ? ""
+        : !collab ? t("boardReflectNotCollab")
+        : !board.data?.fork?.available ? t(forkReasons[board.data?.fork?.reason] || "boardForkUnavailable")
+        : blank ? t("boardReflectNeedsPoints") : "";
+      const can = noteThere && !reason;
+      reflect.disabled = !can;
+      why.textContent = reason;
+      why.hidden = empty || !reason;
+      plain.hidden = !empty;
+      skip.hidden = reflect.hidden = minutesRow.hidden = empty;
+      reflect.classList.toggle("primary", can);
+      skip.classList.toggle("primary", !can);
+      // The minutes are kept unless nothing was discussed since the board
+      // was opened; the person's choice stays while they write.
+      if (now !== kept) {
+        if (kept === null || now === "unchanged" || kept === "unchanged" || kept === "empty") minutes.checked = now === "changed";
+        kept = now;
+      }
+      select.disabled = !minutes.checked;
+    };
+    minutes.addEventListener("change", () => { select.disabled = !minutes.checked; });
+    text.addEventListener("input", updateNote);
+    const folded = picks
+      ? el("details", "board-later", el("summary", "", t("boardPicksLater", { n: b.stickies.length })), picks, el("div", "board-draft", draft))
+      : null;
+    dlg.replaceChildren(head,
+      el("p", "board-hint", t("boardBackHintReflect")),
+      text,
+      nothing,
+      minutesRow,
+      ...(folded ? [folded] : []),
+      why,
+      err,
+      el("div", "files-actions", button(t("cancel"), () => dlg.close()), plain, skip, reflect));
+    updateNote();
+    dlg.showModal();
+    text.focus();
+    return;
+  }
+
+  // A board an AI opened: the session reads what is given back, and the
+  // minutes are kept or not, linked from the note it was opened on if any.
+  const where = el("label", "board-save", t("boardMinutesIn"), select);
+  const skip = button(t("boardFinishNoMinutes"), () => close());
+  const keep = button(t("boardFinishMinutes"), () => close({ keep: true }));
+  buttons.push(skip, keep);
+  let kept = null;
+  const updateKeep = () => {
+    const now = stateNow();
+    if (now === kept) return;
+    kept = now;
+    showNothing(now);
+    const empty = now === "empty";
+    plain.hidden = !empty;
+    skip.hidden = keep.hidden = where.hidden = empty;
+    skip.classList.toggle("primary", now === "unchanged");
+    keep.classList.toggle("primary", now === "changed");
+  };
+  text.addEventListener("input", updateKeep);
+  dlg.replaceChildren(head,
     ...(picks ? [picks, el("div", "board-draft", draft)] : []),
-    el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : noteThere ? "boardBackHintNote" : "boardBackHint")),
+    el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : "boardBackHint")),
     text,
     nothing,
     where,
-    ...appendRow,
     err,
     el("div", "files-actions", button(t("cancel"), () => dlg.close()), plain, skip, keep));
   updateKeep();

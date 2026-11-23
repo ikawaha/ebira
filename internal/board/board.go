@@ -219,6 +219,19 @@ type Result struct {
 	// board was opened from.
 	Appended   bool      `json:"appended,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
+	// Claude is what Claude made of the next points, when the person asked
+	// it to take them up as the board was closed.
+	Claude *Reply `json:"claude,omitempty"`
+}
+
+// Reply is what Claude made of the next points of a board closed on a note:
+// its reply to the person, and whether it changed the note.
+type Reply struct {
+	State string `json:"state"` // Waiting, Idle once done, or Failed
+	Text  string `json:"text,omitempty"`
+	// Edited tells whether the changes of Claude were made to the note.
+	Edited bool   `json:"edited,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 var (
@@ -619,6 +632,10 @@ func (s *Store) Interrupt(reason string) error {
 				st.State, st.Error = Failed, reason
 				changed = true
 			}
+		}
+		if r := b.Result; r != nil && r.Claude != nil && r.Claude.State == Waiting {
+			r.Claude.State, r.Claude.Error = Failed, reason
+			changed = true
 		}
 		if changed {
 			if err := s.write(&b); err != nil {

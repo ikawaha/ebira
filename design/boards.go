@@ -61,6 +61,16 @@ var BoardResult = Type("BoardResult", func() {
 	Attribute("note_id", String, "The note the minutes of the board were kept in, if they were", noteIDDSL)
 	RequiredAttribute("appended", Boolean, "Whether a link to the minutes was added to the note the board was opened from")
 	RequiredAttribute("finished_at", String, "When the board was finished", timeDSL)
+	Attribute("claude", BoardClaudeReply, "What Claude made of the next points, when asked to take them up as the board was closed (ask_claude)")
+})
+
+var BoardClaudeReply = Type("BoardClaudeReply", func() {
+	RequiredAttribute("state", String, "waiting while Claude works, idle once done, or error", func() {
+		Enum("idle", "waiting", "error")
+	})
+	Attribute("text", String, "The reply of Claude to the person, in Markdown")
+	RequiredAttribute("edited", Boolean, "Whether the changes of Claude were made to the note the board was opened from")
+	Attribute("error", String, "Why Claude did not reply, or why its changes were not made to the note")
 })
 
 var BoardSource = Type("BoardSource", func() {
@@ -339,6 +349,7 @@ var _ = Service("boards", func() {
 			})
 			Attribute("notebook", String, "Notebook to keep the minutes of the board in, as a note; not kept when omitted, nor for a board with no sticky notes and no next points", notebookIDDSL)
 			Attribute("append_to_note", Boolean, "Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)")
+			Attribute("ask_claude", Boolean, "Ask Claude, in the background, to take up the next points of a board opened on a note of a notebook of the collab kind: it replies, and the changes it gives are made to that note. The next points must not be empty, and Claude must be able to answer (see fork of the board)")
 			Attribute("lang", String, "Language of the headings of the note, that of the UI", func() {
 				Enum("en", "ja")
 				Default("en")
@@ -346,7 +357,7 @@ var _ = Service("boards", func() {
 		})
 		Result(Board)
 		Error("not_found", ErrorResult, "The board does not exist")
-		Error("bad_request", ErrorResult, "The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, or the note to add to is not there or the minutes are not kept (append_to_note)")
+		Error("bad_request", ErrorResult, "The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, the note to add to is not there or the minutes are not kept (append_to_note), or Claude cannot take up the next points (ask_claude)")
 		HTTP(func() {
 			POST("/boards/{id}/finish")
 			Response(StatusOK)

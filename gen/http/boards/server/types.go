@@ -83,6 +83,11 @@ type FinishRequestBody struct {
 	// the section of discussions at the end of the note the board was opened from
 	// (Appendix: discussions)
 	AppendToNote *bool `form:"append_to_note,omitempty" json:"append_to_note,omitempty" xml:"append_to_note,omitempty"`
+	// Ask Claude, in the background, to take up the next points of a board opened
+	// on a note of a notebook of the collab kind: it replies, and the changes it
+	// gives are made to that note. The next points must not be empty, and Claude
+	// must be able to answer (see fork of the board)
+	AskClaude *bool `form:"ask_claude,omitempty" json:"ask_claude,omitempty" xml:"ask_claude,omitempty"`
 	// Language of the headings of the note, that of the UI
 	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
 }
@@ -989,6 +994,21 @@ type BoardResultResponseBody struct {
 	Appended bool `form:"appended" json:"appended" xml:"appended"`
 	// When the board was finished
 	FinishedAt string `form:"finished_at" json:"finished_at" xml:"finished_at"`
+	// What Claude made of the next points, when asked to take them up as the board
+	// was closed (ask_claude)
+	Claude *BoardClaudeReplyResponseBody `form:"claude,omitempty" json:"claude,omitempty" xml:"claude,omitempty"`
+}
+
+// BoardClaudeReplyResponseBody is used to define fields on response body types.
+type BoardClaudeReplyResponseBody struct {
+	// waiting while Claude works, idle once done, or error
+	State string `form:"state" json:"state" xml:"state"`
+	// The reply of Claude to the person, in Markdown
+	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
+	// Whether the changes of Claude were made to the note the board was opened from
+	Edited bool `form:"edited" json:"edited" xml:"edited"`
+	// Why Claude did not reply, or why its changes were not made to the note
+	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
 }
 
 // BoardForkResponseBody is used to define fields on response body types.
@@ -1848,6 +1868,7 @@ func NewFinishPayload(body *FinishRequestBody, id string, session *string) *boar
 		Text:         *body.Text,
 		Notebook:     body.Notebook,
 		AppendToNote: body.AppendToNote,
+		AskClaude:    body.AskClaude,
 	}
 	if body.Lang != nil {
 		v.Lang = *body.Lang
