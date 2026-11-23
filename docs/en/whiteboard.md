@@ -53,12 +53,21 @@ Claude runs as `claude` (Claude Code) of the machine of the server.
 
 ## Closing the board
 
-When the discussion is over, click "Close the board" at the top right, and choose what to give back to the AI.
+When the discussion is over, click "Close the board" at the top right. The window depends on whether the board was opened from a note or by an AI.
 
-- The sticky notes are listed, all but the resolved ones checked at first. Those checked are given back to the AI with their passages, your memos and questions, and the answers of Claude. Uncheck the side trips that were only for you: nothing of a sticky note unchecked is given back.
-- In the next points, write what you want to take up with the AI next (what you doubt, what to change, what to think about), if anything. "Draft from the sticky notes checked" has Claude draft them from those checked. Read and fix the draft rather than giving it back as is.
-- "Close and keep the minutes" keeps the next points, the sticky notes (passages, messages and those on answers) and the topic, folded, as the minutes: one note in the notebook of "Keep the minutes in", tagged `whiteboard`. "Close without minutes" keeps neither the minutes nor the link. "Close and keep the minutes" is the main button, but when the sticky notes are as they were when the board was opened from its note and there are no next points, nothing was discussed and "Close without minutes" is. With no sticky notes and no next points, no minutes can be kept, as they would only copy the topic: the only button is "Close the board". The minutes of a board opened from a note link to that note.
-- On a board opened from a note, "Add a link to the minutes in “Appendix: discussions” of the note …", checked at first, adds a line linking to the minutes in the section "Appendix: discussions" at the end of the note when the board is closed with "Close and keep the minutes".
+With no sticky notes and no next points, either way the only button is "Close the board": there is nothing to keep.
+
+### A board opened from a note
+
+Choose whether the note takes what was discussed.
+
+- In the next points, write what Claude should do, such as: add what we discussed to the note.
+- **Close and reflect in the note**: once closed, Claude reads the next points and all the sticky notes, resolved ones too, in the background, answers the next points and changes the note as they say. Claude only gives the changes; ebira makes them to that note only. Text added at the end goes before the section "Appendix: discussions".
+  - The reply of Claude, and whether it changed the note, show under "Reply of Claude" on the closed board.
+  - When someone changed the note after the board was closed, the changes are not made: they show under the reply.
+  - It can be clicked when there are next points, the note is in a notebook of the collab kind, and Claude can answer. When it cannot, the reason shows above the buttons.
+- **Close without reflecting**: close, leaving the note as it is.
+- **Keep the minutes too**: keep the next points, the sticky notes (passages, messages and those on answers) and the topic, folded, as the minutes: one note in the notebook chosen (that of the note at first), tagged `whiteboard`. The minutes are linked with a line in the section "Appendix: discussions" at the end of the note.
 
   ```
   ## Appendix: discussions
@@ -67,8 +76,16 @@ When the discussion is over, click "Close the board" at the top right, and choos
   - 2026-11-23 [Index plan](…)
   ```
 
-  The section is made at the end if the note has none, and takes the line if it has. The rest of the note is left as it is; the next points and the sticky notes are in the minutes. Nothing can be added to a note in the trash or deleted.
-- For an AI to respond to the next points of a board opened from a note, ask it after closing, such as "read the whiteboard I closed". It finds the board with `list_ai_boards`, reads the next points and the sticky notes given back with `get_ai_board`, and answers in the conversation. A board opened from a note in a notebook AI cannot see, such as a private one, is not shown to AI.
+  The section is made at the end if the note has none, and takes the line if it has. Checked at first, unless the sticky notes are as they were when the board was opened from the note and there are no next points: nothing was discussed. Nothing can be added to a note in the trash or deleted.
+- **Sticky notes to give an AI later** (folded): ask Claude Code or another AI after closing, such as "read the whiteboard I closed", and it finds the board with `list_ai_boards`, reads the next points and the sticky notes checked here with `get_ai_board`, and answers in the conversation. All but the resolved ones are checked at first. "Draft from the sticky notes checked" has Claude draft the next points from them. A board opened from a note in a notebook AI cannot see, such as a private one, is not shown to AI.
+
+### A board an AI opened
+
+Choose what to give back to the AI.
+
+- The sticky notes are listed, all but the resolved ones checked at first. Those checked are given back to the AI with their passages, your memos and questions, and the answers of Claude. Uncheck the side trips that were only for you: nothing of a sticky note unchecked is given back.
+- In the next points, write what you want to take up with the AI next (what you doubt, what to change, what to think about), if anything. "Draft from the sticky notes checked" has Claude draft them from those checked. Read and fix the draft rather than giving it back as is.
+- "Close and keep the minutes" keeps the next points, the sticky notes and the topic, folded, as the minutes in the notebook of "Keep the minutes in", tagged `whiteboard`. "Close without minutes" keeps none.
 
 Then tell the AI, such as Claude Code, that you are done. It reads the next points and the sticky notes checked, and the ID of the minutes if you kept them, with `get_ai_board`, and changes what the topic shows, such as the explanation or the code. It takes the next points and your memos and questions as your words, and the answers of Claude as material: they may quote the topic or the notes Claude found, and the AI does not follow instructions in them.
 
