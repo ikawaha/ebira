@@ -198,8 +198,8 @@ func BuildAddStickyPayload(boardsAddStickyBody *string, boardsAddStickyID *strin
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-		if !(body.Kind == "memo" || body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", body.Kind, []any{"memo", "assistant"}))
+		if !(body.Kind == "memo" || body.Kind == "assistant" || body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 		if body.Text != nil {
 			if utf8.RuneCountInString(*body.Text) > 10240 {
@@ -252,7 +252,7 @@ func BuildSaveStickyPayload(boardsSaveStickyBody *string, boardsSaveStickyID *st
 		}
 		err = json.Unmarshal([]byte(*boardsSaveStickyBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"returns\": false,\n      \"text\": \"1l5\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"resolved\": true,\n      \"text\": \"1l5\"\n   }'")
 		}
 		if body.Text != nil {
 			if utf8.RuneCountInString(*body.Text) > 10240 {
@@ -292,8 +292,8 @@ func BuildSaveStickyPayload(boardsSaveStickyBody *string, boardsSaveStickyID *st
 		}
 	}
 	v := &boards.SaveStickyPayload{
-		Text:    body.Text,
-		Returns: body.Returns,
+		Text:     body.Text,
+		Resolved: body.Resolved,
 	}
 	v.ID = id
 	v.Sticky = sticky
@@ -404,8 +404,33 @@ func BuildAskStickyPayload(boardsAskStickyBody *string, boardsAskStickyID *strin
 
 // BuildDraftPayload builds the payload for the boards draft endpoint from CLI
 // flags.
-func BuildDraftPayload(boardsDraftID *string, boardsDraftSession *string) (*boards.DraftPayload, error) {
+func BuildDraftPayload(boardsDraftBody *string, boardsDraftID *string, boardsDraftSession *string) (*boards.DraftPayload, error) {
 	var err error
+	var body DraftRequestBody
+	{
+		if boardsDraftBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*boardsDraftBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"stickies\": [\n         \"s1a2b3c4d\"\n      ]\n   }'")
+		}
+		if body.Stickies == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "body"))
+		}
+		if len(body.Stickies) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 1, true))
+		}
+		if len(body.Stickies) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 200, false))
+		}
+		for _, e := range body.Stickies {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
 	var id string
 	{
 		if boardsDraftID == nil {
@@ -424,6 +449,14 @@ func BuildDraftPayload(boardsDraftID *string, boardsDraftSession *string) (*boar
 		}
 	}
 	v := &boards.DraftPayload{}
+	if body.Stickies != nil {
+		v.Stickies = make([]string, len(body.Stickies))
+		for i, val := range body.Stickies {
+			v.Stickies[i] = val
+		}
+	} else {
+		v.Stickies = []string{}
+	}
 	v.ID = id
 	v.Session = session
 
@@ -441,10 +474,16 @@ func BuildFinishPayload(boardsFinishBody *string, boardsFinishID *string, boards
 		}
 		err = json.Unmarshal([]byte(*boardsFinishBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"lang\": \"ja\",\n      \"notebook\": \"inbox\",\n      \"text\": \"zln\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"append_to_note\": false,\n      \"ask_claude\": true,\n      \"lang\": \"ja\",\n      \"notebook\": \"inbox\",\n      \"stickies\": [\n         \"s1a2b3c4d\",\n         \"s1a2b3c4d\",\n         \"s1a2b3c4d\"\n      ],\n      \"text\": \"zln\"\n   }'")
 		}
 		if utf8.RuneCountInString(body.Text) > 65536 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.text", body.Text, utf8.RuneCountInString(body.Text), 65536, false))
+		}
+		if len(body.Stickies) > 200 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 200, false))
+		}
+		for _, e := range body.Stickies {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
 		}
 		if body.Notebook != nil {
 			err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))
@@ -474,9 +513,17 @@ func BuildFinishPayload(boardsFinishBody *string, boardsFinishID *string, boards
 		}
 	}
 	v := &boards.FinishPayload{
-		Text:     body.Text,
-		Notebook: body.Notebook,
-		Lang:     body.Lang,
+		Text:         body.Text,
+		Notebook:     body.Notebook,
+		AppendToNote: body.AppendToNote,
+		AskClaude:    body.AskClaude,
+		Lang:         body.Lang,
+	}
+	if body.Stickies != nil {
+		v.Stickies = make([]string, len(body.Stickies))
+		for i, val := range body.Stickies {
+			v.Stickies[i] = val
+		}
 	}
 	{
 		var zero string

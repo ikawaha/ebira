@@ -17,6 +17,7 @@ func mcpHTTPBindings() mcpruntime.HTTPBindings {
 			"archive_ai_notebook":   {Idempotent: true},
 			"get_ai_board":          {ReadOnly: true, Idempotent: true},
 			"get_note":              {ReadOnly: true},
+			"list_ai_boards":        {ReadOnly: true, Idempotent: true},
 			"list_marks":            {ReadOnly: true},
 			"list_notebooks":        {ReadOnly: true},
 			"list_notes":            {ReadOnly: true},

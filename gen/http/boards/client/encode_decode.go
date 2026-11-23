@@ -1293,6 +1293,10 @@ func EncodeDraftRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.
 				Value: v,
 			})
 		}
+		body := NewDraftRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("boards", "draft", err)
+		}
 		return nil
 	}
 }
@@ -1575,11 +1579,14 @@ func unmarshalBoardSummaryResponseToBoardsBoardSummary(v *BoardSummaryResponse) 
 // *boards.BoardSource from a value of type *BoardSourceResponseBody.
 func unmarshalBoardSourceResponseBodyToBoardsBoardSource(v *BoardSourceResponseBody) *boards.BoardSource {
 	res := &boards.BoardSource{
-		From:   *v.From,
-		NoteID: v.NoteID,
-		Format: *v.Format,
-		Lang:   v.Lang,
-		Size:   *v.Size,
+		From:         *v.From,
+		NoteID:       v.NoteID,
+		NoteTitle:    v.NoteTitle,
+		NoteNotebook: v.NoteNotebook,
+		NoteState:    v.NoteState,
+		Format:       *v.Format,
+		Lang:         v.Lang,
+		Size:         *v.Size,
 	}
 
 	return res
@@ -1594,7 +1601,8 @@ func unmarshalBoardStickyResponseBodyToBoardsBoardSticky(v *BoardStickyResponseB
 		Kind:      *v.Kind,
 		State:     *v.State,
 		Error:     v.Error,
-		Returns:   *v.Returns,
+		Resolved:  *v.Resolved,
+		Session:   v.Session,
 		CreatedAt: *v.CreatedAt,
 		UpdatedAt: *v.UpdatedAt,
 	}
@@ -1641,7 +1649,42 @@ func unmarshalBoardResultResponseBodyToBoardsBoardResult(v *BoardResultResponseB
 	res := &boards.BoardResult{
 		Text:       *v.Text,
 		NoteID:     v.NoteID,
+		Appended:   *v.Appended,
 		FinishedAt: *v.FinishedAt,
+	}
+	res.Stickies = make([]string, len(v.Stickies))
+	for i, val := range v.Stickies {
+		res.Stickies[i] = val
+	}
+	if v.Claude != nil {
+		res.Claude = unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply(v.Claude)
+	}
+
+	return res
+}
+
+// unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply builds a value
+// of type *boards.BoardClaudeReply from a value of type
+// *BoardClaudeReplyResponseBody.
+func unmarshalBoardClaudeReplyResponseBodyToBoardsBoardClaudeReply(v *BoardClaudeReplyResponseBody) *boards.BoardClaudeReply {
+	res := &boards.BoardClaudeReply{
+		State:  *v.State,
+		Text:   v.Text,
+		Edited: *v.Edited,
+		Reason: v.Reason,
+		Error:  v.Error,
+	}
+
+	return res
+}
+
+// unmarshalBoardForkResponseBodyToBoardsBoardFork builds a value of type
+// *boards.BoardFork from a value of type *BoardForkResponseBody.
+func unmarshalBoardForkResponseBodyToBoardsBoardFork(v *BoardForkResponseBody) *boards.BoardFork {
+	res := &boards.BoardFork{
+		Available: *v.Available,
+		Reason:    v.Reason,
+		Cwd:       v.Cwd,
 	}
 
 	return res

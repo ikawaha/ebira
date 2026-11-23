@@ -11,6 +11,8 @@
 package board
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -92,6 +94,7 @@ const (
 const (
 	Memo      = "memo"      // written by the person
 	Assistant = "assistant" // answered by the assistant
+	Fork      = "fork"      // answered by a fork of the Claude Code session that opened the board
 )
 
 // States of sticky notes.
@@ -118,37 +121,73 @@ type Board struct {
 	Origin    Origin    `json:"origin,omitzero"`
 	Stickies  []Sticky  `json:"stickies"`
 	Result    *Result   `json:"result,omitempty"`
+	// Opened is the digest of the sticky notes when a person last opened
+	// the board from its note (see StickiesDigest), to tell whether they
+	// changed since.
+	Opened string `json:"opened,omitempty"`
+}
+
+// StickiesDigest returns a digest of the sticky notes of b, with their
+// messages and states.
+func (b *Board) StickiesDigest() string {
+	stickies := b.Stickies
+	if stickies == nil {
+		stickies = []Sticky{}
+	}
+	data, err := json.Marshal(stickies)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// Unchanged tells whether the sticky notes of b are as they were when a
+// person last opened it from its note.
+func (b *Board) Unchanged() bool {
+	return b.Opened != "" && b.Opened == b.StickiesDigest()
 }
 
 // Source tells where the source came from and how to show it.
 type Source struct {
 	From   string `json:"from"`
 	NoteID string `json:"note_id,omitempty"`
-	Format string `json:"format"`
-	Lang   string `json:"lang,omitempty"`
+	// NoteVersion is the version of the note when the board was opened from
+	// it, to tell whether it changed since.
+	NoteVersion string `json:"note_version,omitempty"`
+	Format      string `json:"format"`
+	Lang        string `json:"lang,omitempty"`
 	// Size is the size of source.md, in bytes.
 	Size int `json:"size"`
 }
 
 // Origin tells who opened the board: an AI client, waiting for what is given
-// back, and its Claude Code session, kept for asking forks of it later.
+// back, and the Claude Code session the sticky notes fork: that of Claude
+// Code when it opened the board, or one ebira made to read the source
+// (Seeded), which goes with the board.
 type Origin struct {
 	AI        bool   `json:"ai,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
 	Cwd       string `json:"cwd,omitempty"`
+	Seeded    bool   `json:"seeded,omitempty"`
 }
 
 // Sticky is a sticky note on a passage of the source, or of the answer of
 // another sticky note (its parent).
 type Sticky struct {
-	ID        string    `json:"id"`
-	Parent    string    `json:"parent,omitempty"`
-	Anchor    Anchor    `json:"anchor"`
-	Kind      string    `json:"kind"`
-	Messages  []Message `json:"messages"`
-	State     string    `json:"state"`
-	Error     string    `json:"error,omitempty"`
-	Returns   bool      `json:"returns,omitempty"`
+	ID       string    `json:"id"`
+	Parent   string    `json:"parent,omitempty"`
+	Anchor   Anchor    `json:"anchor"`
+	Kind     string    `json:"kind"`
+	Messages []Message `json:"messages"`
+	State    string    `json:"state"`
+	Error    string    `json:"error,omitempty"`
+	// Resolved tells that the person understood what the sticky note asked
+	// and is satisfied: asking it again clears it.
+	Resolved bool `json:"resolved,omitempty"`
+	// Session is the Claude Code session that answers a sticky note of kind
+	// fork: a fork of the session of the board, or of that of its parent.
+	Session   string    `json:"session,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -172,10 +211,43 @@ type Message struct {
 
 // Result is what the person gives back to the session, at the end.
 type Result struct {
-	Text       string    `json:"text"`
-	NoteID     string    `json:"note_id,omitempty"`
+	Text string `json:"text"`
+	// Stickies are the IDs of the sticky notes given back with Text.
+	Stickies []string `json:"stickies,omitempty"`
+	NoteID   string   `json:"note_id,omitempty"`
+	// Appended tells whether the next points were added to the note the
+	// board was opened from.
+	Appended   bool      `json:"appended,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
+	// Claude is what Claude made of the next points, when the person asked
+	// it to take them up as the board was closed.
+	Claude *Reply `json:"claude,omitempty"`
 }
+
+// Reply is what Claude made of the next points of a board closed on a note:
+// its reply to the person, and whether it changed the note.
+type Reply struct {
+	State string `json:"state"` // Waiting, Idle once done, or Failed
+	Text  string `json:"text,omitempty"`
+	// Edited tells whether the changes of Claude were made to the note.
+	Edited bool `json:"edited,omitempty"`
+	// Reason tells, as one of the Reason values, why Claude did not reply
+	// or its changes were not made; Error says it in words.
+	Reason string `json:"reason,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+// Why Claude did not reply to the next points, or its changes were not made
+// to the note (Reply.Reason).
+const (
+	ReasonInterrupted = "interrupted" // the server stopped before the reply
+	ReasonTimeout     = "timeout"     // no reply in time
+	ReasonFailed      = "failed"      // Claude could not be asked
+	ReasonInvalid     = "invalid"     // the block of changes is not valid
+	ReasonChanged     = "changed"     // the note changed after the close
+	ReasonNotCollab   = "not_collab"  // the note left the collab notebooks
+	ReasonNotMade     = "not_made"    // the changes do not fit the note
+)
 
 var (
 	idPattern      = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
@@ -248,7 +320,7 @@ func (b *Board) Add(s Sticky, now time.Time) (*Sticky, error) {
 		return nil, invalid("no sticky note %q to put a sticky note on", s.Parent)
 	}
 	switch s.Kind {
-	case Memo, Assistant:
+	case Memo, Assistant, Fork:
 	default:
 		return nil, invalid("unknown kind of sticky note %q", s.Kind)
 	}
@@ -282,10 +354,10 @@ func (b *Board) newStickyID() string {
 }
 
 // Remove removes the sticky note id of b, with the sticky notes on it, and
-// tells whether there was one.
-func (b *Board) Remove(id string) bool {
+// returns them, or nil without one.
+func (b *Board) Remove(id string) []Sticky {
 	if b.Find(id) == nil {
-		return false
+		return nil
 	}
 	gone := map[string]bool{id: true}
 	for changed := true; changed; {
@@ -296,8 +368,26 @@ func (b *Board) Remove(id string) bool {
 			}
 		}
 	}
-	b.Stickies = slices.DeleteFunc(b.Stickies, func(s Sticky) bool { return gone[s.ID] })
-	return true
+	var removed []Sticky
+	b.Stickies = slices.DeleteFunc(b.Stickies, func(s Sticky) bool {
+		if gone[s.ID] {
+			removed = append(removed, s)
+		}
+		return gone[s.ID]
+	})
+	return removed
+}
+
+// Sessions returns the Claude Code sessions of the sticky notes in stickies,
+// which ebira made for them.
+func Sessions(stickies []Sticky) []string {
+	var ids []string
+	for _, s := range stickies {
+		if s.Session != "" {
+			ids = append(ids, s.Session)
+		}
+	}
+	return ids
 }
 
 // Say adds a message to the sticky note s: one of the person, or an answer of
@@ -512,18 +602,32 @@ func (s *Store) Update(id string, change func(*Board) error) (*Board, error) {
 	return b, nil
 }
 
-// Delete deletes board id.
-func (s *Store) Delete(id string) error {
+// WorkDir returns the working directory of the Claude Code session ebira
+// makes for board id, which it creates if needed: an empty directory of the
+// board, deleted with it.
+func (s *Store) WorkDir(id string) (string, error) {
 	dir, err := s.boardDir(id)
 	if err != nil {
-		return err
+		return "", err
+	}
+	work := filepath.Join(dir, "work")
+	return work, os.MkdirAll(work, 0o700)
+}
+
+// Delete deletes board id, and returns it as it was: nil when its file
+// could not be read, which does not keep it from being deleted.
+func (s *Store) Delete(id string) (*Board, error) {
+	dir, err := s.boardDir(id)
+	if err != nil {
+		return nil, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, err := os.Stat(filepath.Join(dir, boardFile)); errors.Is(err, os.ErrNotExist) {
-		return ErrNotFound
+	b, err := s.read(id)
+	if errors.Is(err, ErrNotFound) {
+		return nil, err
 	}
-	return os.RemoveAll(dir)
+	return b, os.RemoveAll(dir)
 }
 
 // Interrupt marks the sticky notes waiting for an answer as failed, as the
@@ -544,6 +648,10 @@ func (s *Store) Interrupt(reason string) error {
 				changed = true
 			}
 		}
+		if r := b.Result; r != nil && r.Claude != nil && r.Claude.State == Waiting {
+			r.Claude.State, r.Claude.Reason, r.Claude.Error = Failed, ReasonInterrupted, reason
+			changed = true
+		}
 		if changed {
 			if err := s.write(&b); err != nil {
 				return err
@@ -554,8 +662,8 @@ func (s *Store) Interrupt(reason string) error {
 }
 
 // Sweep deletes the boards finished more than DoneAge ago, and the open ones
-// untouched for more than IdleAge, and returns their IDs.
-func (s *Store) Sweep() ([]string, error) {
+// untouched for more than IdleAge, and returns them.
+func (s *Store) Sweep() ([]Board, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	boards, err := s.list()
@@ -563,7 +671,7 @@ func (s *Store) Sweep() ([]string, error) {
 		return nil, err
 	}
 	now := s.now()
-	var gone []string
+	var gone []Board
 	for _, b := range boards {
 		old := b.Status == Open && now.Sub(b.UpdatedAt) > IdleAge
 		if b.Status == Done {
@@ -579,7 +687,7 @@ func (s *Store) Sweep() ([]string, error) {
 		if err := os.RemoveAll(filepath.Join(s.dir, b.ID)); err != nil {
 			return gone, err
 		}
-		gone = append(gone, b.ID)
+		gone = append(gone, b)
 	}
 	return gone, nil
 }

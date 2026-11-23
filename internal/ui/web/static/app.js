@@ -4744,6 +4744,13 @@ function noteAnchor(id, title, d) {
 // note replaced by one of the same name or deleted, by people or AI clients,
 // which can be put back too.
 
+// openHistoryOf shows note id in the preview, then its history.
+async function openHistoryOf(id) {
+  selectNote(id);
+  for (let i = 0; i < 100 && state.note?.id !== id; i++) await new Promise((r) => setTimeout(r, 50));
+  if (state.note?.id === id) openHistory();
+}
+
 async function openHistory() {
   const n = state.note;
   if (!n) return;
@@ -5416,6 +5423,20 @@ function notePrivateLost(id) {
       loadNotebooks().catch(() => {});
     }, PRIVATE_LOST_MS);
   }, 300);
+}
+
+// showToastLink shows message in the bar for a while, with a link to href.
+function showToastLink(message, label, href, ms = 15000) {
+  undoAction = null;
+  const bar = $("toast");
+  const a = el("a", "", label);
+  a.href = href;
+  a.addEventListener("click", () => hideToast());
+  bar.querySelector(".toast-msg").replaceChildren(message, " ", a);
+  bar.querySelector("button").hidden = true;
+  bar.hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideToast, ms);
 }
 
 // showToast shows message in the bar for a moment, without an undo.
@@ -6501,8 +6522,9 @@ function openMCP() {
   showClaude(claude, intro);
 }
 
-// showClaude tells in box whether Claude Code has ebira, with a button that
-// registers it (POST /claude/mcp). The server runs claude, so the button is
+// showClaude tells in box whether Claude Code has ebira and its skill that
+// opens whiteboards, with a button that registers it and installs the skill
+// (POST /claude/mcp). The server runs claude, so the button is
 // there only when the server finds claude and the page is on its machine;
 // else intro tells to run the command above, which ebira mcp add, on
 // the machine of the server, would not help with.
@@ -6525,15 +6547,29 @@ async function showClaude(box, intro, done) {
     box.replaceChildren(...parts);
     return;
   }
+  // A skill changed by hand is left as it is; one missing or of another
+  // version is installed with the registration, or alone.
+  const skill = st.skill === "missing" || st.skill === "outdated";
+  const modified = st.skill === "modified" ? el("p", "msg", t("mcpClaudeSkillModified", { path: st.skill_path })) : null;
   if (st.registered === st.url) {
     if (!done) parts.push(el("p", "", t("mcpClaudeRegistered")));
-    box.replaceChildren(...parts);
-    return;
+    if (modified) parts.push(modified);
+    if (!skill) {
+      box.replaceChildren(...parts);
+      return;
+    }
+    parts.push(el("p", "msg", t(st.skill === "missing" ? "mcpClaudeSkillMissing" : "mcpClaudeSkillOutdated")));
   }
-  if (st.registered) parts.push(el("p", "msg", t("mcpClaudeOther", { url: st.registered })));
+  if (st.registered && st.registered !== st.url) parts.push(el("p", "msg", t("mcpClaudeOther", { url: st.registered })));
+  if (modified && st.registered !== st.url) parts.push(modified);
+  if (st.registered !== st.url && skill) parts.push(el("p", "msg", t("mcpClaudeSkillWith")));
   let msg;
-  const go = button(t(st.registered ? "mcpClaudeReplace" : "mcpClaudeAdd"), async () => {
-    if (!confirm(t("mcpClaudeConfirm", { command: st.command }))) return;
+  const label = st.registered === st.url ? "mcpClaudeSkillAdd" : st.registered ? "mcpClaudeReplace" : "mcpClaudeAdd";
+  const go = button(t(label), async () => {
+    const ask = st.registered === st.url
+      ? t("mcpClaudeSkillConfirm", { path: st.skill_path })
+      : t("mcpClaudeConfirm", { command: st.command }) + (skill ? "\n\n" + t("mcpClaudeSkillConfirm", { path: st.skill_path }) : "");
+    if (!confirm(ask)) return;
     go.disabled = true;
     msg.textContent = t("mcpClaudeRunning");
     msg.className = "msg";
@@ -6546,7 +6582,9 @@ async function showClaude(box, intro, done) {
       go.disabled = false;
       return;
     }
-    showClaude(box, intro, res.status === "replaced" ? t("mcpClaudeReplaced", { url: res.previous }) : t("mcpClaudeAdded"));
+    const said = { replaced: t("mcpClaudeReplaced", { url: res.previous }), added: t("mcpClaudeAdded") }[res.status];
+    const installed = res.skill === "missing" || res.skill === "outdated" ? t("mcpClaudeSkillAdded") : "";
+    showClaude(box, intro, [said, installed].filter(Boolean).join(" "));
   }, { cls: "primary" });
   msg = el("p", "msg", "");
   parts.push(el("div", "mcp-claude-go", go), msg);
@@ -7382,26 +7420,33 @@ function leaveBoard() {
   showNoteHash(state.note?.id);
 }
 
+// closeBoardFinish closes the window to close a board, if it is open.
+function closeBoardFinish() {
+  const dlg = document.getElementById("board-finish");
+  if (dlg?.open) dlg.close();
+}
+
 function showBoardView(id) {
   // The editor is under the board: leave it first.
   if (state.editing && !leaveEditor()) {
     history.replaceState(null, "", location.pathname + location.search);
     return;
   }
+  // The window to close a board belongs to the board it was opened on:
+  // going to another one, as by the back button, closes it.
+  if (board.id !== id) closeBoardFinish();
   board.open = true;
   board.id = id;
   board.compose = null;
   document.querySelector(".panes").classList.add("board-open");
   $("board").hidden = false;
   renderNotebooks();
-  if (!board.assistant) {
-    api("/ask").then((s) => { board.assistant = s; }, () => { board.assistant = { available: false, reason: "" }; });
-  }
   if (id) loadBoard();
   else renderBoardList();
 }
 
 function closeBoardView() {
+  closeBoardFinish();
   board.resize?.disconnect();
   board.resize = null;
   board.open = false;
@@ -7467,6 +7512,10 @@ async function loadBoard() {
 
 // openBoardFromNote opens a board on the body of note n.
 async function openBoardFromNote(n) {
+  // Claude reads the note to answer the sticky notes: a note kept from AI
+  // is opened only when the person agrees.
+  const nb = state.notebooks.find((x) => x.id === n.notebook);
+  if (nb?.kind === "private" && !confirm(t("boardOpenPrivateConfirm"))) return;
   let b;
   try {
     b = await api("/boards", { method: "POST", body: { note_id: n.id } });
@@ -7492,19 +7541,64 @@ function renderBoard() {
   }
   const actions = el("div", "actions");
   if (open) actions.append(button(t("boardFinish"), openBoardFinish, { cls: "primary", title: t("boardFinishTitle") }));
-  actions.append(iconButton("trash", t("boardDeleteTitle"), () => deleteBoard(b)), closeButton(() => goBoard(null)));
+  // The board itself is closed with "Close the board"; this one only goes
+  // back to the list.
+  actions.append(iconButton("trash", t("boardDeleteTitle"), () => deleteBoard(b)), iconButton("close", t("boardBackToList"), () => goBoard(null)));
   const head = el("div", "board-head", button(kindSVG("back"), () => goBoard(null), { cls: "icon-button", title: t("boards") }), title, actions);
 
   const parts = [head];
   if (b.result) {
     const done = el("div", "board-result", el("h3", "", t("boardGivenBack")));
     const text = el("div", "body");
-    renderBody(text, b.result.text || t("boardNothingBack"));
+    const given = b.result.stickies?.length || 0;
+    renderBody(text, b.result.text || (given ? "" : t("boardNothingBack")));
     done.append(text);
+    if (given && !b.result.appended) done.append(el("p", "board-hint", t("boardStickiesGiven", { n: given })));
+    if (b.result.appended && b.source.note_id) {
+      const a = el("a", "", b.source.note_title || b.source.note_id);
+      a.href = "/#note/" + encodeURIComponent(b.source.note_id);
+      done.append(el("p", "board-hint", t("boardAppendedTo"), " ", a));
+    }
     if (b.result.note_id) {
       const a = el("a", "", t("boardSavedNote"));
       a.href = "/#note/" + encodeURIComponent(b.result.note_id);
       done.append(el("p", "", a));
+    }
+    // What Claude made of the points, when asked as the board was closed.
+    const c = b.result.claude;
+    if (c) {
+      const reply = el("div", "board-claude", el("h3", "", t("boardClaudeReply")));
+      if (c.state === "waiting") {
+        reply.append(el("p", "sticky-wait", t("boardClaudeWorking")));
+      } else {
+        // Why it did not reply, or the note was left as it was, first: the
+        // changes not made then follow the reply. The words of the server
+        // stay at hand for the details.
+        if (c.error) {
+          const why = el("p", "error", c.reason ? t("boardClaudeWhy_" + c.reason) : c.error);
+          why.title = c.error;
+          reply.append(why);
+        }
+        if (c.text) {
+          const body = el("div", "body");
+          renderBody(body, c.text);
+          reply.append(body);
+        }
+        if (c.edited && b.source.note_id) {
+          const a = el("a", "", b.source.note_title || b.source.note_id);
+          a.href = "/#note/" + encodeURIComponent(b.source.note_id);
+          // The note was changed without a look first: its history has the
+          // version before, to compare or put back.
+          const back = el("a", "", t("boardClaudeHistory"));
+          back.href = "#";
+          back.addEventListener("click", (e) => {
+            e.preventDefault();
+            openHistoryOf(b.source.note_id);
+          });
+          reply.append(el("p", "board-hint", t("boardClaudeEdited"), " ", a, " · ", back));
+        }
+      }
+      done.append(reply);
     }
     parts.push(done);
   } else if (open) {
@@ -7667,6 +7761,7 @@ function stickyCard(s, children, open) {
   // The state is a class of its own name: .error colors the whole card.
   const card = el("div", `sticky ${s.kind} state-${s.state}`);
   card.dataset.sticky = s.id;
+  card.classList.toggle("resolved", !!s.resolved);
   const quote = el("blockquote", "sticky-quote", s.anchor.exact.replace(/\s+/g, " ").slice(0, 120));
   quote.title = t("boardShowPassage");
   quote.addEventListener("click", () => showPassage(s.id));
@@ -7683,7 +7778,8 @@ function stickyCard(s, children, open) {
     }
   }
   card.append(msgs);
-  if (s.state === "waiting") card.append(el("p", "sticky-wait", t("boardWaiting")));
+  if (s.kind === "fork") card.prepend(el("p", "sticky-kind", t("boardForkMark")));
+  if (s.state === "waiting") card.append(el("p", "sticky-wait", t(s.kind === "fork" ? "boardForkWaiting" : "boardWaiting")));
   if (s.state === "error") {
     const p = el("p", "error", t("boardAnswerFailed", { error: s.error || "" }));
     if (open) p.append(" ", button(t("boardAskAgain"), () => askSticky(s, "")));
@@ -7692,7 +7788,8 @@ function stickyCard(s, children, open) {
   if (open && s.state !== "waiting") {
     const box = el("textarea");
     box.rows = 1; // grows while written in (style.css)
-    box.placeholder = t(s.kind === "assistant" ? "boardFollowUp" : "boardAddMemo");
+    const asks = s.kind === "assistant" || s.kind === "fork";
+    box.placeholder = t(asks ? "boardFollowUp" : "boardAddMemo");
     box.value = board.drafts.get(s.id) || "";
     box.addEventListener("input", () => board.drafts.set(s.id, box.value));
     const send = () => {
@@ -7705,16 +7802,32 @@ function stickyCard(s, children, open) {
         send();
       }
     });
-    card.append(el("div", "sticky-reply", box, button(t(s.kind === "assistant" ? "boardSend" : "boardAdd"), send)));
+    card.append(el("div", "sticky-reply", box, button(t(asks ? "boardSend" : "boardAdd"), send)));
   }
-  const returns = el("input");
-  returns.type = "checkbox";
-  returns.checked = s.returns;
-  returns.disabled = !open;
-  returns.addEventListener("change", () => saveSticky(s, { returns: returns.checked }));
-  const foot = el("div", "sticky-foot", el("label", "", returns, t("boardReturns")));
-  if (open) foot.append(iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s)));
-  card.append(foot);
+  // The session of a fork goes on in a terminal, where the side trip may go
+  // deeper than a sticky note.
+  if (s.kind === "fork" && s.session && s.messages.some((m) => m.role === "assistant")) {
+    const cwd = board.data?.fork?.cwd;
+    const resume = el("details", "sticky-resume", el("summary", "", t("boardForkResume")),
+      copyRow((cwd ? `cd '${cwd.replace(/'/g, "'\\''")}' && ` : "") + `claude --resume ${s.session}`));
+    card.append(resume);
+  }
+  // Resolved: the person understood it and is satisfied.
+  if (open) {
+    const done = el("input");
+    done.type = "checkbox";
+    done.checked = !!s.resolved;
+    done.disabled = s.state === "waiting";
+    done.addEventListener("change", () => resolveSticky(s, done));
+    const resolved = el("label", "sticky-resolved", done, t("boardStickyResolved"));
+    resolved.title = t("boardStickyResolvedTitle");
+    card.append(el("div", "sticky-foot", resolved, iconButton("trash", t("boardStickyDelete"), () => deleteSticky(s))));
+  } else {
+    const foot = [];
+    if (s.resolved) foot.push(el("span", "sticky-resolved", "\u2713 " + t("boardStickyResolved")));
+    if (board.data?.result?.stickies?.includes(s.id)) foot.push(el("span", "sticky-given", t("boardStickyGiven")));
+    if (foot.length) card.append(el("div", "sticky-foot", ...foot));
+  }
   const kids = children.get(s.id) || [];
   if (kids.length) card.append(el("div", "sticky-children", ...kids.map((k) => stickyCard(k, children, open))));
   return card;
@@ -7778,19 +7891,23 @@ function openBoardCompose(anchor, parent, rect) {
   const box = el("textarea");
   box.rows = 3;
   box.placeholder = t("boardComposePlaceholder");
-  const ask = board.assistant?.available !== false;
-  const askButton = button(t("boardAsk"), () => addSticky("assistant", box.value), { cls: "primary", title: ask ? t("boardAskTitle") : (board.assistant?.reason || t("boardNoAssistant")) });
+  // Claude answers in a fork of the session of the board: that of Claude
+  // Code when it opened the board, or one that read the topic.
+  const fork = board.data?.fork;
+  const ask = !!fork?.available;
+  const askButton = button(t("boardAsk"), () => addSticky("fork", box.value), { cls: "primary", title: ask ? t("boardAskTitle") : t(forkReasons[fork?.reason] || "boardForkUnavailable") });
   askButton.disabled = !ask;
+  const buttons = el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }), askButton);
   const pop = el("div", "board-compose",
     el("blockquote", "sticky-quote", anchor.exact.replace(/\s+/g, " ").slice(0, 120)),
     box,
-    el("div", "buttons", button(t("cancel"), () => closeBoardCompose()), button(t("boardMemo"), () => addSticky("memo", box.value), { title: t("boardMemoTitle") }), askButton));
+    buttons);
   pop.id = "board-compose";
   box.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeBoardCompose();
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.isComposing) {
       e.preventDefault();
-      if (ask && box.value.trim()) addSticky("assistant", box.value);
+      if (ask && box.value.trim()) addSticky("fork", box.value);
       else addSticky("memo", box.value);
     }
   });
@@ -7813,11 +7930,19 @@ function closeBoardCompose(reload = true) {
   }
 }
 
+// forkReasons are the messages of why a fork cannot answer, by the reason of
+// the board.
+const forkReasons = {
+  auth_none: "boardForkAuthNone",
+  not_found: "boardForkNotFound",
+  session_missing: "boardForkSessionMissing",
+};
+
 async function addSticky(kind, text) {
   const c = board.compose;
   if (!c || !board.data) return;
   text = text.trim();
-  if (kind === "assistant" && !text) return;
+  if ((kind === "assistant" || kind === "fork") && !text) return;
   try {
     await api(`/boards/${board.data.id}/stickies`, { method: "POST", body: { kind, anchor: c.anchor, parent: c.parent || undefined, text: text || undefined } });
   } catch (e) {
@@ -7845,6 +7970,20 @@ async function saveSticky(s, body) {
     await api(`/boards/${board.data.id}/stickies/${s.id}`, { method: "PATCH", body });
   } catch (e) {
     alert(t("boardFailed", { error: e.message }));
+  }
+  await loadBoard();
+}
+
+// resolveSticky marks sticky note s resolved or not, as box says.
+async function resolveSticky(s, box) {
+  box.disabled = true;
+  try {
+    await api(`/boards/${board.data.id}/stickies/${s.id}`, { method: "PATCH", body: { resolved: box.checked } });
+  } catch (e) {
+    box.checked = !box.checked;
+    box.disabled = false;
+    alert(t("boardFailed", { error: e.message }));
+    return;
   }
   await loadBoard();
 }
@@ -7899,29 +8038,66 @@ function renameBoard(h) {
 function openBoardFinish() {
   const b = board.data;
   const dlg = $("board-finish");
+  // A board opened from a note links its minutes from that note, in its
+  // section of discussions at the end, unless the note is gone.
+  const fromNote = b.source.from === "note";
+  const noteThere = fromNote && (b.source.note_state === "ok" || b.source.note_state === "changed");
   const text = el("textarea");
   text.rows = 8;
   text.placeholder = t("boardBackPlaceholder");
-  const returns = b.stickies.some((s) => s.returns);
   const err = el("p", "error");
+
+  // The sticky notes, each with a box to give it back, all checked at first:
+  // they were mostly written about the source. The session reads those
+  // checked, with the answers; the others stay here. Those on an answer go
+  // under the sticky note of the answer.
+  const kids = new Map();
+  for (const s of b.stickies) {
+    const k = s.parent || "";
+    if (!kids.has(k)) kids.set(k, []);
+    kids.get(k).push(s);
+  }
+  const boxes = [];
+  const clip = (s, n) => {
+    const one = s.replace(/\s+/g, " ").trim();
+    return one.length > n ? one.slice(0, n) + "…" : one;
+  };
+  const stickyRows = (parent, depth) => (kids.get(parent) || []).flatMap((s) => {
+    const box = el("input");
+    box.type = "checkbox";
+    // A resolved one needs no more work: it stays here unless chosen.
+    box.checked = !s.resolved;
+    box.value = s.id;
+    box.addEventListener("change", update);
+    boxes.push(box);
+    const row = el("label", "board-pick", box,
+      el("span", "board-pick-passage", (s.resolved ? "\u2713 " : "") + "\u201c" + clip(s.anchor.exact, 60) + "\u201d"),
+      el("span", "board-pick-message", clip(s.messages[0]?.text || "", 80)));
+    row.style.paddingLeft = `${depth * 16}px`;
+    return [row, ...stickyRows(s.id, depth + 1)];
+  });
+  const picks = b.stickies.length
+    ? el("div", "board-picks", el("p", "board-hint", t(b.from_session ? "boardPickHintSession" : fromNote ? "boardPickHintNote" : "boardPickHint")), ...stickyRows("", 0))
+    : null;
+  const chosen = () => boxes.filter((x) => x.checked).map((x) => x.value);
+
   const draft = button(t("boardDraft"), async () => {
     if (text.value.trim() && !confirm(t("boardDraftReplace"))) return;
     draft.disabled = true;
     draft.textContent = t("boardDrafting");
     try {
-      const r = await api(`/boards/${b.id}/draft`, { method: "POST" });
+      const r = await api(`/boards/${b.id}/draft`, { method: "POST", body: { stickies: chosen() } });
       text.value = r.text;
       err.textContent = "";
     } catch (e) {
       err.textContent = t("boardFailed", { error: e.message });
     }
-    draft.disabled = false;
     draft.textContent = t("boardDraft");
-  }, { title: board.assistant?.available === false ? (board.assistant.reason || t("boardNoAssistant")) : returns ? t("boardDraftTitle") : t("boardDraftNone") });
-  draft.disabled = !returns || board.assistant?.available === false;
+    update();
+  }, { title: board.data?.fork?.available ? t("boardDraftTitle") : t(forkReasons[board.data?.fork?.reason] || "boardForkUnavailable") });
 
-  const save = el("input");
-  save.type = "checkbox";
+  // Where the minutes go, when they are kept: the notebook chosen last
+  // time, or that of the note the board was opened from.
   let last = "";
   try { last = localStorage.getItem("ebira.boardNotebook") || ""; } catch (_) { /* not kept */ }
   const nbs = state.notebooks.filter((n) => n.id !== "trash" && !n.archived);
@@ -7931,36 +8107,150 @@ function openBoardFinish() {
     return o;
   }));
   if (nbs.some((n) => n.id === last)) select.value = last;
-  save.checked = !!last;
-  select.disabled = !save.checked;
-  save.addEventListener("change", () => { select.disabled = !save.checked; });
+  const near = b.source.note_notebook;
+  if (fromNote && nbs.some((n) => n.id === near)) select.value = near;
 
-  const finish = button(t("boardFinish"), async () => {
-    finish.disabled = true;
-    const body = { text: text.value.trim(), lang: lang === "ja" ? "ja" : "en" };
-    if (save.checked) body.notebook = select.value;
+  // close finishes the board: keep keeps the minutes, linked from the note
+  // the board was opened from; reflect asks Claude to take up the points
+  // and change that note.
+  const buttons = [];
+  const close = async ({ keep = false, reflect = false } = {}) => {
+    for (const x of buttons) x.disabled = true;
+    const body = { text: text.value.trim(), stickies: chosen(), lang: lang === "ja" ? "ja" : "en" };
+    if (keep) body.notebook = select.value;
+    if (keep && noteThere) body.append_to_note = true;
+    if (reflect) body.ask_claude = true;
     try {
       await api(`/boards/${b.id}/finish`, { method: "POST", body });
     } catch (e) {
       err.textContent = t("boardFailed", { error: e.message });
-      finish.disabled = false;
+      for (const x of buttons) x.disabled = false;
       return;
     }
-    try { localStorage.setItem("ebira.boardNotebook", save.checked ? select.value : ""); } catch (_) { /* not kept */ }
+    if (keep) {
+      try { localStorage.setItem("ebira.boardNotebook", select.value); } catch (_) { /* not kept */ }
+    }
     dlg.close();
-    showToast(t(b.from_session ? "boardFinishedSession" : "boardFinished"));
+    if (reflect) reflecting.set(b.id, b.source.note_title || "");
+    showToast(t(reflect ? "boardFinishedReflect" : b.from_session ? "boardFinishedSession" : "boardFinished"));
     await loadBoards();
     loadBoard();
-  }, { cls: "primary" });
+  };
+  const plain = button(t("boardFinish"), () => close(), { cls: "primary" });
+  buttons.push(plain);
 
-  dlg.replaceChildren(
-    el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close())),
+  // With no sticky notes and no points, there is nothing to keep: the
+  // minutes would only copy the topic. With the sticky notes as they were
+  // when the board was opened from its note and no points, nothing was
+  // discussed this time.
+  const nothing = el("p", "board-hint");
+  const stateNow = () => {
+    const blank = !text.value.trim();
+    return b.stickies.length === 0 && blank ? "empty" : b.unchanged && blank ? "unchanged" : "changed";
+  };
+  const showNothing = (now) => {
+    nothing.hidden = now === "changed";
+    nothing.textContent = now === "empty" ? t("boardNothingToKeep") : now === "unchanged" ? t("boardUnchanged") : "";
+  };
+
+  function update() {
+    if (draft.textContent === t("boardDraft")) draft.disabled = !chosen().length || !board.data?.fork?.available;
+  }
+  update();
+  const head = el("div", "files-head", el("h2", "", t("boardFinishHead")), closeButton(() => dlg.close()));
+
+  if (fromNote && !b.from_session) {
+    // On a board a person opened from a note, what matters is whether the note
+    // takes what was discussed: Claude reads the points and changes the
+    // note, if it may (a notebook of the collab kind). The minutes are kept
+    // besides, linked from the note; the sticky notes to give back to an AI
+    // later are folded away.
+    const collab = state.notebooks.find((n) => n.id === b.source.note_notebook)?.kind === "collab";
+    const minutes = el("input");
+    minutes.type = "checkbox";
+    const minutesRow = el("div", "board-minutes",
+      el("label", "board-save", minutes, t("boardKeepMinutes"), select),
+      el("p", "board-hint", noteThere ? t("boardMinutesLinked")
+        : t(b.source.note_state === "trash" ? "boardNoteInTrash" : "boardNoteMissing")));
+    const why = el("p", "board-hint");
+    const skip = button(t("boardCloseNoReflect"), () => close({ keep: minutes.checked }));
+    const reflect = button(t("boardCloseReflect"), () => close({ keep: minutes.checked, reflect: true }));
+    buttons.push(skip, reflect);
+    let kept = null;
+    const updateNote = () => {
+      const now = stateNow();
+      const blank = !text.value.trim();
+      const empty = now === "empty";
+      showNothing(now === "unchanged" ? "changed" : now);
+      // Why the note cannot take it, first what the person can do.
+      const reason = !noteThere ? t(b.source.note_state === "trash" ? "boardReflectInTrash" : "boardReflectMissing")
+        : !collab ? t("boardReflectNotCollab")
+        : !board.data?.fork?.available ? t(forkReasons[board.data?.fork?.reason] || "boardForkUnavailable")
+        : blank ? t("boardReflectNeedsPoints") : "";
+      const can = noteThere && !reason;
+      reflect.disabled = !can;
+      why.textContent = reason;
+      why.hidden = empty || !reason;
+      plain.hidden = !empty;
+      skip.hidden = reflect.hidden = minutesRow.hidden = empty;
+      reflect.classList.toggle("primary", can);
+      skip.classList.toggle("primary", !can);
+      // The minutes are kept unless nothing was discussed since the board
+      // was opened; the person's choice stays while they write.
+      if (now !== kept) {
+        if (kept === null || now === "unchanged" || kept === "unchanged" || kept === "empty") minutes.checked = now === "changed";
+        kept = now;
+      }
+      select.disabled = !minutes.checked;
+    };
+    minutes.addEventListener("change", () => { select.disabled = !minutes.checked; });
+    text.addEventListener("input", updateNote);
+    const folded = picks
+      ? el("details", "board-later", el("summary", "", t("boardPicksLater", { n: b.stickies.length })), picks, el("div", "board-draft", draft))
+      : null;
+    dlg.replaceChildren(head,
+      el("p", "board-hint", t(noteThere ? "boardBackHintReflect" : "boardBackHint")),
+      text,
+      nothing,
+      minutesRow,
+      ...(folded ? [folded] : []),
+      why,
+      err,
+      el("div", "files-actions", button(t("cancel"), () => dlg.close()), plain, skip, reflect));
+    updateNote();
+    dlg.showModal();
+    text.focus();
+    return;
+  }
+
+  // A board an AI opened: the session reads what is given back, and the
+  // minutes are kept or not, linked from the note it was opened on if any.
+  const where = el("label", "board-save", t("boardMinutesIn"), select);
+  const skip = button(t("boardFinishNoMinutes"), () => close());
+  const keep = button(t("boardFinishMinutes"), () => close({ keep: true }));
+  buttons.push(skip, keep);
+  let kept = null;
+  const updateKeep = () => {
+    const now = stateNow();
+    if (now === kept) return;
+    kept = now;
+    showNothing(now);
+    const empty = now === "empty";
+    plain.hidden = !empty;
+    skip.hidden = keep.hidden = where.hidden = empty;
+    skip.classList.toggle("primary", now === "unchanged");
+    keep.classList.toggle("primary", now === "changed");
+  };
+  text.addEventListener("input", updateKeep);
+  dlg.replaceChildren(head,
+    ...(picks ? [picks, el("div", "board-draft", draft)] : []),
     el("p", "board-hint", t(b.from_session ? "boardBackHintSession" : "boardBackHint")),
     text,
-    el("div", "board-draft", draft),
-    el("label", "board-save", save, t("boardSaveAsNote"), select),
+    nothing,
+    where,
     err,
-    el("div", "files-actions", button(t("cancel"), () => dlg.close()), finish));
+    el("div", "files-actions", button(t("cancel"), () => dlg.close()), plain, skip, keep));
+  updateKeep();
   dlg.showModal();
   text.focus();
 }
@@ -7969,7 +8259,28 @@ let boardReload;
 
 // boardChanged follows an event of type board: a board was opened, changed or
 // deleted, such as when an answer came to a sticky note.
+// Boards closed here with the note to take what was discussed: once Claude
+// is done, the bar tells, wherever the person is.
+const reflecting = new Map();
+
+async function tellReflected(id) {
+  const title = reflecting.get(id);
+  let b;
+  try {
+    b = await api(`/boards/${encodeURIComponent(id)}`);
+  } catch (_) {
+    reflecting.delete(id); // deleted
+    return;
+  }
+  const c = b.result?.claude;
+  if (!reflecting.has(id) || !c || c.state === "waiting") return;
+  reflecting.delete(id);
+  if (c.edited) showToastLink(t("boardReflected", { title }), t("boardReflectedOpen"), "/#note/" + encodeURIComponent(b.source.note_id));
+  else showToastLink(t("boardNotReflected", { title }), t("boardNotReflectedReply"), "#board/" + encodeURIComponent(id));
+}
+
 function boardChanged(id) {
+  for (const r of reflecting.keys()) if (!id || id === r) tellReflected(r);
   clearTimeout(boardReload);
   boardReload = setTimeout(async () => {
     await loadBoards();

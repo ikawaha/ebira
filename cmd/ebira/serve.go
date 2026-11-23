@@ -299,6 +299,14 @@ func runServe(args []string) error {
 	if err := svc.SetBoards(boards, boardAsk); err != nil {
 		return err
 	}
+	// Forks of the Claude Code session that opened a board answer the
+	// sticky notes of the fork kind, with claude of this machine. Finding it
+	// may ask the login shell, so the server does not wait for it.
+	go func() {
+		if f := newForker(ctx, *addr); f != nil {
+			svc.SetForker(f)
+		}
+	}()
 
 	if gitEvery > 0 {
 		go syncGitEvery(ctx, svc, gitEvery)
@@ -651,7 +659,13 @@ func loopback(host string) bool {
 // server at that host. The guard has checked the host already.
 func withBaseURL(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r.WithContext(service.WithBaseURL(r.Context(), "http://"+r.Host)))
+		ctx := service.WithBaseURL(r.Context(), "http://"+r.Host)
+		// Without passkeys, forks of Claude Code serve requests from this
+		// machine only.
+		if fromLoopback(r) {
+			ctx = service.FromThisMachine(ctx)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

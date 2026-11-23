@@ -37,9 +37,10 @@ type AddStickyRequestBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage
 	Anchor *BoardAnchorRequestBody `form:"anchor,omitempty" json:"anchor,omitempty" xml:"anchor,omitempty"`
-	// memo, or assistant to ask the assistant
+	// memo; assistant to ask the assistant; fork to ask a fork of the Claude Code
+	// session that opened the board
 	Kind *string `form:"kind,omitempty" json:"kind,omitempty" xml:"kind,omitempty"`
-	// The memo, or the question; required for the assistant
+	// The memo, or the question; required for the assistant and a fork
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 }
 
@@ -48,8 +49,9 @@ type AddStickyRequestBody struct {
 type SaveStickyRequestBody struct {
 	// The new text of a memo; empty to leave only the mark on the passage
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
-	// Whether what the sticky note found is to be given back
-	Returns *bool `form:"returns,omitempty" json:"returns,omitempty" xml:"returns,omitempty"`
+	// Whether the sticky note is resolved: the person understood it and is
+	// satisfied
+	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty" xml:"resolved,omitempty"`
 }
 
 // AskStickyRequestBody is the type of the "boards" service "ask_sticky"
@@ -59,13 +61,33 @@ type AskStickyRequestBody struct {
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
 }
 
+// DraftRequestBody is the type of the "boards" service "draft" endpoint HTTP
+// request body.
+type DraftRequestBody struct {
+	// The sticky notes to draft from
+	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
+}
+
 // FinishRequestBody is the type of the "boards" service "finish" endpoint HTTP
 // request body.
 type FinishRequestBody struct {
 	// What to give back, in Markdown; may be empty
 	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
-	// Notebook to save the board in as a note; not saved when omitted
+	// The sticky notes to give back: the session reads their passages and
+	// messages, those of the assistant too. The others are not given back
+	Stickies []string `form:"stickies,omitempty" json:"stickies,omitempty" xml:"stickies,omitempty"`
+	// Notebook to keep the minutes of the board in, as a note; not kept when
+	// omitted, nor for a board with no sticky notes and no next points
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
+	// Add a line linking to the minutes, which are then to be kept (notebook), in
+	// the section of discussions at the end of the note the board was opened from
+	// (Appendix: discussions)
+	AppendToNote *bool `form:"append_to_note,omitempty" json:"append_to_note,omitempty" xml:"append_to_note,omitempty"`
+	// Ask Claude, in the background, to take up the next points of a board opened
+	// on a note of a notebook of the collab kind: it replies, and the changes it
+	// gives are made to that note. The next points must not be empty, and Claude
+	// must be able to answer (see fork of the board)
+	AskClaude *bool `form:"ask_claude,omitempty" json:"ask_claude,omitempty" xml:"ask_claude,omitempty"`
 	// Language of the headings of the note, that of the UI
 	Lang *string `form:"lang,omitempty" json:"lang,omitempty" xml:"lang,omitempty"`
 }
@@ -95,9 +117,13 @@ type GetResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
 
 // OpenResponseBody is the type of the "boards" service "open" endpoint HTTP
@@ -121,9 +147,13 @@ type OpenResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
 
 // SaveResponseBody is the type of the "boards" service "save" endpoint HTTP
@@ -147,9 +177,13 @@ type SaveResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
 
 // AddStickyResponseBody is the type of the "boards" service "add_sticky"
@@ -161,7 +195,8 @@ type AddStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor" json:"anchor" xml:"anchor"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind string `form:"kind" json:"kind" xml:"kind"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages" json:"messages" xml:"messages"`
@@ -169,9 +204,12 @@ type AddStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -187,7 +225,8 @@ type SaveStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor" json:"anchor" xml:"anchor"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind string `form:"kind" json:"kind" xml:"kind"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages" json:"messages" xml:"messages"`
@@ -195,9 +234,12 @@ type SaveStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -213,7 +255,8 @@ type AskStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor" json:"anchor" xml:"anchor"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind string `form:"kind" json:"kind" xml:"kind"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages" json:"messages" xml:"messages"`
@@ -221,9 +264,12 @@ type AskStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -258,9 +304,13 @@ type FinishResponseBody struct {
 	Stickies []*BoardStickyResponseBody `form:"stickies" json:"stickies" xml:"stickies"`
 	// What was given back, once finished
 	Result *BoardResultResponseBody `form:"result,omitempty" json:"result,omitempty" xml:"result,omitempty"`
-	// Whether a Claude Code session opened the board, and waits for what is given
-	// back
+	// Whether an AI client opened the board, and waits for what is given back
 	FromSession bool `form:"from_session" json:"from_session" xml:"from_session"`
+	// Whether the sticky notes are as they were when a person last opened the
+	// board from its note: closing it as it is then keeps no minutes by default
+	Unchanged bool `form:"unchanged" json:"unchanged" xml:"unchanged"`
+	// Whether sticky notes of the fork kind can be put on the board
+	Fork *BoardForkResponseBody `form:"fork" json:"fork" xml:"fork"`
 }
 
 // ListUnauthorizedResponseBody is the type of the "boards" service "list"
@@ -866,6 +916,15 @@ type BoardSourceResponseBody struct {
 	From string `form:"from" json:"from" xml:"from"`
 	// The note the source was copied from
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// The title of that note now, if it is there
+	NoteTitle *string `form:"note_title,omitempty" json:"note_title,omitempty" xml:"note_title,omitempty"`
+	// The notebook of that note now, if it is there, where its minutes go by
+	// default
+	NoteNotebook *string `form:"note_notebook,omitempty" json:"note_notebook,omitempty" xml:"note_notebook,omitempty"`
+	// The state of that note now: ok; changed since the board was opened; trash,
+	// in the trash; or missing, deleted. Closing the board may add to it unless it
+	// is in the trash or missing
+	NoteState *string `form:"note_state,omitempty" json:"note_state,omitempty" xml:"note_state,omitempty"`
 	// How to show the source
 	Format string `form:"format" json:"format" xml:"format"`
 	// Language of code
@@ -882,7 +941,8 @@ type BoardStickyResponseBody struct {
 	Parent *string `form:"parent,omitempty" json:"parent,omitempty" xml:"parent,omitempty"`
 	// The passage the sticky note is on
 	Anchor *BoardAnchorResponseBody `form:"anchor" json:"anchor" xml:"anchor"`
-	// memo, written by the person, or assistant, answered by the assistant
+	// memo, written by the person; assistant, answered by the assistant; or fork,
+	// answered by a fork of the Claude Code session that opened the board
 	Kind string `form:"kind" json:"kind" xml:"kind"`
 	// The messages, oldest first
 	Messages []*BoardMessageResponseBody `form:"messages" json:"messages" xml:"messages"`
@@ -890,9 +950,12 @@ type BoardStickyResponseBody struct {
 	State string `form:"state" json:"state" xml:"state"`
 	// Why the last answer failed
 	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
-	// Whether what the sticky note found is to be given back to the session, at
-	// the end
-	Returns bool `form:"returns" json:"returns" xml:"returns"`
+	// Whether the person marked the sticky note resolved: they understood it and
+	// are satisfied. Asking it again clears it
+	Resolved bool `form:"resolved" json:"resolved" xml:"resolved"`
+	// The Claude Code session that answers a sticky note of the fork kind, which
+	// claude --resume goes on with
+	Session *string `form:"session,omitempty" json:"session,omitempty" xml:"session,omitempty"`
 	// Creation time
 	CreatedAt string `form:"created_at" json:"created_at" xml:"created_at"`
 	// Last update time
@@ -923,10 +986,51 @@ type BoardMessageResponseBody struct {
 type BoardResultResponseBody struct {
 	// What the person gives back to the session, in Markdown
 	Text string `form:"text" json:"text" xml:"text"`
-	// The note the board was saved as, if it was
+	// The sticky notes given back with the text
+	Stickies []string `form:"stickies" json:"stickies" xml:"stickies"`
+	// The note the minutes of the board were kept in, if they were
 	NoteID *string `form:"note_id,omitempty" json:"note_id,omitempty" xml:"note_id,omitempty"`
+	// Whether a link to the minutes was added to the note the board was opened from
+	Appended bool `form:"appended" json:"appended" xml:"appended"`
 	// When the board was finished
 	FinishedAt string `form:"finished_at" json:"finished_at" xml:"finished_at"`
+	// What Claude made of the next points, when asked to take them up as the board
+	// was closed (ask_claude)
+	Claude *BoardClaudeReplyResponseBody `form:"claude,omitempty" json:"claude,omitempty" xml:"claude,omitempty"`
+}
+
+// BoardClaudeReplyResponseBody is used to define fields on response body types.
+type BoardClaudeReplyResponseBody struct {
+	// waiting while Claude works, idle once done, or error
+	State string `form:"state" json:"state" xml:"state"`
+	// The reply of Claude to the person, in Markdown
+	Text *string `form:"text,omitempty" json:"text,omitempty" xml:"text,omitempty"`
+	// Whether the changes of Claude were made to the note the board was opened from
+	Edited bool `form:"edited" json:"edited" xml:"edited"`
+	// Why Claude did not reply, or why its changes were not made to the note: the
+	// server stopped (interrupted), no reply in time (timeout), Claude could not
+	// be asked (failed), the changes are not valid (invalid), the note changed
+	// after the board was closed (changed), the note is no longer in a notebook of
+	// the collab kind (not_collab), or the changes do not fit the note (not_made)
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+	// Why Claude did not reply, or why its changes were not made to the note, in
+	// words (reason)
+	Error *string `form:"error,omitempty" json:"error,omitempty" xml:"error,omitempty"`
+}
+
+// BoardForkResponseBody is used to define fields on response body types.
+type BoardForkResponseBody struct {
+	// Whether Claude can answer sticky notes: forks of the Claude Code session
+	// that opened the board, or of one ebira makes to read the topic
+	Available bool `form:"available" json:"available" xml:"available"`
+	// Why not: auth_none (a request from another machine without passkeys: forks
+	// need passkeys there), session_missing (Claude Code no longer has the session
+	// that opened the board), not_found (claude is not found on the machine of the
+	// server) or done (the board is finished)
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+	// The working directory of the session, where claude --resume goes on with the
+	// session of a sticky note
+	Cwd *string `form:"cwd,omitempty" json:"cwd,omitempty" xml:"cwd,omitempty"`
 }
 
 // BoardAnchorRequestBody is used to define fields on request body types.
@@ -964,6 +1068,7 @@ func NewGetResponseBody(res *boards.Board) *GetResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -982,6 +1087,9 @@ func NewGetResponseBody(res *boards.Board) *GetResponseBody {
 	}
 	if res.Result != nil {
 		body.Result = marshalBoardsBoardResultToBoardResultResponseBody(res.Result)
+	}
+	if res.Fork != nil {
+		body.Fork = marshalBoardsBoardForkToBoardForkResponseBody(res.Fork)
 	}
 	return body
 }
@@ -997,6 +1105,7 @@ func NewOpenResponseBody(res *boards.Board) *OpenResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -1015,6 +1124,9 @@ func NewOpenResponseBody(res *boards.Board) *OpenResponseBody {
 	}
 	if res.Result != nil {
 		body.Result = marshalBoardsBoardResultToBoardResultResponseBody(res.Result)
+	}
+	if res.Fork != nil {
+		body.Fork = marshalBoardsBoardForkToBoardForkResponseBody(res.Fork)
 	}
 	return body
 }
@@ -1030,6 +1142,7 @@ func NewSaveResponseBody(res *boards.Board) *SaveResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -1049,6 +1162,9 @@ func NewSaveResponseBody(res *boards.Board) *SaveResponseBody {
 	if res.Result != nil {
 		body.Result = marshalBoardsBoardResultToBoardResultResponseBody(res.Result)
 	}
+	if res.Fork != nil {
+		body.Fork = marshalBoardsBoardForkToBoardForkResponseBody(res.Fork)
+	}
 	return body
 }
 
@@ -1061,7 +1177,8 @@ func NewAddStickyResponseBody(res *boards.BoardSticky) *AddStickyResponseBody {
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
-		Returns:   res.Returns,
+		Resolved:  res.Resolved,
+		Session:   res.Session,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
 	}
@@ -1092,7 +1209,8 @@ func NewSaveStickyResponseBody(res *boards.BoardSticky) *SaveStickyResponseBody 
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
-		Returns:   res.Returns,
+		Resolved:  res.Resolved,
+		Session:   res.Session,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
 	}
@@ -1123,7 +1241,8 @@ func NewAskStickyResponseBody(res *boards.BoardSticky) *AskStickyResponseBody {
 		Kind:      res.Kind,
 		State:     res.State,
 		Error:     res.Error,
-		Returns:   res.Returns,
+		Resolved:  res.Resolved,
+		Session:   res.Session,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
 	}
@@ -1165,6 +1284,7 @@ func NewFinishResponseBody(res *boards.Board) *FinishResponseBody {
 		UpdatedAt:   res.UpdatedAt,
 		Text:        res.Text,
 		FromSession: res.FromSession,
+		Unchanged:   res.Unchanged,
 	}
 	if res.Source != nil {
 		body.Source = marshalBoardsBoardSourceToBoardSourceResponseBody(res.Source)
@@ -1183,6 +1303,9 @@ func NewFinishResponseBody(res *boards.Board) *FinishResponseBody {
 	}
 	if res.Result != nil {
 		body.Result = marshalBoardsBoardResultToBoardResultResponseBody(res.Result)
+	}
+	if res.Fork != nil {
+		body.Fork = marshalBoardsBoardForkToBoardForkResponseBody(res.Fork)
 	}
 	return body
 }
@@ -1700,8 +1823,8 @@ func NewAddStickyPayload(body *AddStickyRequestBody, id string, session *string)
 // NewSaveStickyPayload builds a boards service save_sticky endpoint payload.
 func NewSaveStickyPayload(body *SaveStickyRequestBody, id string, sticky string, session *string) *boards.SaveStickyPayload {
 	v := &boards.SaveStickyPayload{
-		Text:    body.Text,
-		Returns: body.Returns,
+		Text:     body.Text,
+		Resolved: body.Resolved,
 	}
 	v.ID = id
 	v.Sticky = sticky
@@ -1734,8 +1857,12 @@ func NewAskStickyPayload(body *AskStickyRequestBody, id string, sticky string, s
 }
 
 // NewDraftPayload builds a boards service draft endpoint payload.
-func NewDraftPayload(id string, session *string) *boards.DraftPayload {
+func NewDraftPayload(body *DraftRequestBody, id string, session *string) *boards.DraftPayload {
 	v := &boards.DraftPayload{}
+	v.Stickies = make([]string, len(body.Stickies))
+	for i, val := range body.Stickies {
+		v.Stickies[i] = val
+	}
 	v.ID = id
 	v.Session = session
 
@@ -1745,11 +1872,19 @@ func NewDraftPayload(id string, session *string) *boards.DraftPayload {
 // NewFinishPayload builds a boards service finish endpoint payload.
 func NewFinishPayload(body *FinishRequestBody, id string, session *string) *boards.FinishPayload {
 	v := &boards.FinishPayload{
-		Text:     *body.Text,
-		Notebook: body.Notebook,
+		Text:         *body.Text,
+		Notebook:     body.Notebook,
+		AppendToNote: body.AppendToNote,
+		AskClaude:    body.AskClaude,
 	}
 	if body.Lang != nil {
 		v.Lang = *body.Lang
+	}
+	if body.Stickies != nil {
+		v.Stickies = make([]string, len(body.Stickies))
+		for i, val := range body.Stickies {
+			v.Stickies[i] = val
+		}
 	}
 	if body.Lang == nil {
 		v.Lang = "en"
@@ -1810,8 +1945,8 @@ func ValidateAddStickyRequestBody(body *AddStickyRequestBody) (err error) {
 		}
 	}
 	if body.Kind != nil {
-		if !(*body.Kind == "memo" || *body.Kind == "assistant") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant"}))
+		if !(*body.Kind == "memo" || *body.Kind == "assistant" || *body.Kind == "fork") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.kind", *body.Kind, []any{"memo", "assistant", "fork"}))
 		}
 	}
 	if body.Text != nil {
@@ -1844,6 +1979,23 @@ func ValidateAskStickyRequestBody(body *AskStickyRequestBody) (err error) {
 	return
 }
 
+// ValidateDraftRequestBody runs the validations defined on DraftRequestBody
+func ValidateDraftRequestBody(body *DraftRequestBody) (err error) {
+	if body.Stickies == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("stickies", "body"))
+	}
+	if len(body.Stickies) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 1, true))
+	}
+	if len(body.Stickies) > 200 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 200, false))
+	}
+	for _, e := range body.Stickies {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
+	}
+	return
+}
+
 // ValidateFinishRequestBody runs the validations defined on FinishRequestBody
 func ValidateFinishRequestBody(body *FinishRequestBody) (err error) {
 	if body.Text == nil {
@@ -1853,6 +2005,12 @@ func ValidateFinishRequestBody(body *FinishRequestBody) (err error) {
 		if utf8.RuneCountInString(*body.Text) > 65536 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.text", *body.Text, utf8.RuneCountInString(*body.Text), 65536, false))
 		}
+	}
+	if len(body.Stickies) > 200 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.stickies", body.Stickies, len(body.Stickies), 200, false))
+	}
+	for _, e := range body.Stickies {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.stickies[*]", e, "^s[0-9a-f]{8}$"))
 	}
 	if body.Notebook != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.notebook", *body.Notebook, "^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$"))

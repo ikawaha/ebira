@@ -78,9 +78,8 @@ func TestDraftQuestion(t *testing.T) {
 	now := time.Now()
 	b := &Board{Title: "t", Status: Open}
 	a, _ := b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "kept"}, Messages: []Message{{Text: "give back"}}}, now)
-	a.Returns = true
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "skipped"}, Messages: []Message{{Text: "not this"}}}, now)
-	q := DraftQuestion(b)
+	q := DraftQuestion(b, []string{a.ID})
 	if !strings.Contains(q, "kept") || !strings.Contains(q, "give back") || strings.Contains(q, "not this") {
 		t.Errorf("draft question:\n%s", q)
 	}
@@ -94,9 +93,9 @@ func TestNoteBody(t *testing.T) {
 	b.Add(Sticky{Parent: q.ID, Kind: Memo, Anchor: Anchor{Exact: "entry"}, Messages: []Message{{Text: "see the spec"}}}, now)
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "*bold* [link]"}}, now)
 
-	got := NoteBody(b, "func main() {\n```\n}\n", "  Given back.  ", "en")
+	got := NoteBody(b, "func main() {\n```\n}\n", "  Given back.  ", "en", nil)
 	for _, want := range []string{
-		"Given back.\n\n## Sticky notes\n",
+		"## Next points\n\nGiven back.\n\n## Sticky notes\n",
 		"### \u201cfunc main() { }\u201d\n\n> func main() {\n> }\n",
 		"**Q** what?\n", "**A** The entry point.\n",
 		"#### \u201centry\u201d\n", "**Memo** see the spec\n",
@@ -113,7 +112,7 @@ func TestNoteBody(t *testing.T) {
 		t.Errorf("child out of place:\n%s", got)
 	}
 
-	md := NoteBody(&Board{Source: Source{Format: Markdown}}, "# Plan\n", "", "fr")
+	md := NoteBody(&Board{Source: Source{Format: Markdown}}, "# Plan\n", "", "fr", nil)
 	if strings.Contains(md, "Sticky notes") || !strings.Contains(md, "\n# Plan\n") || strings.Contains(md, "```") {
 		t.Errorf("Markdown source without sticky notes:\n%s", md)
 	}
@@ -123,8 +122,8 @@ func TestNoteBodyJapanese(t *testing.T) {
 	b := &Board{Status: Open, Source: Source{Format: Text}}
 	q, _ := b.Add(Sticky{Kind: Assistant, Anchor: Anchor{Exact: "語"}, Messages: []Message{{Text: "何？"}}}, time.Now())
 	q.Say(Agent, "答え", time.Now())
-	got := NoteBody(b, "語\n", "", "ja")
-	for _, want := range []string{"## 付箋\n", "**問** 何？", "**答** 答え", "## 本筋\n", "<summary>text (1 行)</summary>"} {
+	got := NoteBody(b, "語\n", "", "ja", nil)
+	for _, want := range []string{"## 付箋\n", "**問** 何？", "**答** 答え", "## 議題\n", "<summary>text (1 行)</summary>"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("note lacks %q:\n%s", want, got)
 		}
@@ -139,12 +138,62 @@ func TestNoteBodyQuotes(t *testing.T) {
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "later"}}, now)
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "fall\n+\t// back *now*\n1. one"}}, now)
 	b.Add(Sticky{Kind: Memo, Anchor: Anchor{Exact: "nowhere"}}, now)
-	got := NoteBody(b, "short terms fall\n+\t// back *now*\n1. one\nlater\n", "", "en")
+	got := NoteBody(b, "short terms fall\n+\t// back *now*\n1. one\nlater\n", "", "en", nil)
 	if want := "> fall\n> \\+\t// back \\*now\\*\n> \\1. one\n"; !strings.Contains(got, want) {
 		t.Errorf("quote, want %q in:\n%s", want, got)
 	}
 	f, l, n := strings.Index(got, "\u201cfall"), strings.Index(got, "\u201clater"), strings.Index(got, "\u201cnowhere")
 	if f < 0 || l < f || n < l {
 		t.Errorf("order of the sticky notes, want fall, later, nowhere:\n%s", got)
+	}
+}
+
+func TestForkQuestion(t *testing.T) {
+	now := time.Now()
+	b := &Board{Title: "Plan", Status: Open, Source: Source{Format: Markdown}}
+	s, _ := b.Add(Sticky{Kind: Fork, Anchor: Anchor{Exact: "trie"}, Messages: []Message{{Text: "why a trie?"}}}, now)
+	q := ForkQuestion(b, "Use a trie for the index.", s, false)
+	if !strings.Contains(q, "fork of this session") || !strings.Contains(q, `"Plan"`) || !strings.Contains(q, "<<<trie>>>") || !strings.Contains(q, "why a trie?") {
+		t.Errorf("first question:\n%s", q)
+	}
+	s.Say(Agent, "fast prefix search", now)
+	s.Say(User, "and memory?", now)
+	if q := ForkQuestion(b, "Use a trie for the index.", s, true); q != "The person asks again on the same sticky note: and memory?" {
+		t.Errorf("question again: %q", q)
+	}
+}
+
+func TestNoteBodyFromNote(t *testing.T) {
+	b := &Board{Title: "Plan", Status: Open, Source: Source{From: FromNote, NoteID: "n1", Format: Markdown}}
+	got := NoteBody(b, "Use a trie.\n", "", "ja", &NoteRef{ID: "n1", Title: "Plan [draft]"})
+	if !strings.HasPrefix(got, "元のノート: [Plan \\[draft\\]](/#note/n1)\n\n") {
+		t.Errorf("note body:\n%s", got)
+	}
+}
+
+func TestAddDiscussion(t *testing.T) {
+	m := NoteRef{ID: "m1", Title: "Plan"}
+	for _, c := range []struct{ name, body, lang, want string }{
+		{"new", "# Plan\n\nUse a trie.\n", "ja",
+			"# Plan\n\nUse a trie.\n\n## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"empty", "", "en", "## Appendix: discussions\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"again", "Use a trie.\n\n## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n\n", "ja",
+			"Use a trie.\n\n## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"another language", "x\n\n## Appendix: discussions\n\n- 2026-11-22 [Plan](/#note/m0)\n", "ja",
+			"x\n\n## Appendix: discussions\n\n- 2026-11-22 [Plan](/#note/m0)\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"not at the end", "## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n\n## Later\n\nmore\n", "ja",
+			"## 補足：議論\n\n- 2026-11-22 [Plan](/#note/m0)\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n\nmore\n"},
+		{"subsection inside", "## 補足：議論\n\n- a\n\n### old\n\n- b\n", "ja",
+			"## 補足：議論\n\n- a\n\n### old\n\n- b\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"empty section", "## 補足：議論\n## Later\n", "ja",
+			"## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n"},
+		{"in a code block", "```md\n## 補足：議論\n```\n", "ja",
+			"```md\n## 補足：議論\n```\n\n## 補足：議論\n\n- 2026-11-23 [Plan](/#note/m1)\n"},
+		{"code block inside", "## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n\n## Later\n", "ja",
+			"## 補足：議論\n\n- a\n\n```\n## not a heading\n```\n- 2026-11-23 [Plan](/#note/m1)\n\n## Later\n"},
+	} {
+		if got := AddDiscussion(c.body, c.lang, "2026-11-23", m); got != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
 	}
 }

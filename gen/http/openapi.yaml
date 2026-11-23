@@ -722,7 +722,7 @@ paths:
             tags:
                 - boards
             summary: open boards
-            description: Open a whiteboard on the body of a note, copied as it is now.
+            description: Open a whiteboard on the body of a note, copied as it is now; or the whiteboard of the note open already, if a person opened one and has not closed it.
             operationId: boards#open
             parameters:
                 - name: OpenRequestBody
@@ -747,6 +747,8 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - unchanged
+                            - fork
                 "400":
                     description: 'bad_request: The body of the note is empty, or too many boards are open'
                     schema:
@@ -816,6 +818,8 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - unchanged
+                            - fork
                 "401":
                     description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
                     schema:
@@ -923,6 +927,8 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - unchanged
+                            - fork
                 "400":
                     description: 'bad_request: The title is empty'
                     schema:
@@ -968,7 +974,7 @@ paths:
             tags:
                 - boards
             summary: draft boards
-            description: 'Have the assistant draft what to give back to the session, from the sticky notes to give back. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.'
+            description: 'Have the assistant draft what to give back to the session, from the sticky notes chosen when finishing. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.'
             operationId: boards#draft
             parameters:
                 - name: id
@@ -977,6 +983,13 @@ paths:
                   required: true
                   type: string
                   pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: DraftRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsDraftRequestBody'
+                    required:
+                        - stickies
             responses:
                 "200":
                     description: OK response.
@@ -985,7 +998,7 @@ paths:
                         required:
                             - text
                 "400":
-                    description: 'bad_request: No sticky note is to be given back, or the board is finished'
+                    description: 'bad_request: No sticky note is chosen, a chosen one does not exist, or the board is finished'
                     schema:
                         $ref: '#/definitions/BoardsDraftBadRequestResponseBody'
                     examples:
@@ -1041,7 +1054,7 @@ paths:
             tags:
                 - boards
             summary: finish boards
-            description: 'Finish a whiteboard: keep what to give back to the session, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.'
+            description: 'Finish a whiteboard: keep what to give back to the session, the text and the sticky notes chosen, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.'
             operationId: boards#finish
             parameters:
                 - name: id
@@ -1072,8 +1085,10 @@ paths:
                             - text
                             - stickies
                             - from_session
+                            - unchanged
+                            - fork
                 "400":
-                    description: 'bad_request: The board is finished, a sticky note waits for an answer, or the notebook is invalid'
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, the note to add to is not there or the minutes are not kept (append_to_note), or Claude cannot take up the next points (ask_claude)'
                     schema:
                         $ref: '#/definitions/BoardsFinishBadRequestResponseBody'
                     examples:
@@ -1117,7 +1132,7 @@ paths:
             tags:
                 - boards
             summary: add_sticky boards
-            description: 'Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and comes back waiting: the answer comes later, told by an event of type board on /events.'
+            description: 'Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and one of the fork kind asks a fork of the Claude Code session that opened the board, which needs a session signed in with a passkey: they come back waiting, and the answer comes later, told by an event of type board on /events.'
             operationId: boards#add_sticky
             parameters:
                 - name: id
@@ -1145,7 +1160,7 @@ paths:
                             - kind
                             - messages
                             - state
-                            - returns
+                            - resolved
                             - created_at
                             - updated_at
                 "400":
@@ -1185,7 +1200,7 @@ paths:
                             temporary: false
                             timeout: false
                 "503":
-                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)'
                     schema:
                         $ref: '#/definitions/BoardsAddStickyUnavailableResponseBody'
                     examples:
@@ -1267,7 +1282,7 @@ paths:
             tags:
                 - boards
             summary: save_sticky boards
-            description: 'Change a sticky note: the text of a memo, or whether it is given back at the end.'
+            description: Change the text of a memo, or mark a sticky note resolved or not.
             operationId: boards#save_sticky
             parameters:
                 - name: id
@@ -1298,7 +1313,7 @@ paths:
                             - kind
                             - messages
                             - state
-                            - returns
+                            - resolved
                             - created_at
                             - updated_at
                 "400":
@@ -1346,7 +1361,7 @@ paths:
             tags:
                 - boards
             summary: ask_sticky boards
-            description: 'Add a message to a sticky note: a follow-up question to the assistant, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.'
+            description: 'Add a message to a sticky note: a follow-up question to the assistant or a fork, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.'
             operationId: boards#ask_sticky
             parameters:
                 - name: id
@@ -1377,7 +1392,7 @@ paths:
                             - kind
                             - messages
                             - state
-                            - returns
+                            - resolved
                             - created_at
                             - updated_at
                 "400":
@@ -1417,7 +1432,7 @@ paths:
                             temporary: false
                             timeout: false
                 "503":
-                    description: 'unavailable: The assistant is not configured, such as when no model API key is set'
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)'
                     schema:
                         $ref: '#/definitions/BoardsAskStickyUnavailableResponseBody'
                     examples:
@@ -6059,9 +6074,11 @@ definitions:
                 description: Creation time
                 example: "2026-10-16T09:30:00Z"
                 format: date-time
+            fork:
+                $ref: '#/definitions/BoardFork'
             from_session:
                 type: boolean
-                description: Whether a Claude Code session opened the board, and waits for what is given back
+                description: Whether an AI client opened the board, and waits for what is given back
                 example: false
             id:
                 type: string
@@ -6104,7 +6121,8 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6126,7 +6144,8 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6148,7 +6167,8 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
                     - anchor:
@@ -6170,7 +6190,8 @@ definitions:
                           role: assistant
                           text: Eum quaerat rerum illo natus.
                       parent: s1a2b3c4d
-                      returns: false
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                       state: error
                       updated_at: "2026-10-16T09:30:00Z"
             text:
@@ -6181,6 +6202,10 @@ definitions:
                 type: string
                 description: Title
                 example: Eaque ad eos quo dolore et voluptatem.
+            unchanged:
+                type: boolean
+                description: 'Whether the sticky notes are as they were when a person last opened the board from its note: closing it as it is then keeps no minutes by default'
+                example: true
             updated_at:
                 type: string
                 description: Last update time
@@ -6188,17 +6213,34 @@ definitions:
                 format: date-time
         example:
             created_at: "2026-10-16T09:30:00Z"
+            fork:
+                available: false
+                cwd: Eveniet sed qui autem quaerat.
+                reason: done
             from_session: false
             id: 3f9c2a7b1d4e6f
             result:
+                appended: false
+                claude:
+                    edited: true
+                    error: Tenetur culpa mollitia fuga rerum vero rerum.
+                    reason: changed
+                    state: waiting
+                    text: Officiis exercitationem earum cumque fugiat quis.
                 finished_at: "2026-10-16T09:30:00Z"
                 note_id: be4c1193735ee1
+                stickies:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
                 text: Cumque accusantium doloremque eaque.
             source:
                 format: text
                 from: note
                 lang: Harum odio ut unde id dolorem.
                 note_id: be4c1193735ee1
+                note_notebook: inbox
+                note_state: trash
+                note_title: Autem et qui sed cum explicabo.
                 size: 5018596344245903192
             status: open
             stickies:
@@ -6221,7 +6263,8 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6243,7 +6286,8 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6265,7 +6309,8 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
                 - anchor:
@@ -6287,11 +6332,13 @@ definitions:
                       role: assistant
                       text: Eum quaerat rerum illo natus.
                   parent: s1a2b3c4d
-                  returns: false
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
                   state: error
                   updated_at: "2026-10-16T09:30:00Z"
             text: Ut labore minima quo et voluptatem.
             title: Eaque ad eos quo dolore et voluptatem.
+            unchanged: true
             updated_at: "2026-10-16T09:30:00Z"
         required:
             - id
@@ -6303,6 +6350,8 @@ definitions:
             - text
             - stickies
             - from_session
+            - unchanged
+            - fork
     BoardAnchor:
         title: BoardAnchor
         type: object
@@ -6327,6 +6376,78 @@ definitions:
             suffix: Eveniet corporis nobis explicabo et sit.
         required:
             - exact
+    BoardClaudeReply:
+        title: BoardClaudeReply
+        type: object
+        properties:
+            edited:
+                type: boolean
+                description: Whether the changes of Claude were made to the note the board was opened from
+                example: true
+            error:
+                type: string
+                description: Why Claude did not reply, or why its changes were not made to the note, in words (reason)
+                example: Tenetur culpa mollitia fuga rerum vero rerum.
+            reason:
+                type: string
+                description: 'Why Claude did not reply, or why its changes were not made to the note: the server stopped (interrupted), no reply in time (timeout), Claude could not be asked (failed), the changes are not valid (invalid), the note changed after the board was closed (changed), the note is no longer in a notebook of the collab kind (not_collab), or the changes do not fit the note (not_made)'
+                example: changed
+                enum:
+                    - interrupted
+                    - timeout
+                    - failed
+                    - invalid
+                    - changed
+                    - not_collab
+                    - not_made
+            state:
+                type: string
+                description: waiting while Claude works, idle once done, or error
+                example: waiting
+                enum:
+                    - idle
+                    - waiting
+                    - error
+            text:
+                type: string
+                description: The reply of Claude to the person, in Markdown
+                example: Officiis exercitationem earum cumque fugiat quis.
+        example:
+            edited: true
+            error: Tenetur culpa mollitia fuga rerum vero rerum.
+            reason: changed
+            state: waiting
+            text: Officiis exercitationem earum cumque fugiat quis.
+        required:
+            - state
+            - edited
+    BoardFork:
+        title: BoardFork
+        type: object
+        properties:
+            available:
+                type: boolean
+                description: 'Whether Claude can answer sticky notes: forks of the Claude Code session that opened the board, or of one ebira makes to read the topic'
+                example: false
+            cwd:
+                type: string
+                description: The working directory of the session, where claude --resume goes on with the session of a sticky note
+                example: Eveniet sed qui autem quaerat.
+            reason:
+                type: string
+                description: 'Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), session_missing (Claude Code no longer has the session that opened the board), not_found (claude is not found on the machine of the server) or done (the board is finished)'
+                example: done
+                enum:
+                    - auth_none
+                    - session_missing
+                    - not_found
+                    - done
+        example:
+            available: false
+            cwd: Eveniet sed qui autem quaerat.
+            reason: done
+        required:
+            - available
     BoardMessage:
         title: BoardMessage
         type: object
@@ -6378,6 +6499,12 @@ definitions:
         title: BoardResult
         type: object
         properties:
+            appended:
+                type: boolean
+                description: Whether a link to the minutes was added to the note the board was opened from
+                example: false
+            claude:
+                $ref: '#/definitions/BoardClaudeReply'
             finished_at:
                 type: string
                 description: When the board was finished
@@ -6385,19 +6512,41 @@ definitions:
                 format: date-time
             note_id:
                 type: string
-                description: The note the board was saved as, if it was
+                description: The note the minutes of the board were kept in, if they were
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: The sticky notes given back with the text
+                example:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
             text:
                 type: string
                 description: What the person gives back to the session, in Markdown
                 example: Cumque accusantium doloremque eaque.
         example:
+            appended: false
+            claude:
+                edited: true
+                error: Tenetur culpa mollitia fuga rerum vero rerum.
+                reason: changed
+                state: waiting
+                text: Officiis exercitationem earum cumque fugiat quis.
             finished_at: "2026-10-16T09:30:00Z"
             note_id: be4c1193735ee1
+            stickies:
+                - s1a2b3c4d
+                - s1a2b3c4d
             text: Cumque accusantium doloremque eaque.
         required:
             - text
+            - stickies
+            - appended
             - finished_at
     BoardSource:
         title: BoardSource
@@ -6429,6 +6578,24 @@ definitions:
                 description: The note the source was copied from
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            note_notebook:
+                type: string
+                description: The notebook of that note now, if it is there, where its minutes go by default
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            note_state:
+                type: string
+                description: 'The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing'
+                example: trash
+                enum:
+                    - ok
+                    - changed
+                    - trash
+                    - missing
+            note_title:
+                type: string
+                description: The title of that note now, if it is there
+                example: Autem et qui sed cum explicabo.
             size:
                 type: integer
                 description: Size of the source, in bytes
@@ -6439,6 +6606,9 @@ definitions:
             from: note
             lang: Harum odio ut unde id dolorem.
             note_id: be4c1193735ee1
+            note_notebook: inbox
+            note_state: trash
+            note_title: Autem et qui sed cum explicabo.
             size: 5018596344245903192
         required:
             - from
@@ -6466,11 +6636,12 @@ definitions:
                 pattern: ^s[0-9a-f]{8}$
             kind:
                 type: string
-                description: memo, written by the person, or assistant, answered by the assistant
+                description: memo, written by the person; assistant, answered by the assistant; or fork, answered by a fork of the Claude Code session that opened the board
                 example: memo
                 enum:
                     - memo
                     - assistant
+                    - fork
             messages:
                 type: array
                 items:
@@ -6491,10 +6662,15 @@ definitions:
                 description: The sticky note this one is on, for one on a passage of an answer
                 example: s1a2b3c4d
                 pattern: ^s[0-9a-f]{8}$
-            returns:
+            resolved:
                 type: boolean
-                description: Whether what the sticky note found is to be given back to the session, at the end
-                example: false
+                description: 'Whether the person marked the sticky note resolved: they understood it and are satisfied. Asking it again clears it'
+                example: true
+            session:
+                type: string
+                description: The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with
+                example: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                format: uuid
             state:
                 type: string
                 description: idle, waiting for an answer, or error when the last answer failed
@@ -6529,7 +6705,8 @@ definitions:
                   role: assistant
                   text: Eum quaerat rerum illo natus.
             parent: s1a2b3c4d
-            returns: false
+            resolved: true
+            session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
             state: error
             updated_at: "2026-10-16T09:30:00Z"
         required:
@@ -6538,7 +6715,7 @@ definitions:
             - kind
             - messages
             - state
-            - returns
+            - resolved
             - created_at
             - updated_at
     BoardSummary:
@@ -6702,11 +6879,12 @@ definitions:
                 $ref: '#/definitions/BoardAnchor'
             kind:
                 type: string
-                description: memo, or assistant to ask the assistant
+                description: memo; assistant to ask the assistant; fork to ask a fork of the Claude Code session that opened the board
                 example: assistant
                 enum:
                     - memo
                     - assistant
+                    - fork
             parent:
                 type: string
                 description: The sticky note whose answer the passage is in
@@ -6714,7 +6892,7 @@ definitions:
                 pattern: ^s[0-9a-f]{8}$
             text:
                 type: string
-                description: The memo, or the question; required for the assistant
+                description: The memo, or the question; required for the assistant and a fork
                 example: rc5
                 maxLength: 10240
         example:
@@ -7298,6 +7476,26 @@ definitions:
             - temporary
             - timeout
             - fault
+    BoardsDraftRequestBody:
+        title: BoardsDraftRequestBody
+        type: object
+        properties:
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: The sticky notes to draft from
+                example:
+                    - s1a2b3c4d
+                minItems: 1
+                maxItems: 200
+        example:
+            stickies:
+                - s1a2b3c4d
+        required:
+            - stickies
     BoardsDraftResponseBody:
         title: BoardsDraftResponseBody
         type: object
@@ -7486,6 +7684,14 @@ definitions:
         title: BoardsFinishRequestBody
         type: object
         properties:
+            append_to_note:
+                type: boolean
+                description: 'Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)'
+                example: false
+            ask_claude:
+                type: boolean
+                description: 'Ask Claude, in the background, to take up the next points of a board opened on a note of a notebook of the collab kind: it replies, and the changes it gives are made to that note. The next points must not be empty, and Claude must be able to answer (see fork of the board)'
+                example: true
             lang:
                 type: string
                 description: Language of the headings of the note, that of the UI
@@ -7496,17 +7702,35 @@ definitions:
                     - ja
             notebook:
                 type: string
-                description: Notebook to save the board in as a note; not saved when omitted
+                description: Notebook to keep the minutes of the board in, as a note; not kept when omitted, nor for a board with no sticky notes and no next points
                 example: inbox
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: 'The sticky notes to give back: the session reads their passages and messages, those of the assistant too. The others are not given back'
+                example:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                maxItems: 200
             text:
                 type: string
                 description: What to give back, in Markdown; may be empty
                 example: zln
                 maxLength: 65536
         example:
+            append_to_note: false
+            ask_claude: true
             lang: ja
             notebook: inbox
+            stickies:
+                - s1a2b3c4d
+                - s1a2b3c4d
+                - s1a2b3c4d
             text: zln
         required:
             - text
@@ -8020,17 +8244,17 @@ definitions:
         title: BoardsSaveStickyRequestBody
         type: object
         properties:
-            returns:
+            resolved:
                 type: boolean
-                description: Whether what the sticky note found is to be given back
-                example: false
+                description: 'Whether the sticky note is resolved: the person understood it and is satisfied'
+                example: true
             text:
                 type: string
                 description: The new text of a memo; empty to leave only the mark on the passage
                 example: 1l5
                 maxLength: 10240
         example:
-            returns: false
+            resolved: true
             text: 1l5
     BoardsSaveStickyUnauthorizedResponseBody:
         title: 'Mediatype identifier: application/vnd.goa.error; view=default'

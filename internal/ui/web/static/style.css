@@ -856,6 +856,7 @@ dialog.history { max-width: min(960px, calc(100vw - 32px)); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 12px 8px 16px; border-radius: var(--r-lg); background: var(--fg); color: var(--bg); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); font-size: var(--fs-sm); }
 .toast[hidden] { display: none; }
 .toast .toast-msg { overflow-wrap: anywhere; }
+.toast .toast-msg a { color: var(--bg); font-weight: 600; text-decoration: underline; }
 .toast button { flex: none; font-size: var(--fs-sm); padding: 4px 12px; background: transparent; color: var(--bg); border: 1px solid currentColor; border-radius: var(--r-md); cursor: pointer; }
 .auth { max-width: 420px; }
 .auth .files-actions { gap: 8px; }
@@ -919,6 +920,10 @@ mark.board-anchor { background: color-mix(in srgb, var(--mark-bg) 55%, transpare
 .sticky-quote { margin: 0 0 8px; padding: 0 0 0 8px; border-left: 3px solid var(--mark-current); color: var(--fg-muted); font-size: var(--fs-xs); cursor: pointer; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .sticky-ask { white-space: pre-wrap; overflow-wrap: anywhere; font-weight: 600; margin: 4px 0; }
 .sticky.memo .sticky-ask { font-weight: normal; }
+.sticky-kind { margin: 0 0 4px; color: var(--accent); font-size: var(--fs-xs); font-weight: 600; }
+.sticky-resume { margin-top: 8px; font-size: var(--fs-xs); color: var(--fg-muted); }
+.sticky-resume summary { cursor: pointer; }
+.sticky-resume .auth-cmd code { font-size: inherit; word-break: break-all; }
 .sticky-answer { margin: 4px 0; overflow-wrap: anywhere; }
 .sticky-answer > :first-child { margin-top: 0; }
 .sticky-answer > :last-child { margin-bottom: 0; }
@@ -933,12 +938,30 @@ mark.board-anchor { background: color-mix(in srgb, var(--mark-bg) 55%, transpare
 .sticky-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; color: var(--fg-muted); font-size: var(--fs-xs); }
 .sticky-foot label { display: inline-flex; align-items: center; gap: 4px; }
 .sticky-foot .icon-button svg { width: 14px; height: 14px; }
+.sticky-foot .sticky-resolved { cursor: pointer; }
+.sticky-foot span.sticky-resolved { cursor: default; color: var(--ok); }
+/* A resolved sticky note fades, but not those on its answer. */
+.sticky.resolved > .sticky-quote, .sticky.resolved > .sticky-messages, .sticky.resolved > .sticky-kind { opacity: .55; }
 .board-compose { position: absolute; z-index: 20; width: min(360px, calc(100% - 16px)); padding: 8px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg); box-shadow: 0 4px 12px rgb(0 0 0 / .18); }
 .board-compose .buttons { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; }
 .flash { animation: board-flash 1s ease-out; }
 @keyframes board-flash { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
 .board-finish .board-draft { margin: 8px 0 12px; }
+.sticky-given { color: var(--fg-muted); font-size: var(--fs-sm); }
+.board-finish .board-picks { max-height: 40vh; overflow-y: auto; margin-bottom: 4px; }
+.board-finish .board-pick { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; font-size: var(--fs-sm); cursor: pointer; }
+.board-finish .board-pick input { flex: none; }
+.board-finish .board-pick-passage { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
+.board-finish .board-pick-message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board-finish .board-save { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.board-finish [hidden] { display: none; }
+.board-finish .board-minutes { margin: 8px 0; }
+.board-finish .board-minutes .board-hint { margin: 2px 0 0 24px; }
+.board-finish .board-later { margin: 8px 0; }
+.board-finish .board-later > summary { cursor: pointer; color: var(--fg-muted); font-size: var(--fs-sm); }
+.board-finish .board-later[open] > summary { margin-bottom: 4px; }
+.board-claude { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+.board-claude h3 { margin: 0 0 4px; }
 .board-finish select { font: inherit; padding: 2px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); color: var(--fg); }
 @media (max-width: 760px) {
   .board-view, .panes.board-open .assistant, .panes.board-open .resizer[data-col="ask"] { grid-column: 1; grid-row: auto; }

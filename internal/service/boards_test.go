@@ -282,24 +282,31 @@ func TestBoardStickies(t *testing.T) {
 	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: b.ID, Parent: ptr("s00000000"), Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "x"}}); errorName(err) != "not_found" {
 		t.Errorf("sticky note on a missing parent = %v", err)
 	}
-	saved, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: b.ID, Sticky: q.ID, Returns: ptr(true)})
-	if err != nil || !saved.Returns {
-		t.Fatalf("save = %+v, %v", saved, err)
-	}
 	if _, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: b.ID, Sticky: q.ID, Text: ptr("x")}); errorName(err) != "bad_request" {
 		t.Errorf("text of an answered sticky note = %v", err)
 	}
 	if m, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: b.ID, Sticky: memo.ID, Text: ptr("checked")}); err != nil || m.Messages[0].Text != "checked" {
 		t.Errorf("memo saved = %+v, %v", m, err)
 	}
-
-	// The draft is from the sticky notes to give back.
-	asker.answers <- result{text: "- bigrams are pairs"}
-	draft, err := boardsOf(svc).Draft(person, &genboards.DraftPayload{ID: b.ID})
-	if err != nil || draft.Text != "- bigrams are pairs" {
-		t.Fatalf("draft = %+v, %v", draft, err)
+	// Resolved, with the text kept; adding to it again clears it.
+	if m, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: b.ID, Sticky: memo.ID, Resolved: ptr(true)}); err != nil || !m.Resolved || m.Messages[0].Text != "checked" {
+		t.Errorf("memo resolved = %+v, %v", m, err)
 	}
-	if qs := asker.last(); !strings.Contains(qs, "To match any part.") || strings.Contains(qs, "checked") {
+	if m, err := boardsOf(svc).AskSticky(person, &genboards.AskStickyPayload{ID: b.ID, Sticky: memo.ID, Text: ptr("and more")}); err != nil || m.Resolved {
+		t.Errorf("memo added to after resolved = %+v, %v", m, err)
+	}
+
+	// The draft is from the sticky notes chosen, which exist.
+	for _, ids := range [][]string{nil, {q.ID, "s00000000"}} {
+		if _, err := boardsOf(svc).Draft(person, &genboards.DraftPayload{ID: b.ID, Stickies: ids}); errorName(err) != "bad_request" {
+			t.Errorf("draft from %v = %v", ids, err)
+		}
+	}
+	// Claude drafts, not the assistant: without claude, no draft.
+	if _, err := boardsOf(svc).Draft(person, &genboards.DraftPayload{ID: b.ID, Stickies: []string{q.ID}}); errorName(err) != "unavailable" {
+		t.Errorf("draft without claude = %v", err)
+	}
+	if qs := board.DraftQuestion(mustBoard(t, svc, b.ID), []string{q.ID}); !strings.Contains(qs, "To match any part.") || strings.Contains(qs, "checked") {
 		t.Errorf("draft question:\n%s", qs)
 	}
 
@@ -322,7 +329,11 @@ func TestFinishBoard(t *testing.T) {
 	if res, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: opened.ID}); err != nil || res.Status != "open" || res.Result != nil {
 		t.Errorf("open board for AI = %+v, %v", res, err)
 	}
-	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: opened.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}, Text: ptr("why not a map?")}); err != nil {
+	given, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: opened.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}, Text: ptr("why not a map?")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: opened.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "Use"}, Text: ptr("only for me")}); err != nil {
 		t.Fatal(err)
 	}
 	// Without the assistant.
@@ -334,11 +345,17 @@ func TestFinishBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: opened.ID, Text: "Use a map instead.", Notebook: &nb.ID})
+	if _, err := boardsOf(svc).SaveSticky(person, &genboards.SaveStickyPayload{ID: opened.ID, Sticky: given.ID, Resolved: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: opened.ID, Text: "x", Stickies: []string{given.ID, "s00000000"}}); errorName(err) != "bad_request" {
+		t.Errorf("finishing with a missing sticky note = %v", err)
+	}
+	b, err := boardsOf(svc).Finish(person, &genboards.FinishPayload{ID: opened.ID, Text: "Use a map instead.", Stickies: []string{given.ID, given.ID}, Notebook: &nb.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b.Status != "done" || b.Result == nil || b.Result.NoteID == nil {
+	if b.Status != "done" || b.Result == nil || b.Result.NoteID == nil || len(b.Result.Stickies) != 1 || b.Result.Stickies[0] != given.ID {
 		t.Fatalf("finished = %+v", b)
 	}
 	n, err := svc.Get(person, &gennotes.GetPayload{ID: *b.Result.NoteID})
@@ -346,13 +363,22 @@ func TestFinishBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n.Notebook != nb.ID || n.Title != "Plan" || len(n.Tags) != 1 || n.Tags[0] != board.Tag ||
-		!strings.HasPrefix(n.Body, "Use a map instead.") || !strings.Contains(n.Body, "why not a map?") || !strings.Contains(n.Body, "Use a trie.") {
+		!strings.HasPrefix(n.Body, "## Next points\n\nUse a map instead.") || !strings.Contains(n.Body, "why not a map?") ||
+		!strings.Contains(n.Body, "### “trie” (resolved)\n") || strings.Contains(n.Body, "“Use” (resolved)") || !strings.Contains(n.Body, "Use a trie.") {
 		t.Errorf("note = %+v", n)
 	}
 
 	res, err := svc.GetAiBoard(ai, &gennotes.GetAiBoardPayload{ID: opened.ID})
 	if err != nil || res.Status != "done" || deref(res.Result) != "Use a map instead." || deref(res.NoteID) != n.ID {
 		t.Errorf("finished board for AI = %+v, %v", res, err)
+	}
+	// Only the sticky note chosen is given back, once.
+	if len(res.Stickies) != 1 {
+		t.Fatalf("sticky notes given back = %d", len(res.Stickies))
+	}
+	if st := res.Stickies[0]; st.ID != given.ID || st.Passage != "trie" || st.Parent != nil || !st.Resolved ||
+		len(st.Messages) != 1 || st.Messages[0].Role != "user" || st.Messages[0].Text != "why not a map?" {
+		t.Errorf("sticky note given back = %+v", st)
 	}
 	if _, err := boardsOf(svc).AddSticky(person, &genboards.AddStickyPayload{ID: opened.ID, Kind: "memo", Anchor: &genboards.BoardAnchor{Exact: "trie"}}); errorName(err) != "bad_request" {
 		t.Errorf("sticky note on a finished board = %v", err)
@@ -362,7 +388,7 @@ func TestFinishBoard(t *testing.T) {
 	}
 
 	list, err := boardsOf(svc).List(person, &genboards.ListPayload{})
-	if err != nil || len(list) != 1 || list[0].Stickies != 1 || list[0].Status != "done" {
+	if err != nil || len(list) != 1 || list[0].Stickies != 2 || list[0].Status != "done" {
 		t.Errorf("list = %+v, %v", list, err)
 	}
 	if err := boardsOf(svc).Delete(person, &genboards.DeletePayload{ID: opened.ID}); err != nil {
@@ -423,4 +449,14 @@ func TestBoardInterrupted(t *testing.T) {
 	if s := b.Stickies[0]; s.ID != q.ID || s.State != "error" || s.Error == nil {
 		t.Errorf("sticky note after a restart = %+v", s)
 	}
+}
+
+// mustBoard returns board id as the store has it.
+func mustBoard(t *testing.T, svc *Notes, id string) *board.Board {
+	t.Helper()
+	b, err := svc.boards.store.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

@@ -982,9 +982,28 @@ func DecodeDraftRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.D
 	return func(r *http.Request) (*boards.DraftPayload, error) {
 		var payload *boards.DraftPayload
 		var (
+			body DraftRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateDraftRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
 			id      string
 			session *string
-			err     error
 			c       *http.Cookie
 
 			params = mux.Vars(r)
@@ -1002,7 +1021,7 @@ func DecodeDraftRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.D
 		if err != nil {
 			return payload, err
 		}
-		payload = NewDraftPayload(id, session)
+		payload = NewDraftPayload(&body, id, session)
 
 		return payload, nil
 	}
@@ -1215,11 +1234,14 @@ func marshalBoardsBoardSummaryToBoardSummaryResponse(v *boards.BoardSummary) *Bo
 // *BoardSourceResponseBody from a value of type *boards.BoardSource.
 func marshalBoardsBoardSourceToBoardSourceResponseBody(v *boards.BoardSource) *BoardSourceResponseBody {
 	res := &BoardSourceResponseBody{
-		From:   v.From,
-		NoteID: v.NoteID,
-		Format: v.Format,
-		Lang:   v.Lang,
-		Size:   v.Size,
+		From:         v.From,
+		NoteID:       v.NoteID,
+		NoteTitle:    v.NoteTitle,
+		NoteNotebook: v.NoteNotebook,
+		NoteState:    v.NoteState,
+		Format:       v.Format,
+		Lang:         v.Lang,
+		Size:         v.Size,
 	}
 
 	return res
@@ -1234,7 +1256,8 @@ func marshalBoardsBoardStickyToBoardStickyResponseBody(v *boards.BoardSticky) *B
 		Kind:      v.Kind,
 		State:     v.State,
 		Error:     v.Error,
-		Returns:   v.Returns,
+		Resolved:  v.Resolved,
+		Session:   v.Session,
 		CreatedAt: v.CreatedAt,
 		UpdatedAt: v.UpdatedAt,
 	}
@@ -1287,7 +1310,46 @@ func marshalBoardsBoardResultToBoardResultResponseBody(v *boards.BoardResult) *B
 	res := &BoardResultResponseBody{
 		Text:       v.Text,
 		NoteID:     v.NoteID,
+		Appended:   v.Appended,
 		FinishedAt: v.FinishedAt,
+	}
+	if v.Stickies != nil {
+		res.Stickies = make([]string, len(v.Stickies))
+		for i, val := range v.Stickies {
+			res.Stickies[i] = val
+		}
+	} else {
+		res.Stickies = []string{}
+	}
+	if v.Claude != nil {
+		res.Claude = marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody(v.Claude)
+	}
+
+	return res
+}
+
+// marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody builds a value
+// of type *BoardClaudeReplyResponseBody from a value of type
+// *boards.BoardClaudeReply.
+func marshalBoardsBoardClaudeReplyToBoardClaudeReplyResponseBody(v *boards.BoardClaudeReply) *BoardClaudeReplyResponseBody {
+	res := &BoardClaudeReplyResponseBody{
+		State:  v.State,
+		Text:   v.Text,
+		Edited: v.Edited,
+		Reason: v.Reason,
+		Error:  v.Error,
+	}
+
+	return res
+}
+
+// marshalBoardsBoardForkToBoardForkResponseBody builds a value of type
+// *BoardForkResponseBody from a value of type *boards.BoardFork.
+func marshalBoardsBoardForkToBoardForkResponseBody(v *boards.BoardFork) *BoardForkResponseBody {
+	res := &BoardForkResponseBody{
+		Available: v.Available,
+		Reason:    v.Reason,
+		Cwd:       v.Cwd,
 	}
 
 	return res
