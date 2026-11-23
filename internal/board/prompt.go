@@ -3,7 +3,6 @@ package board
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -344,24 +343,56 @@ func CloseQuestion(b *Board, points string, note NoteRef) string {
 	return sb.String()
 }
 
-var noteBlock = regexp.MustCompile("(?s)```+" + NoteFence + "[^\\n]*\\n(.*?)\\n```+")
-
 // SplitReply returns the reply of Claude to CloseQuestion without its block
 // of changes, and the changes, nil when it gave none. A block that is not
 // valid is an error, with the reply.
+//
+// The block is the last fenced code block of the info string NoteFence that
+// is closed and not inside another: one shown as an example in a longer
+// fence is text.
 func SplitReply(reply string) (string, *NoteChange, error) {
-	loc := noteBlock.FindAllStringSubmatchIndex(reply, -1)
-	if len(loc) == 0 {
+	lines := strings.Split(reply, "\n")
+	from, to := noteBlock(lines)
+	if from < 0 {
 		return strings.TrimSpace(reply), nil, nil
 	}
-	last := loc[len(loc)-1]
-	text := strings.TrimSpace(reply[:last[0]] + reply[last[1]:])
+	text := strings.TrimSpace(strings.Join(lines[:from], "\n") + "\n" + strings.Join(lines[to+1:], "\n"))
+	body := strings.Join(lines[from+1:to], "\n")
 	var c NoteChange
-	if err := json.Unmarshal([]byte(reply[last[2]:last[3]]), &c); err != nil {
+	if err := json.Unmarshal([]byte(body), &c); err != nil {
 		return text, nil, fmt.Errorf("the changes to the note are not valid: %w", err)
 	}
 	if len(c.Edits) == 0 && strings.TrimSpace(c.Append) == "" {
 		return text, nil, nil
 	}
 	return text, &c, nil
+}
+
+// noteBlock returns the lines of the opening and the closing fences of the
+// last block of NoteFence in lines, or -1, -1: fenced code blocks are
+// followed as inCode does, and only one opened outside another counts.
+func noteBlock(lines []string) (from, to int) {
+	from, to = -1, -1
+	open, start := "", -1
+	for i, l := range lines {
+		t := strings.TrimLeft(l, " ")
+		if len(l)-len(t) > 3 {
+			continue
+		}
+		m := codeFence.FindString(t)
+		switch {
+		case m == "":
+		case open == "":
+			open, start = m, -1
+			if f := strings.Fields(t[len(m):]); len(f) > 0 && f[0] == NoteFence {
+				start = i
+			}
+		case m[0] == open[0] && len(m) >= len(open) && strings.TrimSpace(t[len(m):]) == "":
+			if start >= 0 {
+				from, to = start, i
+			}
+			open = ""
+		}
+	}
+	return from, to
 }

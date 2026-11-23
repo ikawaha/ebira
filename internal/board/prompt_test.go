@@ -257,3 +257,24 @@ func TestCloseQuestionKeepsThePoints(t *testing.T) {
 		t.Errorf("close question of %d bytes", len(q))
 	}
 }
+
+// TestSplitReplyNested checks that a block of changes shown as an example in
+// another code block is text, not changes.
+func TestSplitReplyNested(t *testing.T) {
+	example := "I would give:\n\n````md\n```ebira-note\n{\"append\": \"x\"}\n```\n````\n"
+	text, c, err := SplitReply(example)
+	if err != nil || c != nil || text != strings.TrimSpace(example) {
+		t.Errorf("an example: %q, %+v, %v", text, c, err)
+	}
+	// The example, then a real block.
+	text, c, err = SplitReply(example + "\nDone.\n\n```ebira-note\n{\"append\": \"y\"}\n```\n")
+	if err != nil || c == nil || c.Append != "y" || !strings.Contains(text, "```ebira-note") || !strings.HasSuffix(text, "Done.") {
+		t.Errorf("an example and a block: %q, %+v, %v", text, c, err)
+	}
+	// Only the info string ebira-note counts, and only a closed block.
+	for _, r := range []string{"```ebira-notes\n{\"append\": \"x\"}\n```", "```ebira-note\n{\"append\": \"x\"}\n"} {
+		if _, c, err := SplitReply(r); err != nil || c != nil {
+			t.Errorf("%q: %+v, %v", r, c, err)
+		}
+	}
+}
