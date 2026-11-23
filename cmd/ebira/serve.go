@@ -260,9 +260,6 @@ func runServe(args []string) error {
 	} else if freed > 0 {
 		slog.Info("index compacted", "freed_bytes", freed)
 	}
-	// The earlier versions past the limits of the history go now and then
-	// once a day, for a server left running.
-	go sweepHistoryEvery(ctx, svc, 24*time.Hour)
 	if *watchF {
 		// The notes are as deep as trash/<notebook>/<sub>/<id>.yaml.
 		const watchDepth = 3
@@ -299,6 +296,10 @@ func runServe(args []string) error {
 	if err := svc.SetBoards(boards, boardAsk); err != nil {
 		return err
 	}
+	// The earlier versions past the limits of the history, and the old
+	// whiteboards, go now and then once a day, for a server left running.
+	// It starts after SetBoards, as it sweeps the whiteboards too.
+	go sweepHistoryEvery(ctx, svc, 24*time.Hour)
 	// Forks of the Claude Code session that opened a board answer the
 	// sticky notes of the fork kind, with claude of this machine. Finding it
 	// may ask the login shell, so the server does not wait for it.
