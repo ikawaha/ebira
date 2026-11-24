@@ -92,7 +92,10 @@ type boards struct {
 	stop  context.CancelFunc
 
 	mu      sync.Mutex
-	running map[string]context.CancelFunc // answers under way, by board and sticky note
+	running map[string]*run // answers under way, by board and sticky note
+	closing map[string]bool // boards Finish is closing, which take no other change
+
+	finishing sync.Mutex // one board closed or deleted at a time
 
 	opening sync.Mutex // one note opened at a time, not to open two boards of it
 }
@@ -107,7 +110,7 @@ func (s *Notes) SetBoards(st *board.Store, ask Asker) error {
 	ctx, stop := context.WithCancel(context.Background())
 	s.boards = &boards{
 		store: st, ask: ask, turns: make(chan struct{}, boardAnswers), forks: make(chan struct{}, boardForks),
-		ctx: ctx, stop: stop, running: map[string]context.CancelFunc{},
+		ctx: ctx, stop: stop, running: map[string]*run{}, closing: map[string]bool{},
 	}
 	return nil
 }
@@ -132,19 +135,62 @@ func (bs *boards) forker() Forker {
 // runKey is the key of an answer under way in boards.running.
 func runKey(board, sticky string) string { return board + "/" + sticky }
 
+// run is a run under way in boards.running.
+type run struct{ stop context.CancelFunc }
+
+// track keeps a run under key in boards.running, and returns its context and
+// the func to call when it ends. That func removes the run only if key is
+// still its own: a run started again under the same key, as when the person
+// asks again as soon as the answer is written, stays stoppable.
+func (bs *boards) track(key string) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(bs.ctx)
+	r := &run{stop: cancel}
+	bs.mu.Lock()
+	bs.running[key] = r
+	bs.mu.Unlock()
+	return ctx, func() {
+		bs.mu.Lock()
+		if bs.running[key] == r {
+			delete(bs.running, key)
+		}
+		bs.mu.Unlock()
+		cancel()
+	}
+}
+
+// isClosing tells whether Finish is closing board id.
+func (bs *boards) isClosing(id string) bool {
+	bs.mu.Lock()
+	defer bs.mu.Unlock()
+	return bs.closing[id]
+}
+
+// setClosing marks board id as being closed by Finish, or no more.
+func (bs *boards) setClosing(id string, closing bool) {
+	bs.mu.Lock()
+	defer bs.mu.Unlock()
+	if closing {
+		bs.closing[id] = true
+	} else {
+		delete(bs.closing, id)
+	}
+}
+
+var errClosing = fmt.Errorf("%w: the board is being closed", board.ErrInvalid)
+
 // cancel stops the answers under way for the sticky notes of board, or all
 // of them without stickies.
 func (bs *boards) cancel(id string, stickies []board.Sticky) {
 	bs.mu.Lock()
 	defer bs.mu.Unlock()
-	for key, stop := range bs.running {
+	for key, r := range bs.running {
 		if stickies == nil && strings.HasPrefix(key, id+"/") {
-			stop()
+			r.stop()
 		}
 	}
 	for _, st := range stickies {
-		if stop, ok := bs.running[runKey(id, st.ID)]; ok {
-			stop()
+		if r, ok := bs.running[runKey(id, st.ID)]; ok {
+			r.stop()
 		}
 	}
 }
@@ -617,7 +663,12 @@ func (s *Notes) changeBoard(ctx context.Context, id string, change func(*board.B
 	if err != nil {
 		return nil, nil, err
 	}
-	b, err := st.Update(id, change)
+	b, err := st.Update(id, func(b *board.Board) error {
+		if s.boards.isClosing(id) {
+			return errClosing
+		}
+		return change(b)
+	})
 	if err != nil {
 		return nil, nil, boardErr(err)
 	}
@@ -650,6 +701,10 @@ func (r Boards) Delete(ctx context.Context, p *genboards.DeletePayload) error {
 	if err != nil {
 		return err
 	}
+	// Not while Finish closes it: the minutes and the link to them would
+	// be left with no board.
+	s.boards.finishing.Lock()
+	defer s.boards.finishing.Unlock()
 	b, err := st.Delete(p.ID)
 	if err != nil {
 		return boardErr(err)
@@ -866,18 +921,9 @@ func (s *Notes) answer(id, sid, kind string) {
 	if kind == board.Fork {
 		turns, limit = bs.forks, boardForkTime
 	}
-	ctx, cancel := context.WithCancel(bs.ctx)
-	key := runKey(id, sid)
-	bs.mu.Lock()
-	bs.running[key] = cancel
-	bs.mu.Unlock()
+	ctx, done := bs.track(runKey(id, sid))
 	go func() {
-		defer func() {
-			bs.mu.Lock()
-			delete(bs.running, key)
-			bs.mu.Unlock()
-			cancel()
-		}()
+		defer done()
 		select {
 		case turns <- struct{}{}:
 			defer func() { <-turns }()
@@ -997,18 +1043,9 @@ func (s *Notes) seed(ctx context.Context, id string) (*board.Board, error) {
 // it. Deleting the board stops it.
 func (s *Notes) seedLater(id string) {
 	bs := s.boards
-	ctx, cancel := context.WithCancel(bs.ctx)
-	key := runKey(id, "seed")
-	bs.mu.Lock()
-	bs.running[key] = cancel
-	bs.mu.Unlock()
+	ctx, done := bs.track(runKey(id, "seed"))
 	go func() {
-		defer func() {
-			bs.mu.Lock()
-			delete(bs.running, key)
-			bs.mu.Unlock()
-			cancel()
-		}()
+		defer done()
 		select {
 		case bs.forks <- struct{}{}:
 			defer func() { <-bs.forks }()
@@ -1142,6 +1179,21 @@ func (r Boards) Draft(ctx context.Context, p *genboards.DraftPayload) (*genboard
 
 func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboards.Board, error) {
 	s := r.Notes
+	if err := peopleOnly(ctx); err != nil {
+		return nil, err
+	}
+	if _, err := s.boardStore(); err != nil {
+		return nil, err
+	}
+	// One board is closed at a time, and the board takes no other change
+	// meanwhile: a second Finish sees it done, and no sticky note starts to
+	// wait for an answer, so the minutes and the link to them are made once,
+	// for a board that is closed.
+	bs := s.boards
+	bs.finishing.Lock()
+	defer bs.finishing.Unlock()
+	bs.setClosing(p.ID, true)
+	defer bs.setClosing(p.ID, false)
 	st, b, err := s.getBoard(ctx, p.ID)
 	if err != nil {
 		return nil, err
@@ -1215,6 +1267,16 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 		return nil, boardErr(err)
 	}
 	noteID := ""
+	// undo moves the minutes made to the trash when the board is not
+	// closed after all, so that closing it again makes them once.
+	undo := func() {
+		if noteID == "" {
+			return
+		}
+		if err := s.Delete(ctx, &gennotes.DeletePayload{ID: noteID}); err != nil {
+			log.Printf("whiteboard %s: moving the minutes %s to the trash: %v", p.ID, noteID, err)
+		}
+	}
 	if p.Notebook != nil {
 		body := board.NoteBody(b, source, p.Text, p.Lang, from)
 		n, err := s.Create(ctx, &gennotes.CreatePayload{
@@ -1231,10 +1293,13 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 		if err := s.changeNoteBody(ctx, from.ID, func(body string) string {
 			return board.AddDiscussion(body, p.Lang, day, minutes)
 		}); err != nil {
+			undo()
 			return nil, err
 		}
 	}
-	st, b, err = s.changeBoard(ctx, p.ID, func(b *board.Board) error {
+	// Not through changeBoard, which takes no change of a board being
+	// closed.
+	b, err = st.Update(p.ID, func(b *board.Board) error {
 		if err := ready(b); err != nil {
 			return err
 		}
@@ -1246,8 +1311,15 @@ func (r Boards) Finish(ctx context.Context, p *genboards.FinishPayload) (*genboa
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		// With the link to them added to the note, the minutes stay, not
+		// to leave a link to the trash. Only a failure to write the board
+		// gets here: nothing else changes or deletes it meanwhile.
+		if !appendToNote {
+			undo()
+		}
+		return nil, boardErr(err)
 	}
+	s.events.publish(eventBoard, p.ID)
 	if askClaude {
 		s.takeUp(b.ID, *from)
 	}
@@ -1265,18 +1337,9 @@ func (s *Notes) takeUp(id string, note board.NoteRef) {
 	if n, err := s.Get(bs.ctx, &gennotes.GetPayload{ID: note.ID}); err == nil {
 		version = n.Version
 	}
-	ctx, cancel := context.WithCancel(bs.ctx)
-	key := runKey(id, "close")
-	bs.mu.Lock()
-	bs.running[key] = cancel
-	bs.mu.Unlock()
+	ctx, done := bs.track(runKey(id, "close"))
 	go func() {
-		defer func() {
-			bs.mu.Lock()
-			delete(bs.running, key)
-			bs.mu.Unlock()
-			cancel()
-		}()
+		defer done()
 		select {
 		case bs.forks <- struct{}{}:
 			defer func() { <-bs.forks }()
