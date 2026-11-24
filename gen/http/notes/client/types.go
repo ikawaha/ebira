@@ -839,6 +839,15 @@ type UploadAiFileResponseBody struct {
 	Replaced *bool `form:"replaced,omitempty" json:"replaced,omitempty" xml:"replaced,omitempty"`
 }
 
+// UploadAiBoardResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body.
+type UploadAiBoardResponseBody struct {
+	// Board ID
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// URL of the board in the web UI, to give to the user
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
 // AddFileResponseBody is the type of the "notes" service "add_file" endpoint
 // HTTP response body.
 type AddFileResponseBody struct {
@@ -897,11 +906,13 @@ type CheckFilesResponseBody struct {
 type EventsResponseBody struct {
 	// Kind of change. ready is sent once when the stream starts; clients should
 	// reload the note list on it. notebooks means the notebook list, names or
-	// order changed, or the separators of a notebook. private_lost means that a
-	// notebook was private and is no longer, as files changed outside the API,
-	// such as by a sync, so that AI clients may now see it
+	// order changed, or the separators of a notebook. board means a whiteboard
+	// changed, such as when an answer came to a sticky note. private_lost means
+	// that a notebook was private and is no longer, as files changed outside the
+	// API, such as by a sync, so that AI clients may now see it
 	Type *string `form:"type,omitempty" json:"type,omitempty" xml:"type,omitempty"`
-	// Note ID (absent for ready, notebooks and private_lost)
+	// Note ID, or the board ID for board (absent for ready, notebooks and
+	// private_lost)
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	// Notebook ID, for private_lost
 	Notebook *string `form:"notebook,omitempty" json:"notebook,omitempty" xml:"notebook,omitempty"`
@@ -3133,6 +3144,97 @@ type UploadAiFileTooLargeResponseBody struct {
 // UploadAiFileUnauthorizedResponseBody is the type of the "notes" service
 // "upload_ai_file" endpoint HTTP response body for the "unauthorized" error.
 type UploadAiFileUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UploadAiBoardNotFoundResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "not_found" error.
+type UploadAiBoardNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UploadAiBoardBadRequestResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "bad_request" error.
+type UploadAiBoardBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UploadAiBoardTooLargeResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "too_large" error.
+type UploadAiBoardTooLargeResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UploadAiBoardUnauthorizedResponseBody is the type of the "notes" service
+// "upload_ai_board" endpoint HTTP response body for the "unauthorized" error.
+type UploadAiBoardUnauthorizedResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// UploadAiBoardVerificationRequiredResponseBody is the type of the "notes"
+// service "upload_ai_board" endpoint HTTP response body for the
+// "verification_required" error.
+type UploadAiBoardVerificationRequiredResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -7275,6 +7377,92 @@ func NewUploadAiFileUnauthorized(body *UploadAiFileUnauthorizedResponseBody) *go
 	return v
 }
 
+// NewUploadAiBoardBoardOpenedCreated builds a "notes" service
+// "upload_ai_board" endpoint result from a HTTP "Created" response.
+func NewUploadAiBoardBoardOpenedCreated(body *UploadAiBoardResponseBody) *notes.BoardOpened {
+	v := &notes.BoardOpened{
+		ID:  *body.ID,
+		URL: *body.URL,
+	}
+
+	return v
+}
+
+// NewUploadAiBoardNotFound builds a notes service upload_ai_board endpoint
+// not_found error.
+func NewUploadAiBoardNotFound(body *UploadAiBoardNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUploadAiBoardBadRequest builds a notes service upload_ai_board endpoint
+// bad_request error.
+func NewUploadAiBoardBadRequest(body *UploadAiBoardBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUploadAiBoardTooLarge builds a notes service upload_ai_board endpoint
+// too_large error.
+func NewUploadAiBoardTooLarge(body *UploadAiBoardTooLargeResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUploadAiBoardUnauthorized builds a notes service upload_ai_board endpoint
+// unauthorized error.
+func NewUploadAiBoardUnauthorized(body *UploadAiBoardUnauthorizedResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewUploadAiBoardVerificationRequired builds a notes service upload_ai_board
+// endpoint verification_required error.
+func NewUploadAiBoardVerificationRequired(body *UploadAiBoardVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
 // NewAddFileNoteFileCreated builds a "notes" service "add_file" endpoint
 // result from a HTTP "Created" response.
 func NewAddFileNoteFileCreated(body *AddFileResponseBody) *notes.NoteFile {
@@ -9430,6 +9618,21 @@ func ValidateUploadAiFileResponseBody(body *UploadAiFileResponseBody) (err error
 	return
 }
 
+// ValidateUploadAiBoardResponseBody runs the validations defined on
+// UploadAiBoardResponseBody
+func ValidateUploadAiBoardResponseBody(body *UploadAiBoardResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.URL == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("url", "body"))
+	}
+	if body.ID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.id", *body.ID, "^[a-z0-9][a-z0-9_-]{0,63}$"))
+	}
+	return
+}
+
 // ValidateAddFileResponseBody runs the validations defined on
 // AddFileResponseBody
 func ValidateAddFileResponseBody(body *AddFileResponseBody) (err error) {
@@ -9519,8 +9722,8 @@ func ValidateEventsResponseBody(body *EventsResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("type", "body"))
 	}
 	if body.Type != nil {
-		if !(*body.Type == "ready" || *body.Type == "created" || *body.Type == "updated" || *body.Type == "deleted" || *body.Type == "notebooks" || *body.Type == "private_lost") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost"}))
+		if !(*body.Type == "ready" || *body.Type == "created" || *body.Type == "updated" || *body.Type == "deleted" || *body.Type == "notebooks" || *body.Type == "private_lost" || *body.Type == "board") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.type", *body.Type, []any{"ready", "created", "updated", "deleted", "notebooks", "private_lost", "board"}))
 		}
 	}
 	if body.ID != nil {
@@ -12470,6 +12673,126 @@ func ValidateUploadAiFileTooLargeResponseBody(body *UploadAiFileTooLargeResponse
 // ValidateUploadAiFileUnauthorizedResponseBody runs the validations defined on
 // UploadAiFileUnauthorizedResponseBody
 func ValidateUploadAiFileUnauthorizedResponseBody(body *UploadAiFileUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUploadAiBoardNotFoundResponseBody runs the validations defined on
+// UploadAiBoardNotFoundResponseBody
+func ValidateUploadAiBoardNotFoundResponseBody(body *UploadAiBoardNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUploadAiBoardBadRequestResponseBody runs the validations defined on
+// UploadAiBoardBadRequestResponseBody
+func ValidateUploadAiBoardBadRequestResponseBody(body *UploadAiBoardBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUploadAiBoardTooLargeResponseBody runs the validations defined on
+// UploadAiBoardTooLargeResponseBody
+func ValidateUploadAiBoardTooLargeResponseBody(body *UploadAiBoardTooLargeResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUploadAiBoardUnauthorizedResponseBody runs the validations defined
+// on UploadAiBoardUnauthorizedResponseBody
+func ValidateUploadAiBoardUnauthorizedResponseBody(body *UploadAiBoardUnauthorizedResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateUploadAiBoardVerificationRequiredResponseBody runs the validations
+// defined on UploadAiBoardVerificationRequiredResponseBody
+func ValidateUploadAiBoardVerificationRequiredResponseBody(body *UploadAiBoardVerificationRequiredResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

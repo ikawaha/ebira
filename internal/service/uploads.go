@@ -9,6 +9,7 @@ import (
 	"time"
 
 	gennotes "github.com/ikawaha/ebira/gen/notes"
+	"github.com/ikawaha/ebira/internal/board"
 	"github.com/ikawaha/ebira/internal/store"
 )
 
@@ -35,7 +36,10 @@ const UploadsPath = "/uploads/"
 type upload struct {
 	id, name string // the note and the name of the file
 	replace  bool   // whether the file replaces one of the same name
-	expires  time.Time
+	// board is what a board is opened with, for an upload of its source
+	// (see StartAiBoard) rather than of a file.
+	board   *board.Board
+	expires time.Time
 }
 
 // uploads are the pending uploads by their tokens.
@@ -114,7 +118,7 @@ func (s *Notes) StartAiUpload(ctx context.Context, p *gennotes.StartAiUploadPayl
 func (s *Notes) UploadAiFile(ctx context.Context, p *gennotes.UploadAiFilePayload, body io.ReadCloser) (*gennotes.NoteFile, error) {
 	defer body.Close()
 	u, ok := s.uploads.take(p.Token, s.now())
-	if !ok {
+	if !ok || u.board != nil {
 		return nil, gennotes.MakeNotFound(errUnknownUpload)
 	}
 	// One byte more than allowed tells a file that is too large.

@@ -24,6 +24,8 @@ claude mcp add --transport http --scope user ebira http://localhost:13579/mcp
 
 Sessions of Claude Code started after that can use it. `claude mcp list`, or `/mcp` in Claude Code, shows whether it is registered. After you change the address, the button and `ebira mcp add` replace the registration of the old address.
 
+The button and `ebira mcp add` also install the skill `ebira-whiteboard`, with which Claude Code opens whiteboards ([Reading on a whiteboard](whiteboard.md)), into `skills/` of the configuration directory of Claude Code (`CLAUDE_CONFIG_DIR`, else `~/.claude`). Running them again after you update ebira updates the skill too. A skill you changed by hand is not replaced; remove it, then run them, to get the new one. `ebira mcp add -skill=false` registers ebira without the skill. To remove the skill, remove the directory `skills/ebira-whiteboard`.
+
 ### Without the button
 
 The button shows only when the ebira server finds Claude Code (`claude`): the server runs `claude` of its machine to register it.
@@ -157,6 +159,7 @@ Claude Desktop (`claude_desktop_config.json`), which starts servers as commands,
 | `create_ai_notebook` | Make a new collab notebook, or a sub notebook in one, for the AI to write in |
 | `archive_ai_notebook` | Put a collab notebook in the archive, or take it out |
 | `make_notebook_private` | Hide a notebook from AI; only you can undo it |
+| `open_ai_board` / `start_ai_board` / `get_ai_board` / `list_ai_boards` | Open a text or a diff on a whiteboard (given, or by a URL for one upload), and read what you give back when you are done; find and read the boards you opened on a note and closed too ([Reading on a whiteboard](whiteboard.md)) |
 
 The version makes an AI's changes safe: when a note has changed since the AI read it, the change is refused, and nothing you wrote is overwritten. The files AI replaces or deletes are kept too, to be put back from the [history](history.md).
 

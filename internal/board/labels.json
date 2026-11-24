@@ -1,0 +1,26 @@
+{
+  "en": {
+    "stickies": "Sticky notes",
+    "source": "Topic",
+    "lines": "{n} lines",
+    "question": "Q",
+    "answer": "A",
+    "memo": "Memo",
+    "from_note": "From the note",
+    "discussions": "Appendix: discussions",
+    "points": "Next points",
+    "resolved": "(resolved)"
+  },
+  "ja": {
+    "stickies": "付箋",
+    "source": "議題",
+    "lines": "{n} 行",
+    "question": "問",
+    "answer": "答",
+    "memo": "メモ",
+    "from_note": "元のノート",
+    "discussions": "補足：議論",
+    "points": "論点",
+    "resolved": "（解決）"
+  }
+}

@@ -1,5 +1,6 @@
 // Package claudecode registers ebira as an MCP server of Claude Code, with its
-// command claude, for ebira mcp add and the button of the web UI.
+// command claude, for ebira mcp add and the button of the web UI, and installs
+// the skills of ebira for Claude Code (skill.go).
 //
 // It registers ebira in the user scope, so that every project can use it, and
 // leaves the registrations of the local and project scopes alone: they belong

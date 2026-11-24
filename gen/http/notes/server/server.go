@@ -52,6 +52,7 @@ type Server struct {
 	EmptyTrash            http.Handler
 	Import                http.Handler
 	UploadAiFile          http.Handler
+	UploadAiBoard         http.Handler
 	AddFile               http.Handler
 	GetFile               http.Handler
 	DeleteFile            http.Handler
@@ -132,6 +133,7 @@ func New(
 			{"EmptyTrash", "DELETE", "/trash"},
 			{"Import", "POST", "/import"},
 			{"UploadAiFile", "PUT", "/uploads/{token}"},
+			{"UploadAiBoard", "PUT", "/boards/uploads/{token}"},
 			{"AddFile", "POST", "/notes/{id}/files"},
 			{"GetFile", "GET", "/notes/{id}/files/{name}"},
 			{"DeleteFile", "DELETE", "/notes/{id}/files/{name}"},
@@ -184,6 +186,7 @@ func New(
 		EmptyTrash:            NewEmptyTrashHandler(e.EmptyTrash, mux, decoder, encoder, errhandler, formatter),
 		Import:                NewImportHandler(e.Import, mux, decoder, encoder, errhandler, formatter),
 		UploadAiFile:          NewUploadAiFileHandler(e.UploadAiFile, mux, decoder, encoder, errhandler, formatter),
+		UploadAiBoard:         NewUploadAiBoardHandler(e.UploadAiBoard, mux, decoder, encoder, errhandler, formatter),
 		AddFile:               NewAddFileHandler(e.AddFile, mux, decoder, encoder, errhandler, formatter),
 		GetFile:               NewGetFileHandler(e.GetFile, mux, decoder, encoder, errhandler, formatter),
 		DeleteFile:            NewDeleteFileHandler(e.DeleteFile, mux, decoder, encoder, errhandler, formatter),
@@ -243,6 +246,7 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.EmptyTrash = m(s.EmptyTrash)
 	s.Import = m(s.Import)
 	s.UploadAiFile = m(s.UploadAiFile)
+	s.UploadAiBoard = m(s.UploadAiBoard)
 	s.AddFile = m(s.AddFile)
 	s.GetFile = m(s.GetFile)
 	s.DeleteFile = m(s.DeleteFile)
@@ -301,6 +305,7 @@ func Mount(mux goahttp.Muxer, h *Server) {
 	MountEmptyTrashHandler(mux, h.EmptyTrash)
 	MountImportHandler(mux, h.Import)
 	MountUploadAiFileHandler(mux, h.UploadAiFile)
+	MountUploadAiBoardHandler(mux, h.UploadAiBoard)
 	MountAddFileHandler(mux, h.AddFile)
 	MountGetFileHandler(mux, h.GetFile)
 	MountDeleteFileHandler(mux, h.DeleteFile)
@@ -1958,6 +1963,60 @@ func NewUploadAiFileHandler(
 			return
 		}
 		data := &notes.UploadAiFileRequestData{Payload: payload, Body: r.Body}
+		res, err := endpoint(ctx, data)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+		}
+	})
+}
+
+// MountUploadAiBoardHandler configures the mux to serve the "notes" service
+// "upload_ai_board" endpoint.
+func MountUploadAiBoardHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("PUT", "/boards/uploads/{token}", f)
+}
+
+// NewUploadAiBoardHandler creates a HTTP handler which loads the HTTP request
+// and calls the "notes" service "upload_ai_board" endpoint.
+func NewUploadAiBoardHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeUploadAiBoardRequest(mux, decoder)
+		encodeResponse = EncodeUploadAiBoardResponse(encoder)
+		encodeError    = EncodeUploadAiBoardError(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "upload_ai_board")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notes")
+		payload, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		data := &notes.UploadAiBoardRequestData{Payload: payload, Body: r.Body}
 		res, err := endpoint(ctx, data)
 		if err != nil {
 			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {

@@ -688,6 +688,849 @@ paths:
                             timeout: false
             schemes:
                 - http
+    /boards:
+        get:
+            tags:
+                - boards
+            summary: list boards
+            description: List the whiteboards, last updated first.
+            operationId: boards#list
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/definitions/BoardSummary'
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsListUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        post:
+            tags:
+                - boards
+            summary: open boards
+            description: Open a whiteboard on the body of a note, copied as it is now; or the whiteboard of the note open already, if a person opened one and has not closed it.
+            operationId: boards#open
+            parameters:
+                - name: OpenRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsOpenRequestBody'
+                    required:
+                        - note_id
+            responses:
+                "201":
+                    description: Created response.
+                    schema:
+                        $ref: '#/definitions/Board'
+                        required:
+                            - id
+                            - title
+                            - status
+                            - created_at
+                            - updated_at
+                            - source
+                            - text
+                            - stickies
+                            - from_session
+                            - unchanged
+                            - fork
+                "400":
+                    description: 'bad_request: The body of the note is empty, or too many boards are open'
+                    schema:
+                        $ref: '#/definitions/BoardsOpenBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsOpenUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The note does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsOpenNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}:
+        get:
+            tags:
+                - boards
+            summary: get boards
+            description: Get a whiteboard with its source and sticky notes.
+            operationId: boards#get
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Board'
+                        required:
+                            - id
+                            - title
+                            - status
+                            - created_at
+                            - updated_at
+                            - source
+                            - text
+                            - stickies
+                            - from_session
+                            - unchanged
+                            - fork
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsGetUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsGetNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        delete:
+            tags:
+                - boards
+            summary: delete boards
+            description: Delete a whiteboard, open or finished; a session waiting for it reads that it does not exist.
+            operationId: boards#delete
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            responses:
+                "204":
+                    description: No Content response.
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsDeleteUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsDeleteNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        patch:
+            tags:
+                - boards
+            summary: save boards
+            description: Rename a whiteboard.
+            operationId: boards#save
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: SaveRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsSaveRequestBody'
+                    required:
+                        - title
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Board'
+                        required:
+                            - id
+                            - title
+                            - status
+                            - created_at
+                            - updated_at
+                            - source
+                            - text
+                            - stickies
+                            - from_session
+                            - unchanged
+                            - fork
+                "400":
+                    description: 'bad_request: The title is empty'
+                    schema:
+                        $ref: '#/definitions/BoardsSaveBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsSaveUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsSaveNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/draft:
+        post:
+            tags:
+                - boards
+            summary: draft boards
+            description: 'Have the assistant draft what to give back to the session, from the sticky notes chosen when finishing. The draft is for the person to check and change before finishing: the sticky notes hold text from outside, such as a pull request, which is not to reach the session unchecked.'
+            operationId: boards#draft
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: DraftRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsDraftRequestBody'
+                    required:
+                        - stickies
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/BoardsDraftResponseBody'
+                        required:
+                            - text
+                "400":
+                    description: 'bad_request: No sticky note is chosen, a chosen one does not exist, or the board is finished'
+                    schema:
+                        $ref: '#/definitions/BoardsDraftBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsDraftUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsDraftNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+                "503":
+                    description: 'unavailable: The assistant is not configured, or failed to answer'
+                    schema:
+                        $ref: '#/definitions/BoardsDraftUnavailableResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unavailable
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/finish:
+        post:
+            tags:
+                - boards
+            summary: finish boards
+            description: 'Finish a whiteboard: keep what to give back to the session, the text and the sticky notes chosen, for get_ai_board, and save the board as a note in notebook if given. A finished board takes no more sticky notes and is deleted after 7 days.'
+            operationId: boards#finish
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: FinishRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsFinishRequestBody'
+                    required:
+                        - text
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/Board'
+                        required:
+                            - id
+                            - title
+                            - status
+                            - created_at
+                            - updated_at
+                            - source
+                            - text
+                            - stickies
+                            - from_session
+                            - unchanged
+                            - fork
+                "400":
+                    description: 'bad_request: The board is finished, a sticky note waits for an answer or does not exist, the notebook is invalid, the note to add to is not there or the minutes are not kept (append_to_note), or Claude cannot take up the next points (ask_claude)'
+                    schema:
+                        $ref: '#/definitions/BoardsFinishBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsFinishUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsFinishNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/stickies:
+        post:
+            tags:
+                - boards
+            summary: add_sticky boards
+            description: 'Put a sticky note on a passage of the source, or of an answer of another sticky note (parent). A memo keeps the text as written; a sticky note of the assistant kind asks it the text as a question, and one of the fork kind asks a fork of the Claude Code session that opened the board, which needs a session signed in with a passkey: they come back waiting, and the answer comes later, told by an event of type board on /events.'
+            operationId: boards#add_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: add_sticky_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsAddStickyRequestBody'
+                    required:
+                        - anchor
+                        - kind
+            responses:
+                "201":
+                    description: Created response.
+                    schema:
+                        $ref: '#/definitions/BoardSticky'
+                        required:
+                            - id
+                            - anchor
+                            - kind
+                            - messages
+                            - state
+                            - resolved
+                            - created_at
+                            - updated_at
+                "400":
+                    description: 'bad_request: The passage or the question is empty or too long, the board is finished, or it has too many sticky notes'
+                    schema:
+                        $ref: '#/definitions/BoardsAddStickyBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsAddStickyUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board, or the parent sticky note, does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsAddStickyNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+                "503":
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)'
+                    schema:
+                        $ref: '#/definitions/BoardsAddStickyUnavailableResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unavailable
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/stickies/{sticky}:
+        delete:
+            tags:
+                - boards
+            summary: delete_sticky boards
+            description: Delete a sticky note, with the sticky notes on its answer.
+            operationId: boards#delete_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: sticky
+                  in: path
+                  description: Sticky note ID
+                  required: true
+                  type: string
+                  pattern: ^s[0-9a-f]{8}$
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'bad_request: The board is finished'
+                    schema:
+                        $ref: '#/definitions/BoardsDeleteStickyBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsDeleteStickyUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board or the sticky note does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsDeleteStickyNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+        patch:
+            tags:
+                - boards
+            summary: save_sticky boards
+            description: Change the text of a memo, or mark a sticky note resolved or not.
+            operationId: boards#save_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: sticky
+                  in: path
+                  description: Sticky note ID
+                  required: true
+                  type: string
+                  pattern: ^s[0-9a-f]{8}$
+                - name: save_sticky_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsSaveStickyRequestBody'
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/BoardSticky'
+                        required:
+                            - id
+                            - anchor
+                            - kind
+                            - messages
+                            - state
+                            - resolved
+                            - created_at
+                            - updated_at
+                "400":
+                    description: 'bad_request: The text is too long, is given for a sticky note that is not a memo, or the board is finished'
+                    schema:
+                        $ref: '#/definitions/BoardsSaveStickyBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsSaveStickyUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board or the sticky note does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsSaveStickyNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/{id}/stickies/{sticky}/messages:
+        post:
+            tags:
+                - boards
+            summary: ask_sticky boards
+            description: 'Add a message to a sticky note: a follow-up question to the assistant or a fork, which comes back waiting as with add_sticky, or a line of a memo. Asking again after an error asks the question that failed when text is omitted.'
+            operationId: boards#ask_sticky
+            parameters:
+                - name: id
+                  in: path
+                  description: 'Board ID, as in the URL of the board in the web UI after #board/'
+                  required: true
+                  type: string
+                  pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+                - name: sticky
+                  in: path
+                  description: Sticky note ID
+                  required: true
+                  type: string
+                  pattern: ^s[0-9a-f]{8}$
+                - name: ask_sticky_request_body
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/BoardsAskStickyRequestBody'
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/BoardSticky'
+                        required:
+                            - id
+                            - anchor
+                            - kind
+                            - messages
+                            - state
+                            - resolved
+                            - created_at
+                            - updated_at
+                "400":
+                    description: 'bad_request: The message is empty or too long, the sticky note waits for an answer, the board is finished, or the sticky note has too many messages'
+                    schema:
+                        $ref: '#/definitions/BoardsAskStickyBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/BoardsAskStickyUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The board or the sticky note does not exist'
+                    schema:
+                        $ref: '#/definitions/BoardsAskStickyNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+                "503":
+                    description: 'unavailable: The assistant is not configured, such as when no model API key is set, or a fork cannot answer (see fork of the board)'
+                    schema:
+                        $ref: '#/definitions/BoardsAskStickyUnavailableResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unavailable
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security:
+                - session_cookie_ebira_session: []
+    /boards/uploads/{token}:
+        put:
+            tags:
+                - notes
+            summary: upload_ai_board notes
+            description: Open a whiteboard with the text sent to a URL from start_ai_board. The request body is the text, at most 2 MB of UTF-8. A URL works once, until it expires.
+            operationId: notes#upload_ai_board
+            parameters:
+                - name: token
+                  in: path
+                  description: The token of the upload, from the URL start_ai_board gave
+                  required: true
+                  type: string
+            responses:
+                "201":
+                    description: Created response.
+                    schema:
+                        $ref: '#/definitions/BoardOpened'
+                        required:
+                            - id
+                            - url
+                "400":
+                    description: 'bad_request: The text is empty or not UTF-8, or too many boards are open'
+                    schema:
+                        $ref: '#/definitions/NotesUploadAiBoardBadRequestResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: bad_request
+                            temporary: false
+                            timeout: false
+                "401":
+                    description: 'unauthorized: The session is invalid or expired: sign in with a passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesUploadAiBoardUnauthorizedResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: unauthorized
+                            temporary: false
+                            timeout: false
+                "403":
+                    description: 'verification_required: An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again'
+                    schema:
+                        $ref: '#/definitions/NotesUploadAiBoardVerificationRequiredResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: verification_required
+                            temporary: false
+                            timeout: false
+                "404":
+                    description: 'not_found: The URL is unknown, used or expired'
+                    schema:
+                        $ref: '#/definitions/NotesUploadAiBoardNotFoundResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: not_found
+                            temporary: false
+                            timeout: false
+                "413":
+                    description: 'too_large: The text is larger than 2 MB'
+                    schema:
+                        $ref: '#/definitions/NotesUploadAiBoardTooLargeResponseBody'
+                    examples:
+                        application/vnd.goa.error:
+                            fault: false
+                            id: 123abc
+                            message: parameter 'p' must be an integer
+                            name: too_large
+                            temporary: false
+                            timeout: false
+            schemes:
+                - http
+            security: []
     /events:
         get:
             tags:
@@ -5222,6 +6065,2283 @@ definitions:
             - mode
             - registered
             - signed_in
+    Board:
+        title: Board
+        type: object
+        properties:
+            created_at:
+                type: string
+                description: Creation time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            fork:
+                $ref: '#/definitions/BoardFork'
+            from_session:
+                type: boolean
+                description: Whether an AI client opened the board, and waits for what is given back
+                example: false
+            id:
+                type: string
+                description: Board ID
+                example: 3f9c2a7b1d4e6f
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            result:
+                $ref: '#/definitions/BoardResult'
+            source:
+                $ref: '#/definitions/BoardSource'
+            status:
+                type: string
+                description: open, or done once finished
+                example: open
+                enum:
+                    - open
+                    - done
+            stickies:
+                type: array
+                items:
+                    $ref: '#/definitions/BoardSticky'
+                description: The sticky notes, in the order they were added
+                example:
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+                    - anchor:
+                        exact: qh0
+                        prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                        suffix: Eveniet corporis nobis explicabo et sit.
+                      created_at: "2026-10-16T09:30:00Z"
+                      error: Soluta accusantium.
+                      id: s1a2b3c4d
+                      kind: memo
+                      messages:
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                        - at: "2026-10-16T09:30:00Z"
+                          role: assistant
+                          text: Eum quaerat rerum illo natus.
+                      parent: s1a2b3c4d
+                      resolved: true
+                      session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                      state: error
+                      updated_at: "2026-10-16T09:30:00Z"
+            text:
+                type: string
+                description: The source, copied when the board was opened
+                example: Ut labore minima quo et voluptatem.
+            title:
+                type: string
+                description: Title
+                example: Eaque ad eos quo dolore et voluptatem.
+            unchanged:
+                type: boolean
+                description: 'Whether the sticky notes are as they were when a person last opened the board from its note: closing it as it is then keeps no minutes by default'
+                example: true
+            updated_at:
+                type: string
+                description: Last update time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+        example:
+            created_at: "2026-10-16T09:30:00Z"
+            fork:
+                available: false
+                cwd: Eveniet sed qui autem quaerat.
+                reason: done
+            from_session: false
+            id: 3f9c2a7b1d4e6f
+            result:
+                appended: false
+                claude:
+                    edited: true
+                    error: Tenetur culpa mollitia fuga rerum vero rerum.
+                    reason: changed
+                    state: waiting
+                    text: Officiis exercitationem earum cumque fugiat quis.
+                finished_at: "2026-10-16T09:30:00Z"
+                note_id: be4c1193735ee1
+                stickies:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                text: Cumque accusantium doloremque eaque.
+            source:
+                format: text
+                from: note
+                lang: Harum odio ut unde id dolorem.
+                note_id: be4c1193735ee1
+                note_notebook: inbox
+                note_state: trash
+                note_title: Autem et qui sed cum explicabo.
+                size: 5018596344245903192
+            status: open
+            stickies:
+                - anchor:
+                    exact: qh0
+                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                    suffix: Eveniet corporis nobis explicabo et sit.
+                  created_at: "2026-10-16T09:30:00Z"
+                  error: Soluta accusantium.
+                  id: s1a2b3c4d
+                  kind: memo
+                  messages:
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                  parent: s1a2b3c4d
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                  state: error
+                  updated_at: "2026-10-16T09:30:00Z"
+                - anchor:
+                    exact: qh0
+                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                    suffix: Eveniet corporis nobis explicabo et sit.
+                  created_at: "2026-10-16T09:30:00Z"
+                  error: Soluta accusantium.
+                  id: s1a2b3c4d
+                  kind: memo
+                  messages:
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                  parent: s1a2b3c4d
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                  state: error
+                  updated_at: "2026-10-16T09:30:00Z"
+                - anchor:
+                    exact: qh0
+                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                    suffix: Eveniet corporis nobis explicabo et sit.
+                  created_at: "2026-10-16T09:30:00Z"
+                  error: Soluta accusantium.
+                  id: s1a2b3c4d
+                  kind: memo
+                  messages:
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                  parent: s1a2b3c4d
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                  state: error
+                  updated_at: "2026-10-16T09:30:00Z"
+                - anchor:
+                    exact: qh0
+                    prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                    suffix: Eveniet corporis nobis explicabo et sit.
+                  created_at: "2026-10-16T09:30:00Z"
+                  error: Soluta accusantium.
+                  id: s1a2b3c4d
+                  kind: memo
+                  messages:
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                  parent: s1a2b3c4d
+                  resolved: true
+                  session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                  state: error
+                  updated_at: "2026-10-16T09:30:00Z"
+            text: Ut labore minima quo et voluptatem.
+            title: Eaque ad eos quo dolore et voluptatem.
+            unchanged: true
+            updated_at: "2026-10-16T09:30:00Z"
+        required:
+            - id
+            - title
+            - status
+            - created_at
+            - updated_at
+            - source
+            - text
+            - stickies
+            - from_session
+            - unchanged
+            - fork
+    BoardAnchor:
+        title: BoardAnchor
+        type: object
+        properties:
+            exact:
+                type: string
+                description: The passage
+                example: qh0
+                minLength: 1
+            prefix:
+                type: string
+                description: Text just before the passage, at most 256 characters
+                example: Reiciendis adipisci aspernatur quos voluptates nostrum.
+            suffix:
+                type: string
+                description: Text just after the passage, at most 256 characters
+                example: Eveniet corporis nobis explicabo et sit.
+        description: 'The passage a sticky note is on, as a W3C text quote selector: the passage, with some text before and after it to tell it apart from the same text elsewhere'
+        example:
+            exact: qh0
+            prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+            suffix: Eveniet corporis nobis explicabo et sit.
+        required:
+            - exact
+    BoardClaudeReply:
+        title: BoardClaudeReply
+        type: object
+        properties:
+            edited:
+                type: boolean
+                description: Whether the changes of Claude were made to the note the board was opened from
+                example: true
+            error:
+                type: string
+                description: Why Claude did not reply, or why its changes were not made to the note, in words (reason)
+                example: Tenetur culpa mollitia fuga rerum vero rerum.
+            reason:
+                type: string
+                description: 'Why Claude did not reply, or why its changes were not made to the note: the server stopped (interrupted), no reply in time (timeout), Claude could not be asked (failed), the changes are not valid (invalid), the note changed after the board was closed (changed), the note is no longer in a notebook of the collab kind (not_collab), or the changes do not fit the note (not_made)'
+                example: changed
+                enum:
+                    - interrupted
+                    - timeout
+                    - failed
+                    - invalid
+                    - changed
+                    - not_collab
+                    - not_made
+            state:
+                type: string
+                description: waiting while Claude works, idle once done, or error
+                example: waiting
+                enum:
+                    - idle
+                    - waiting
+                    - error
+            text:
+                type: string
+                description: The reply of Claude to the person, in Markdown
+                example: Officiis exercitationem earum cumque fugiat quis.
+        example:
+            edited: true
+            error: Tenetur culpa mollitia fuga rerum vero rerum.
+            reason: changed
+            state: waiting
+            text: Officiis exercitationem earum cumque fugiat quis.
+        required:
+            - state
+            - edited
+    BoardFork:
+        title: BoardFork
+        type: object
+        properties:
+            available:
+                type: boolean
+                description: 'Whether Claude can answer sticky notes: forks of the Claude Code session that opened the board, or of one ebira makes to read the topic'
+                example: false
+            cwd:
+                type: string
+                description: The working directory of the session, where claude --resume goes on with the session of a sticky note
+                example: Eveniet sed qui autem quaerat.
+            reason:
+                type: string
+                description: 'Why not: auth_none (a request from another machine without passkeys: forks need passkeys there), session_missing (Claude Code no longer has the session that opened the board), not_found (claude is not found on the machine of the server) or done (the board is finished)'
+                example: done
+                enum:
+                    - auth_none
+                    - session_missing
+                    - not_found
+                    - done
+        example:
+            available: false
+            cwd: Eveniet sed qui autem quaerat.
+            reason: done
+        required:
+            - available
+    BoardMessage:
+        title: BoardMessage
+        type: object
+        properties:
+            at:
+                type: string
+                description: When it was written
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            role:
+                type: string
+                description: 'Who wrote it: the person (user) or the assistant'
+                example: assistant
+                enum:
+                    - user
+                    - assistant
+            text:
+                type: string
+                description: Message in Markdown
+                example: Eum quaerat rerum illo natus.
+        example:
+            at: "2026-10-16T09:30:00Z"
+            role: assistant
+            text: Eum quaerat rerum illo natus.
+        required:
+            - role
+            - text
+            - at
+    BoardOpened:
+        title: BoardOpened
+        type: object
+        properties:
+            id:
+                type: string
+                description: Board ID
+                example: 3f9c2a7b1d4e6f
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            url:
+                type: string
+                description: URL of the board in the web UI, to give to the user
+                example: http://localhost:13579/#board/3f9c2a7b1d4e6f
+        example:
+            id: 3f9c2a7b1d4e6f
+            url: http://localhost:13579/#board/3f9c2a7b1d4e6f
+        required:
+            - id
+            - url
+    BoardResult:
+        title: BoardResult
+        type: object
+        properties:
+            appended:
+                type: boolean
+                description: Whether a link to the minutes was added to the note the board was opened from
+                example: false
+            claude:
+                $ref: '#/definitions/BoardClaudeReply'
+            finished_at:
+                type: string
+                description: When the board was finished
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            note_id:
+                type: string
+                description: The note the minutes of the board were kept in, if they were
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: The sticky notes given back with the text
+                example:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+            text:
+                type: string
+                description: What the person gives back to the session, in Markdown
+                example: Cumque accusantium doloremque eaque.
+        example:
+            appended: false
+            claude:
+                edited: true
+                error: Tenetur culpa mollitia fuga rerum vero rerum.
+                reason: changed
+                state: waiting
+                text: Officiis exercitationem earum cumque fugiat quis.
+            finished_at: "2026-10-16T09:30:00Z"
+            note_id: be4c1193735ee1
+            stickies:
+                - s1a2b3c4d
+                - s1a2b3c4d
+            text: Cumque accusantium doloremque eaque.
+        required:
+            - text
+            - stickies
+            - appended
+            - finished_at
+    BoardSource:
+        title: BoardSource
+        type: object
+        properties:
+            format:
+                type: string
+                description: How to show the source
+                example: text
+                enum:
+                    - markdown
+                    - text
+                    - diff
+                    - code
+            from:
+                type: string
+                description: 'Where the source came from: sent to an upload URL, given as text, or the body of a note'
+                example: note
+                enum:
+                    - upload
+                    - text
+                    - note
+            lang:
+                type: string
+                description: Language of code
+                example: Harum odio ut unde id dolorem.
+            note_id:
+                type: string
+                description: The note the source was copied from
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            note_notebook:
+                type: string
+                description: The notebook of that note now, if it is there, where its minutes go by default
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            note_state:
+                type: string
+                description: 'The state of that note now: ok; changed since the board was opened; trash, in the trash; or missing, deleted. Closing the board may add to it unless it is in the trash or missing'
+                example: trash
+                enum:
+                    - ok
+                    - changed
+                    - trash
+                    - missing
+            note_title:
+                type: string
+                description: The title of that note now, if it is there
+                example: Autem et qui sed cum explicabo.
+            size:
+                type: integer
+                description: Size of the source, in bytes
+                example: 5018596344245903192
+                format: int64
+        example:
+            format: text
+            from: note
+            lang: Harum odio ut unde id dolorem.
+            note_id: be4c1193735ee1
+            note_notebook: inbox
+            note_state: trash
+            note_title: Autem et qui sed cum explicabo.
+            size: 5018596344245903192
+        required:
+            - from
+            - format
+            - size
+    BoardSticky:
+        title: BoardSticky
+        type: object
+        properties:
+            anchor:
+                $ref: '#/definitions/BoardAnchor'
+            created_at:
+                type: string
+                description: Creation time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            error:
+                type: string
+                description: Why the last answer failed
+                example: Soluta accusantium.
+            id:
+                type: string
+                description: Sticky note ID
+                example: s1a2b3c4d
+                pattern: ^s[0-9a-f]{8}$
+            kind:
+                type: string
+                description: memo, written by the person; assistant, answered by the assistant; or fork, answered by a fork of the Claude Code session that opened the board
+                example: memo
+                enum:
+                    - memo
+                    - assistant
+                    - fork
+            messages:
+                type: array
+                items:
+                    $ref: '#/definitions/BoardMessage'
+                description: The messages, oldest first
+                example:
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+                    - at: "2026-10-16T09:30:00Z"
+                      role: assistant
+                      text: Eum quaerat rerum illo natus.
+            parent:
+                type: string
+                description: The sticky note this one is on, for one on a passage of an answer
+                example: s1a2b3c4d
+                pattern: ^s[0-9a-f]{8}$
+            resolved:
+                type: boolean
+                description: 'Whether the person marked the sticky note resolved: they understood it and are satisfied. Asking it again clears it'
+                example: true
+            session:
+                type: string
+                description: The Claude Code session that answers a sticky note of the fork kind, which claude --resume goes on with
+                example: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+                format: uuid
+            state:
+                type: string
+                description: idle, waiting for an answer, or error when the last answer failed
+                example: error
+                enum:
+                    - idle
+                    - waiting
+                    - error
+            updated_at:
+                type: string
+                description: Last update time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+        description: A sticky note on a passage of the source, or of the answer of another sticky note (its parent)
+        example:
+            anchor:
+                exact: qh0
+                prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                suffix: Eveniet corporis nobis explicabo et sit.
+            created_at: "2026-10-16T09:30:00Z"
+            error: Soluta accusantium.
+            id: s1a2b3c4d
+            kind: memo
+            messages:
+                - at: "2026-10-16T09:30:00Z"
+                  role: assistant
+                  text: Eum quaerat rerum illo natus.
+                - at: "2026-10-16T09:30:00Z"
+                  role: assistant
+                  text: Eum quaerat rerum illo natus.
+                - at: "2026-10-16T09:30:00Z"
+                  role: assistant
+                  text: Eum quaerat rerum illo natus.
+            parent: s1a2b3c4d
+            resolved: true
+            session: 3515222d-bd49-4604-90f4-4fbd6cd98b6f
+            state: error
+            updated_at: "2026-10-16T09:30:00Z"
+        required:
+            - id
+            - anchor
+            - kind
+            - messages
+            - state
+            - resolved
+            - created_at
+            - updated_at
+    BoardSummary:
+        title: BoardSummary
+        type: object
+        properties:
+            created_at:
+                type: string
+                description: Creation time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            format:
+                type: string
+                description: How the source is shown
+                example: diff
+                enum:
+                    - markdown
+                    - text
+                    - diff
+                    - code
+            id:
+                type: string
+                description: Board ID
+                example: 3f9c2a7b1d4e6f
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            status:
+                type: string
+                description: open, or done once finished
+                example: done
+                enum:
+                    - open
+                    - done
+            stickies:
+                type: integer
+                description: Number of sticky notes
+                example: 8159457130861961317
+                format: int64
+            title:
+                type: string
+                description: Title
+                example: Est eos fugiat.
+            updated_at:
+                type: string
+                description: Last update time
+                example: "2026-10-16T09:30:00Z"
+                format: date-time
+            waiting:
+                type: integer
+                description: Number of sticky notes waiting for an answer
+                example: 3462309494990713507
+                format: int64
+        example:
+            created_at: "2026-10-16T09:30:00Z"
+            format: diff
+            id: 3f9c2a7b1d4e6f
+            status: done
+            stickies: 8159457130861961317
+            title: Est eos fugiat.
+            updated_at: "2026-10-16T09:30:00Z"
+            waiting: 3462309494990713507
+        required:
+            - id
+            - title
+            - status
+            - created_at
+            - updated_at
+            - format
+            - stickies
+            - waiting
+    BoardsAddStickyBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAddStickyNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAddStickyRequestBody:
+        title: BoardsAddStickyRequestBody
+        type: object
+        properties:
+            anchor:
+                $ref: '#/definitions/BoardAnchor'
+            kind:
+                type: string
+                description: memo; assistant to ask the assistant; fork to ask a fork of the Claude Code session that opened the board
+                example: assistant
+                enum:
+                    - memo
+                    - assistant
+                    - fork
+            parent:
+                type: string
+                description: The sticky note whose answer the passage is in
+                example: s1a2b3c4d
+                pattern: ^s[0-9a-f]{8}$
+            text:
+                type: string
+                description: The memo, or the question; required for the assistant and a fork
+                example: rc5
+                maxLength: 10240
+        example:
+            anchor:
+                exact: qh0
+                prefix: Reiciendis adipisci aspernatur quos voluptates nostrum.
+                suffix: Eveniet corporis nobis explicabo et sit.
+            kind: assistant
+            parent: s1a2b3c4d
+            text: rc5
+        required:
+            - anchor
+            - kind
+    BoardsAddStickyUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAddStickyUnavailableResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAskStickyBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAskStickyNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAskStickyRequestBody:
+        title: BoardsAskStickyRequestBody
+        type: object
+        properties:
+            text:
+                type: string
+                description: The message
+                example: aam
+                maxLength: 10240
+        example:
+            text: aam
+    BoardsAskStickyUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsAskStickyUnavailableResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDeleteNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDeleteStickyBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDeleteStickyNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDeleteStickyUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDeleteUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDraftBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDraftNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDraftRequestBody:
+        title: BoardsDraftRequestBody
+        type: object
+        properties:
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: The sticky notes to draft from
+                example:
+                    - s1a2b3c4d
+                minItems: 1
+                maxItems: 200
+        example:
+            stickies:
+                - s1a2b3c4d
+        required:
+            - stickies
+    BoardsDraftResponseBody:
+        title: BoardsDraftResponseBody
+        type: object
+        properties:
+            text:
+                type: string
+                description: The draft, in Markdown
+                example: Totam est exercitationem ipsam.
+        example:
+            text: Totam est exercitationem ipsam.
+        required:
+            - text
+    BoardsDraftUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsDraftUnavailableResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsFinishBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsFinishNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsFinishRequestBody:
+        title: BoardsFinishRequestBody
+        type: object
+        properties:
+            append_to_note:
+                type: boolean
+                description: 'Add a line linking to the minutes, which are then to be kept (notebook), in the section of discussions at the end of the note the board was opened from (Appendix: discussions)'
+                example: false
+            ask_claude:
+                type: boolean
+                description: 'Ask Claude, in the background, to take up the next points of a board opened on a note of a notebook of the collab kind: it replies, and the changes it gives are made to that note. The next points must not be empty, and Claude must be able to answer (see fork of the board)'
+                example: true
+            lang:
+                type: string
+                description: Language of the headings of the note, that of the UI
+                default: en
+                example: ja
+                enum:
+                    - en
+                    - ja
+            notebook:
+                type: string
+                description: Notebook to keep the minutes of the board in, as a note; not kept when omitted, nor for a board with no sticky notes and no next points
+                example: inbox
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
+            stickies:
+                type: array
+                items:
+                    type: string
+                    example: s1a2b3c4d
+                    pattern: ^s[0-9a-f]{8}$
+                description: 'The sticky notes to give back: the session reads their passages and messages, those of the assistant too. The others are not given back'
+                example:
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                    - s1a2b3c4d
+                maxItems: 200
+            text:
+                type: string
+                description: What to give back, in Markdown; may be empty
+                example: zln
+                maxLength: 65536
+        example:
+            append_to_note: false
+            ask_claude: true
+            lang: ja
+            notebook: inbox
+            stickies:
+                - s1a2b3c4d
+                - s1a2b3c4d
+                - s1a2b3c4d
+            text: zln
+        required:
+            - text
+    BoardsFinishUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsGetNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsGetUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsListUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsOpenBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsOpenNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsOpenRequestBody:
+        title: BoardsOpenRequestBody
+        type: object
+        properties:
+            note_id:
+                type: string
+                description: The note
+                example: be4c1193735ee1
+                pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
+            title:
+                type: string
+                description: Title of the board; the note's title when omitted
+                example: pfn
+                maxLength: 200
+        example:
+            note_id: be4c1193735ee1
+            title: pfn
+        required:
+            - note_id
+    BoardsOpenUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsSaveBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsSaveNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsSaveRequestBody:
+        title: BoardsSaveRequestBody
+        type: object
+        properties:
+            title:
+                type: string
+                description: Title
+                example: w
+                minLength: 1
+                maxLength: 200
+        example:
+            title: w
+        required:
+            - title
+    BoardsSaveStickyBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsSaveStickyNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsSaveStickyRequestBody:
+        title: BoardsSaveStickyRequestBody
+        type: object
+        properties:
+            resolved:
+                type: boolean
+                description: 'Whether the sticky note is resolved: the person understood it and is satisfied'
+                example: true
+            text:
+                type: string
+                description: The new text of a memo; empty to leave only the mark on the passage
+                example: 1l5
+                maxLength: 10240
+        example:
+            resolved: true
+            text: 1l5
+    BoardsSaveStickyUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    BoardsSaveUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
     BrokenFileRef:
         title: BrokenFileRef
         type: object
@@ -6080,7 +9200,7 @@ definitions:
         properties:
             id:
                 type: string
-                description: Note ID (absent for ready, notebooks and private_lost)
+                description: Note ID, or the board ID for board (absent for ready, notebooks and private_lost)
                 example: be4c1193735ee1
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}$
             notebook:
@@ -6090,7 +9210,7 @@ definitions:
                 pattern: ^[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})?$
             type:
                 type: string
-                description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it
+                description: Kind of change. ready is sent once when the stream starts; clients should reload the note list on it. notebooks means the notebook list, names or order changed, or the separators of a notebook. board means a whiteboard changed, such as when an answer came to a sticky note. private_lost means that a notebook was private and is no longer, as files changed outside the API, such as by a sync, so that AI clients may now see it
                 example: notebooks
                 enum:
                     - ready
@@ -6099,6 +9219,7 @@ definitions:
                     - deleted
                     - notebooks
                     - private_lost
+                    - board
         example:
             id: be4c1193735ee1
             notebook: inbox
@@ -14510,6 +17631,221 @@ definitions:
         description: Error response result type (default view)
         example:
             fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUploadAiBoardBadRequestResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUploadAiBoardNotFoundResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUploadAiBoardTooLargeResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: true
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: true
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: true
+            timeout: true
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUploadAiBoardUnauthorizedResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: false
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: false
+        description: Error response result type (default view)
+        example:
+            fault: false
+            id: 123abc
+            message: parameter 'p' must be an integer
+            name: bad_request
+            temporary: false
+            timeout: false
+        required:
+            - name
+            - id
+            - message
+            - temporary
+            - timeout
+            - fault
+    NotesUploadAiBoardVerificationRequiredResponseBody:
+        title: 'Mediatype identifier: application/vnd.goa.error; view=default'
+        type: object
+        properties:
+            fault:
+                type: boolean
+                description: Is the error a server-side fault?
+                example: false
+            id:
+                type: string
+                description: ID is a unique identifier for this particular occurrence of the problem.
+                example: 123abc
+            message:
+                type: string
+                description: Message is a human-readable explanation specific to this occurrence of the problem.
+                example: parameter 'p' must be an integer
+            name:
+                type: string
+                description: Name is the name of this class of errors.
+                example: bad_request
+            temporary:
+                type: boolean
+                description: Is the error temporary?
+                example: true
+            timeout:
+                type: boolean
+                description: Is the error a timeout?
+                example: true
+        description: Error response result type (default view)
+        example:
+            fault: false
             id: 123abc
             message: parameter 'p' must be an integer
             name: bad_request
