@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net"
@@ -61,7 +62,7 @@ func (s *shell) openSettings(problem string) { s.openSettingsWith(problem, "") }
 // it, which may not be the one of the system.
 func (s *shell) openSettingsWith(problem, intro string) {
 	s.mu.Lock()
-	win, current, chosen := s.settings, s.current, s.chosen
+	win, current, chosen, broken := s.settings, s.current, s.chosen, s.broken
 	s.mu.Unlock()
 	if win != nil {
 		win.Focus()
@@ -81,16 +82,13 @@ func (s *shell) openSettingsWith(problem, intro string) {
 	tmpl := template.Must(template.New("settings").Funcs(template.FuncMap{"t": text}).Parse(settingsHTML))
 	// The folder as chosen: empty follows the config file of ebira, which the
 	// placeholder shows as the server found it.
-	if err := tmpl.Execute(&page, map[string]any{"Notes": chosen.Notes, "NotesFound": current.Notes, "Addr": chosen.Addr, "Problem": problem, "Intro": intro, "Messages": messages}); err != nil {
+	if err := tmpl.Execute(&page, map[string]any{"Notes": chosen.Notes, "NotesFound": current.Notes, "Addr": chosen.Addr, "Problem": problem, "Intro": intro, "Messages": messages, "Broken": broken}); err != nil {
 		panic(err) // embedded: a broken file is a broken build
 	}
-	height := 300
-	if intro != "" {
-		height += 190 // the introduction, and the language and the search mode
-	}
+	height := settingsSize(intro != "", broken != "")
 	win = s.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:         title,
-		Width:         560,
+		Width:         settingsWidth,
 		Height:        height,
 		DisableResize: true,
 		HTML:          page.String(),
@@ -128,17 +126,98 @@ func (s *shell) onSettingsMessage(from application.Window, message string) {
 		go win.Close()
 	case message == "choose":
 		go s.chooseNotes()
-	case strings.HasPrefix(message, "apply:"):
+	case message == "openSettingsFile":
+		go s.openSettingsFile()
+	case strings.HasPrefix(message, "apply:"), strings.HasPrefix(message, "safe:"):
+		// safe: Apply in the safe mode, without the settings file of ebira
+		// while it has an error.
+		verb, data, _ := strings.Cut(message, ":")
 		var m struct {
 			target
 			firstSetup
 			Keep bool `json:"keep"` // the folder is taken although it is no notes of ebira
 		}
-		if err := json.Unmarshal([]byte(strings.TrimPrefix(message, "apply:")), &m); err != nil {
+		if err := json.Unmarshal([]byte(data), &m); err != nil {
 			log.Print(err)
 			return
 		}
+		if verb == "safe" {
+			safeMode.Store(true)
+		}
 		go s.apply(m.target, m.firstSetup, m.Keep)
+	}
+}
+
+// brokenSettingsText is the problem the settings window tells when the settings
+// file of ebira has an error; %s is the error.
+const brokenSettingsText = "The settings file of ebira has an error, and the server cannot start with it:\n%s\nFix the file and press Apply, or start the server in safe mode, which leaves the file out until it is fixed."
+
+// chooseNotesText is added to brokenSettingsText when not even notes_dir
+// reads from the settings file of ebira, as the safe mode needs a folder.
+const chooseNotesText = "Its notes_dir cannot be read either: choose the notes folder above to start in safe mode."
+
+// settingsWidth is the width of the settings window.
+const settingsWidth = 560
+
+// settingsSize returns the height of the settings window: taller with the
+// introduction, and the language and the search mode, of the first start,
+// and with the buttons of a settings file of ebira with an error
+// (offerSafeMode).
+func settingsSize(intro, broken bool) int {
+	height := 300
+	if intro {
+		height += 190
+	}
+	if broken {
+		height += 120 // the buttons, and room for the error
+	}
+	return height
+}
+
+// offerSafeMode tells in the settings window that the settings file of ebira
+// has an error, when it does and the server of t is of this computer, which
+// then cannot start, with buttons to open the file and to start the server in
+// safe mode. It reports whether it did.
+func (s *shell) offerSafeMode(t target) bool {
+	if !local(t.Addr) {
+		return false
+	}
+	st := brokenSettings()
+	if st == nil {
+		return false
+	}
+	s.mu.Lock()
+	s.broken = st.SettingsFile
+	s.mu.Unlock()
+	problem := fmt.Sprintf(s.pageText(brokenSettingsText), st.SettingsError)
+	if t.Notes == "" && st.Configured != nil && !*st.Configured {
+		problem += "\n" + s.pageText(chooseNotesText)
+	}
+	if win := s.settingsWindow(); win != nil {
+		s.mu.Lock()
+		first := s.first
+		s.mu.Unlock()
+		win.SetSize(settingsWidth, settingsSize(first, true))
+		s.callSettings("showBroken", st.SettingsFile)
+		s.showProblem(problem)
+		return true
+	}
+	s.openSettings(problem)
+	return true
+}
+
+// openSettingsFile opens the settings file of ebira with an error in an
+// editor of text, to fix it.
+func (s *shell) openSettingsFile() {
+	s.mu.Lock()
+	path := s.broken
+	s.mu.Unlock()
+	if path == "" {
+		return
+	}
+	if err := openTextFile(path); err != nil {
+		log.Print("open the settings file: ", err)
+		s.showProblem(err.Error())
 	}
 }
 
@@ -235,7 +314,9 @@ func (s *shell) apply(t target, setup firstSetup, keep bool) {
 	}
 	if err != nil {
 		s.mu.Unlock()
-		s.showProblem(err.Error())
+		if !s.offerSafeMode(t) {
+			s.showProblem(err.Error())
+		}
 		return
 	}
 	chosen := t

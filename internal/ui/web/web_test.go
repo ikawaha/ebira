@@ -157,6 +157,21 @@ func TestHandlerVersion(t *testing.T) {
 	}
 }
 
+func TestHandlerSettingsError(t *testing.T) {
+	srv := httptest.NewServer(Handler(Options{SettingsError: `/c/config.yaml: yaml: line 2: did not find expected key "<x>"`}))
+	defer srv.Close()
+	res, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	want := `<html data-settings-error="/c/config.yaml: yaml: line 2: did not find expected key &#34;&lt;x&gt;&#34;">`
+	if !strings.Contains(string(body), want) {
+		t.Errorf("no %q in the page", want)
+	}
+}
+
 func TestHandlerGuideNames(t *testing.T) {
 	srv := httptest.NewServer(Handler(Options{GuideNames: []string{"ebira Guide", `a"b`}}))
 	defer srv.Close()

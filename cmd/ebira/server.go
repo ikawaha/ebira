@@ -328,6 +328,12 @@ type statusJSON struct {
 	Running    bool `json:"running"`
 	// State is the state of the server, when it runs and has written it.
 	State *daemon.State `json:"state,omitempty"`
+	// SettingsError is the error of the settings file in the safe mode,
+	// which the desktop app asks the status in, to offer to fix the file or
+	// to start the server without it; empty when the file reads.
+	SettingsError string `json:"settings_error,omitempty"`
+	// SettingsFile is the path of the settings file, for the app to open.
+	SettingsFile string `json:"settings_file,omitempty"`
 }
 
 // serverStatusJSON prints the notes directory dir, whether it is configured,
@@ -337,7 +343,10 @@ func serverStatusJSON(dir string, configured bool, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	st := statusJSON{NotesDir: dir, Configured: configured, Running: running}
+	st := statusJSON{NotesDir: dir, Configured: configured, Running: running, SettingsError: errorText(settingsError)}
+	if p, err := config.Path(); err == nil {
+		st.SettingsFile = p
+	}
 	if running {
 		if s, err := daemon.ReadState(sd); err == nil {
 			st.State = &s

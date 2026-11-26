@@ -124,6 +124,10 @@ func helperCommand(bin string, args ...string) *exec.Cmd {
 	return cmd
 }
 
+// openTextFile opens the file at path in Notepad, which every Windows has,
+// as a YAML file may be opened by no app or by one that does not edit it.
+func openTextFile(path string) error { return exec.Command("notepad.exe", path).Start() }
+
 // frameKey is the setting the frame of the main window is kept in, as
 // "x,y,width,height".
 const frameKey = "frame"

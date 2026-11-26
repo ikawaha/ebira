@@ -62,6 +62,21 @@ You can also change its settings one by one in the settings dialog, which keeps 
 
 The settings synced with the notes are in `_ebira.yaml` of the notes directory, such as the search mode `search`.
 
+## Safe mode
+
+With a mistake in the settings file, such as an error of YAML or a key ebira does not know, the commands stop telling it, and the server does not start. To use the notes until it is fixed, set the environment variable `EBIRA_SAFE_MODE=1`, and they start without the file (safe mode).
+
+```sh
+EBIRA_SAFE_MODE=1 ebira server start
+```
+
+- Of the settings file, only the line of `notes_dir` is taken, when it reads; the rest are the defaults.
+- As the settings of authentication are not known, the server starts only on an address of this computer, such as `localhost:13579`.
+- The web UI tells above its panes that it is in safe mode, and the mistake. Fix the file, then press "Restart" there to run with the settings fixed.
+- With no mistake in the settings file, `EBIRA_SAFE_MODE` changes nothing.
+
+In the desktop app, "Start in Safe Mode" in its settings window does the same ([Desktop App](desktop.md)).
+
 ## Sharing settings among machines
 
 Write keys of the settings file under `defaults:` in `_ebira.yaml`, and they become the defaults of every machine that syncs the notes. A value in the settings file of a machine wins, so write there only what a machine does differently.

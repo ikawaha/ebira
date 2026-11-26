@@ -99,7 +99,7 @@ func (s *shell) restartServer() {
 	bin, err := helper()
 	if err == nil {
 		var out []byte
-		if out, err = helperCommand(bin, "server", "restart", "-notes", t.Notes).CombinedOutput(); err != nil {
+		if out, err = ebiraCommand(bin, false, "server", "restart", "-notes", t.Notes).CombinedOutput(); err != nil {
 			err = fmt.Errorf("%w\n%s", err, strings.TrimSpace(string(out)))
 		}
 	}
