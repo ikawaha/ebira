@@ -67,6 +67,20 @@ type status struct {
 	// path. Empty from an ebira whose file reads, or from an earlier one.
 	SettingsError string `json:"settings_error"`
 	SettingsFile  string `json:"settings_file"`
+	// NotesSettingsError is the error of the settings shared with the notes,
+	// _ebira.yaml of the notes folder, which keeps the server from starting
+	// as well; NotesSettingsFile is its path.
+	NotesSettingsError string `json:"notes_settings_error"`
+	NotesSettingsFile  string `json:"notes_settings_file"`
+}
+
+// broken returns the file of st with an error, the settings file of ebira
+// before _ebira.yaml of the notes, to fix first, and its error, or "".
+func (st *status) broken() (file, problem string) {
+	if st.SettingsError != "" {
+		return st.SettingsFile, st.SettingsError
+	}
+	return st.NotesSettingsFile, st.NotesSettingsError
 }
 
 // safeEnv names the environment variable of the safe mode of ebira
@@ -89,15 +103,19 @@ func ebiraCommand(bin string, safe bool, args ...string) *exec.Cmd {
 	return cmd
 }
 
-// brokenSettings returns the status of ebira when its settings file has an
-// error, which keeps the server from starting until it is fixed or the safe
-// mode is on, or nil.
-func brokenSettings() *status {
+// brokenSettings returns the status of ebira for the notes folder notes, or
+// of the config file for an empty one, when its settings file or the
+// settings shared with those notes have an error, which keeps the server
+// from starting until it is fixed or the safe mode is on, or nil.
+func brokenSettings(notes string) *status {
 	if safeMode.Load() {
 		return nil
 	}
-	st, err := serverStatus("")
-	if err != nil || st.SettingsError == "" {
+	st, err := serverStatus(notes)
+	if err != nil {
+		return nil
+	}
+	if file, _ := st.broken(); file == "" {
 		return nil
 	}
 	return st

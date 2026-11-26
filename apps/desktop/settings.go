@@ -154,6 +154,10 @@ const brokenSettingsText = "The settings file of ebira has an error, and the ser
 
 // chooseNotesText is added to brokenSettingsText when not even notes_dir
 // reads from the settings file of ebira, as the safe mode needs a folder.
+// brokenNotesText is the problem the settings window tells when the
+// settings shared with the notes, _ebira.yaml, have an error; %s is the error.
+const brokenNotesText = "The settings shared with the notes have an error, and the server cannot start with them:\n%s\nFix the file and press Apply, or start the server in safe mode, which leaves the file out until it is fixed."
+
 const chooseNotesText = "Its notes_dir cannot be read either: choose the notes folder above to start in safe mode."
 
 // settingsWidth is the width of the settings window.
@@ -174,23 +178,29 @@ func settingsSize(intro, broken bool) int {
 	return height
 }
 
-// offerSafeMode tells in the settings window that the settings file of ebira
-// has an error, when it does and the server of t is of this computer, which
-// then cannot start, with buttons to open the file and to start the server in
-// safe mode. It reports whether it did.
+// offerSafeMode tells in the settings window that the settings file of ebira,
+// or the settings shared with the notes of t, have an error, when they do and
+// the server of t is of this computer, which then cannot start, with buttons
+// to open the file and to start the server in safe mode. It reports whether it
+// did.
 func (s *shell) offerSafeMode(t target) bool {
 	if !local(t.Addr) {
 		return false
 	}
-	st := brokenSettings()
+	st := brokenSettings(t.Notes)
 	if st == nil {
 		return false
 	}
+	file, err := st.broken()
 	s.mu.Lock()
-	s.broken = st.SettingsFile
+	s.broken = file
 	s.mu.Unlock()
-	problem := fmt.Sprintf(s.pageText(brokenSettingsText), st.SettingsError)
-	if t.Notes == "" && st.Configured != nil && !*st.Configured {
+	text := brokenSettingsText
+	if st.SettingsError == "" {
+		text = brokenNotesText
+	}
+	problem := fmt.Sprintf(s.pageText(text), err)
+	if st.SettingsError != "" && t.Notes == "" && st.Configured != nil && !*st.Configured {
 		problem += "\n" + s.pageText(chooseNotesText)
 	}
 	if win := s.settingsWindow(); win != nil {
@@ -198,7 +208,7 @@ func (s *shell) offerSafeMode(t target) bool {
 		first := s.first
 		s.mu.Unlock()
 		win.SetSize(settingsWidth, settingsSize(first, true))
-		s.callSettings("showBroken", st.SettingsFile)
+		s.callSettings("showBroken", file)
 		s.showProblem(problem)
 		return true
 	}
@@ -206,8 +216,8 @@ func (s *shell) offerSafeMode(t target) bool {
 	return true
 }
 
-// openSettingsFile opens the settings file of ebira with an error in an
-// editor of text, to fix it.
+// openSettingsFile opens the settings file with an error, of ebira or of the
+// notes, in an editor of text, to fix it.
 func (s *shell) openSettingsFile() {
 	s.mu.Lock()
 	path := s.broken

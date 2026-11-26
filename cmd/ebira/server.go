@@ -334,6 +334,11 @@ type statusJSON struct {
 	SettingsError string `json:"settings_error,omitempty"`
 	// SettingsFile is the path of the settings file, for the app to open.
 	SettingsFile string `json:"settings_file,omitempty"`
+	// NotesSettingsError is the error of _ebira.yaml of the notes directory,
+	// which keeps the server from starting outside the safe mode, and
+	// NotesSettingsFile its path; empty when it reads.
+	NotesSettingsError string `json:"notes_settings_error,omitempty"`
+	NotesSettingsFile  string `json:"notes_settings_file,omitempty"`
 }
 
 // serverStatusJSON prints the notes directory dir, whether it is configured,
@@ -346,6 +351,10 @@ func serverStatusJSON(dir string, configured bool, out io.Writer) error {
 	st := statusJSON{NotesDir: dir, Configured: configured, Running: running, SettingsError: errorText(settingsError)}
 	if p, err := config.Path(); err == nil {
 		st.SettingsFile = p
+	}
+	if err := notesSettingsCheck(dir); err != nil {
+		st.NotesSettingsError = err.Error()
+		st.NotesSettingsFile = filepath.Join(dir, store.ConfigFile)
 	}
 	if running {
 		if s, err := daemon.ReadState(sd); err == nil {

@@ -91,9 +91,10 @@ type Options struct {
 	// data-guide-names attribute, one a line, by which the page knows the
 	// notebooks of the guide.
 	GuideNames []string
-	// SettingsError is the error of the settings file when the server runs
-	// in the safe mode without it, given as the data-settings-error
-	// attribute, which the page tells above the panes; empty for none.
+	// SettingsError is the error of the settings files, of the machine or
+	// shared with the notes, that the server runs without in the safe mode,
+	// one a line, given as the data-settings-error attribute, which the page
+	// tells above the panes; empty for none.
 	SettingsError string
 }
 

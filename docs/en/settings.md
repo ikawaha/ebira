@@ -64,16 +64,16 @@ The settings synced with the notes are in `_ebira.yaml` of the notes directory, 
 
 ## Safe mode
 
-With a mistake in the settings file, such as an error of YAML or a key ebira does not know, the commands stop telling it, and the server does not start. To use the notes until it is fixed, set the environment variable `EBIRA_SAFE_MODE=1`, and they start without the file (safe mode).
+With a mistake in the settings file or in `_ebira.yaml` of the notes directory, such as an error of YAML or a key ebira does not know, the commands stop telling it, and the server does not start. `_ebira.yaml` is synced with the notes, so a mistake on one machine reaches them all. To use the notes until it is fixed, set the environment variable `EBIRA_SAFE_MODE=1`, and they start without the file with the mistake (safe mode).
 
 ```sh
 EBIRA_SAFE_MODE=1 ebira server start
 ```
 
-- Of the settings file, only the line of `notes_dir` is taken, when it reads; the rest are the defaults.
-- As the settings of authentication are not known, the server starts only on an address of this computer, such as `localhost:13579`.
+- Of the settings file, only the line of `notes_dir` is taken, when it reads; the rest are the defaults. As the settings of authentication are not known, the server starts only on an address of this computer, such as `localhost:13579`.
+- Of `_ebira.yaml`, only the line of the search mode `search` is taken, when it reads, so that the index is not made again; `defaults`, the stop lists and the names of the marks are the defaults.
 - The web UI tells above its panes that it is in safe mode, and the mistake. Fix the file, then press "Restart" there to run with the settings fixed.
-- With no mistake in the settings file, `EBIRA_SAFE_MODE` changes nothing.
+- With no mistake in either file, `EBIRA_SAFE_MODE` changes nothing.
 
 In the desktop app, "Start in Safe Mode" in its settings window does the same ([Desktop App](desktop.md)).
 
