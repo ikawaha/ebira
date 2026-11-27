@@ -5038,11 +5038,17 @@ paths:
                                 default_models:
                                     Repudiandae expedita.: Culpa facilis corporis sit.
                                     Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+                                key_commands: true
+                                key_env:
+                                    - anthropic
                                 machine:
+                                    anthropic_key_command: op read 'op://Private/Anthropic/credential'
                                     auth: none
+                                    gemini_key_command: bw get password 'Gemini API key'
                                     git_sync: 10m
                                     lang: ja
                                     model: Vel sit soluta aut corporis nostrum.
+                                    openai_key_command: rbw get 'OpenAI API key'
                                     provider: gemini
                                     theme: auto
                                     tui_preview: rendered
@@ -5054,10 +5060,13 @@ paths:
                                 machine_path: /Users/you/.config/ebira/config.yaml
                                 notes:
                                     defaults:
+                                        anthropic_key_command: op read 'op://Private/Anthropic/credential'
                                         auth: none
+                                        gemini_key_command: bw get password 'Gemini API key'
                                         git_sync: 10m
                                         lang: ja
                                         model: Vel sit soluta aut corporis nostrum.
+                                        openai_key_command: rbw get 'OpenAI API key'
                                         provider: gemini
                                         theme: auto
                                         tui_preview: rendered
@@ -5132,10 +5141,13 @@ paths:
                             $ref: '#/components/schemas/SaveSettingsRequestBody'
                         example:
                             machine:
+                                anthropic_key_command: op read 'op://Private/Anthropic/credential'
                                 auth: none
+                                gemini_key_command: bw get password 'Gemini API key'
                                 git_sync: 10m
                                 lang: ja
                                 model: Vel sit soluta aut corporis nostrum.
+                                openai_key_command: rbw get 'OpenAI API key'
                                 provider: gemini
                                 theme: auto
                                 tui_preview: rendered
@@ -5146,10 +5158,13 @@ paths:
                                 zenn_user: you
                             notes:
                                 defaults:
+                                    anthropic_key_command: op read 'op://Private/Anthropic/credential'
                                     auth: none
+                                    gemini_key_command: bw get password 'Gemini API key'
                                     git_sync: 10m
                                     lang: ja
                                     model: Vel sit soluta aut corporis nostrum.
+                                    openai_key_command: rbw get 'OpenAI API key'
                                     provider: gemini
                                     theme: auto
                                     tui_preview: rendered
@@ -5187,11 +5202,17 @@ paths:
                                     Rem laboriosam.: Et nostrum doloremque doloribus.
                                     Rerum inventore dignissimos tenetur.: Unde dolore laborum laborum sed quam.
                                     Soluta vero blanditiis eum qui quia.: Ipsam nemo id.
+                                key_commands: true
+                                key_env:
+                                    - anthropic
                                 machine:
+                                    anthropic_key_command: op read 'op://Private/Anthropic/credential'
                                     auth: none
+                                    gemini_key_command: bw get password 'Gemini API key'
                                     git_sync: 10m
                                     lang: ja
                                     model: Vel sit soluta aut corporis nostrum.
+                                    openai_key_command: rbw get 'OpenAI API key'
                                     provider: gemini
                                     theme: auto
                                     tui_preview: rendered
@@ -5203,10 +5224,13 @@ paths:
                                 machine_path: /Users/you/.config/ebira/config.yaml
                                 notes:
                                     defaults:
+                                        anthropic_key_command: op read 'op://Private/Anthropic/credential'
                                         auth: none
+                                        gemini_key_command: bw get password 'Gemini API key'
                                         git_sync: 10m
                                         lang: ja
                                         model: Vel sit soluta aut corporis nostrum.
+                                        openai_key_command: rbw get 'OpenAI API key'
                                         provider: gemini
                                         theme: auto
                                         tui_preview: rendered
@@ -6716,6 +6740,10 @@ components:
         MachineSettings:
             type: object
             properties:
+                anthropic_key_command:
+                    type: string
+                    description: 'Command that prints the API key of Anthropic, such as one of a password manager, which the server runs when the assistant is first used; empty for none. Never a default: it is left out of the defaults'
+                    example: op read 'op://Private/Anthropic/credential'
                 auth:
                     type: string
                     description: How the REST API authenticates people; empty for none. passkey needs a passkey registered
@@ -6723,6 +6751,10 @@ components:
                     enum:
                         - none
                         - passkey
+                gemini_key_command:
+                    type: string
+                    description: Command that prints the API key of Gemini, as anthropic_key_command does
+                    example: bw get password 'Gemini API key'
                 git_sync:
                     type: string
                     description: Interval of syncing the notes with git, such as 10m; empty or 0 for none
@@ -6735,6 +6767,10 @@ components:
                     type: string
                     description: Model of the assistant; empty for the default of the provider
                     example: Vel sit soluta aut corporis nostrum.
+                openai_key_command:
+                    type: string
+                    description: Command that prints the API key of OpenAI, as anthropic_key_command does
+                    example: rbw get 'OpenAI API key'
                 provider:
                     type: string
                     description: Model provider of the assistant; empty for the one whose API key is set
@@ -6783,10 +6819,13 @@ components:
                     example: you
             description: Settings of the server's machine and user, in its settings file, that the web UI changes; a value left out is the default
             example:
+                anthropic_key_command: op read 'op://Private/Anthropic/credential'
                 auth: none
+                gemini_key_command: bw get password 'Gemini API key'
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
+                openai_key_command: rbw get 'OpenAI API key'
                 provider: gemini
                 theme: auto
                 tui_preview: rendered
@@ -7951,10 +7990,13 @@ components:
             description: Settings synced with the notes, in _ebira.yaml of the notes directory, that the web UI changes
             example:
                 defaults:
+                    anthropic_key_command: op read 'op://Private/Anthropic/credential'
                     auth: none
+                    gemini_key_command: bw get password 'Gemini API key'
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
+                    openai_key_command: rbw get 'OpenAI API key'
                     provider: gemini
                     theme: auto
                     tui_preview: rendered
@@ -8126,10 +8168,13 @@ components:
             description: Request body for save_settings.
             example:
                 machine:
+                    anthropic_key_command: op read 'op://Private/Anthropic/credential'
                     auth: none
+                    gemini_key_command: bw get password 'Gemini API key'
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
+                    openai_key_command: rbw get 'OpenAI API key'
                     provider: gemini
                     theme: auto
                     tui_preview: rendered
@@ -8140,10 +8185,13 @@ components:
                     zenn_user: you
                 notes:
                     defaults:
+                        anthropic_key_command: op read 'op://Private/Anthropic/credential'
                         auth: none
+                        gemini_key_command: bw get password 'Gemini API key'
                         git_sync: 10m
                         lang: ja
                         model: Vel sit soluta aut corporis nostrum.
+                        openai_key_command: rbw get 'OpenAI API key'
                         provider: gemini
                         theme: auto
                         tui_preview: rendered
@@ -8566,6 +8614,18 @@ components:
                     additionalProperties:
                         type: string
                         example: Dolorem saepe voluptatem.
+                key_commands:
+                    type: boolean
+                    description: 'Whether save_settings may change the commands that print the API keys, which the server runs: only while it listens on the loopback or requires passkeys'
+                    example: true
+                key_env:
+                    type: array
+                    items:
+                        type: string
+                        example: Asperiores ab molestiae.
+                    description: Providers whose API keys the server has in its environment variables, which win over their commands
+                    example:
+                        - anthropic
                 machine:
                     $ref: '#/components/schemas/MachineSettings'
                 machine_path:
@@ -8614,11 +8674,17 @@ components:
                 default_models:
                     Repudiandae expedita.: Culpa facilis corporis sit.
                     Ut facere omnis expedita doloremque.: Dolorem saepe voluptatem.
+                key_commands: true
+                key_env:
+                    - anthropic
                 machine:
+                    anthropic_key_command: op read 'op://Private/Anthropic/credential'
                     auth: none
+                    gemini_key_command: bw get password 'Gemini API key'
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
+                    openai_key_command: rbw get 'OpenAI API key'
                     provider: gemini
                     theme: auto
                     tui_preview: rendered
@@ -8630,10 +8696,13 @@ components:
                 machine_path: /Users/you/.config/ebira/config.yaml
                 notes:
                     defaults:
+                        anthropic_key_command: op read 'op://Private/Anthropic/credential'
                         auth: none
+                        gemini_key_command: bw get password 'Gemini API key'
                         git_sync: 10m
                         lang: ja
                         model: Vel sit soluta aut corporis nostrum.
+                        openai_key_command: rbw get 'OpenAI API key'
                         provider: gemini
                         theme: auto
                         tui_preview: rendered
@@ -8677,6 +8746,8 @@ components:
                 - restart
                 - passkeys
                 - default_models
+                - key_commands
+                - key_env
         StatusResponseBody:
             type: object
             properties:

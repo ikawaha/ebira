@@ -3225,6 +3225,10 @@ async function openSettings(focus) {
     auth: select(m.auth === "none" ? "" : m.auth, [["", t("settingsAuthNone")], ["passkey", t("settingsAuthPasskey")]]),
     search: select(cur.notes.search === "bigram" ? "" : cur.notes.search, [["", "bigram"], ["like", "like"], ["trigram", "trigram"], ["en", "en"], ["ja", "ja"]]),
   };
+  // The commands that print the API keys of the assistant, by provider, of
+  // this machine alone. A command of a password manager is chosen by its
+  // tool and the secret it reads; any other is written as it is.
+  const keyRows = KEY_PROVIDERS.map(([provider, label, env]) => keyCommandRow(provider, label, env, m[provider + "_key_command"] || "", cur));
   // The value shared with the notes, as its choice tells it; "" for none.
   const sharedLabel = (k) => {
     if (!has(sd, k)) return "";
@@ -3359,6 +3363,7 @@ async function openSettings(focus) {
   const machineValue = () => {
     const v = { auth: c.auth.value.trim() || undefined };
     for (const k of keys) v[k] = own(k) || !sd ? valueOf(k) : undefined;
+    for (const r of keyRows) v[r.key] = r.value() || undefined;
     return v;
   };
   // The defaults keep those shared as read, but for the ones shared here.
@@ -3442,6 +3447,11 @@ async function openSettings(focus) {
     const pending = startup() !== initialStartup;
     // A file not a built-in style as it is goes to the backup: say so first.
     if (styleChanged() && style.initial === "" && !confirm(t("previewStyleConfirm", { path: style.cur.path, backup: style.cur.path + ".bak" }))) return;
+    const bad = keyRows.find((r) => r.error());
+    if (bad) {
+      fail(bad.error());
+      return;
+    }
     if (await save() && await saveStyle()) {
       setBodySize(size);
       d.close();
@@ -3524,7 +3534,11 @@ async function openSettings(focus) {
       machineRow("zenn_user", t("settingsZennUser"))),
     tab("assistant",
       machineRow("provider", t("settingsProvider")),
-      machineRow("model", t("settingsModel"))),
+      machineRow("model", t("settingsModel")),
+      el("h3", "", t("settingsKeys")),
+      el("p", "hint", t("settingsKeysHint")),
+      ...(cur.key_commands === false ? [el("p", "hint", t("settingsKeysLocked"))] : []),
+      ...keyRows.map((r) => r.node)),
     tab("tui",
       machineRow("tui_preview", t("settingsTUIPreview"), t("settingsTUIPreviewHint")),
       machineRow("tui_search", t("settingsTUISearch"), t("settingsTUIPreviewHint"))),
@@ -6531,12 +6545,110 @@ async function addGuide() {
   showNotebook(nb.id);
   showToast(t("guideAdded", { name: nb.name }));
 }
+// KEY_PROVIDERS are the providers of the assistant, with their names and
+// the first environment variable of their keys.
+const KEY_PROVIDERS = [
+  ["anthropic", "Anthropic (Claude)", "ANTHROPIC_API_KEY"],
+  ["gemini", "Google (Gemini)", "GEMINI_API_KEY"],
+  ["openai", "OpenAI (GPT)", "OPENAI_API_KEY"],
+];
+
+// KEY_TOOLS are the password managers whose commands the settings write
+// from the secret they read: 1Password's op, and Bitwarden's bw and rbw.
+// The secret is quoted with double quotes, which both sh and cmd.exe take.
+const KEY_TOOLS = {
+  op: { prefix: "op read ", placeholder: "op://Private/Anthropic/credential" },
+  bw: { prefix: "bw get password ", placeholder: "Anthropic API key" },
+  rbw: { prefix: "rbw get ", placeholder: "Anthropic API key" },
+};
+
+// keyArg returns the secret s quoted for a command, or null for one that
+// cannot be quoted the same way in sh and in cmd.exe.
+function keyArg(s) {
+  if (/["$`\\%!]/.test(s) || /[\r\n]/.test(s)) return null;
+  return /^[A-Za-z0-9_.\/:@+-]+$/.test(s) ? s : `"${s}"`;
+}
+
+// keyCommandOf splits a command into the tool and the secret it reads, as
+// keyArg quoted it; the tool is "command" for any other.
+function keyCommandOf(command) {
+  for (const [tool, { prefix }] of Object.entries(KEY_TOOLS)) {
+    if (!command.startsWith(prefix)) continue;
+    const arg = command.slice(prefix.length);
+    const m = /^"([^"]*)"$/.exec(arg);
+    const secret = m ? m[1] : arg;
+    if (secret && keyArg(secret) === arg) return { tool, secret };
+  }
+  return { tool: command ? "command" : "", secret: command };
+}
+
+// keyCommandRow returns the row of the command that prints the API key of
+// provider, of the command it has: node, its key in the settings, value,
+// the command chosen, and error, why it cannot be written, or "".
+function keyCommandRow(provider, label, env, command, cur) {
+  const start = keyCommandOf(command);
+  const tool = el("select");
+  for (const v of ["", "op", "bw", "rbw", "command"]) {
+    const o = el("option", "", t("settingsKeyTool_" + (v || "none")));
+    o.value = v;
+    tool.append(o);
+  }
+  tool.value = start.tool;
+  const input = el("input");
+  input.value = start.secret;
+  input.spellcheck = false;
+  input.autocomplete = "off";
+  input.setAttribute("aria-label", label);
+  const hint = el("p", "hint");
+  const envHint = el("p", "hint", t("settingsKeyEnv", { name: env }));
+  envHint.hidden = !(cur.key_env || []).includes(provider);
+  const show = () => {
+    const v = tool.value;
+    input.hidden = !v;
+    input.placeholder = KEY_TOOLS[v] ? KEY_TOOLS[v].placeholder : t("settingsKeyCommandPlaceholder");
+    input.classList.toggle("mono", v === "command");
+    hint.textContent = v ? t("settingsKeyHint_" + v) : "";
+    hint.hidden = !v;
+  };
+  // The secret carries over between the tools; to a command, it becomes
+  // the command of its tool, and from one, the secret its tool reads.
+  let was = tool.value;
+  tool.addEventListener("change", () => {
+    const s = input.value.trim();
+    if (tool.value === "command" && KEY_TOOLS[was] && s) {
+      const arg = keyArg(s);
+      if (arg !== null) input.value = KEY_TOOLS[was].prefix + arg;
+    } else if (KEY_TOOLS[tool.value] && was === "command") {
+      const p = keyCommandOf(s);
+      input.value = KEY_TOOLS[p.tool] ? p.secret : "";
+    }
+    was = tool.value;
+    show();
+  });
+  show();
+  const value = () => {
+    const v = tool.value;
+    const s = input.value.trim();
+    if (!v || !s) return "";
+    if (v === "command") return s;
+    const arg = keyArg(s);
+    return arg === null ? "" : KEY_TOOLS[v].prefix + arg;
+  };
+  const error = () => (KEY_TOOLS[tool.value] && input.value.trim() && keyArg(input.value.trim()) === null ? t("settingsKeyQuote", { provider: label }) : "");
+  const box = el("div", "settings-control", el("div", "settings-share-line", tool, input), hint, envHint);
+  if (cur.key_commands === false) {
+    tool.disabled = true;
+    input.disabled = true;
+  }
+  return { node: el("div", "settings-row", el("span", "settings-label", label), box), key: provider + "_key_command", value, error };
+}
+
 // LOOK_KEYS are the settings that apply once saved, without a restart.
 const LOOK_KEYS = ["lang", "theme"];
 
 // NOW_KEYS are the settings that apply once saved: those of the look, and
 // those of Zenn, which the server reads at each use.
-const NOW_KEYS = [...LOOK_KEYS, "zenn_repo", "zenn_branch", "zenn_user"];
+const NOW_KEYS = [...LOOK_KEYS, "zenn_repo", "zenn_branch", "zenn_user", "anthropic_key_command", "gemini_key_command", "openai_key_command"];
 
 // applyTheme draws the page in the theme choice: auto (the system's), light or
 // dark.

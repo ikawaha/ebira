@@ -1079,6 +1079,12 @@ type SettingsResponseBody struct {
 	Passkeys *bool `form:"passkeys,omitempty" json:"passkeys,omitempty" xml:"passkeys,omitempty"`
 	// Default models of the assistant by provider
 	DefaultModels map[string]string `form:"default_models,omitempty" json:"default_models,omitempty" xml:"default_models,omitempty"`
+	// Whether save_settings may change the commands that print the API keys, which
+	// the server runs: only while it listens on the loopback or requires passkeys
+	KeyCommands *bool `form:"key_commands,omitempty" json:"key_commands,omitempty" xml:"key_commands,omitempty"`
+	// Providers whose API keys the server has in its environment variables, which
+	// win over their commands
+	KeyEnv []string `form:"key_env,omitempty" json:"key_env,omitempty" xml:"key_env,omitempty"`
 }
 
 // SaveSettingsResponseBody is the type of the "notes" service "save_settings"
@@ -1111,6 +1117,12 @@ type SaveSettingsResponseBody struct {
 	Passkeys *bool `form:"passkeys,omitempty" json:"passkeys,omitempty" xml:"passkeys,omitempty"`
 	// Default models of the assistant by provider
 	DefaultModels map[string]string `form:"default_models,omitempty" json:"default_models,omitempty" xml:"default_models,omitempty"`
+	// Whether save_settings may change the commands that print the API keys, which
+	// the server runs: only while it listens on the loopback or requires passkeys
+	KeyCommands *bool `form:"key_commands,omitempty" json:"key_commands,omitempty" xml:"key_commands,omitempty"`
+	// Providers whose API keys the server has in its environment variables, which
+	// win over their commands
+	KeyEnv []string `form:"key_env,omitempty" json:"key_env,omitempty" xml:"key_env,omitempty"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -4168,9 +4180,9 @@ type SaveSettingsPreconditionFailedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// SaveSettingsUnauthorizedResponseBody is the type of the "notes" service
-// "save_settings" endpoint HTTP response body for the "unauthorized" error.
-type SaveSettingsUnauthorizedResponseBody struct {
+// SaveSettingsForbiddenResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "forbidden" error.
+type SaveSettingsForbiddenResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -4190,6 +4202,24 @@ type SaveSettingsUnauthorizedResponseBody struct {
 // service "save_settings" endpoint HTTP response body for the
 // "verification_required" error.
 type SaveSettingsVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// SaveSettingsUnauthorizedResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "unauthorized" error.
+type SaveSettingsUnauthorizedResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -4620,6 +4650,14 @@ type MachineSettingsResponseBody struct {
 	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
 	// User name on Zenn, to link to the articles; empty for none
 	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
+	// Command that prints the API key of Anthropic, such as one of a password
+	// manager, which the server runs when the assistant is first used; empty for
+	// none. Never a default: it is left out of the defaults
+	AnthropicKeyCommand *string `form:"anthropic_key_command,omitempty" json:"anthropic_key_command,omitempty" xml:"anthropic_key_command,omitempty"`
+	// Command that prints the API key of Gemini, as anthropic_key_command does
+	GeminiKeyCommand *string `form:"gemini_key_command,omitempty" json:"gemini_key_command,omitempty" xml:"gemini_key_command,omitempty"`
+	// Command that prints the API key of OpenAI, as anthropic_key_command does
+	OpenaiKeyCommand *string `form:"openai_key_command,omitempty" json:"openai_key_command,omitempty" xml:"openai_key_command,omitempty"`
 }
 
 // NotesSettingsResponseBody is used to define fields on response body types.
@@ -4676,6 +4714,14 @@ type MachineSettingsRequestBody struct {
 	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
 	// User name on Zenn, to link to the articles; empty for none
 	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
+	// Command that prints the API key of Anthropic, such as one of a password
+	// manager, which the server runs when the assistant is first used; empty for
+	// none. Never a default: it is left out of the defaults
+	AnthropicKeyCommand *string `form:"anthropic_key_command,omitempty" json:"anthropic_key_command,omitempty" xml:"anthropic_key_command,omitempty"`
+	// Command that prints the API key of Gemini, as anthropic_key_command does
+	GeminiKeyCommand *string `form:"gemini_key_command,omitempty" json:"gemini_key_command,omitempty" xml:"gemini_key_command,omitempty"`
+	// Command that prints the API key of OpenAI, as anthropic_key_command does
+	OpenaiKeyCommand *string `form:"openai_key_command,omitempty" json:"openai_key_command,omitempty" xml:"openai_key_command,omitempty"`
 }
 
 // NotesSettingsRequestBody is used to define fields on request body types.
@@ -8297,6 +8343,7 @@ func NewSettingsSettingsOK(body *SettingsResponseBody) *notes.Settings {
 		Restart:            *body.Restart,
 		RestartUnavailable: body.RestartUnavailable,
 		Passkeys:           *body.Passkeys,
+		KeyCommands:        *body.KeyCommands,
 	}
 	v.Machine = unmarshalMachineSettingsResponseBodyToNotesMachineSettings(body.Machine)
 	v.Notes = unmarshalNotesSettingsResponseBodyToNotesNotesSettings(body.Notes)
@@ -8309,6 +8356,10 @@ func NewSettingsSettingsOK(body *SettingsResponseBody) *notes.Settings {
 		tk := key
 		tv := val
 		v.DefaultModels[tk] = tv
+	}
+	v.KeyEnv = make([]string, len(body.KeyEnv))
+	for i, val := range body.KeyEnv {
+		v.KeyEnv[i] = val
 	}
 
 	return v
@@ -8356,6 +8407,7 @@ func NewSaveSettingsSettingsOK(body *SaveSettingsResponseBody) *notes.Settings {
 		Restart:            *body.Restart,
 		RestartUnavailable: body.RestartUnavailable,
 		Passkeys:           *body.Passkeys,
+		KeyCommands:        *body.KeyCommands,
 	}
 	v.Machine = unmarshalMachineSettingsResponseBodyToNotesMachineSettings(body.Machine)
 	v.Notes = unmarshalNotesSettingsResponseBodyToNotesNotesSettings(body.Notes)
@@ -8368,6 +8420,10 @@ func NewSaveSettingsSettingsOK(body *SaveSettingsResponseBody) *notes.Settings {
 		tk := key
 		tv := val
 		v.DefaultModels[tk] = tv
+	}
+	v.KeyEnv = make([]string, len(body.KeyEnv))
+	for i, val := range body.KeyEnv {
+		v.KeyEnv[i] = val
 	}
 
 	return v
@@ -8403,9 +8459,9 @@ func NewSaveSettingsPreconditionFailed(body *SaveSettingsPreconditionFailedRespo
 	return v
 }
 
-// NewSaveSettingsUnauthorized builds a notes service save_settings endpoint
-// unauthorized error.
-func NewSaveSettingsUnauthorized(body *SaveSettingsUnauthorizedResponseBody) *goa.ServiceError {
+// NewSaveSettingsForbidden builds a notes service save_settings endpoint
+// forbidden error.
+func NewSaveSettingsForbidden(body *SaveSettingsForbiddenResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -8421,6 +8477,21 @@ func NewSaveSettingsUnauthorized(body *SaveSettingsUnauthorizedResponseBody) *go
 // NewSaveSettingsVerificationRequired builds a notes service save_settings
 // endpoint verification_required error.
 func NewSaveSettingsVerificationRequired(body *SaveSettingsVerificationRequiredResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewSaveSettingsUnauthorized builds a notes service save_settings endpoint
+// unauthorized error.
+func NewSaveSettingsUnauthorized(body *SaveSettingsUnauthorizedResponseBody) *goa.ServiceError {
 	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
@@ -9738,6 +9809,12 @@ func ValidateSettingsResponseBody(body *SettingsResponseBody) (err error) {
 	if body.DefaultModels == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("default_models", "body"))
 	}
+	if body.KeyCommands == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_commands", "body"))
+	}
+	if body.KeyEnv == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_env", "body"))
+	}
 	if body.Machine != nil {
 		if err2 := validateMachineSettingsResponseBody(body.Machine, "body.machine"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -9791,6 +9868,12 @@ func ValidateSaveSettingsResponseBody(body *SaveSettingsResponseBody) (err error
 	}
 	if body.DefaultModels == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("default_models", "body"))
+	}
+	if body.KeyCommands == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_commands", "body"))
+	}
+	if body.KeyEnv == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_env", "body"))
 	}
 	if body.Machine != nil {
 		if err2 := validateMachineSettingsResponseBody(body.Machine, "body.machine"); err2 != nil {
@@ -13835,9 +13918,9 @@ func ValidateSaveSettingsPreconditionFailedResponseBody(body *SaveSettingsPrecon
 	return
 }
 
-// ValidateSaveSettingsUnauthorizedResponseBody runs the validations defined on
-// SaveSettingsUnauthorizedResponseBody
-func ValidateSaveSettingsUnauthorizedResponseBody(body *SaveSettingsUnauthorizedResponseBody) (err error) {
+// ValidateSaveSettingsForbiddenResponseBody runs the validations defined on
+// SaveSettingsForbiddenResponseBody
+func ValidateSaveSettingsForbiddenResponseBody(body *SaveSettingsForbiddenResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
@@ -13862,6 +13945,30 @@ func ValidateSaveSettingsUnauthorizedResponseBody(body *SaveSettingsUnauthorized
 // ValidateSaveSettingsVerificationRequiredResponseBody runs the validations
 // defined on SaveSettingsVerificationRequiredResponseBody
 func ValidateSaveSettingsVerificationRequiredResponseBody(body *SaveSettingsVerificationRequiredResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateSaveSettingsUnauthorizedResponseBody runs the validations defined on
+// SaveSettingsUnauthorizedResponseBody
+func ValidateSaveSettingsUnauthorizedResponseBody(body *SaveSettingsUnauthorizedResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}

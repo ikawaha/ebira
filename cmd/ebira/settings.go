@@ -109,8 +109,10 @@ func overriddenSettings(fs *flag.FlagSet) []string {
 
 // serverSettings returns how the server of fs, listening on addr, handles its
 // settings: it restarts by restart, which stops it and starts its process
-// again as itself (see serve).
-func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart func(), saved func()) service.Settings {
+// again as itself (see serve). keyCommands tells whether the settings may
+// change the commands that print the API keys, and keyEnv are the providers
+// whose keys are in the environment variables.
+func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart func(), saved func(), keyCommands bool, keyEnv []string) service.Settings {
 	return service.Settings{
 		Check:         checkSettings,
 		Overridden:    overriddenSettings(fs),
@@ -123,6 +125,8 @@ func serverSettings(fs *flag.FlagSet, addr string, passkeys func() bool, restart
 		},
 		Restartable: restartable,
 		Saved:       saved,
+		KeyCommands: keyCommands,
+		KeyEnv:      keyEnv,
 	}
 }
 

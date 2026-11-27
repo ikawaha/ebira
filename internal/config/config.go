@@ -87,6 +87,14 @@ type Config struct {
 	ZennRepo   string `yaml:"zenn_repo"`
 	ZennBranch string `yaml:"zenn_branch"`
 	ZennUser   string `yaml:"zenn_user"`
+	// AnthropicKeyCommand, GeminiKeyCommand and OpenAIKeyCommand are the
+	// commands that print the API keys of the assistant by provider, such as
+	// op read of 1Password or bw get of Bitwarden, which the server runs
+	// when the assistant is first used, so that the keys are not written in
+	// the file. The environment variable of a key wins over its command.
+	AnthropicKeyCommand string `yaml:"anthropic_key_command"`
+	GeminiKeyCommand    string `yaml:"gemini_key_command"`
+	OpenAIKeyCommand    string `yaml:"openai_key_command"`
 
 	// LegacyDataDir is data_dir of earlier builds, the directory above the
 	// notes directory; Load fails with it, telling what to write instead.
@@ -396,7 +404,13 @@ func Set(key, value string) (string, error) {
 // UpdatedKeys are the keys of the settings file that Update writes, those
 // the web UI shows to change: not notes_dir and addr, which a restart of the
 // server keeps.
-var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search", "zenn_repo", "zenn_branch", "zenn_user"}
+var UpdatedKeys = []string{"lang", "theme", "auth", "git_sync", "watch", "provider", "model", "tui_preview", "tui_search", "zenn_repo", "zenn_branch", "zenn_user", "anthropic_key_command", "gemini_key_command", "openai_key_command"}
+
+// KeyCommands returns the commands of c that print the API keys of the
+// assistant, by provider: anthropic, gemini and openai.
+func (c Config) KeyCommands() map[string]string {
+	return map[string]string{"anthropic": c.AnthropicKeyCommand, "gemini": c.GeminiKeyCommand, "openai": c.OpenAIKeyCommand}
+}
 
 // Update writes the values of c for UpdatedKeys to the settings file, and
 // keeps the rest of it, with its comments. A zero value is left out, for the
@@ -440,7 +454,8 @@ func Update(c Config) (string, error) {
 // old values; a zero value removes its key, for the default. keys are of
 // those of the settings file other than notes_dir.
 func SetKeys(m *yaml.Node, c Config, keys []string) {
-	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview, "tui_search": c.TUISearch, "zenn_repo": c.ZennRepo, "zenn_branch": c.ZennBranch, "zenn_user": c.ZennUser}
+	values := map[string]string{"addr": c.Addr, "lang": c.Lang, "theme": c.Theme, "auth": c.Auth, "git_sync": c.GitSync, "provider": c.Provider, "model": c.Model, "tui_preview": c.TUIPreview, "tui_search": c.TUISearch, "zenn_repo": c.ZennRepo, "zenn_branch": c.ZennBranch, "zenn_user": c.ZennUser,
+		"anthropic_key_command": c.AnthropicKeyCommand, "gemini_key_command": c.GeminiKeyCommand, "openai_key_command": c.OpenAIKeyCommand}
 	for _, k := range keys {
 		var v *yaml.Node
 		switch {

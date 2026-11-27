@@ -38,12 +38,7 @@ import (
 	"github.com/ikawaha/ebira/internal/ui/web"
 	"github.com/ikawaha/ebira/internal/watch"
 	"github.com/ikawaha/ebira/internal/zenn"
-	"goa.design/goa-ai/features/model/anthropic"
-	"goa.design/goa-ai/features/model/openai"
-	"goa.design/goa-ai/features/model/vertex"
-	"goa.design/goa-ai/runtime/agent/model"
 	goahttp "goa.design/goa/v3/http"
-	"google.golang.org/genai"
 )
 
 // serveOptions are the flags of ebira serve, which ebira server start passes
@@ -63,7 +58,7 @@ func newServeFlags(name string) (*flag.FlagSet, *serveOptions) {
 		watchF   = fs.Bool("watch", settings.Watch == nil || *settings.Watch, "watch the notes directory and update the index on changes")
 		stopW    = fs.String("stopwords", "", "ja mode: file of stop words, one per line, replacing stop_words of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
 		stopT    = fs.String("stoptags", "", "ja mode: file of stop parts of speech, each written as the IPA dictionary names of its levels joined by \"-\", one per line, matched exactly as in Lucene, replacing stop_tags of "+store.ConfigFile+" (default: the list of kagome's ja filter, from Lucene)")
-		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY), gemini (GEMINI_API_KEY or GOOGLE_API_KEY) or openai (OPENAI_API_KEY); empty picks the one whose key is set")
+		prov     = fs.String("provider", settings.Provider, "model provider of the assistant (POST /ask): anthropic (ANTHROPIC_API_KEY), gemini (GEMINI_API_KEY or GOOGLE_API_KEY) or openai (OPENAI_API_KEY), each also from its command in the settings file, such as anthropic_key_command; empty picks the first with a key")
 		lang     = fs.String("lang", settings.Lang, "language of the web UI: "+strings.Join(web.Langs, " or ")+" (default: lang of the settings file, else of the defaults in "+store.ConfigFile+", else the browser's language)")
 		theme    = fs.String("theme", settings.Theme, "color theme of the web UI: auto (the system's light or dark mode), light or dark (default: theme of the settings file, else of the defaults in "+store.ConfigFile+", else auto)")
 		modelF   = fs.String("model", settings.Model, "model of the assistant (default: "+defaultModels[providerAnthropic]+" for anthropic, "+defaultModels[providerGemini]+" for gemini, "+defaultModels[providerOpenAI]+" for openai)")
@@ -283,7 +278,7 @@ func runServe(args []string) error {
 		}()
 	}
 
-	asst, err := newAssistant(ctx, svc, *prov, *modelF)
+	asst, forgetAssistant, err := newAssistant(ctx, svc, *prov, *modelF)
 	if err != nil {
 		return err
 	}
@@ -347,12 +342,16 @@ func runServe(args []string) error {
 	svc.SetPreviewCSS(previewCSS)
 	restartc := make(chan struct{}, 1)
 	look := newPageLook(fs, *notesDir, *o.lang, *o.theme)
+	keyCommands := *o.auth == auth.ModePasskey || loopback(listenHost)
 	svc.SetSettings(serverSettings(fs, *addr, passkeys.Registered, func() {
 		select {
 		case restartc <- struct{}{}:
 		default: // asked already
 		}
-	}, look.reload))
+	}, func() {
+		look.reload()
+		forgetAssistant()
+	}, keyCommands, keyEnvProviders(envKeys())))
 	ui := web.Handler(web.Options{
 		Look: look.get, Search: string(mode), PreviewCSS: previewCSS,
 		Version: versionLabel(bi), VersionText: versionText(bi, daemon.Version()),
@@ -434,81 +433,6 @@ func serve(args []string) error {
 		return err
 	}
 	return daemon.Reexec(exe, os.Args, r.logPath)
-}
-
-// Model providers of the assistant.
-const (
-	providerAnthropic = "anthropic"
-	providerGemini    = "gemini"
-	providerOpenAI    = "openai"
-)
-
-var defaultModels = map[string]string{
-	providerAnthropic: "claude-sonnet-5-5",
-	providerGemini:    "gemini-3.8-flash",
-	providerOpenAI:    "gpt-6.2-sol",
-}
-
-// newAssistant returns the assistant service: the agent on the model of
-// provider, or when no API key is set, a service that answers every question
-// with unavailable.
-func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, error) {
-	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
-	geminiKey := cmp.Or(os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
-	openaiKey := os.Getenv("OPENAI_API_KEY")
-	if provider == "" {
-		switch {
-		case anthropicKey != "":
-			provider = providerAnthropic
-		case geminiKey != "":
-			provider = providerGemini
-		case openaiKey != "":
-			provider = providerOpenAI
-		default:
-			slog.Info("assistant disabled: set ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY to enable POST /ask")
-			return agent.Unavailable{Reason: "the assistant is not configured: start the server with ANTHROPIC_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY set"}, nil
-		}
-	}
-	if _, ok := defaultModels[provider]; !ok {
-		return nil, fmt.Errorf("unknown model provider %q (anthropic, gemini, openai)", provider)
-	}
-	modelID = cmp.Or(modelID, defaultModels[provider])
-	var (
-		client model.Client
-		err    error
-	)
-	switch provider {
-	case providerAnthropic:
-		if anthropicKey == "" {
-			return nil, errors.New("the anthropic provider needs ANTHROPIC_API_KEY")
-		}
-		client, err = anthropic.NewFromAPIKey(anthropicKey, modelID)
-	case providerGemini:
-		if geminiKey == "" {
-			return nil, errors.New("the gemini provider needs GEMINI_API_KEY or GOOGLE_API_KEY")
-		}
-		// The vertex adapter takes the genai models service, which also serves
-		// the Gemini API (Google AI Studio keys).
-		var gc *genai.Client
-		gc, err = genai.NewClient(ctx, &genai.ClientConfig{APIKey: geminiKey, Backend: genai.BackendGeminiAPI})
-		if err == nil {
-			client, err = vertex.New(gc.Models, vertex.Options{DefaultModel: modelID})
-		}
-	case providerOpenAI:
-		if openaiKey == "" {
-			return nil, errors.New("the openai provider needs OPENAI_API_KEY")
-		}
-		client, err = openai.NewFromAPIKey(openaiKey, modelID)
-	}
-	if err != nil {
-		return nil, err
-	}
-	a, err := agent.New(ctx, client, svc, agent.Config{Model: modelID})
-	if err != nil {
-		return nil, err
-	}
-	slog.Info("assistant enabled", "provider", provider, "model", modelID)
-	return a, nil
 }
 
 // stopListLog describes a stop list for the log.

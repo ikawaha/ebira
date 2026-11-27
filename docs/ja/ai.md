@@ -169,7 +169,33 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 
 ## アシスタント
 
-`a` で開く右の欄では、ノートを探して読み、質問に答えます。サーバーを起動するときに、環境変数 `ANTHROPIC_API_KEY`（Claude）、`GEMINI_API_KEY` か `GOOGLE_API_KEY`（Gemini）、`OPENAI_API_KEY`（OpenAI）のどれかがあると使えます。答えには、使ったノートへのリンクが付きます。キーはサーバーを起動するときに渡します。たとえばパスワードマネージャーから:
+`a` で開く右の欄では、ノートを探して読み、質問に答えます。答えには、使ったノートへのリンクが付きます。使うには、Claude（Anthropic）・Gemini（Google）・OpenAI のどれかの API キーが要ります。
+
+### API キーを渡す
+
+キーは設定のファイルに書きません。設定の「アシスタント」の「API キー」で、提供元ごとにキーの読み方を選びます。サーバーは、アシスタントを初めて使うとき（右の欄を開いたとき）にキーを読み、メモリだけに持ちます。保存するとすぐに当たり、起動し直さなくてよいです。
+
+- 1Password（op）: キーのシークレット参照（`op://Private/Anthropic/credential` の形。1Password のフィールドのメニューの「シークレット参照をコピー」）を書きます。[1Password の CLI](https://developer.1password.com/docs/cli/) を入れ、1Password のアプリの設定の「開発者」で「1Password CLI と連携」をオンにします。読むときに Touch ID などの確かめが出ます。
+- Bitwarden（bw）: パスワードがキーの項目の名前か ID を書きます。[Bitwarden の CLI](https://bitwarden.com/help/cli/)（`bw`）は、保管庫のロックを外している間（`BW_SESSION` がある間）だけ読めます。端末で `export BW_SESSION=$(bw unlock --raw)` としてから `ebira server restart` で起動し直してください（デスクトップアプリが起動したサーバーには `BW_SESSION` がありません）。
+- Bitwarden（rbw）: [rbw](https://github.com/doy/rbw)（Bitwarden の非公式の CLI）の項目の名前を書きます。rbw のエージェントがロックを外したまま持つので、どこから起動したサーバーでも読めます。ロック中は pinentry がマスターパスワードを聞きます。
+- コマンド: キーだけを 1 行で出すコマンドを書きます。sh（Windows では cmd.exe）で、入力なしで動かします。たとえば:
+    - macOS のキーチェーン: `security find-generic-password -w -s anthropic`
+    - Bitwarden を Touch ID で開く [bwbio](https://github.com/jeanregisser/bitwarden-cli-bio)（Bitwarden のデスクトップアプリで生体認証とブラウザとの連携をオンにする）: `bwbio get password "Anthropic API key"`
+    - pass: `pass show anthropic`
+
+設定のファイル（`~/.config/ebira/config.yaml`）には、`anthropic_key_command`・`gemini_key_command`・`openai_key_command` として書かれます:
+
+```yaml
+anthropic_key_command: op read op://Private/Anthropic/credential
+gemini_key_command: rbw get "Gemini API key"
+```
+
+- コマンドが失敗したときは、アシスタントの欄に理由が出ます。欄を開き直すと、もう一度読みます。
+- サーバーをデスクトップアプリや Finder から起動したときも、コマンドはログインシェルの PATH から探します（Homebrew で入れた `op` や `bw` など）。
+- 提供元を選んでいなければ、キーのある最初の提供元（Anthropic・Gemini・OpenAI の順）を使います。
+- これらは端末ごとの設定で、ほかの端末と共有しません（`_ebira.yaml` の `defaults` に書いても使いません）。サーバーがパスキーなし（`auth: none`）でこの機械の外から受け付けているときは、Web UI からは変えられず、設定のファイルで変えます。
+
+環境変数 `ANTHROPIC_API_KEY`・`GEMINI_API_KEY`（か `GOOGLE_API_KEY`）・`OPENAI_API_KEY` でも渡せます。環境変数があれば、コマンドより先に使います。たとえば:
 
 ```sh
 op run --env-file=.env -- ebira server restart
