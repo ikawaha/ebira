@@ -7318,6 +7318,28 @@ $("logout").addEventListener("click", async () => {
   location.reload();
 });
 
+// showSafeMode tells, above the panes, that the server runs in the safe mode
+// without the settings file, which has an error, so that it is fixed, with a
+// button to restart the server once it is: the mark beside the status needs
+// the settings, which cannot be read then.
+function showSafeMode() {
+  const err = document.documentElement.dataset.settingsError;
+  if (!err) return;
+  $("safe-mode-error").textContent = err;
+  $("safe-mode").hidden = false;
+  const b = $("safe-mode-restart");
+  b.addEventListener("click", async () => {
+    if (!confirm(t("statsRestartConfirm")) || !leaveEditor()) return;
+    b.disabled = true;
+    try {
+      await restartServer();
+    } catch (e) {
+      b.disabled = false;
+      alert(t("statsRestartFailed", { error: e.message }));
+    }
+  });
+}
+
 // Start
 
 (async () => {
@@ -7332,6 +7354,7 @@ $("logout").addEventListener("click", async () => {
   } catch (_) { /* an older server: no passkeys */ }
   showAuthState();
   showVersion();
+  showSafeMode();
   const reg = location.hash.match(/^#register\/([\w-]+)$/);
   if (reg) {
     history.replaceState(null, "", location.pathname + location.search);

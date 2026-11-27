@@ -663,6 +663,12 @@ a.zenn-article:hover { color: var(--accent); }
   :root:not([data-theme="light"]) .tok-propertyName, :root:not([data-theme="light"]) .tok-labelName, :root:not([data-theme="light"]) .tok-macroName { color: #a3aef0; }
 }
 .editor-preview { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-md); padding: 0 16px; }
+/* The server runs in the safe mode, without the settings file (showSafeMode). */
+.safe-mode { display: flex; align-items: center; gap: 12px; background: var(--banner-bg); padding: 8px 16px; font-size: var(--fs-sm); border-bottom: 1px solid var(--border); }
+.safe-mode-text { flex: 1; min-width: 0; }
+.safe-mode button { flex: none; }
+.safe-mode[hidden] { display: none; }
+.safe-mode code { display: block; margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--fs-xs)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .banner { background: var(--banner-bg); border-radius: var(--r-md); padding: 8px 12px; font-size: var(--fs-xs); }
 
 /* Assistant: a column on the right with the questions, the answers and a box

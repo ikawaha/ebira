@@ -39,6 +39,11 @@ var settings config.Config
 // machineSettings is the settings file alone, without the defaults.
 var machineSettings config.Config
 
+// settingsError is the error of the settings file in the safe mode
+// (config.SafeEnv), which the commands start without, taking only its
+// notes_dir (config.Salvage); nil when the file reads.
+var settingsError error
+
 // defaultNotesDir returns the default of -notes: notes_dir of the settings
 // file, else notes in the current directory.
 func defaultNotesDir() string { return cmp.Or(settings.NotesDir, "notes") }
@@ -110,7 +115,12 @@ func run(args []string) error {
 	}
 	var err error
 	if settings, err = config.Load(); err != nil {
-		return err
+		if !config.Safe() {
+			return fmt.Errorf("%w\n(fix the settings file, or set %s=1 to start without it until it is fixed)", err, config.SafeEnv)
+		}
+		settingsError = err
+		settings = config.Salvage()
+		fmt.Fprintf(os.Stderr, "safe mode: the settings file is not used: %v\n", err)
 	}
 	machineSettings = settings
 	if len(args) > 0 {

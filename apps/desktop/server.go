@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -61,11 +62,51 @@ type status struct {
 	State      *struct {
 		PID int `json:"pid"`
 	} `json:"state"`
+	// SettingsError is the error of the settings file of ebira, which keeps
+	// the server from starting outside the safe mode; SettingsFile is its
+	// path. Empty from an ebira whose file reads, or from an earlier one.
+	SettingsError string `json:"settings_error"`
+	SettingsFile  string `json:"settings_file"`
+}
+
+// safeEnv names the environment variable of the safe mode of ebira
+// (config.SafeEnv), in which it takes a settings file with an error as none.
+const safeEnv = "EBIRA_SAFE_MODE"
+
+// safeMode is on once the user starts the server in the safe mode, for the
+// rest of the run of the app: the servers it starts then start without the
+// settings file of ebira while it has an error, and as usual once it is
+// fixed.
+var safeMode atomic.Bool
+
+// ebiraCommand runs the ebira of the app, bin, with args: in the safe mode
+// when it is on or with safe.
+func ebiraCommand(bin string, safe bool, args ...string) *exec.Cmd {
+	cmd := helperCommand(bin, args...)
+	if safe || safeMode.Load() {
+		cmd.Env = append(os.Environ(), safeEnv+"=1")
+	}
+	return cmd
+}
+
+// brokenSettings returns the status of ebira when its settings file has an
+// error, which keeps the server from starting until it is fixed or the safe
+// mode is on, or nil.
+func brokenSettings() *status {
+	if safeMode.Load() {
+		return nil
+	}
+	st, err := serverStatus("")
+	if err != nil || st.SettingsError == "" {
+		return nil
+	}
+	return st
 }
 
 // serverStatus asks the ebira of the app for the server of the notes folder
 // notes, or of notes_dir in the config file of ebira for an empty one: from
-// its lock and state, which only this user can write.
+// its lock and state, which only this user can write. It asks in the safe
+// mode, so that a settings file with an error is told, not failed on.
 func serverStatus(notes string) (*status, error) {
 	bin, err := helper()
 	if err != nil {
@@ -75,7 +116,7 @@ func serverStatus(notes string) (*status, error) {
 	if notes != "" {
 		args = append(args, "-notes", notes)
 	}
-	out, err := helperCommand(bin, args...).Output()
+	out, err := ebiraCommand(bin, true, args...).Output()
 	if err != nil {
 		// As an ebira on the PATH older than -json says.
 		var exit *exec.ExitError
@@ -98,6 +139,11 @@ func configuredNotes() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("find the notes folder of the config file of ebira: %w", err)
 	}
+	// Without notes_dir read from a config file with an error, the folder
+	// told is notes/ of the current directory, which means nothing here.
+	if st.SettingsError != "" && st.Configured != nil && !*st.Configured {
+		return "", errors.New("the notes folder cannot be read from the config file of ebira, which has an error: choose the notes folder")
+	}
 	return st.NotesDir, nil
 }
 
@@ -106,13 +152,14 @@ func configuredNotes() (string, error) {
 // is opened before ebira is set up. The default of the commands then, notes/
 // of the current directory, means nothing to the app, which starts anywhere,
 // such as at / from the Finder. An earlier ebira, which does not tell, is
-// taken as set up.
+// taken as set up, and so is a config file with an error, which may have
+// notes_dir in a line that does not read: offerSafeMode tells it instead.
 func firstStart(t target) bool {
 	if t.Notes != "" || !local(t.Addr) {
 		return false
 	}
 	st, err := serverStatus("")
-	return err == nil && st.Configured != nil && !*st.Configured
+	return err == nil && st.Configured != nil && !*st.Configured && st.SettingsError == ""
 }
 
 // defaultNotes is the notes folder offered at the first start: ebira in the
@@ -209,7 +256,7 @@ func connect(t target, first *firstSetup) (*health, error) {
 		if err != nil {
 			return nil, err
 		}
-		if out, err := helperCommand(bin, args...).CombinedOutput(); err != nil {
+		if out, err := ebiraCommand(bin, false, args...).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("start the server: %w\n%s", err, out)
 		}
 		if h, err = readHealth(addr); err != nil {

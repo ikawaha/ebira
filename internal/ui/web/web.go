@@ -91,6 +91,10 @@ type Options struct {
 	// data-guide-names attribute, one a line, by which the page knows the
 	// notebooks of the guide.
 	GuideNames []string
+	// SettingsError is the error of the settings file when the server runs
+	// in the safe mode without it, given as the data-settings-error
+	// attribute, which the page tells above the panes; empty for none.
+	SettingsError string
 }
 
 // stylesDir is where the built-in styles of the preview are served, under
@@ -120,6 +124,9 @@ func Handler(o Options) http.Handler {
 	}
 	if o.Version != "" {
 		attrs += ` data-version="` + html.EscapeString(o.Version) + `" data-version-text="` + html.EscapeString(o.VersionText) + `"`
+	}
+	if o.SettingsError != "" {
+		attrs += ` data-settings-error="` + html.EscapeString(o.SettingsError) + `"`
 	}
 	if len(o.GuideNames) > 0 {
 		attrs += ` data-guide-names="` + html.EscapeString(strings.Join(o.GuideNames, "\n")) + `"`

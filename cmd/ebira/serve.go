@@ -302,6 +302,14 @@ func runServe(args []string) error {
 	if err != nil {
 		return err
 	}
+	// In the safe mode the settings of auth are not known, so the notes are
+	// served to this computer only.
+	if settingsError != nil && !loopback(listenHost) {
+		return fmt.Errorf("in the safe mode, the server listens on this computer only, such as localhost:13579, not %s", *addr)
+	}
+	if settingsError != nil {
+		slog.Warn("safe mode: the settings file is not used until it is fixed", "error", settingsError)
+	}
 	if *o.auth == auth.ModePasskey && listenHost != "localhost" {
 		slog.Warn("passkeys work only on the web UI at localhost", "url", "http://localhost:"+port+web.Prefix)
 	}
@@ -356,7 +364,7 @@ func runServe(args []string) error {
 	ui := web.Handler(web.Options{
 		Look: look.get, Search: string(mode), PreviewCSS: previewCSS,
 		Version: versionLabel(bi), VersionText: versionText(bi, daemon.Version()),
-		GuideNames: guide.Names(),
+		GuideNames: guide.Names(), SettingsError: errorText(settingsError),
 	})
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)
@@ -586,6 +594,14 @@ func sweepHistoryEvery(ctx context.Context, svc *service.Notes, interval time.Du
 		case <-t.C:
 		}
 	}
+}
+
+// errorText is the text of err, or "" for nil.
+func errorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 // loopback reports whether a server listening on host is reached from this

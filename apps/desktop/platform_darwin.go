@@ -165,3 +165,7 @@ func saveFrame(*application.WebviewWindow) {}
 
 // helperCommand runs the ebira of the bundle.
 func helperCommand(bin string, args ...string) *exec.Cmd { return exec.Command(bin, args...) }
+
+// openTextFile opens the file at path in the editor of text of the system,
+// TextEdit unless another is chosen.
+func openTextFile(path string) error { return exec.Command("open", "-t", path).Run() }
