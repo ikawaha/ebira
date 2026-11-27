@@ -26,7 +26,7 @@ echo '{"notes_dir":"/n","configured":true,"running":false,"settings_error":"conf
 	if err := os.WriteFile(filepath.Join(bin, "ebira"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	st := brokenSettings()
+	st := brokenSettings("")
 	if st == nil || st.SettingsError != "config.yaml: yaml: line 2" || st.SettingsFile != "/c/config.yaml" {
 		t.Fatalf("brokenSettings = %+v, want the error and the file", st)
 	}
@@ -39,7 +39,7 @@ echo '{"notes_dir":"/n","configured":true,"running":false,"settings_error":"conf
 	if !has(ebiraCommand("ebira", false, "server", "start")) {
 		t.Error("the server starts outside the safe mode once it is asked for")
 	}
-	if st := brokenSettings(); st != nil {
+	if st := brokenSettings(""); st != nil {
 		t.Errorf("brokenSettings in the safe mode = %+v, want nil", st)
 	}
 	if n, err := configuredNotes(); err != nil || n != "/n" {
@@ -58,5 +58,41 @@ echo '{"notes_dir":"/cwd/notes","configured":false,"running":false,"settings_err
 	}
 	if n, err := configuredNotes(); err == nil {
 		t.Errorf("configuredNotes = %q, want an error to choose the folder", n)
+	}
+}
+
+// TestBrokenNotesSettings checks that the app learns of an error of the
+// settings shared with the notes of the folder it is to show, and offers
+// that file, after the settings file of ebira when both have one.
+func TestBrokenNotesSettings(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the ebira of the test is a shell script")
+	}
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	ebira := func(out string) {
+		t.Helper()
+		// The folder asked for is told back as $notes, so that the test sees
+		// it given; PATH has no other commands.
+		script := "#!/bin/sh\nnotes=\"\"\nwhile [ $# -gt 0 ]; do [ \"$1\" = -notes ] && notes=\"$2\"; shift; done\necho \"" + out + "\"\n"
+		if err := os.WriteFile(filepath.Join(bin, "ebira"), []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ebira(`{\"notes_dir\":\"$notes\",\"configured\":true,\"running\":false,\"notes_settings_error\":\"$notes/_ebira.yaml: yaml: line 3\",\"notes_settings_file\":\"$notes/_ebira.yaml\"}`)
+	st := brokenSettings("/my/notes")
+	if st == nil {
+		t.Fatal("brokenSettings = nil, want the error of _ebira.yaml")
+	}
+	if file, err := st.broken(); file != "/my/notes/_ebira.yaml" || err != "/my/notes/_ebira.yaml: yaml: line 3" {
+		t.Errorf("broken = %q, %q; want _ebira.yaml of the folder asked for", file, err)
+	}
+	ebira(`{\"notes_dir\":\"/n\",\"configured\":true,\"running\":false,\"settings_error\":\"config.yaml: line 1\",\"settings_file\":\"/c/config.yaml\",\"notes_settings_error\":\"_ebira.yaml: line 3\",\"notes_settings_file\":\"/n/_ebira.yaml\"}`)
+	if file, _ := brokenSettings("").broken(); file != "/c/config.yaml" {
+		t.Errorf("broken file = %q, want the settings file of ebira first", file)
+	}
+	ebira(`{\"notes_dir\":\"/n\",\"configured\":true,\"running\":false}`)
+	if st := brokenSettings(""); st != nil {
+		t.Errorf("brokenSettings with no error = %+v, want nil", st)
 	}
 }

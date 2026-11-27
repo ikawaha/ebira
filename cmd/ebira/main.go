@@ -27,8 +27,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ikawaha/ebira/internal/config"
+	"github.com/ikawaha/ebira/internal/store"
 )
 
 // settings is the settings file, read by run before the flags, with the
@@ -43,6 +45,41 @@ var machineSettings config.Config
 // (config.SafeEnv), which the commands start without, taking only its
 // notes_dir (config.Salvage); nil when the file reads.
 var settingsError error
+
+// notesSettingsError is the error of the settings shared with the notes,
+// _ebira.yaml of the notes directory, in the safe mode, which the commands
+// start without, taking only its search mode (store.SalvageSearch); nil when
+// the file reads.
+var notesSettingsError error
+
+// safeHint adds to err, of a settings file that cannot be read, how to start
+// without it: the safe mode.
+func safeHint(err error) error {
+	return fmt.Errorf("%w\n(fix the file, or set %s=1 to start without it until it is fixed)", err, config.SafeEnv)
+}
+
+// safeModeErrors is the text of the errors of the settings files that the
+// safe mode leaves out, one a line, or "" for none.
+func safeModeErrors() string {
+	var lines []string
+	for _, err := range []error{settingsError, notesSettingsError} {
+		if err != nil {
+			lines = append(lines, err.Error())
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// notesSettingsCheck returns the error of _ebira.yaml of the notes directory
+// dir, as the server reads it: its defaults (config.LoadDefaults) or the
+// rest of it (store.LoadConfig); nil when it reads or is missing.
+func notesSettingsCheck(dir string) error {
+	if _, _, err := config.LoadDefaults(dir); err != nil {
+		return err
+	}
+	_, err := store.LoadConfig(dir)
+	return err
+}
 
 // defaultNotesDir returns the default of -notes: notes_dir of the settings
 // file, else notes in the current directory.
@@ -116,7 +153,7 @@ func run(args []string) error {
 	var err error
 	if settings, err = config.Load(); err != nil {
 		if !config.Safe() {
-			return fmt.Errorf("%w\n(fix the settings file, or set %s=1 to start without it until it is fixed)", err, config.SafeEnv)
+			return safeHint(err)
 		}
 		settingsError = err
 		settings = config.Salvage()

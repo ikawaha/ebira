@@ -49,7 +49,7 @@ The app uses the server at the address of its settings (`localhost:13579` by def
 
 When it cannot connect, the settings window tells why.
 
-When the settings file of ebira has a mistake and the server cannot start, that window has "Open Settings File" and "Start in Safe Mode". "Open Settings File" opens the file in an editor of text (TextEdit on macOS, Notepad on Windows); fix it and press "Apply" to start as usual. "Start in Safe Mode" starts the server without the file until it is fixed ("Safe mode" in [Settings](settings.md)).
+When the settings file of ebira, or `_ebira.yaml` of the notes folder, has a mistake and the server cannot start, that window has "Open File" and "Start in Safe Mode". "Open File" opens the file with the mistake in an editor of text (TextEdit on macOS, Notepad on Windows); fix it and press "Apply" to start as usual. "Start in Safe Mode" starts the server without the file until it is fixed ("Safe mode" in [Settings](settings.md)).
 
 When ebira is not set up yet (no `notes_dir` in the config file), a window opens first to choose the notes folder: ebira in your Documents folder by default, or any other. For a new folder it also asks the language and the search mode (it opens in English, and speaks Japanese once you choose it). "Apply" makes the folder with this guide, and writes it as `notes_dir` in the config file, so that the TUI, the CLI and MCP use the same notes. If the folder has files but no notes of ebira, it asks whether to keep the notes there (its folders become notebooks and its YAML files notes).
 

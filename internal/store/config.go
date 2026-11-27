@@ -41,9 +41,13 @@ type Config struct {
 
 // Config reads ConfigFile. A missing file gives the zero value, and an unknown
 // key is an error so that a misspelled setting is not silently ignored.
-func (s *Store) Config() (Config, error) {
+func (s *Store) Config() (Config, error) { return LoadConfig(s.dir) }
+
+// LoadConfig reads ConfigFile of the notes directory dir, as Store.Config
+// does, without making the directory, as for telling its error.
+func LoadConfig(dir string) (Config, error) {
 	var c Config
-	p := s.ConfigPath()
+	p := filepath.Join(dir, ConfigFile)
 	b, err := readFile(p)
 	if errors.Is(err, fs.ErrNotExist) {
 		return c, nil
