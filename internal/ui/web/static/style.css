@@ -569,6 +569,11 @@ a.zenn-article:hover { color: var(--accent); }
 /* With the id, over the margin of pre in preview.css; the space below is the
    one of pre there. */
 #preview .body .code-fold > pre { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+.body .code-fold > summary .code-copy { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: auto; padding: 0; border: none; border-radius: var(--r-sm); background: none; color: var(--fg-muted); opacity: 0; cursor: pointer; }
+.body .code-fold > summary .code-copy svg { width: 14px; height: 14px; transform: none; }
+.body .code-fold:hover > summary .code-copy, .body .code-fold > summary .code-copy:focus-visible { opacity: 1; }
+.body .code-fold > summary .code-copy:hover { color: var(--fg); background: var(--bg-active); }
+@media (hover: none) { .body .code-fold > summary .code-copy { opacity: 0.4; } }
 .body .code-lang { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .body .code-lang + .code-lines::before { content: "·"; margin-right: 8px; }
 /* In a heading, code is sized after the heading, not after the body text. */
