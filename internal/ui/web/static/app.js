@@ -4064,6 +4064,14 @@ function addCodeFolds(body, id) {
     pre.replaceWith(fold);
     const bar = el("summary", "", kindSVG("chevron"), el("span", "code-lines", label));
     if (lang) bar.insertBefore(el("span", "code-lang", lang), bar.lastChild);
+    // A click on the copy button copies the code and leaves the block as it is.
+    const copy = button(kindSVG("copy"), (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      copyCode(pre.textContent.replace(/\n$/, ""), lang);
+    }, { title: t("copyCodeTitle"), cls: "code-copy" });
+    copy.setAttribute("aria-label", t("copyCodeTitle"));
+    bar.append(copy);
     fold.append(bar, pre);
     fold.addEventListener("toggle", () => {
       const set = codeFolds.get(id) || new Set();
@@ -4079,6 +4087,18 @@ function addCodeFolds(body, id) {
 function unfold(node) {
   const fold = node.closest("details.code-fold");
   if (fold) fold.open = true;
+}
+
+// copyCode copies the text of a code block of the note in the preview to the
+// clipboard; lang is the language of the block, if any.
+async function copyCode(text, lang) {
+  try {
+    await writeClipboard(text);
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(lang ? t("copiedCodeLang", { lang }) : t("copiedCode"));
 }
 
 // copySection copies a section of the note in the preview to the clipboard.
