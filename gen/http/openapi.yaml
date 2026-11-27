@@ -5616,7 +5616,7 @@ definitions:
             gemini_key_command:
                 type: string
                 description: Command that prints the API key of Gemini, as anthropic_key_command does
-                example: bw get password 'Gemini API key'
+                example: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
             git_sync:
                 type: string
                 description: Interval of syncing the notes with git, such as 10m; empty or 0 for none
@@ -5683,7 +5683,7 @@ definitions:
         example:
             anthropic_key_command: op read 'op://Private/Anthropic/credential'
             auth: none
-            gemini_key_command: bw get password 'Gemini API key'
+            gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
             git_sync: 10m
             lang: ja
             model: Vel sit soluta aut corporis nostrum.
@@ -13055,7 +13055,7 @@ definitions:
             machine:
                 anthropic_key_command: op read 'op://Private/Anthropic/credential'
                 auth: none
-                gemini_key_command: bw get password 'Gemini API key'
+                gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
@@ -13072,7 +13072,7 @@ definitions:
                 defaults:
                     anthropic_key_command: op read 'op://Private/Anthropic/credential'
                     auth: none
-                    gemini_key_command: bw get password 'Gemini API key'
+                    gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.
@@ -13610,7 +13610,7 @@ definitions:
             defaults:
                 anthropic_key_command: op read 'op://Private/Anthropic/credential'
                 auth: none
-                gemini_key_command: bw get password 'Gemini API key'
+                gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
@@ -15411,7 +15411,7 @@ definitions:
             machine:
                 anthropic_key_command: op read 'op://Private/Anthropic/credential'
                 auth: none
-                gemini_key_command: bw get password 'Gemini API key'
+                gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
                 git_sync: 10m
                 lang: ja
                 model: Vel sit soluta aut corporis nostrum.
@@ -15429,7 +15429,7 @@ definitions:
                 defaults:
                     anthropic_key_command: op read 'op://Private/Anthropic/credential'
                     auth: none
-                    gemini_key_command: bw get password 'Gemini API key'
+                    gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
                     git_sync: 10m
                     lang: ja
                     model: Vel sit soluta aut corporis nostrum.

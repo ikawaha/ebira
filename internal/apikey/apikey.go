@@ -7,6 +7,7 @@ package apikey
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -25,21 +26,26 @@ const Timeout = 2 * time.Minute
 const maxOutput = 64 << 10
 
 // Run runs command, a line of the shell, without input, and returns the key
-// it printed, the one line of its standard output without the spaces around
-// it. A command the shell cannot find is run again with the PATH of the
-// login shell of the user: a server started by the desktop app, from the
-// Finder, has a PATH without the directories of the shell, such as that of
-// Homebrew.
+// it printed: the one line of its standard output without the spaces around
+// it, or the value of the JSON object it printed, as bws, the command line
+// tool of Bitwarden Secrets Manager, prints a secret.
+//
+// A command that fails is run again with the environment of the login shell
+// of the user, when it adds to that of the server: its PATH, as a server
+// started by the desktop app, from the Finder, lacks the directories of the
+// shell, such as that of Homebrew, and the variables that the tools of the
+// password managers take their sessions and tokens from (ShellVars), as the
+// profile of the shell may set them.
 func Run(ctx context.Context, command string) (string, error) {
 	if strings.TrimSpace(command) == "" {
 		return "", errors.New("no command")
 	}
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
-	key, err := run(ctx, command, "")
-	if errors.Is(err, errNotFound) {
-		if p := shellPath(ctx); p != "" {
-			key, err = run(ctx, command, p)
+	key, err := run(ctx, command, nil)
+	if err != nil && ctx.Err() == nil {
+		if env := shellEnv(ctx); len(env) > 0 {
+			key, err = run(ctx, command, env)
 		}
 	}
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
@@ -48,28 +54,37 @@ func Run(ctx context.Context, command string) (string, error) {
 	return key, err
 }
 
-// errNotFound is the error of a command the shell did not find.
-var errNotFound = errors.New("command not found")
+// ShellVars are the variables of the login shell that a command is run
+// again with, when the server lacks them: the sessions and the tokens of
+// the command line tools of the password managers.
+var ShellVars = []string{
+	"BWS_ACCESS_TOKEN",         // bws, Bitwarden Secrets Manager
+	"BW_SESSION",               // bw, Bitwarden
+	"OP_SERVICE_ACCOUNT_TOKEN", // op, 1Password service accounts
+}
 
-// run runs command with the PATH path, or that of this process for "".
-func run(ctx context.Context, command, path string) (string, error) {
+// run runs command with the variables env added to the environment of this
+// process.
+func run(ctx context.Context, command string, env []string) (string, error) {
 	cmd := shellCommand(ctx, command)
-	cmd.Env = os.Environ()
-	if path != "" {
-		cmd.Env = append(cmd.Env, "PATH="+path)
-	}
 	// Bitwarden's bw would wait for a master password that nobody types.
-	cmd.Env = append(cmd.Env, "BW_NOINTERACTION=true")
+	cmd.Env = append(append(os.Environ(), env...), "BW_NOINTERACTION=true")
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &limited{w: &out, n: maxOutput}
 	cmd.Stderr = &limited{w: &stderr, n: maxOutput}
 	if err := cmd.Run(); err != nil {
-		if notFound(cmd, err) {
-			return "", fmt.Errorf("%w: %s", errNotFound, message(stderr.String(), err))
-		}
 		return "", errors.New(message(stderr.String(), err))
 	}
 	key := strings.TrimSpace(out.String())
+	if strings.HasPrefix(key, "{") {
+		var secret struct {
+			Value *string `json:"value"`
+		}
+		if err := json.Unmarshal([]byte(key), &secret); err != nil || secret.Value == nil {
+			return "", errors.New("the command printed JSON without a value: it should print the key alone, or a secret as bws does")
+		}
+		key = strings.TrimSpace(*secret.Value)
+	}
 	switch {
 	case key == "":
 		return "", fmt.Errorf("the command printed no key%s", detail(stderr.String()))
@@ -135,20 +150,26 @@ func (l *limited) Write(p []byte) (int, error) {
 }
 
 var (
-	loginPath     string
-	loginPathOnce sync.Once
+	loginEnv     map[string]string
+	loginEnvOnce sync.Once
 )
 
-// shellPath returns the PATH of the login shell of the user joined with
-// that of this process, or "" when it adds nothing.
-func shellPath(ctx context.Context) string {
-	loginPathOnce.Do(func() { loginPath = readShellPath(ctx) })
-	if loginPath == "" {
-		return ""
+// shellEnv returns the variables of the login shell of the user that add to
+// the environment of this process: PATH, with that of the shell first, and
+// those of ShellVars this process lacks; nil for none.
+func shellEnv(ctx context.Context) []string {
+	loginEnvOnce.Do(func() { loginEnv = readShellEnv(ctx) })
+	var env []string
+	if p := loginEnv["PATH"]; p != "" && p != os.Getenv("PATH") {
+		if cur := os.Getenv("PATH"); cur != "" {
+			p += string(os.PathListSeparator) + cur
+		}
+		env = append(env, "PATH="+p)
 	}
-	cur := os.Getenv("PATH")
-	if cur == "" {
-		return loginPath
+	for _, v := range ShellVars {
+		if loginEnv[v] != "" && os.Getenv(v) == "" {
+			env = append(env, v+"="+loginEnv[v])
+		}
 	}
-	return loginPath + string(os.PathListSeparator) + cur
+	return env
 }

@@ -176,6 +176,7 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 キーは設定のファイルに書きません。設定の「アシスタント」の「API キー」で、提供元ごとにキーの読み方を選びます。サーバーは、アシスタントを初めて使うとき（右の欄を開いたとき）にキーを読み、メモリだけに持ちます。保存するとすぐに当たり、起動し直さなくてよいです。
 
 - 1Password（op）: キーのシークレット参照（`op://Private/Anthropic/credential` の形。1Password のフィールドのメニューの「シークレット参照をコピー」）を書きます。[1Password の CLI](https://developer.1password.com/docs/cli/) を入れ、1Password のアプリの設定の「開発者」で「1Password CLI と連携」をオンにします。読むときに Touch ID などの確かめが出ます。
+- Bitwarden Secrets Manager（bws）: 値がキーのシークレットの ID を書きます（`bws secret get <ID> --output json` を動かし、JSON の `value` をキーにします）。[Secrets Manager の CLI](https://bitwarden.com/help/secrets-manager-cli/)（`bws`）と、そのシークレットを読めるマシンアカウントのアクセストークン（`BWS_ACCESS_TOKEN`）が要ります。サーバーの環境変数に無ければ、ログインシェルの `BWS_ACCESS_TOKEN`（`~/.zprofile` などで export しているもの）を使います。
 - Bitwarden（bw）: パスワードがキーの項目の名前か ID を書きます。[Bitwarden の CLI](https://bitwarden.com/help/cli/)（`bw`）は、保管庫のロックを外している間（`BW_SESSION` がある間）だけ読めます。端末で `export BW_SESSION=$(bw unlock --raw)` としてから `ebira server restart` で起動し直してください（デスクトップアプリが起動したサーバーには `BW_SESSION` がありません）。
 - Bitwarden（rbw）: [rbw](https://github.com/doy/rbw)（Bitwarden の非公式の CLI）の項目の名前を書きます。rbw のエージェントがロックを外したまま持つので、どこから起動したサーバーでも読めます。ロック中は pinentry がマスターパスワードを聞きます。
 - コマンド: キーだけを 1 行で出すコマンドを書きます。sh（Windows では cmd.exe）で、入力なしで動かします。たとえば:
@@ -187,11 +188,13 @@ Claude Desktop（`claude_desktop_config.json`）のように、サーバーを�
 
 ```yaml
 anthropic_key_command: op read op://Private/Anthropic/credential
-gemini_key_command: rbw get "Gemini API key"
+gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
+openai_key_command: rbw get "OpenAI API key"
 ```
 
 - コマンドが失敗したときは、アシスタントの欄に理由が出ます。欄を開き直すと、もう一度読みます。
-- サーバーをデスクトップアプリや Finder から起動したときも、コマンドはログインシェルの PATH から探します（Homebrew で入れた `op` や `bw` など）。
+- コマンドが失敗したら、ログインシェルの PATH（Homebrew で入れた `op` や `bws` など）と、サーバーに無いパスワードマネージャーの変数（`BWS_ACCESS_TOKEN`・`BW_SESSION`・`OP_SERVICE_ACCOUNT_TOKEN`）を足して、もう一度動かします。デスクトップアプリや Finder から起動したサーバーには、シェルの設定が無いためです。
+- コマンドの出力は、キーだけの 1 行か、`value` を持つ JSON（`bws` の形）です。
 - 提供元を選んでいなければ、キーのある最初の提供元（Anthropic・Gemini・OpenAI の順）を使います。
 - これらは端末ごとの設定で、ほかの端末と共有しません（`_ebira.yaml` の `defaults` に書いても使いません）。サーバーがパスキーなし（`auth: none`）でこの機械の外から受け付けているときは、Web UI からは変えられず、設定のファイルで変えます。
 

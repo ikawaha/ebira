@@ -176,6 +176,7 @@ The column `a` opens answers questions, searching and reading your notes. Answer
 The key is not written in the settings file. In the settings, under API keys of Assistant, choose how the server reads the key of each provider. The server reads it when the assistant is first used, as you open its column, and keeps it in memory only. It applies once saved, without a restart.
 
 - 1Password (op): the secret reference of the key, such as `op://Private/Anthropic/credential` (Copy Secret Reference in the menu of the field in 1Password). Install the [1Password CLI](https://developer.1password.com/docs/cli/), and turn on Integrate with 1Password CLI under Developer in the settings of the 1Password app. Reading the key asks to confirm it, as with Touch ID.
+- Bitwarden Secrets Manager (bws): the ID of the secret whose value is the key (the server runs `bws secret get <ID> --output json` and takes `value` of the JSON). It needs the [Secrets Manager CLI](https://bitwarden.com/help/secrets-manager-cli/) (`bws`), and the access token of a machine account that reads the secret in `BWS_ACCESS_TOKEN`. Without it in the environment of the server, `BWS_ACCESS_TOKEN` of your login shell is used, as one exported in `~/.zprofile`.
 - Bitwarden (bw): the name or ID of the item whose password is the key. The [Bitwarden CLI](https://bitwarden.com/help/cli/) (`bw`) reads it only while the vault is unlocked, with `BW_SESSION` set. Run `export BW_SESSION=$(bw unlock --raw)` in a terminal, then restart the server with `ebira server restart` (a server the desktop app starts has no `BW_SESSION`).
 - Bitwarden (rbw): the name of the item in [rbw](https://github.com/doy/rbw), an unofficial Bitwarden CLI. Its agent keeps the vault unlocked, so a server started from anywhere reads it. While it is locked, its pinentry asks for the master password.
 - Command: a command that prints the key alone, on one line. It runs with sh (cmd.exe on Windows), without input. For example:
@@ -187,11 +188,13 @@ The settings file (`~/.config/ebira/config.yaml`) has them as `anthropic_key_com
 
 ```yaml
 anthropic_key_command: op read op://Private/Anthropic/credential
-gemini_key_command: rbw get "Gemini API key"
+gemini_key_command: bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json
+openai_key_command: rbw get "OpenAI API key"
 ```
 
 - When a command fails, the column of the assistant tells why. Opening it again reads the key again.
-- A server started by the desktop app or from the Finder looks for the command in the PATH of your login shell too, as for `op` or `bw` installed with Homebrew.
+- A command that fails is run again with the PATH of your login shell (for `op` or `bws` installed with Homebrew) and the variables of the password managers the server lacks (`BWS_ACCESS_TOKEN`, `BW_SESSION`, `OP_SERVICE_ACCOUNT_TOKEN`), as a server the desktop app or the Finder started has none of the settings of your shell.
+- A command prints the key alone on one line, or JSON with `value`, as `bws` does.
 - Without a provider chosen, the assistant uses the first one with a key, in the order Anthropic, Gemini, OpenAI.
 - These are settings of each machine, never shared with the others (`defaults` of `_ebira.yaml` leaves them out). While the server takes requests from beyond this machine without passkeys (`auth: none`), the web UI cannot change them: change them in the settings file.
 

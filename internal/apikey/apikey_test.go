@@ -24,6 +24,8 @@ func TestRun(t *testing.T) {
 		{name: "lines", command: `printf 'a\nb\n'`, err: "more than one line"},
 		{name: "no input", command: `read x || echo none`, key: "none"},
 		{name: "blank", command: "  ", err: "no command"},
+		{name: "secret of bws", command: `printf '{\n  "id": "x",\n  "key": "ANTHROPIC",\n  "value": "sk-bws"\n}\n'`, key: "sk-bws"},
+		{name: "JSON without a value", command: `echo '{"id": "x"}'`, err: "JSON without a value"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,15 +55,26 @@ func TestRunShellPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	shell := filepath.Join(dir, "shell")
-	// A login shell whose profile prints a greeting before the PATH.
-	if err := os.WriteFile(shell, []byte("#!/bin/sh\necho hello\nPATH="+bin+":/usr/bin:/bin\nexport PATH\nexec /bin/sh \"$@\"\n"), 0o755); err != nil {
+	// A login shell whose profile prints a greeting before the PATH, and
+	// sets the token of bws.
+	if err := os.WriteFile(shell, []byte("#!/bin/sh\necho hello\nPATH="+bin+":/usr/bin:/bin\nBWS_ACCESS_TOKEN=token-of-shell\nexport PATH BWS_ACCESS_TOKEN\nexec /bin/sh \"$@\"\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("SHELL", shell)
 	t.Setenv("PATH", "/usr/bin:/bin")
-	loginPathOnce, loginPath = sync.Once{}, ""
+	t.Setenv("BWS_ACCESS_TOKEN", "")
+	loginEnvOnce, loginEnv = sync.Once{}, nil
 	key, err := Run(context.Background(), "ebira-test-key")
 	if err != nil || key != "sk-from-shell" {
 		t.Fatalf("got %q, %v", key, err)
+	}
+	// A token of the profile, which the server lacks.
+	key, err = Run(context.Background(), `test -n "$BWS_ACCESS_TOKEN" || { echo 'missing access token' >&2; exit 1; }; echo "key-for-$BWS_ACCESS_TOKEN"`)
+	if err != nil || key != "key-for-token-of-shell" {
+		t.Fatalf("token: got %q, %v", key, err)
+	}
+	// A command failing with the environment of the shell too tells why.
+	if _, err := Run(context.Background(), `echo 'item not found' >&2; exit 1`); err == nil || err.Error() != "item not found" {
+		t.Fatalf("failing: %v", err)
 	}
 }

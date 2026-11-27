@@ -476,7 +476,7 @@ var MachineSettings = Type("MachineSettings", func() {
 		Example("op read 'op://Private/Anthropic/credential'")
 	})
 	Attribute("gemini_key_command", String, "Command that prints the API key of Gemini, as anthropic_key_command does", func() {
-		Example("bw get password 'Gemini API key'")
+		Example("bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json")
 	})
 	Attribute("openai_key_command", String, "Command that prints the API key of OpenAI, as anthropic_key_command does", func() {
 		Example("rbw get 'OpenAI API key'")

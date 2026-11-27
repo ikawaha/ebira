@@ -2,7 +2,6 @@ package apikey
 
 import (
 	"context"
-	"errors"
 	"os/exec"
 	"syscall"
 )
@@ -22,13 +21,6 @@ func shellCommand(ctx context.Context, command string) *exec.Cmd {
 	return cmd
 }
 
-// notFound tells whether err is that of cmd.exe not finding a command: exit
-// status 9009.
-func notFound(_ *exec.Cmd, err error) bool {
-	var ee *exec.ExitError
-	return errors.As(err, &ee) && ee.ExitCode() == 9009
-}
-
-// readShellPath returns "": a program started on Windows has the PATH of the
-// user already.
-func readShellPath(context.Context) string { return "" }
+// readShellEnv returns nil: a program started on Windows has the
+// environment of the user already.
+func readShellEnv(context.Context) map[string]string { return nil }

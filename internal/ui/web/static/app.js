@@ -6554,12 +6554,14 @@ const KEY_PROVIDERS = [
 ];
 
 // KEY_TOOLS are the password managers whose commands the settings write
-// from the secret they read: 1Password's op, and Bitwarden's bw and rbw.
+// from the secret they read: 1Password's op, bws of Bitwarden Secrets
+// Manager, which prints the secret as JSON, and Bitwarden's bw and rbw.
 // The secret is quoted with double quotes, which both sh and cmd.exe take.
 const KEY_TOOLS = {
-  op: { prefix: "op read ", placeholder: "op://Private/Anthropic/credential" },
-  bw: { prefix: "bw get password ", placeholder: "Anthropic API key" },
-  rbw: { prefix: "rbw get ", placeholder: "Anthropic API key" },
+  op: { prefix: "op read ", suffix: "", placeholder: "op://Private/Anthropic/credential" },
+  bws: { prefix: "bws secret get ", suffix: " --output json", placeholder: "be8e0ad8-d545-4017-a55a-b02f014d4158" },
+  bw: { prefix: "bw get password ", suffix: "", placeholder: "Anthropic API key" },
+  rbw: { prefix: "rbw get ", suffix: "", placeholder: "Anthropic API key" },
 };
 
 // keyArg returns the secret s quoted for a command, or null for one that
@@ -6572,9 +6574,9 @@ function keyArg(s) {
 // keyCommandOf splits a command into the tool and the secret it reads, as
 // keyArg quoted it; the tool is "command" for any other.
 function keyCommandOf(command) {
-  for (const [tool, { prefix }] of Object.entries(KEY_TOOLS)) {
-    if (!command.startsWith(prefix)) continue;
-    const arg = command.slice(prefix.length);
+  for (const [tool, { prefix, suffix }] of Object.entries(KEY_TOOLS)) {
+    if (!command.startsWith(prefix) || !command.endsWith(suffix) || command.length < prefix.length + suffix.length) continue;
+    const arg = command.slice(prefix.length, command.length - suffix.length);
     const m = /^"([^"]*)"$/.exec(arg);
     const secret = m ? m[1] : arg;
     if (secret && keyArg(secret) === arg) return { tool, secret };
@@ -6588,7 +6590,7 @@ function keyCommandOf(command) {
 function keyCommandRow(provider, label, env, command, cur) {
   const start = keyCommandOf(command);
   const tool = el("select");
-  for (const v of ["", "op", "bw", "rbw", "command"]) {
+  for (const v of ["", "op", "bws", "bw", "rbw", "command"]) {
     const o = el("option", "", t("settingsKeyTool_" + (v || "none")));
     o.value = v;
     tool.append(o);
@@ -6617,7 +6619,7 @@ function keyCommandRow(provider, label, env, command, cur) {
     const s = input.value.trim();
     if (tool.value === "command" && KEY_TOOLS[was] && s) {
       const arg = keyArg(s);
-      if (arg !== null) input.value = KEY_TOOLS[was].prefix + arg;
+      if (arg !== null) input.value = KEY_TOOLS[was].prefix + arg + KEY_TOOLS[was].suffix;
     } else if (KEY_TOOLS[tool.value] && was === "command") {
       const p = keyCommandOf(s);
       input.value = KEY_TOOLS[p.tool] ? p.secret : "";
@@ -6632,7 +6634,7 @@ function keyCommandRow(provider, label, env, command, cur) {
     if (!v || !s) return "";
     if (v === "command") return s;
     const arg = keyArg(s);
-    return arg === null ? "" : KEY_TOOLS[v].prefix + arg;
+    return arg === null ? "" : KEY_TOOLS[v].prefix + arg + KEY_TOOLS[v].suffix;
   };
   const error = () => (KEY_TOOLS[tool.value] && input.value.trim() && keyArg(input.value.trim()) === null ? t("settingsKeyQuote", { provider: label }) : "");
   const box = el("div", "settings-control", el("div", "settings-share-line", tool, input), hint, envHint);
