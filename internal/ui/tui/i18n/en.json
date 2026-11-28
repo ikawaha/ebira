@@ -3,6 +3,7 @@
   "status.asking": "asking the assistant…",
   "status.sort": "sort: {sort}",
   "status.reorderHint": "J/K moves notes of a notebook sorted by order, without a search (s changes the sort)",
+  "status.reorderPinned": "Pinned notes move only among themselves, and the others below them (M takes the pin off)",
   "status.loadFailed": "load failed: {err}",
   "status.assistantFailed": "the assistant failed: {err}",
   "status.assistantUnavailable": "the assistant is unavailable: {err}",

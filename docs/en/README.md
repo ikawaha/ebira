@@ -22,7 +22,7 @@ These pages are also the guide that ebira puts in a new notes directory, as a no
 ## Organizing
 
 - [Tags](tags.md): tag notes, and list them by tag
-- [Marks](marks.md): colors and symbols to tell notes at a glance
+- [Marks](marks.md): colors and symbols to tell notes at a glance, and pinning with 📌
 - [Separators and order](separators.md): order notes by hand, with separators between them
 
 ## Finding

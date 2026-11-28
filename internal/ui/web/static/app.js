@@ -346,6 +346,25 @@ function listItems(notes, separators, total) {
   return items;
 }
 
+// Pinned notes, those with the pin mark, come first in the lists of their
+// notebook, as the server orders them, above the other notes and the
+// separators. They move only among themselves, and the others only among
+// the others, so that a move never pins or unpins a note.
+const PIN = "pin";
+const isPinned = (n) => !!n?.marks?.includes(PIN);
+
+// crossesPins reports whether row id of items, the rows of a list in the
+// manual order, put right after row after (null for first) would go to the
+// other side of the pinned notes.
+function crossesPins(items, id, after) {
+  const others = items.filter((it) => it.id !== id);
+  let pinned = 0;
+  while (pinned < others.length && isPinned(others[pinned].note)) pinned++;
+  const pos = after ? others.findIndex((it) => it.id === after) + 1 : 0;
+  const me = items.find((it) => it.id === id);
+  return isPinned(me?.note) ? pos > pinned : pos < pinned;
+}
+
 // partialCell reports whether the cell key of notebook id holds only some of
 // its notes: a cell of the archive of a notebook not there, with the notes
 // put there on their own. Its notes cannot be reordered, nor separators put
@@ -2164,6 +2183,10 @@ function moveSelected(delta) {
   // Down: after the next row. Up: after the row above the previous one, or
   // first.
   const after = delta > 0 ? items[j].id : (items[j - 1]?.id ?? null);
+  if (crossesPins(items, state.selected, after)) {
+    showToast(t("reorderPinned"));
+    return;
+  }
   moveNote(state.selected, after);
 }
 
@@ -2214,9 +2237,14 @@ function enableDrag(li, reorder, list) {
     if (!dragID || list.some((it) => it.id === dragID)) return null;
     return notesInto(listOf(rowID(li)).nb);
   };
+  // A note dropped on the other side of the pinned notes goes in by its
+  // order, as it does not pin or unpin.
   const into = (e) => {
     const { reorder } = listOf(rowID(li));
-    return reorder && !draggedNotes() ? dropAfter(li, e, list) : null;
+    if (!reorder || draggedNotes()) return null;
+    const at = dropAfter(li, e, list);
+    const n = findListed(dragID);
+    return crossesPins([...list, { id: dragID, note: n }], dragID, at.after) ? null : at;
   };
   li.addEventListener("dragover", (e) => {
     if (foreign()) {
@@ -2238,9 +2266,11 @@ function enableDrag(li, reorder, list) {
     // As for the notebooks: a drop effect that the move of dragstart does not
     // allow drops nothing, and browsers differ in the one they take by default.
     e.dataTransfer.dropEffect = "move";
-    const { below } = dropAfter(li, e, list);
-    li.classList.toggle("drop-below", below);
-    li.classList.toggle("drop-above", !below);
+    const { after, below } = dropAfter(li, e, list);
+    // Across the pinned notes it is taken, to say why nothing moves.
+    const across = crossesPins(list, dragID, after);
+    li.classList.toggle("drop-below", below && !across);
+    li.classList.toggle("drop-above", !below && !across);
   });
   li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below", "drop-into"));
   li.addEventListener("drop", (e) => {
@@ -2262,6 +2292,11 @@ function enableDrag(li, reorder, list) {
     e.preventDefault();
     const id = dragID;
     const { after } = dropAfter(li, e, list);
+    if (crossesPins(list, id, after)) {
+      li.classList.remove("drop-above", "drop-below");
+      showToast(t("reorderPinned"));
+      return;
+    }
     const sep = list.find((it) => it.id === id)?.sep;
     if (sep) moveSeparator(sep, after);
     else moveNote(id, after);
@@ -2304,8 +2339,11 @@ function notesInto(nb) {
     const many = draggedNotes();
     if (many) return moveNotesTo(many, nb);
     const all = state.notes.length >= state.total;
-    const last = listItems(state.notes, state.separators, state.total).at(-1)?.id ?? null;
-    moveNoteTo(dragID, nb, canReorder() && all ? last : undefined);
+    const items = listItems(state.notes, state.separators, state.total);
+    const last = items.at(-1)?.id ?? null;
+    // A pinned note goes among the pinned notes, by its order.
+    const pinned = isPinned(findListed(dragID)) && !isPinned(items.at(-1)?.note);
+    moveNoteTo(dragID, nb, canReorder() && all && !pinned ? last : undefined);
   });
 }
 
@@ -2411,7 +2449,7 @@ function subNotebookRows() {
     const reorder = !trashed && !partialCell(key, sub.id) && (sub.sort || "order") === "order";
     const cls = depth ? "in-sub deep" : "in-sub";
     const items = listItems(s.notes, s.separators, s.total);
-    const rows = items.map((it) => it.sep ? separatorRow(it.sep, reorder, items, cls) : noteRow(it.note, sub.sort || "order", reorder, items, cls));
+    const rows = items.map((it) => it.sep ? separatorRow(it.sep, reorder, items, cls) : noteRow(it.note, sub.sort || "order", reorder, items, [cls, pinEnd(items, it)].filter(Boolean).join(" ")));
     if (s.notes.length < s.total) {
       const more = button(t("loadMore", { rest: s.total - s.notes.length }), () => {
         s.want = s.notes.length + LIST_PAGE;
@@ -2432,7 +2470,7 @@ function renderNotes() {
   const ul = $("notes");
   ul.replaceChildren(...subNotebookRows());
   const items = listItems(state.notes, state.separators, state.total);
-  for (const it of items) ul.append(it.sep ? separatorRow(it.sep, canReorder(), items, "") : noteRow(it.note, currentSort(), canReorder(), items, ""));
+  for (const it of items) ul.append(it.sep ? separatorRow(it.sep, canReorder(), items, "") : noteRow(it.note, currentSort(), canReorder(), items, pinEnd(items, it)));
   if (!searching() && state.notes.length < state.total) {
     const more = button(t("loadMore", { rest: state.total - state.notes.length }), () => {
       state.want = state.notes.length + LIST_PAGE;
@@ -2441,6 +2479,20 @@ function renderNotes() {
     ul.append(el("li", "more-row", more));
   }
 }
+
+// pinEnd returns the class of row it of items, the rows of a list, that ends
+// the pinned notes with a line: the last pinned note of a notebook's list,
+// with rows after it.
+function pinEnd(items, it) {
+  if (!isPinned(it.note) || !pinsList()) return "";
+  const next = items[items.indexOf(it) + 1];
+  return next && !isPinned(next.note) ? "pin-end" : "";
+}
+
+// pinsList reports whether the list shown puts the pinned notes first, as the
+// server does for a notebook (see index.pins): not all the notes, a tag, a
+// search, the trash or the archive.
+const pinsList = () => !!state.notebook && state.notebook !== "trash" && !state.tag && !searching() && !state.archive;
 
 // noteRow returns the row of note n in the list, shown in sort; with reorder,
 // it can be dragged within list, the rows it is shown with.
@@ -3029,7 +3081,8 @@ function openMarkMenu(n, at, e) {
   };
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
   // From the list in the manual order, a separator can go above the note.
-  if (inList && notes.length === 1 && findListed(n.id) && listOf(n.id).reorder) {
+  // Separators go below the pinned notes.
+  if (inList && notes.length === 1 && findListed(n.id) && listOf(n.id).reorder && !isPinned(n)) {
     sep();
     item(t("separatorInsertAbove"), () => insertSeparatorAbove(n));
   }

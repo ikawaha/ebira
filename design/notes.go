@@ -659,7 +659,7 @@ var _ = Service("notes", func() {
 			Param("archived")
 			Response("bad_request", StatusBadRequest)
 		})
-		Tool("list_notes", "List notes, in the notebook's order unless sort is given. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook. q filters the list with a query as search_notes takes it but keeps the list as it is: its order (the order the user gave a notebook by hand, which often tells priority), its pages and its separators, and a notebook without its sub notebooks (list each one by its ID). Use it to narrow a list, as in -tag:name to leave out the notes with a tag and see the rest in the order the user gave them; use search_notes to find notes by relevance anywhere", func() {
+		Tool("list_notes", "List notes, in the notebook's order unless sort is given; in a notebook, the notes with the pin mark come first, above the others and the separators. total is the number of notes; use offset for more. Notes in the archive (kept but no longer in use) are left out unless archived asks for them. Without a notebook, archived=only lists the notes put in the archive on their own; read a notebook in the archive (archived in list_notebooks) by giving it as notebook. q filters the list with a query as search_notes takes it but keeps the list as it is: its order (the order the user gave a notebook by hand, which often tells priority), its pages and its separators, and a notebook without its sub notebooks (list each one by its ID). Use it to narrow a list, as in -tag:name to leave out the notes with a tag and see the rest in the order the user gave them; use search_notes to find notes by relevance anywhere", func() {
 			ReadOnlyHint(true)
 			OpenWorldHint(false)
 		})
@@ -855,7 +855,7 @@ var _ = Service("notes", func() {
 	// move is for people, who arrange notes by hand; it is not an MCP tool.
 	// AI clients reorder the notes of collab notebooks only, with move_ai_note.
 	Method("move", func() {
-		Description("Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
+		Description("Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. A pinned note (with the pin mark) moves only among the pinned notes, which come first, and another note only among the others; first is the first of them. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
@@ -863,7 +863,7 @@ var _ = Service("notes", func() {
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist")
-		Error("bad_request", ErrorResult, "The note is in the trash, or after is not another note or a separator of its notebook")
+		Error("bad_request", ErrorResult, "The note is in the trash, or after is not another note or a separator of its notebook, or puts it on the other side of the pinned notes")
 		HTTP(func() {
 			POST("/notes/{id}/move")
 			Response(StatusOK, func() { Header("version:ETag") })
@@ -875,7 +875,7 @@ var _ = Service("notes", func() {
 	// Separators are arranged by people with these methods, and by AI
 	// clients in collab notebooks with the *_ai_separator tools.
 	Method("create_separator", func() {
-		Description("Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.")
+		Description("Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them. Separators are kept in the _separators.yaml file of the notebook.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("notebook", String, "Notebook to put the separator in; not the trash", notebookIDDSL)
@@ -884,7 +884,7 @@ var _ = Service("notes", func() {
 		})
 		Result(Separator)
 		Error("not_found", ErrorResult, "The notebook does not exist")
-		Error("bad_request", ErrorResult, "The notebook is the trash, or after is not a note or a separator of the notebook")
+		Error("bad_request", ErrorResult, "The notebook is the trash, or after is not a note or a separator of the notebook, or is a pinned note but the last")
 		HTTP(func() {
 			POST("/separators")
 			Response(StatusCreated)
@@ -926,7 +926,7 @@ var _ = Service("notes", func() {
 	})
 
 	Method("move_separator", func() {
-		Description("Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.")
+		Description("Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them.")
 		Payload(func() {
 			sessionDSL()
 			RequiredAttribute("id", String, "Separator ID", separatorIDDSL)
@@ -935,7 +935,7 @@ var _ = Service("notes", func() {
 		})
 		Result(Separator)
 		Error("not_found", ErrorResult, "The separator does not exist")
-		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook")
+		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook, or is a pinned note but the last")
 		HTTP(func() {
 			POST("/separators/{id}/move")
 			Response("not_found", StatusNotFound)
@@ -1437,16 +1437,16 @@ var _ = Service("notes", func() {
 
 	Method("move_ai_note", func() {
 		NoSecurity()
-		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. Only the order changes; the content and updated_at are kept, so no version is needed. The result leaves out the body (it comes back empty), as the move does not change it. Notes of other notebooks are ordered by people only.")
+		Description("Put a note of a notebook of the collab kind right after another note or a separator of the same notebook in the manual order (the order sort of list_notes), or first when after is omitted. To put it last, pass the ID of the last note of list_notes with sort order. A note with the pin mark comes first and moves only among the pinned notes, and another note only among the others; first is the first of them. Only the order changes; the content and updated_at are kept, so no version is needed. The result leaves out the body (it comes back empty), as the move does not change it. Notes of other notebooks are ordered by people only.")
 		Payload(func() {
 			RequiredAttribute("id", String, noteIDDesc, noteIDDSL)
 			Attribute("after", String, separatorAfterDesc, noteIDDSL)
 		})
 		Result(Note)
 		Error("not_found", ErrorResult, "The note does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "after is not another note or a separator of the note's notebook")
+		Error("bad_request", ErrorResult, "after is not another note or a separator of the note's notebook, or puts it on the other side of the pinned notes")
 		Error("forbidden", ErrorResult, "The note is not in a notebook of the collab kind")
-		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. The result leaves out the body", func() {
+		Tool("move_ai_note", "Reorder a note in a notebook shared with AI (kind collab): put it after another note or a separator of the notebook, or first. Pinned notes (with the pin mark) come first and move only among themselves, and the others only among the others. The result leaves out the body", func() {
 			DestructiveHint(false)
 			IdempotentHint(true)
 			OpenWorldHint(false)
@@ -1455,7 +1455,7 @@ var _ = Service("notes", func() {
 
 	Method("create_ai_separator", func() {
 		NoSecurity()
-		Description("Put a new separator between the notes of a notebook of the collab kind in the manual order (the order sort of list_notes), right after a note or a separator, or first when after is omitted. A separator is a bar with a heading, a date and a color to show, to arrange the notes; it has no body and is not a note. list_notes shows the separators of a notebook in the order sort.")
+		Description("Put a new separator between the notes of a notebook of the collab kind in the manual order (the order sort of list_notes), right after a note or a separator, or first when after is omitted. A separator is a bar with a heading, a date and a color to show, to arrange the notes; it has no body and is not a note. list_notes shows the separators of a notebook in the order sort. Separators go below the pinned notes, and first is the first place below them.")
 		Payload(func() {
 			RequiredAttribute("notebook", String, "ID of a notebook of the collab kind", notebookIDDSL)
 			separatorTextDSL()
@@ -1463,7 +1463,7 @@ var _ = Service("notes", func() {
 		})
 		Result(Separator)
 		Error("not_found", ErrorResult, "The notebook does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "after is not a note or a separator of the notebook")
+		Error("bad_request", ErrorResult, "after is not a note or a separator of the notebook, or is a pinned note but the last")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
 		Tool("create_ai_separator", "Put a separator (a bar with a heading, a date and a color, no body) between the notes of a notebook shared with AI (kind collab), after a note or a separator, or first", func() {
 			DestructiveHint(false)
@@ -1506,7 +1506,7 @@ var _ = Service("notes", func() {
 
 	Method("move_ai_separator", func() {
 		NoSecurity()
-		Description("Put a separator of a notebook of the collab kind right after a note or another separator of the notebook in the manual order, or first when after is omitted.")
+		Description("Put a separator of a notebook of the collab kind right after a note or another separator of the notebook in the manual order, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them.")
 		Payload(func() {
 			RequiredAttribute("id", String, "Separator ID, from list_notes", separatorIDDSL)
 			RequiredAttribute("notebook", String, "Notebook of the separator", notebookIDDSL)
@@ -1514,7 +1514,7 @@ var _ = Service("notes", func() {
 		})
 		Result(Separator)
 		Error("not_found", ErrorResult, "The separator does not exist, or is hidden from AI clients")
-		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook")
+		Error("bad_request", ErrorResult, "after is not a note or another separator of the notebook, or is a pinned note but the last")
 		Error("forbidden", ErrorResult, "The notebook is not of the collab kind")
 		Tool("move_ai_separator", "Reorder a separator in a notebook shared with AI (kind collab): put it after a note or another separator, or first", func() {
 			DestructiveHint(false)

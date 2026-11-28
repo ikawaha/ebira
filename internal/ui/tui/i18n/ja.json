@@ -3,6 +3,7 @@
   "status.asking": "アシスタントに質問しています…",
   "status.sort": "並べ方: {sort}",
   "status.reorderHint": "J/K で動かせるのは、手動の順で並べたノートブックのノートだけです（検索中は不可。s で並べ方を変えます）",
+  "status.reorderPinned": "ピン留めしたノートは、ピン留めしたノートの中でだけ動かせます（ほかのノートはその下。M で 📌 を外せます）",
   "status.loadFailed": "読み込めませんでした: {err}",
   "status.assistantFailed": "アシスタントが失敗しました: {err}",
   "status.assistantUnavailable": "アシスタントを使えません: {err}",

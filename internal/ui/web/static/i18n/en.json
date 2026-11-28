@@ -516,6 +516,7 @@
   "reorderSorted": "Notes are reordered in {sort}.",
   "reorderTrash": "Notes in the trash are not reordered.",
   "reorderChosen": "Chosen notes are not reordered; drag them to a notebook to move them.",
+  "reorderPinned": "Pinned notes are reordered only among themselves, and the others below them; unpin a note to move it out.",
   "archive": "Archive",
   "showArchivedTitle": "The notes in the archive are hidden. Click to show them in the lists and searches too",
   "hideArchivedTitle": "The notes in the archive are shown too, marked with a box. Click to hide them",

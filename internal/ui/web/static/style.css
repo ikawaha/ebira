@@ -421,6 +421,8 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook.nested.open, .list li.in-sub.deep { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px); }
 /* The last row of an opened notebook ends its rule with a line across the
    bottom and a gap under it, so that the next opened notebook starts anew. */
+/* The pinned notes come first, above a line. */
+.list li.pin-end { border-bottom: 2px solid var(--fg-muted); }
 .list li.sub-notebook.cell-end, .list li.in-sub.cell-end { box-shadow: inset 4px 0 0 var(--sub-line), inset 0 -2px 0 var(--sub-line); margin-bottom: 8px; }
 .list li.sub-notebook.nested.deep-end, .list li.in-sub.deep.deep-end { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px), linear-gradient(var(--sub-line), var(--sub-line)); background-size: 100% 100%, calc(100% - 20px) 2px; background-position: 0 0, 20px 100%; background-repeat: no-repeat; }
 .list li.in-sub:hover { background-color: var(--bg-hover); }
