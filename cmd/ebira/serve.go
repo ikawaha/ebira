@@ -291,10 +291,7 @@ func runServe(args []string) error {
 		}()
 	}
 
-	asst, err := newAssistant(ctx, svc, *prov, *modelF)
-	if err != nil {
-		return err
-	}
+	asst := newAssistant(ctx, svc, *prov, *modelF)
 
 	if gitEvery > 0 {
 		go syncGitEvery(ctx, svc, gitEvery)
@@ -469,9 +466,22 @@ var defaultModels = map[string]string{
 }
 
 // newAssistant returns the assistant service: the agent on the model of
-// provider, or when no API key is set, a service that answers every question
-// with unavailable.
-func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, error) {
+// provider, or when no API key is set, or the assistant cannot be made, as
+// for an unknown provider or one without its API key, a service that answers
+// every question with unavailable and why. A mistake in the settings of the
+// assistant does not stop the server: the rest of it works without one, and
+// the settings can be fixed from the web UI.
+func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) genassistant.Service {
+	a, err := startAssistant(ctx, svc, provider, modelID)
+	if err != nil {
+		slog.Warn("assistant disabled", "error", err)
+		return agent.Unavailable{Reason: "the assistant could not be started: " + err.Error()}
+	}
+	return a
+}
+
+// startAssistant makes the assistant of newAssistant, or tells why it cannot.
+func startAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, error) {
 	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
 	geminiKey := cmp.Or(os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
 	openaiKey := os.Getenv("OPENAI_API_KEY")
