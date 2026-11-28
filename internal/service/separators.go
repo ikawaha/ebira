@@ -118,7 +118,7 @@ func (s *Notes) createSeparator(ctx context.Context, nb string, text sepText, af
 	if err != nil {
 		return nil, err
 	}
-	pos, err := afterPos(items, deref(after), nb)
+	group, pos, err := placeIn(items, deref(after), nb, false)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *Notes) createSeparator(ctx context.Context, nb string, text sepText, af
 	// Saved even when it keeps the key it starts with: put first a second
 	// after the first note was made, both are the time of this second.
 	seps = append(seps, sep)
-	if err := s.applyKeys(ctx, nb, seps, place(items, pos, sep.ID, sep.Order), true); err != nil {
+	if err := s.applyKeys(ctx, nb, seps, place(group, pos, sep.ID, sep.Order), true); err != nil {
 		return nil, err
 	}
 	return s.separator(ctx, nb, sep.ID)
@@ -172,11 +172,11 @@ func (s *Notes) moveSeparator(ctx context.Context, nb, id string, after *string)
 	i := slices.IndexFunc(items, func(k index.SortKey) bool { return k.ID == id })
 	cur := items[i].Key
 	items = slices.Delete(items, i, i+1)
-	pos, err := afterPos(items, deref(after), nb)
+	group, pos, err := placeIn(items, deref(after), nb, false)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.applyKeys(ctx, nb, seps, place(items, pos, id, cur), false); err != nil {
+	if err := s.applyKeys(ctx, nb, seps, place(group, pos, id, cur), false); err != nil {
 		return nil, err
 	}
 	return s.separator(ctx, nb, id)

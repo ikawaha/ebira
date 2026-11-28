@@ -19,6 +19,13 @@ var MarkIDs = []string{
 	"wip", "hold", "dropped", "reply", "waiting", "review",
 }
 
+// MarkPin is the mark that pins a note: the notes with it come first in the
+// lists of their notebook, above the others and the separators.
+const MarkPin = "pin"
+
+// Pinned reports whether note n has MarkPin.
+func (n *Note) Pinned() bool { return slices.Contains(n.Marks, MarkPin) }
+
 // MaxMarks is the number of marks a note can have. It is one for now; the
 // file and the API hold a list, so that it can grow.
 const MaxMarks = 1

@@ -57,13 +57,16 @@ type Service interface {
 	// Move a note from the trash back to the notebook it was in.
 	Restore(context.Context, *RestorePayload) (res *Note, err error)
 	// Put a note right after another note or a separator of the same notebook in
-	// the manual order (sort order), or first when after is omitted. Only the
+	// the manual order (sort order), or first when after is omitted. A pinned note
+	// (with the pin mark) moves only among the pinned notes, which come first, and
+	// another note only among the others; first is the first of them. Only the
 	// moved note is written, with its new order; updated_at is kept, as the
 	// content does not change.
 	Move(context.Context, *MovePayload) (res *Note, err error)
 	// Put a new separator between the notes of a notebook in the manual order,
 	// right after a note or a separator, or first when after is omitted.
-	// Separators are kept in the _separators.yaml file of the notebook.
+	// Separators go below the pinned notes, and first is the first place below
+	// them. Separators are kept in the _separators.yaml file of the notebook.
 	CreateSeparator(context.Context, *CreateSeparatorPayload) (res *Separator, err error)
 	// Replace the heading, the date and the color of a separator; an omitted one
 	// is taken away.
@@ -71,7 +74,8 @@ type Service interface {
 	// Remove a separator. It does not go to the trash.
 	DeleteSeparator(context.Context, *DeleteSeparatorPayload) (err error)
 	// Put a separator right after a note or another separator of its notebook in
-	// the manual order, or first when after is omitted.
+	// the manual order, or first when after is omitted. Separators go below the
+	// pinned notes, and first is the first place below them.
 	MoveSeparator(context.Context, *MoveSeparatorPayload) (res *Separator, err error)
 	// List notebooks with their note counts: inbox first, then the others by order
 	// and name, trash last.
@@ -223,17 +227,20 @@ type Service interface {
 	// Put a note of a notebook of the collab kind right after another note or a
 	// separator of the same notebook in the manual order (the order sort of
 	// list_notes), or first when after is omitted. To put it last, pass the ID of
-	// the last note of list_notes with sort order. Only the order changes; the
-	// content and updated_at are kept, so no version is needed. The result leaves
-	// out the body (it comes back empty), as the move does not change it. Notes of
-	// other notebooks are ordered by people only.
+	// the last note of list_notes with sort order. A note with the pin mark comes
+	// first and moves only among the pinned notes, and another note only among the
+	// others; first is the first of them. Only the order changes; the content and
+	// updated_at are kept, so no version is needed. The result leaves out the body
+	// (it comes back empty), as the move does not change it. Notes of other
+	// notebooks are ordered by people only.
 	MoveAiNote(context.Context, *MoveAiNotePayload) (res *Note, err error)
 	// Put a new separator between the notes of a notebook of the collab kind in
 	// the manual order (the order sort of list_notes), right after a note or a
 	// separator, or first when after is omitted. A separator is a bar with a
 	// heading, a date and a color to show, to arrange the notes; it has no body
 	// and is not a note. list_notes shows the separators of a notebook in the
-	// order sort.
+	// order sort. Separators go below the pinned notes, and first is the first
+	// place below them.
 	CreateAiSeparator(context.Context, *CreateAiSeparatorPayload) (res *Separator, err error)
 	// Replace the heading, the date and the color of a separator in a notebook of
 	// the collab kind; an omitted one is taken away.
@@ -243,7 +250,8 @@ type Service interface {
 	DeleteAiSeparator(context.Context, *DeleteAiSeparatorPayload) (err error)
 	// Put a separator of a notebook of the collab kind right after a note or
 	// another separator of the notebook in the manual order, or first when after
-	// is omitted.
+	// is omitted. Separators go below the pinned notes, and first is the first
+	// place below them.
 	MoveAiSeparator(context.Context, *MoveAiSeparatorPayload) (res *Separator, err error)
 	// Create a new notebook of the collab kind, where AI clients may write notes,
 	// or a sub notebook in a notebook of the collab kind, which takes the kind of

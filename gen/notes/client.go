@@ -295,7 +295,7 @@ func (c *Client) Restore(ctx context.Context, p *RestorePayload) (res *Note, err
 // Move calls the "move" endpoint of the "notes" service.
 // Move may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist
-//   - "bad_request" (type *goa.ServiceError): The note is in the trash, or after is not another note or a separator of its notebook
+//   - "bad_request" (type *goa.ServiceError): The note is in the trash, or after is not another note or a separator of its notebook, or puts it on the other side of the pinned notes
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -311,7 +311,7 @@ func (c *Client) Move(ctx context.Context, p *MovePayload) (res *Note, err error
 // CreateSeparator calls the "create_separator" endpoint of the "notes" service.
 // CreateSeparator may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist
-//   - "bad_request" (type *goa.ServiceError): The notebook is the trash, or after is not a note or a separator of the notebook
+//   - "bad_request" (type *goa.ServiceError): The notebook is the trash, or after is not a note or a separator of the notebook, or is a pinned note but the last
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -353,7 +353,7 @@ func (c *Client) DeleteSeparator(ctx context.Context, p *DeleteSeparatorPayload)
 // MoveSeparator calls the "move_separator" endpoint of the "notes" service.
 // MoveSeparator may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The separator does not exist
-//   - "bad_request" (type *goa.ServiceError): after is not a note or another separator of the notebook
+//   - "bad_request" (type *goa.ServiceError): after is not a note or another separator of the notebook, or is a pinned note but the last
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error
@@ -733,7 +733,7 @@ func (c *Client) DeleteAiNote(ctx context.Context, p *DeleteAiNotePayload) (err 
 // MoveAiNote calls the "move_ai_note" endpoint of the "notes" service.
 // MoveAiNote may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The note does not exist, or is hidden from AI clients
-//   - "bad_request" (type *goa.ServiceError): after is not another note or a separator of the note's notebook
+//   - "bad_request" (type *goa.ServiceError): after is not another note or a separator of the note's notebook, or puts it on the other side of the pinned notes
 //   - "forbidden" (type *goa.ServiceError): The note is not in a notebook of the collab kind
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
@@ -751,7 +751,7 @@ func (c *Client) MoveAiNote(ctx context.Context, p *MoveAiNotePayload) (res *Not
 // service.
 // CreateAiSeparator may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The notebook does not exist, or is hidden from AI clients
-//   - "bad_request" (type *goa.ServiceError): after is not a note or a separator of the notebook
+//   - "bad_request" (type *goa.ServiceError): after is not a note or a separator of the notebook, or is a pinned note but the last
 //   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
@@ -799,7 +799,7 @@ func (c *Client) DeleteAiSeparator(ctx context.Context, p *DeleteAiSeparatorPayl
 // service.
 // MoveAiSeparator may return the following errors:
 //   - "not_found" (type *goa.ServiceError): The separator does not exist, or is hidden from AI clients
-//   - "bad_request" (type *goa.ServiceError): after is not a note or another separator of the notebook
+//   - "bad_request" (type *goa.ServiceError): after is not a note or another separator of the notebook, or is a pinned note but the last
 //   - "forbidden" (type *goa.ServiceError): The notebook is not of the collab kind
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
