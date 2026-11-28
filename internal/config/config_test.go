@@ -302,11 +302,11 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	off := false
-	if _, err := Update(Config{Lang: "ja", GitSync: "10m", Watch: &off}); err != nil {
+	if _, err := Update(Config{Lang: "ja", GitSync: "10m", Watch: &off, OpenAIKeyCommand: "bw get password 'OpenAI'"}); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(p)
-	for _, want := range []string{"# mine", "notes_dir: ~/notes", "lang: ja # the UI", "git_sync: 10m", "watch: false", "# auth: passkey"} {
+	for _, want := range []string{"# mine", "notes_dir: ~/notes", "lang: ja # the UI", "git_sync: 10m", "watch: false", "# auth: passkey", "openai_key_command: bw get password 'OpenAI'"} {
 		if !strings.Contains(string(b), want) {
 			t.Errorf("file lacks %q:\n%s", want, b)
 		}
@@ -315,7 +315,7 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("theme, set to the default, is kept:\n%s", b)
 	}
 	c, err := Load()
-	if err != nil || c.Lang != "ja" || c.GitSync != "10m" || c.Watch == nil || *c.Watch || c.Theme != "" {
+	if err != nil || c.Lang != "ja" || c.GitSync != "10m" || c.Watch == nil || *c.Watch || c.Theme != "" || c.KeyCommands()["openai"] != "bw get password 'OpenAI'" {
 		t.Errorf("read back = %+v, %v", c, err)
 	}
 }
@@ -337,12 +337,12 @@ func TestDefaults(t *testing.T) {
 		t.Errorf("without defaults: %+v, %v, %v", d, w, err)
 	}
 	// The keys of a machine alone are left out, with a warning each.
-	write("search: ja\ndefaults:\n  lang: ja\n  git_sync: 10m\n  auth: none\n  notes_dir: ~/x\n  addr: 0.0.0.0:13579\n")
+	write("search: ja\ndefaults:\n  lang: ja\n  git_sync: 10m\n  auth: none\n  notes_dir: ~/x\n  anthropic_key_command: op read op://a/b/c\n  addr: 0.0.0.0:13579\n")
 	d, w, err := LoadDefaults(dir)
-	if err != nil || d.Lang != "ja" || d.GitSync != "10m" || d.Auth != "" || d.NotesDir != "" || d.Addr != "" || len(w) != 3 {
+	if err != nil || d.Lang != "ja" || d.GitSync != "10m" || d.Auth != "" || d.NotesDir != "" || d.Addr != "" || d.AnthropicKeyCommand != "" || len(w) != 4 {
 		t.Errorf("left out: %+v, %v, %v", d, w, err)
 	}
-	for i, key := range []string{"auth", "notes_dir", "addr 0.0.0.0:13579"} { // in the order of the file
+	for i, key := range []string{"auth", "notes_dir", "anthropic_key_command", "addr 0.0.0.0:13579"} { // in the order of the file
 		if i < len(w) && !strings.Contains(w[i], "defaults: "+key) {
 			t.Errorf("warning %d: %s", i, w[i])
 		}

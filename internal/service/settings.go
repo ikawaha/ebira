@@ -35,6 +35,14 @@ type Settings struct {
 	Passkeys func() bool
 	// DefaultModels are the default models of the assistant by provider.
 	DefaultModels map[string]string
+	// KeyCommands tells whether the settings may change the commands that
+	// print the API keys, which the server runs: it should not let anyone
+	// who reaches it run commands, as without passkeys on an address other
+	// than the loopback.
+	KeyCommands bool
+	// KeyEnv are the providers whose API keys the server has in its
+	// environment variables, which win over their commands.
+	KeyEnv []string
 	// Restart starts the server again, with its flags; nil when it cannot.
 	Restart func() error
 	// Restartable tells why Restart cannot start the server now, as one of
@@ -106,6 +114,9 @@ func (s *Notes) SaveSettings(ctx context.Context, p *gennotes.SaveSettingsPayloa
 			return nil, gennotes.MakeBadRequest(err)
 		}
 	}
+	if !s.settings.KeyCommands && !maps.Equal(m.KeyCommands(), machineConfig(cur.Machine).KeyCommands()) {
+		return nil, gennotes.MakeForbidden(errors.New("the commands that print the API keys are changed in the settings file, as this server listens beyond the loopback without passkeys"))
+	}
 	// Without a passkey, nobody could sign in once the server restarts.
 	if m.Auth == "passkey" && !cur.Passkeys {
 		return nil, gennotes.MakeBadRequest(errors.New("register a passkey with ebira auth passkey before auth: passkey, or nobody can sign in"))
@@ -114,7 +125,8 @@ func (s *Notes) SaveSettings(ctx context.Context, p *gennotes.SaveSettingsPayloa
 	var defaults *config.Config
 	if p.Notes != nil && p.Notes.Defaults != nil {
 		d := machineConfig(p.Notes.Defaults)
-		d.Auth = "" // a machine's own
+		// A machine's own.
+		d.Auth, d.AnthropicKeyCommand, d.GeminiKeyCommand, d.OpenAIKeyCommand = "", "", "", ""
 		if s.settings.Check != nil {
 			if err := s.settings.Check(d); err != nil {
 				return nil, gennotes.MakeBadRequest(fmt.Errorf("defaults: %w", err))
@@ -222,6 +234,8 @@ func (s *Notes) readSettings() (*gennotes.Settings, error) {
 		RestartUnavailable: why,
 		Passkeys:           s.settings.Passkeys != nil && s.settings.Passkeys(),
 		DefaultModels:      models,
+		KeyCommands:        s.settings.KeyCommands,
+		KeyEnv:             append([]string{}, s.settings.KeyEnv...),
 	}, nil
 }
 
@@ -237,6 +251,7 @@ func machineSettings(c config.Config) *gennotes.MachineSettings {
 		Lang: opt(c.Lang), Theme: opt(c.Theme), Auth: opt(c.Auth), GitSync: opt(c.GitSync),
 		Watch: c.Watch, Provider: opt(c.Provider), Model: opt(c.Model), TuiPreview: opt(c.TUIPreview), TuiSearch: opt(c.TUISearch),
 		ZennRepo: opt(c.ZennRepo), ZennBranch: opt(c.ZennBranch), ZennUser: opt(c.ZennUser),
+		AnthropicKeyCommand: opt(c.AnthropicKeyCommand), GeminiKeyCommand: opt(c.GeminiKeyCommand), OpenaiKeyCommand: opt(c.OpenAIKeyCommand),
 	}
 }
 
@@ -256,6 +271,7 @@ func machineConfig(m *gennotes.MachineSettings) config.Config {
 		Lang: v(m.Lang), Theme: v(m.Theme), Auth: v(m.Auth), GitSync: v(m.GitSync),
 		Watch: m.Watch, Provider: v(m.Provider), Model: v(m.Model), TUIPreview: v(m.TuiPreview), TUISearch: v(m.TuiSearch),
 		ZennRepo: v(m.ZennRepo), ZennBranch: v(m.ZennBranch), ZennUser: v(m.ZennUser),
+		AnthropicKeyCommand: v(m.AnthropicKeyCommand), GeminiKeyCommand: v(m.GeminiKeyCommand), OpenAIKeyCommand: v(m.OpenaiKeyCommand),
 	}
 }
 

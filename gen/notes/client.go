@@ -1150,6 +1150,7 @@ func (c *Client) Settings(ctx context.Context, p *SettingsPayload) (res *Setting
 // SaveSettings may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): The settings are invalid, such as auth: passkey without a passkey registered
 //   - "precondition_failed" (type *goa.ServiceError): The settings were changed since they were read
+//   - "forbidden" (type *goa.ServiceError): The settings change the commands that print the API keys, which this server does not let them (key_commands)
 //   - "unauthorized" (type *goa.ServiceError): The session is invalid or expired: sign in with a passkey again
 //   - "verification_required" (type *goa.ServiceError): An important operation, such as making a private notebook visible to AI, reading the history of a note or emptying the trash, while passkeys are required and the session was not signed in with a passkey recently: sign in with the passkey again
 //   - error: internal error

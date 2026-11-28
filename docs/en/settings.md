@@ -24,7 +24,7 @@ Settings… in the gear menu (⌘, in the desktop app) opens it. The column on t
 - Search: the search mode, and the stop words and stop tags of ja.
 - Sync: how often to sync with git, and watching the files.
 - Integrations: the repository, the branch and the user name for Zenn (beta) ([Writing to Zenn](zenn.md)).
-- Assistant: the provider and the model.
+- Assistant: the provider, the model, and how to read the API key of each provider ([Using AI](ai.md)).
 - TUI: the preview and the search box of the TUI.
 - Server: the notes directory and the address, authentication, and where the settings files are. In the desktop app it shows the notes folder and the address of the server that the app connects to, and Change… opens the settings window of the app ([Desktop App](desktop.md)).
 
@@ -56,7 +56,7 @@ git_sync: 10m        # how often to sync with git
 auth: none           # passkey asks for a passkey
 ```
 
-The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; `light` makes the TUI use its light colors too), `git_sync`, `auth` (`none` or `passkey`), `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes) `tui_search` (`search` or `filter`, which Tab in the search box of the TUI switches and writes), and `zenn_repo`, `zenn_branch` and `zenn_user` ([Writing to Zenn](zenn.md)). Each is the default of a flag of the commands ([Commands](cli.md)), and a key ebira does not know is an error. API keys never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
+The keys are `notes_dir`, `addr`, `watch`, `provider`, `model`, `lang`, `theme` (`auto`, `light` or `dark`; `light` makes the TUI use its light colors too), `git_sync`, `auth` (`none` or `passkey`), `tui_preview` (`rendered` or `source`, which `v` in the TUI switches and writes) `tui_search` (`search` or `filter`, which Tab in the search box of the TUI switches and writes), `zenn_repo`, `zenn_branch` and `zenn_user` ([Writing to Zenn](zenn.md)), and `anthropic_key_command`, `gemini_key_command` and `openai_key_command`, the commands that print the API keys ([Using AI](ai.md)). Each is the default of a flag of the commands ([Commands](cli.md)), and a key ebira does not know is an error. The API keys themselves never go in it. The index is kept in `~/.cache/ebira`, and the server's state and log in `~/.local/state/ebira` (the XDG variables are honored).
 
 You can also change its settings one by one in the settings dialog, which keeps the comments of the file. But for the language and the theme, the server reads the settings when it starts, so save them, then restart the server to apply them. `notes_dir` and `addr`, though, apply only when you stop the server and start it again.
 
@@ -92,7 +92,7 @@ defaults:
 
 - The order is: the flags of a command, then the settings file of the machine, then `defaults` of `_ebira.yaml`, then the built-in defaults.
 - The settings file of a machine needs only the notes directory (`notes_dir`).
-- `notes_dir`, `auth` (how to sign in) and an `addr` other than localhost belong to each machine. Written in `defaults`, they are left out with a warning, so that other machines, or people you share the notes with, cannot turn off passkeys or open the server to the network.
+- `notes_dir`, `auth` (how to sign in), the commands that print the API keys and an `addr` other than localhost belong to each machine. Written in `defaults`, they are left out with a warning, so that other machines, or people you share the notes with, cannot turn off passkeys, open the server to the network or run commands.
 - When you make new notes, setup writes the language, the interval of syncing and the address to `defaults`. On another machine with the notes, setup does not ask what `defaults` has, and writes the answers to what it lacks to the settings file of that machine.
 - `defaults` can also choose the provider and the model of the assistant, used with the API key of each machine, and turn on syncing with git. When you share the notes with other people, watch the changes to `_ebira.yaml`.
 - An earlier ebira does not know `defaults`: it says "field defaults not found" and does not start. Update ebira on every machine.

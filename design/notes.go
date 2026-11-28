@@ -472,6 +472,15 @@ var MachineSettings = Type("MachineSettings", func() {
 	Attribute("zenn_user", String, "User name on Zenn, to link to the articles; empty for none", func() {
 		Example("you")
 	})
+	Attribute("anthropic_key_command", String, "Command that prints the API key of Anthropic, such as one of a password manager, which the server runs when the assistant is first used; empty for none. Never a default: it is left out of the defaults", func() {
+		Example("op read 'op://Private/Anthropic/credential'")
+	})
+	Attribute("gemini_key_command", String, "Command that prints the API key of Gemini, as anthropic_key_command does", func() {
+		Example("bws secret get be8e0ad8-d545-4017-a55a-b02f014d4158 --output json")
+	})
+	Attribute("openai_key_command", String, "Command that prints the API key of OpenAI, as anthropic_key_command does", func() {
+		Example("rbw get 'OpenAI API key'")
+	})
 })
 
 var StopList = Type("StopList", func() {
@@ -513,6 +522,10 @@ var Settings = Type("Settings", func() {
 	})
 	RequiredAttribute("passkeys", Boolean, "Whether a passkey is registered, which auth: passkey needs to sign in")
 	RequiredAttribute("default_models", MapOf(String, String), "Default models of the assistant by provider")
+	RequiredAttribute("key_commands", Boolean, "Whether save_settings may change the commands that print the API keys, which the server runs: only while it listens on the loopback or requires passkeys")
+	RequiredAttribute("key_env", ArrayOf(String), "Providers whose API keys the server has in its environment variables, which win over their commands", func() {
+		Example([]string{"anthropic"})
+	})
 })
 
 var GitConflict = Type("GitConflict", func() {
@@ -1946,6 +1959,7 @@ var _ = Service("notes", func() {
 		Result(Settings)
 		Error("bad_request", ErrorResult, "The settings are invalid, such as auth: passkey without a passkey registered")
 		Error("precondition_failed", ErrorResult, "The settings were changed since they were read")
+		Error("forbidden", ErrorResult, "The settings change the commands that print the API keys, which this server does not let them (key_commands)")
 		HTTP(func() {
 			PUT("/settings")
 			Body(func() {
@@ -1955,6 +1969,7 @@ var _ = Service("notes", func() {
 			})
 			Response("bad_request", StatusBadRequest)
 			Response("precondition_failed", StatusPreconditionFailed)
+			Response("forbidden", StatusForbidden)
 		})
 	})
 

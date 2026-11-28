@@ -24,7 +24,7 @@ tags: [guide, settings]
 - 検索: 検索方式と、ja のときのストップワード・品詞のストップ。
 - 同期: git との自動同期の間隔と、ファイルの監視。
 - 連携: Zenn（β）の書き出し先のリポジトリ・ブランチ・ユーザー名（[Zenn に書き出す](zenn.md)）。
-- アシスタント: 提供元とモデル。
+- アシスタント: 提供元とモデルと、提供元ごとの API キーの読み方（[AI と使う](ai.md)）。
 - TUI: TUI のプレビューと検索欄。
 - サーバー: ノートのディレクトリとアドレス、認証、設定のファイルの場所。デスクトップアプリでは、アプリがつなぐノートのフォルダとサーバーのアドレスを出し、「変える…」でアプリの設定のウインドウを開きます（[デスクトップアプリ](desktop.md)）。
 
@@ -56,7 +56,7 @@ git_sync: 10m        # git と自動で同期する間隔
 auth: none           # passkey でパスキーを求める
 ```
 
-キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）、`tui_search`（`search` か `filter`。TUI の検索欄の Tab で切り替えると書き換えます）、`zenn_repo`・`zenn_branch`・`zenn_user`（[Zenn に書き出す](zenn.md)）です。各キーはコマンドのフラグの既定値になり（[コマンド](cli.md)）、知らないキーはエラーになります。API キーは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
+キーは `notes_dir`、`addr`、`watch`、`provider`、`model`、`lang`、`theme`（`auto`・`light`・`dark`。`light` なら TUI も明るい配色になります）、`git_sync`、`auth`（`none` か `passkey`）、`tui_preview`（`rendered` か `source`。TUI の `v` で切り替えると書き換えます）、`tui_search`（`search` か `filter`。TUI の検索欄の Tab で切り替えると書き換えます）、`zenn_repo`・`zenn_branch`・`zenn_user`（[Zenn に書き出す](zenn.md)）、`anthropic_key_command`・`gemini_key_command`・`openai_key_command`（API キーを出すコマンド。[AI と使う](ai.md)）です。各キーはコマンドのフラグの既定値になり（[コマンド](cli.md)）、知らないキーはエラーになります。API キーそのものは書きません。索引は `~/.cache/ebira` に、サーバーの状態とログは `~/.local/state/ebira` に置きます（XDG の環境変数に従います）。
 
 設定のダイアログからも、項目ごとに変えられます（ファイルのコメントは残ります）。言語とテーマのほかは、サーバーの起動時に読み込まれるので、保存してからサーバーを再起動すると反映されます。ただし `notes_dir` と `addr` は、サーバーを止めてから起動し直したときに反映されます。
 
@@ -92,7 +92,7 @@ defaults:
 
 - 値の順は「コマンドのフラグ ＞ 端末の設定ファイル ＞ `_ebira.yaml` の `defaults` ＞ 既定値」です。
 - 端末の設定ファイルには、ノートのディレクトリ（`notes_dir`）だけを書けば足ります。
-- `notes_dir`・`auth`（ログインの方法）と、localhost 以外の `addr` は、端末ごとの値です。`defaults` に書いても、警告を出して使いません（ほかの端末やノートを共有する人から、パスキーを外されたり、サーバーを外へ開かれたりしないように）。
+- `notes_dir`・`auth`（ログインの方法）・API キーを出すコマンドと、localhost 以外の `addr` は、端末ごとの値です。`defaults` に書いても、警告を出して使いません（ほかの端末やノートを共有する人から、パスキーを外されたり、サーバーを外へ開かれたり、コマンドを動かされたりしないように）。
 - 初めてノートを作るときの言語・同期の間隔・アドレスは、`defaults` に書かれます。ほかの端末で既にあるノートを使うときは、`defaults` にある値は聞かれず、`defaults` に無いものへの答えは、その端末の設定ファイルに書かれます。
 - `defaults` は、アシスタントの提供元とモデル（その端末の API キーで使われます）や、git との自動の同期も決められます。ノートをほかの人と共有しているときは、`_ebira.yaml` の変更に気をつけてください。
 - 前の版の ebira は `defaults` を知らないので、「field defaults not found」と出して起動しません。すべての端末の ebira を上げてください。

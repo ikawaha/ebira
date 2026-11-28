@@ -5548,7 +5548,7 @@ func EncodeSaveSettingsError(encoder func(context.Context, http.ResponseWriter) 
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusPreconditionFailed)
 			return enc.Encode(body)
-		case "unauthorized":
+		case "forbidden":
 			var res *goa.ServiceError
 			errors.As(v, &res)
 			enc := encoder(ctx, w)
@@ -5556,10 +5556,10 @@ func EncodeSaveSettingsError(encoder func(context.Context, http.ResponseWriter) 
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
-				body = NewSaveSettingsUnauthorizedResponseBody(res)
+				body = NewSaveSettingsForbiddenResponseBody(res)
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusForbidden)
 			return enc.Encode(body)
 		case "verification_required":
 			var res *goa.ServiceError
@@ -5573,6 +5573,19 @@ func EncodeSaveSettingsError(encoder func(context.Context, http.ResponseWriter) 
 			}
 			w.Header().Set("goa-error", res.GoaErrorName())
 			w.WriteHeader(http.StatusForbidden)
+			return enc.Encode(body)
+		case "unauthorized":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			var body any
+			if formatter != nil {
+				body = formatter(ctx, res)
+			} else {
+				body = NewSaveSettingsUnauthorizedResponseBody(res)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusUnauthorized)
 			return enc.Encode(body)
 		default:
 			return encodeError(ctx, w, v)
@@ -6047,18 +6060,21 @@ func marshalNotesZennWarningToZennWarningResponseBody(v *notes.ZennWarning) *Zen
 // *notes.MachineSettings.
 func marshalNotesMachineSettingsToMachineSettingsResponseBody(v *notes.MachineSettings) *MachineSettingsResponseBody {
 	res := &MachineSettingsResponseBody{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res
@@ -6103,18 +6119,21 @@ func marshalNotesStopListToStopListResponseBody(v *notes.StopList) *StopListResp
 // type *notes.MachineSettings from a value of type *MachineSettingsRequestBody.
 func unmarshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsRequestBody) *notes.MachineSettings {
 	res := &notes.MachineSettings{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res

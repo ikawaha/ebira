@@ -22,7 +22,8 @@ import (
 // its default, so a machine can differ from the others. Keys that belong to
 // a machine alone are left out of the defaults with a warning: notes_dir,
 // which tells where the notes are, auth, as passkeys are kept by each
-// machine and the notes should not turn them off, and an addr that is not of
+// machine and the notes should not turn them off, the commands that print
+// the API keys, which the server runs, and an addr that is not of
 // the loopback, so that the notes do not open the server to the network.
 
 // DefaultKeys are the keys of the defaults that the web UI changes: those of
@@ -93,8 +94,10 @@ func ParseDefaults(d *yaml.Node, p string) (Config, []string, error) {
 }
 
 // machineKeys are the keys of the settings file that are each machine's own,
-// never defaults: the notes directory, and how the server authenticates.
-var machineKeys = []string{"notes_dir", "data_dir", "auth"}
+// never defaults: the notes directory, how the server authenticates, and the
+// commands that print the API keys, which the server runs: the notes, which
+// others may write, as through a shared git repository, must not give them.
+var machineKeys = []string{"notes_dir", "data_dir", "auth", "anthropic_key_command", "gemini_key_command", "openai_key_command"}
 
 // Loopback reports whether the address addr, host:port, listens only on the
 // loopback: localhost or a loopback IP address. An empty host listens on all

@@ -815,6 +815,7 @@ dialog.server-settings { max-width: min(860px, calc(100vw - 32px)); }
 /* A setting of a machine, and the check box that shares it. */
 .settings-share-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .settings-share-line input:not([type]) { flex: 1; width: auto; min-width: 12em; }
+.settings-control input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .settings-share { display: inline-flex; gap: 4px; align-items: center; color: var(--fg-muted); font-size: var(--fs-xs); white-space: nowrap; cursor: pointer; }
 .settings-control .body-size { display: inline-flex; align-items: center; gap: 2px; }
 .settings-control .body-size > button:not(.icon-button) { min-width: 4.5em; font-variant-numeric: tabular-nums; }

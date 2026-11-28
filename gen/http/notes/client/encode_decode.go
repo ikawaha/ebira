@@ -7125,8 +7125,9 @@ func EncodeSaveSettingsRequest(encoder func(*http.Request) goahttp.Encoder) func
 // DecodeSaveSettingsResponse may return the following errors:
 //   - "bad_request" (type *goa.ServiceError): http.StatusBadRequest
 //   - "precondition_failed" (type *goa.ServiceError): http.StatusPreconditionFailed
-//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
+//   - "forbidden" (type *goa.ServiceError): http.StatusForbidden
 //   - "verification_required" (type *goa.ServiceError): http.StatusForbidden
+//   - "unauthorized" (type *goa.ServiceError): http.StatusUnauthorized
 //   - error: internal error
 func DecodeSaveSettingsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (result any, decodeErr error) {
@@ -7192,6 +7193,44 @@ func DecodeSaveSettingsResponse(decoder func(*http.Response) goahttp.Decoder, re
 				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
 			return nil, NewSaveSettingsPreconditionFailed(&body)
+		case http.StatusForbidden:
+			en := resp.Header.Get("goa-error")
+			switch en {
+			case "forbidden":
+				var (
+					body SaveSettingsForbiddenResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
+				}
+				err = ValidateSaveSettingsForbiddenResponseBody(&body)
+				if err != nil {
+					return nil, goahttp.ErrValidationError("notes", "save_settings", err)
+				}
+				return nil, NewSaveSettingsForbidden(&body)
+			case "verification_required":
+				var (
+					body SaveSettingsVerificationRequiredResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
+				}
+				err = ValidateSaveSettingsVerificationRequiredResponseBody(&body)
+				if err != nil {
+					return nil, goahttp.ErrValidationError("notes", "save_settings", err)
+				}
+				return nil, NewSaveSettingsVerificationRequired(&body)
+			default:
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
+				}
+				return nil, goahttp.ErrInvalidResponse("notes", "save_settings", resp.StatusCode, string(body))
+			}
 		case http.StatusUnauthorized:
 			var (
 				body SaveSettingsUnauthorizedResponseBody
@@ -7206,20 +7245,6 @@ func DecodeSaveSettingsResponse(decoder func(*http.Response) goahttp.Decoder, re
 				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
 			}
 			return nil, NewSaveSettingsUnauthorized(&body)
-		case http.StatusForbidden:
-			var (
-				body SaveSettingsVerificationRequiredResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("notes", "save_settings", err)
-			}
-			err = ValidateSaveSettingsVerificationRequiredResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("notes", "save_settings", err)
-			}
-			return nil, NewSaveSettingsVerificationRequired(&body)
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -7757,18 +7782,21 @@ func unmarshalZennWarningResponseBodyToNotesZennWarning(v *ZennWarningResponseBo
 // *MachineSettingsResponseBody.
 func unmarshalMachineSettingsResponseBodyToNotesMachineSettings(v *MachineSettingsResponseBody) *notes.MachineSettings {
 	res := &notes.MachineSettings{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res
@@ -7809,18 +7837,21 @@ func unmarshalStopListResponseBodyToNotesStopList(v *StopListResponseBody) *note
 // type *MachineSettingsRequestBody from a value of type *notes.MachineSettings.
 func marshalNotesMachineSettingsToMachineSettingsRequestBody(v *notes.MachineSettings) *MachineSettingsRequestBody {
 	res := &MachineSettingsRequestBody{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res
@@ -7865,18 +7896,21 @@ func marshalNotesStopListToStopListRequestBody(v *notes.StopList) *StopListReque
 // type *notes.MachineSettings from a value of type *MachineSettingsRequestBody.
 func marshalMachineSettingsRequestBodyToNotesMachineSettings(v *MachineSettingsRequestBody) *notes.MachineSettings {
 	res := &notes.MachineSettings{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res

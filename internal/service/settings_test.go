@@ -196,3 +196,55 @@ func TestSettingsDefaults(t *testing.T) {
 		t.Errorf("defaults changed without them:\n%s", b2)
 	}
 }
+
+// TestSettingsKeyCommands saves the commands that print the API keys only
+// where the server lets the settings change them, and never as defaults.
+func TestSettingsKeyCommands(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv(config.Env, path)
+	if err := os.WriteFile(path, []byte("gemini_key_command: rbw get gemini\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	person := AsPerson(context.Background())
+	svc, _ := newTestService(t)
+	svc.SetSettings(Settings{KeyEnv: []string{"anthropic"}})
+	got, err := svc.Settings(person, &gennotes.SettingsPayload{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.KeyCommands || !slices.Equal(got.KeyEnv, []string{"anthropic"}) || got.Machine.GeminiKeyCommand == nil || *got.Machine.GeminiKeyCommand != "rbw get gemini" {
+		t.Errorf("settings = %+v, machine %+v", got, got.Machine)
+	}
+	notes := &gennotes.NotesSettings{StopWords: &gennotes.StopList{Use: "default"}, StopTags: &gennotes.StopList{Use: "default"}}
+	op := "op read 'op://Private/Anthropic/credential'"
+	// The same commands save other settings.
+	ja := "ja"
+	got, err = svc.SaveSettings(person, &gennotes.SaveSettingsPayload{Machine: &gennotes.MachineSettings{Lang: &ja, GeminiKeyCommand: got.Machine.GeminiKeyCommand}, Notes: notes, Version: got.Version})
+	if err != nil {
+		t.Fatalf("other settings: %v", err)
+	}
+	// Another command is refused.
+	if _, err := svc.SaveSettings(person, &gennotes.SaveSettingsPayload{Machine: &gennotes.MachineSettings{AnthropicKeyCommand: &op, GeminiKeyCommand: got.Machine.GeminiKeyCommand}, Notes: notes, Version: got.Version}); errorName(err) != "forbidden" {
+		t.Errorf("command changed = %v, want forbidden", err)
+	}
+
+	svc.SetSettings(Settings{KeyCommands: true})
+	saved, err := svc.SaveSettings(person, &gennotes.SaveSettingsPayload{
+		Machine: &gennotes.MachineSettings{AnthropicKeyCommand: &op},
+		Notes:   &gennotes.NotesSettings{StopWords: notes.StopWords, StopTags: notes.StopTags, Defaults: &gennotes.MachineSettings{OpenaiKeyCommand: &op, Lang: &ja}},
+		Version: got.Version,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !saved.KeyCommands || saved.Machine.AnthropicKeyCommand == nil || *saved.Machine.AnthropicKeyCommand != op || saved.Machine.GeminiKeyCommand != nil {
+		t.Errorf("saved machine %+v", saved.Machine)
+	}
+	if d := saved.Notes.Defaults; d == nil || d.OpenaiKeyCommand != nil || d.Lang == nil {
+		t.Errorf("defaults %+v: a command is never a default", d)
+	}
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), "anthropic_key_command: op read 'op://Private/Anthropic/credential'") || strings.Contains(string(b), "gemini_key_command") {
+		t.Errorf("settings file:\n%s", b)
+	}
+}

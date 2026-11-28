@@ -1109,6 +1109,12 @@ type SettingsResponseBody struct {
 	Passkeys bool `form:"passkeys" json:"passkeys" xml:"passkeys"`
 	// Default models of the assistant by provider
 	DefaultModels map[string]string `form:"default_models" json:"default_models" xml:"default_models"`
+	// Whether save_settings may change the commands that print the API keys, which
+	// the server runs: only while it listens on the loopback or requires passkeys
+	KeyCommands bool `form:"key_commands" json:"key_commands" xml:"key_commands"`
+	// Providers whose API keys the server has in its environment variables, which
+	// win over their commands
+	KeyEnv []string `form:"key_env" json:"key_env" xml:"key_env"`
 }
 
 // SaveSettingsResponseBody is the type of the "notes" service "save_settings"
@@ -1141,6 +1147,12 @@ type SaveSettingsResponseBody struct {
 	Passkeys bool `form:"passkeys" json:"passkeys" xml:"passkeys"`
 	// Default models of the assistant by provider
 	DefaultModels map[string]string `form:"default_models" json:"default_models" xml:"default_models"`
+	// Whether save_settings may change the commands that print the API keys, which
+	// the server runs: only while it listens on the loopback or requires passkeys
+	KeyCommands bool `form:"key_commands" json:"key_commands" xml:"key_commands"`
+	// Providers whose API keys the server has in its environment variables, which
+	// win over their commands
+	KeyEnv []string `form:"key_env" json:"key_env" xml:"key_env"`
 }
 
 // SyncResponseBody is the type of the "notes" service "sync" endpoint HTTP
@@ -4198,9 +4210,9 @@ type SaveSettingsPreconditionFailedResponseBody struct {
 	Fault bool `form:"fault" json:"fault" xml:"fault"`
 }
 
-// SaveSettingsUnauthorizedResponseBody is the type of the "notes" service
-// "save_settings" endpoint HTTP response body for the "unauthorized" error.
-type SaveSettingsUnauthorizedResponseBody struct {
+// SaveSettingsForbiddenResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "forbidden" error.
+type SaveSettingsForbiddenResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -4220,6 +4232,24 @@ type SaveSettingsUnauthorizedResponseBody struct {
 // service "save_settings" endpoint HTTP response body for the
 // "verification_required" error.
 type SaveSettingsVerificationRequiredResponseBody struct {
+	// Name is the name of this class of errors.
+	Name string `form:"name" json:"name" xml:"name"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID string `form:"id" json:"id" xml:"id"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message string `form:"message" json:"message" xml:"message"`
+	// Is the error temporary?
+	Temporary bool `form:"temporary" json:"temporary" xml:"temporary"`
+	// Is the error a timeout?
+	Timeout bool `form:"timeout" json:"timeout" xml:"timeout"`
+	// Is the error a server-side fault?
+	Fault bool `form:"fault" json:"fault" xml:"fault"`
+}
+
+// SaveSettingsUnauthorizedResponseBody is the type of the "notes" service
+// "save_settings" endpoint HTTP response body for the "unauthorized" error.
+type SaveSettingsUnauthorizedResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`
 	// ID is a unique identifier for this particular occurrence of the problem.
@@ -4650,6 +4680,14 @@ type MachineSettingsResponseBody struct {
 	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
 	// User name on Zenn, to link to the articles; empty for none
 	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
+	// Command that prints the API key of Anthropic, such as one of a password
+	// manager, which the server runs when the assistant is first used; empty for
+	// none. Never a default: it is left out of the defaults
+	AnthropicKeyCommand *string `form:"anthropic_key_command,omitempty" json:"anthropic_key_command,omitempty" xml:"anthropic_key_command,omitempty"`
+	// Command that prints the API key of Gemini, as anthropic_key_command does
+	GeminiKeyCommand *string `form:"gemini_key_command,omitempty" json:"gemini_key_command,omitempty" xml:"gemini_key_command,omitempty"`
+	// Command that prints the API key of OpenAI, as anthropic_key_command does
+	OpenaiKeyCommand *string `form:"openai_key_command,omitempty" json:"openai_key_command,omitempty" xml:"openai_key_command,omitempty"`
 }
 
 // NotesSettingsResponseBody is used to define fields on response body types.
@@ -4706,6 +4744,14 @@ type MachineSettingsRequestBody struct {
 	ZennBranch *string `form:"zenn_branch,omitempty" json:"zenn_branch,omitempty" xml:"zenn_branch,omitempty"`
 	// User name on Zenn, to link to the articles; empty for none
 	ZennUser *string `form:"zenn_user,omitempty" json:"zenn_user,omitempty" xml:"zenn_user,omitempty"`
+	// Command that prints the API key of Anthropic, such as one of a password
+	// manager, which the server runs when the assistant is first used; empty for
+	// none. Never a default: it is left out of the defaults
+	AnthropicKeyCommand *string `form:"anthropic_key_command,omitempty" json:"anthropic_key_command,omitempty" xml:"anthropic_key_command,omitempty"`
+	// Command that prints the API key of Gemini, as anthropic_key_command does
+	GeminiKeyCommand *string `form:"gemini_key_command,omitempty" json:"gemini_key_command,omitempty" xml:"gemini_key_command,omitempty"`
+	// Command that prints the API key of OpenAI, as anthropic_key_command does
+	OpenaiKeyCommand *string `form:"openai_key_command,omitempty" json:"openai_key_command,omitempty" xml:"openai_key_command,omitempty"`
 }
 
 // NotesSettingsRequestBody is used to define fields on request body types.
@@ -5637,6 +5683,7 @@ func NewSettingsResponseBody(res *notes.Settings) *SettingsResponseBody {
 		Restart:            res.Restart,
 		RestartUnavailable: res.RestartUnavailable,
 		Passkeys:           res.Passkeys,
+		KeyCommands:        res.KeyCommands,
 	}
 	if res.Machine != nil {
 		body.Machine = marshalNotesMachineSettingsToMachineSettingsResponseBody(res.Machine)
@@ -5659,6 +5706,14 @@ func NewSettingsResponseBody(res *notes.Settings) *SettingsResponseBody {
 			tv := val
 			body.DefaultModels[tk] = tv
 		}
+	}
+	if res.KeyEnv != nil {
+		body.KeyEnv = make([]string, len(res.KeyEnv))
+		for i, val := range res.KeyEnv {
+			body.KeyEnv[i] = val
+		}
+	} else {
+		body.KeyEnv = []string{}
 	}
 	return body
 }
@@ -5675,6 +5730,7 @@ func NewSaveSettingsResponseBody(res *notes.Settings) *SaveSettingsResponseBody 
 		Restart:            res.Restart,
 		RestartUnavailable: res.RestartUnavailable,
 		Passkeys:           res.Passkeys,
+		KeyCommands:        res.KeyCommands,
 	}
 	if res.Machine != nil {
 		body.Machine = marshalNotesMachineSettingsToMachineSettingsResponseBody(res.Machine)
@@ -5697,6 +5753,14 @@ func NewSaveSettingsResponseBody(res *notes.Settings) *SaveSettingsResponseBody 
 			tv := val
 			body.DefaultModels[tk] = tv
 		}
+	}
+	if res.KeyEnv != nil {
+		body.KeyEnv = make([]string, len(res.KeyEnv))
+		for i, val := range res.KeyEnv {
+			body.KeyEnv[i] = val
+		}
+	} else {
+		body.KeyEnv = []string{}
 	}
 	return body
 }
@@ -8073,10 +8137,10 @@ func NewSaveSettingsPreconditionFailedResponseBody(res *goa.ServiceError) *SaveS
 	return body
 }
 
-// NewSaveSettingsUnauthorizedResponseBody builds the HTTP response body from
-// the result of the "save_settings" endpoint of the "notes" service.
-func NewSaveSettingsUnauthorizedResponseBody(res *goa.ServiceError) *SaveSettingsUnauthorizedResponseBody {
-	body := &SaveSettingsUnauthorizedResponseBody{
+// NewSaveSettingsForbiddenResponseBody builds the HTTP response body from the
+// result of the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsForbiddenResponseBody(res *goa.ServiceError) *SaveSettingsForbiddenResponseBody {
+	body := &SaveSettingsForbiddenResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,
@@ -8091,6 +8155,20 @@ func NewSaveSettingsUnauthorizedResponseBody(res *goa.ServiceError) *SaveSetting
 // body from the result of the "save_settings" endpoint of the "notes" service.
 func NewSaveSettingsVerificationRequiredResponseBody(res *goa.ServiceError) *SaveSettingsVerificationRequiredResponseBody {
 	body := &SaveSettingsVerificationRequiredResponseBody{
+		Name:      res.Name,
+		ID:        res.ID,
+		Message:   res.Message,
+		Temporary: res.Temporary,
+		Timeout:   res.Timeout,
+		Fault:     res.Fault,
+	}
+	return body
+}
+
+// NewSaveSettingsUnauthorizedResponseBody builds the HTTP response body from
+// the result of the "save_settings" endpoint of the "notes" service.
+func NewSaveSettingsUnauthorizedResponseBody(res *goa.ServiceError) *SaveSettingsUnauthorizedResponseBody {
+	body := &SaveSettingsUnauthorizedResponseBody{
 		Name:      res.Name,
 		ID:        res.ID,
 		Message:   res.Message,

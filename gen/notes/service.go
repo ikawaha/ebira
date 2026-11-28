@@ -1060,6 +1060,14 @@ type MachineSettings struct {
 	ZennBranch *string
 	// User name on Zenn, to link to the articles; empty for none
 	ZennUser *string
+	// Command that prints the API key of Anthropic, such as one of a password
+	// manager, which the server runs when the assistant is first used; empty for
+	// none. Never a default: it is left out of the defaults
+	AnthropicKeyCommand *string
+	// Command that prints the API key of Gemini, as anthropic_key_command does
+	GeminiKeyCommand *string
+	// Command that prints the API key of OpenAI, as anthropic_key_command does
+	OpenaiKeyCommand *string
 }
 
 // MakeNotebookPrivatePayload is the payload type of the notes service
@@ -1624,6 +1632,12 @@ type Settings struct {
 	Passkeys bool
 	// Default models of the assistant by provider
 	DefaultModels map[string]string
+	// Whether save_settings may change the commands that print the API keys, which
+	// the server runs: only while it listens on the loopback or requires passkeys
+	KeyCommands bool
+	// Providers whose API keys the server has in its environment variables, which
+	// win over their commands
+	KeyEnv []string
 }
 
 // SettingsPayload is the payload type of the notes service settings method.
@@ -2450,6 +2464,14 @@ type jsonMachineSettingsTransport struct {
 	ZennBranch *string `json:"zenn_branch,omitempty"`
 	// User name on Zenn, to link to the articles; empty for none
 	ZennUser *string `json:"zenn_user,omitempty"`
+	// Command that prints the API key of Anthropic, such as one of a password
+	// manager, which the server runs when the assistant is first used; empty for
+	// none. Never a default: it is left out of the defaults
+	AnthropicKeyCommand *string `json:"anthropic_key_command,omitempty"`
+	// Command that prints the API key of Gemini, as anthropic_key_command does
+	GeminiKeyCommand *string `json:"gemini_key_command,omitempty"`
+	// Command that prints the API key of OpenAI, as anthropic_key_command does
+	OpenaiKeyCommand *string `json:"openai_key_command,omitempty"`
 }
 
 // validatejsonMachineSettingsTransport checks decoded JSON before it becomes a service value.
@@ -3303,6 +3325,12 @@ type jsonSettingsTransport struct {
 	Passkeys *bool `json:"passkeys"`
 	// Default models of the assistant by provider
 	DefaultModels map[string]string `json:"default_models"`
+	// Whether save_settings may change the commands that print the API keys, which
+	// the server runs: only while it listens on the loopback or requires passkeys
+	KeyCommands *bool `json:"key_commands"`
+	// Providers whose API keys the server has in its environment variables, which
+	// win over their commands
+	KeyEnv []string `json:"key_env"`
 }
 
 // validatejsonSettingsTransport checks decoded JSON before it becomes a service value.
@@ -3342,6 +3370,12 @@ func validatejsonSettingsTransport(value *jsonSettingsTransport) (err error) {
 	}
 	if value.DefaultModels == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("default_models", "body"))
+	}
+	if value.KeyCommands == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_commands", "body"))
+	}
+	if value.KeyEnv == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_env", "body"))
 	}
 	if value.Machine != nil {
 		if err2 := validatejsonMachineSettingsTransport(value.Machine); err2 != nil {
@@ -4276,6 +4310,9 @@ func validateSettingsOriginal(value *Settings) (err error) {
 	}
 	if value.DefaultModels == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("default_models", "value"))
+	}
+	if value.KeyEnv == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("key_env", "value"))
 	}
 	if value.Machine != nil {
 		if err2 := validateMachineSettingsOriginal(value.Machine); err2 != nil {
@@ -5623,18 +5660,21 @@ func EncodeMachineSettings(in *MachineSettings) ([]byte, error) {
 	var body *jsonMachineSettingsTransport
 	{
 		body = &jsonMachineSettingsTransport{
-			Lang:       in.Lang,
-			Theme:      in.Theme,
-			Auth:       in.Auth,
-			GitSync:    in.GitSync,
-			Watch:      in.Watch,
-			Provider:   in.Provider,
-			Model:      in.Model,
-			TuiPreview: in.TuiPreview,
-			TuiSearch:  in.TuiSearch,
-			ZennRepo:   in.ZennRepo,
-			ZennBranch: in.ZennBranch,
-			ZennUser:   in.ZennUser,
+			Lang:                in.Lang,
+			Theme:               in.Theme,
+			Auth:                in.Auth,
+			GitSync:             in.GitSync,
+			Watch:               in.Watch,
+			Provider:            in.Provider,
+			Model:               in.Model,
+			TuiPreview:          in.TuiPreview,
+			TuiSearch:           in.TuiSearch,
+			ZennRepo:            in.ZennRepo,
+			ZennBranch:          in.ZennBranch,
+			ZennUser:            in.ZennUser,
+			AnthropicKeyCommand: in.AnthropicKeyCommand,
+			GeminiKeyCommand:    in.GeminiKeyCommand,
+			OpenaiKeyCommand:    in.OpenaiKeyCommand,
 		}
 	}
 	if err := validatejsonMachineSettingsTransport(body); err != nil {
@@ -5665,18 +5705,21 @@ func ValidateMachineSettingsValue(in *MachineSettings) error {
 	var body *jsonMachineSettingsTransport
 	{
 		body = &jsonMachineSettingsTransport{
-			Lang:       in.Lang,
-			Theme:      in.Theme,
-			Auth:       in.Auth,
-			GitSync:    in.GitSync,
-			Watch:      in.Watch,
-			Provider:   in.Provider,
-			Model:      in.Model,
-			TuiPreview: in.TuiPreview,
-			TuiSearch:  in.TuiSearch,
-			ZennRepo:   in.ZennRepo,
-			ZennBranch: in.ZennBranch,
-			ZennUser:   in.ZennUser,
+			Lang:                in.Lang,
+			Theme:               in.Theme,
+			Auth:                in.Auth,
+			GitSync:             in.GitSync,
+			Watch:               in.Watch,
+			Provider:            in.Provider,
+			Model:               in.Model,
+			TuiPreview:          in.TuiPreview,
+			TuiSearch:           in.TuiSearch,
+			ZennRepo:            in.ZennRepo,
+			ZennBranch:          in.ZennBranch,
+			ZennUser:            in.ZennUser,
+			AnthropicKeyCommand: in.AnthropicKeyCommand,
+			GeminiKeyCommand:    in.GeminiKeyCommand,
+			OpenaiKeyCommand:    in.OpenaiKeyCommand,
 		}
 	}
 	if err := validatejsonMachineSettingsTransport(body); err != nil {
@@ -5711,18 +5754,21 @@ func DecodeMachineSettings(data []byte) (out *MachineSettings, err error) {
 	}
 	{
 		out = &MachineSettings{
-			Lang:       body.Lang,
-			Theme:      body.Theme,
-			Auth:       body.Auth,
-			GitSync:    body.GitSync,
-			Watch:      body.Watch,
-			Provider:   body.Provider,
-			Model:      body.Model,
-			TuiPreview: body.TuiPreview,
-			TuiSearch:  body.TuiSearch,
-			ZennRepo:   body.ZennRepo,
-			ZennBranch: body.ZennBranch,
-			ZennUser:   body.ZennUser,
+			Lang:                body.Lang,
+			Theme:               body.Theme,
+			Auth:                body.Auth,
+			GitSync:             body.GitSync,
+			Watch:               body.Watch,
+			Provider:            body.Provider,
+			Model:               body.Model,
+			TuiPreview:          body.TuiPreview,
+			TuiSearch:           body.TuiSearch,
+			ZennRepo:            body.ZennRepo,
+			ZennBranch:          body.ZennBranch,
+			ZennUser:            body.ZennUser,
+			AnthropicKeyCommand: body.AnthropicKeyCommand,
+			GeminiKeyCommand:    body.GeminiKeyCommand,
+			OpenaiKeyCommand:    body.OpenaiKeyCommand,
 		}
 	}
 	return out, nil
@@ -7397,6 +7443,7 @@ func EncodeSettings(in *Settings) ([]byte, error) {
 			Restart:            &in.Restart,
 			RestartUnavailable: in.RestartUnavailable,
 			Passkeys:           &in.Passkeys,
+			KeyCommands:        &in.KeyCommands,
 		}
 		body.Machine = encodeMachineSettingsToMachineSettingsTransport2(in.Machine)
 		body.Notes = encodeNotesSettingsToNotesSettingsTransport(in.Notes)
@@ -7409,6 +7456,10 @@ func EncodeSettings(in *Settings) ([]byte, error) {
 			tk := key
 			tv := val
 			body.DefaultModels[tk] = tv
+		}
+		body.KeyEnv = make([]string, len(in.KeyEnv))
+		for i, val := range in.KeyEnv {
+			body.KeyEnv[i] = val
 		}
 	}
 	if err := validatejsonSettingsTransport(body); err != nil {
@@ -7447,6 +7498,7 @@ func ValidateSettingsValue(in *Settings) error {
 			Restart:            &in.Restart,
 			RestartUnavailable: in.RestartUnavailable,
 			Passkeys:           &in.Passkeys,
+			KeyCommands:        &in.KeyCommands,
 		}
 		body.Machine = encodeMachineSettingsToMachineSettingsTransport2(in.Machine)
 		body.Notes = encodeNotesSettingsToNotesSettingsTransport(in.Notes)
@@ -7459,6 +7511,10 @@ func ValidateSettingsValue(in *Settings) error {
 			tk := key
 			tv := val
 			body.DefaultModels[tk] = tv
+		}
+		body.KeyEnv = make([]string, len(in.KeyEnv))
+		for i, val := range in.KeyEnv {
+			body.KeyEnv[i] = val
 		}
 	}
 	if err := validatejsonSettingsTransport(body); err != nil {
@@ -7501,6 +7557,7 @@ func DecodeSettings(data []byte) (out *Settings, err error) {
 			Restart:            *body.Restart,
 			RestartUnavailable: body.RestartUnavailable,
 			Passkeys:           *body.Passkeys,
+			KeyCommands:        *body.KeyCommands,
 		}
 		out.Machine = decodeMachineSettingsTransportToMachineSettings(body.Machine)
 		out.Notes = decodeNotesSettingsTransportToNotesSettings(body.Notes)
@@ -7513,6 +7570,10 @@ func DecodeSettings(data []byte) (out *Settings, err error) {
 			tk := key
 			tv := val
 			out.DefaultModels[tk] = tv
+		}
+		out.KeyEnv = make([]string, len(body.KeyEnv))
+		for i, val := range body.KeyEnv {
+			out.KeyEnv[i] = val
 		}
 	}
 	return out, nil
@@ -8593,18 +8654,21 @@ func decodeListenSelectionTransportToListenSelection(v *jsonListenSelectionTrans
 
 func decodeMachineSettingsTransportToMachineSettings(v *jsonMachineSettingsTransport) *MachineSettings {
 	res := &MachineSettings{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res
@@ -8839,18 +8903,21 @@ func encodeListenSelectionToListenSelectionTransport(v *ListenSelection) *jsonLi
 
 func encodeMachineSettingsToMachineSettingsTransport(v *MachineSettings) *jsonMachineSettingsTransport {
 	res := &jsonMachineSettingsTransport{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res
@@ -8858,18 +8925,21 @@ func encodeMachineSettingsToMachineSettingsTransport(v *MachineSettings) *jsonMa
 
 func encodeMachineSettingsToMachineSettingsTransport2(v *MachineSettings) *jsonMachineSettingsTransport {
 	res := &jsonMachineSettingsTransport{
-		Lang:       v.Lang,
-		Theme:      v.Theme,
-		Auth:       v.Auth,
-		GitSync:    v.GitSync,
-		Watch:      v.Watch,
-		Provider:   v.Provider,
-		Model:      v.Model,
-		TuiPreview: v.TuiPreview,
-		TuiSearch:  v.TuiSearch,
-		ZennRepo:   v.ZennRepo,
-		ZennBranch: v.ZennBranch,
-		ZennUser:   v.ZennUser,
+		Lang:                v.Lang,
+		Theme:               v.Theme,
+		Auth:                v.Auth,
+		GitSync:             v.GitSync,
+		Watch:               v.Watch,
+		Provider:            v.Provider,
+		Model:               v.Model,
+		TuiPreview:          v.TuiPreview,
+		TuiSearch:           v.TuiSearch,
+		ZennRepo:            v.ZennRepo,
+		ZennBranch:          v.ZennBranch,
+		ZennUser:            v.ZennUser,
+		AnthropicKeyCommand: v.AnthropicKeyCommand,
+		GeminiKeyCommand:    v.GeminiKeyCommand,
+		OpenaiKeyCommand:    v.OpenaiKeyCommand,
 	}
 
 	return res
@@ -10516,10 +10586,24 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 	sort.Strings(keys)
 	for _, key := range keys {
 		switch key {
+		case "anthropic_key_command":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Command that prints the API key of Anthropic, such as one of a password manager, which the server runs when the assistant is first used; empty for none. Never a default: it is left out of the defaults",
+			); err != nil {
+				return err
+			}
 		case "auth":
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "How the REST API authenticates people; empty for none. passkey needs a passkey registered",
+			); err != nil {
+				return err
+			}
+		case "gemini_key_command":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Command that prints the API key of Gemini, as anthropic_key_command does",
 			); err != nil {
 				return err
 			}
@@ -10541,6 +10625,13 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 			if err := validateAIImportFileJSONValue3(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Model of the assistant; empty for the default of the provider",
+			); err != nil {
+				return err
+			}
+		case "openai_key_command":
+			if err := validateAIImportFileJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Command that prints the API key of OpenAI, as anthropic_key_command does",
 			); err != nil {
 				return err
 			}
@@ -10602,10 +10693,13 @@ func validateMachineSettingsJSONValue(path string, value any, description string
 			}
 		default:
 			return unknownJSONFieldError(path, key, []string{
+				"anthropic_key_command",
 				"auth",
+				"gemini_key_command",
 				"git_sync",
 				"lang",
 				"model",
+				"openai_key_command",
 				"provider",
 				"theme",
 				"tui_preview",
@@ -11845,6 +11939,20 @@ func validateSettingsJSONValue(path string, value any, description string) error
 			); err != nil {
 				return err
 			}
+		case "key_commands":
+			if err := validateFileCheckJSONValue5(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Whether save_settings may change the commands that print the API keys, which the server runs: only while it listens on the loopback or requires passkeys",
+			); err != nil {
+				return err
+			}
+		case "key_env":
+			if err := validateSettingsJSONValue3(
+				generatedJSONChildPath(path, key, false),
+				typed[key], "Providers whose API keys the server has in its environment variables, which win over their commands",
+			); err != nil {
+				return err
+			}
 		case "machine":
 			if err := validateMachineSettingsJSONValue(
 				generatedJSONChildPath(path, key, false),
@@ -11881,7 +11989,7 @@ func validateSettingsJSONValue(path string, value any, description string) error
 				return err
 			}
 		case "overridden":
-			if err := validateSettingsJSONValue3(
+			if err := validateSettingsJSONValue4(
 				generatedJSONChildPath(path, key, false),
 				typed[key], "Keys whose values the server does not take, and a restart would not either, as it was started with their flags",
 			); err != nil {
@@ -11919,6 +12027,8 @@ func validateSettingsJSONValue(path string, value any, description string) error
 			return unknownJSONFieldError(path, key, []string{
 				"addr",
 				"default_models",
+				"key_commands",
+				"key_env",
 				"machine",
 				"machine_path",
 				"notes",
@@ -11966,6 +12076,30 @@ func validateSettingsJSONValue2(path string, value any, description string) erro
 
 // validateSettingsJSONValue3 checks one value whose JSON shape is fixed by the generated Goa type.
 func validateSettingsJSONValue3(path string, value any, description string) error {
+	field := path
+	if field == "" {
+		field = "$payload"
+	}
+	if value == nil {
+		return invalidGeneratedFieldTypeError(field, "array", "null", description)
+	}
+	typed, ok := value.([]any)
+	if !ok {
+		return invalidGeneratedFieldTypeError(field, "array", decodedJSONType(value), description)
+	}
+	for index, item := range typed {
+		if err := validateAIImportFileJSONValue3(
+			generatedJSONChildPath(path, strconv.Itoa(index), true),
+			item, description,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateSettingsJSONValue4 checks one value whose JSON shape is fixed by the generated Goa type.
+func validateSettingsJSONValue4(path string, value any, description string) error {
 	field := path
 	if field == "" {
 		field = "$payload"
@@ -13205,6 +13339,21 @@ func checkMachineSettingsMachineSettingsValue(in *MachineSettings, field string,
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "zenn_user", false))
 			}
 		}
+		if in.AnthropicKeyCommand != nil {
+			if !utf8.ValidString(string(*in.AnthropicKeyCommand)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "anthropic_key_command", false))
+			}
+		}
+		if in.GeminiKeyCommand != nil {
+			if !utf8.ValidString(string(*in.GeminiKeyCommand)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "gemini_key_command", false))
+			}
+		}
+		if in.OpenaiKeyCommand != nil {
+			if !utf8.ValidString(string(*in.OpenaiKeyCommand)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(field, "openai_key_command", false))
+			}
+		}
 	}
 	return nil
 }
@@ -13893,6 +14042,13 @@ func checkSettingsSettingsValue(in *Settings, field string, active map[any]bool)
 			}
 			if !utf8.ValidString(string(item1)) {
 				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "default_models", false), string(key1), true))
+			}
+		}
+		for index1, item1 := range in.KeyEnv {
+			_ = index1
+			_ = item1
+			if !utf8.ValidString(string(item1)) {
+				return fmt.Errorf("%s: invalid UTF-8", generatedJSONChildPath(generatedJSONChildPath(field, "key_env", false), strconv.Itoa(index1), true))
 			}
 		}
 	}
