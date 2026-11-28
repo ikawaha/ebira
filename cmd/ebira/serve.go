@@ -166,7 +166,15 @@ func runServe(args []string) error {
 	}
 	conf, err := st.Config()
 	if err != nil {
-		return err
+		if !config.Safe() {
+			return safeHint(err)
+		}
+		// The safe mode goes on without the file, but for its search mode,
+		// in which the index was made.
+		if notesSettingsError == nil {
+			notesSettingsError = err
+		}
+		conf = store.Config{Search: store.SalvageSearch(*notesDir)}
 	}
 	// The flag wins over the settings file, which the notes repository shares.
 	modeName, modeFrom := *search, "-search"
@@ -278,10 +286,7 @@ func runServe(args []string) error {
 		}()
 	}
 
-	asst, forgetAssistant, err := newAssistant(ctx, svc, *prov, *modelF)
-	if err != nil {
-		return err
-	}
+	asst, forgetAssistant := newAssistant(ctx, svc, *prov, *modelF)
 
 	if gitEvery > 0 {
 		go syncGitEvery(ctx, svc, gitEvery)
@@ -296,6 +301,17 @@ func runServe(args []string) error {
 	passkeys, err := auth.New(auth.Dir(stateDir), "http://localhost:"+port, "localhost")
 	if err != nil {
 		return err
+	}
+	// In the safe mode the settings of auth are not known, so the notes are
+	// served to this computer only.
+	if settingsError != nil && !loopback(listenHost) {
+		return fmt.Errorf("in the safe mode, the server listens on this computer only, such as localhost:13579, not %s", *addr)
+	}
+	if settingsError != nil {
+		slog.Warn("safe mode: the settings file is not used until it is fixed", "error", settingsError)
+	}
+	if notesSettingsError != nil {
+		slog.Warn("safe mode: the settings shared with the notes are not used until they are fixed", "error", notesSettingsError)
 	}
 	if *o.auth == auth.ModePasskey && listenHost != "localhost" {
 		slog.Warn("passkeys work only on the web UI at localhost", "url", "http://localhost:"+port+web.Prefix)
@@ -355,7 +371,7 @@ func runServe(args []string) error {
 	ui := web.Handler(web.Options{
 		Look: look.get, Search: string(mode), PreviewCSS: previewCSS,
 		Version: versionLabel(bi), VersionText: versionText(bi, daemon.Version()),
-		GuideNames: guide.Names(),
+		GuideNames: guide.Names(), SettingsError: safeModeErrors(),
 	})
 	root.Handle("GET /{$}", ui)
 	root.Handle("GET "+web.AssetsPrefix, ui)
@@ -510,6 +526,14 @@ func sweepHistoryEvery(ctx context.Context, svc *service.Notes, interval time.Du
 		case <-t.C:
 		}
 	}
+}
+
+// errorText is the text of err, or "" for nil.
+func errorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 // loopback reports whether a server listening on host is reached from this

@@ -104,26 +104,31 @@ type lazyAssistant struct {
 
 // newAssistant returns the assistant service on the model of provider, or
 // of the first provider whose key there is when it is "". A key in an
-// environment variable makes the agent at once, and one failing stops the
-// server, as a flag would; a key of a command makes it when it is first
-// used. The function returned forgets an agent made with a command, so that
+// environment variable makes the agent at once; a key of a command makes it
+// when it is first used. A mistake in the settings of the assistant, as an
+// unknown provider or one without its key, does not stop the server: the
+// assistant answers with unavailable and why, and the rest of the server
+// works. The function returned forgets an agent made with a command, so that
 // saved settings apply when it is used next.
-func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, func(), error) {
+func newAssistant(ctx context.Context, svc gennotes.Service, provider, modelID string) (genassistant.Service, func()) {
 	if _, ok := defaultModels[provider]; provider != "" && !ok {
-		return nil, nil, fmt.Errorf("unknown model provider %q (anthropic, gemini, openai)", provider)
+		err := fmt.Errorf("unknown model provider %q (anthropic, gemini, openai)", provider)
+		slog.Warn("assistant disabled", "error", err)
+		return agent.Unavailable{Reason: "the assistant could not be started: " + err.Error()}, func() {}
 	}
 	l := &lazyAssistant{
 		ctx: ctx, svc: svc, provider: provider, model: modelID,
 		env: envKeys(), commands: readKeyCommands, runKey: apikey.Run, build: buildAssistant,
 	}
 	if p := l.pick(nil); p != "" && l.env[p] != "" {
-		a, err := l.build(ctx, svc, p, modelID, l.env[p])
-		if err != nil {
-			return nil, nil, err
+		// When it fails, each use tries again and tells why.
+		if a, err := l.build(ctx, svc, p, modelID, l.env[p]); err != nil {
+			slog.Warn("the assistant failed to start", "provider", p, "error", err)
+		} else {
+			l.made, l.fromEnv = a, true
 		}
-		l.made, l.fromEnv = a, true
 	}
-	return l, l.forget, nil
+	return l, l.forget
 }
 
 // pick returns the provider of the assistant: the one chosen, else the first

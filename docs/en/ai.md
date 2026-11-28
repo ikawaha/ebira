@@ -204,6 +204,8 @@ The environment variables `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` (or `GOOGLE_API_
 op run --env-file=.env -- ebira server restart
 ```
 
+When `provider` in the settings names an unknown provider, or the key of the provider chosen is missing, only the assistant is off and the rest works as usual. This column tells why.
+
 ## Pointing an AI to a note
 
 The chain button after the title of the preview (or `Y`) copies the URL of the note, or a Markdown link to it. The part after `#note/` in the URL is the ID of the note, by which an AI can read it.

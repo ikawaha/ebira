@@ -58,6 +58,7 @@ type shell struct {
 	nextAs   target                     // next as the user gave it
 	applies  uint64                     // the Applies of the settings so far: the last counts
 	first    bool                       // the first start, until an Apply saves the folder for ebira
+	broken   string                     // the settings file of ebira with an error, offered to open; "" for none
 }
 
 // welcome is the introduction of the settings window at the first start.
@@ -99,7 +100,9 @@ func main() {
 		s.openSettingsWith("", welcome)
 	} else if h, err := connect(s.current, nil); err != nil {
 		log.Print(err)
-		s.openSettings(err.Error())
+		if !s.offerSafeMode(s.current) {
+			s.openSettings(err.Error())
+		}
 	} else {
 		s.current.Notes = h.NotesDir
 		s.openMain(s.current.url())

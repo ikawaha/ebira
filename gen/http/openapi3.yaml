@@ -3852,7 +3852,7 @@ paths:
             tags:
                 - notes
             summary: move notes
-            description: Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.
+            description: Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. A pinned note (with the pin mark) moves only among the pinned notes, which come first, and another note only among the others; first is the first of them. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.
             operationId: notes#move
             parameters:
                 - name: id
@@ -3936,7 +3936,7 @@ paths:
                                     type: tech
                                     url: https://zenn.dev/you/articles/5d22fdc56c57a0
                 "400":
-                    description: 'bad_request: The note is in the trash, or after is not another note or a separator of its notebook'
+                    description: 'bad_request: The note is in the trash, or after is not another note or a separator of its notebook, or puts it on the other side of the pinned notes'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -4632,7 +4632,7 @@ paths:
             tags:
                 - notes
             summary: create_separator notes
-            description: Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.
+            description: Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them. Separators are kept in the _separators.yaml file of the notebook.
             operationId: notes#create_separator
             requestBody:
                 description: Request body for create_separator.
@@ -4662,7 +4662,7 @@ paths:
                                 notebook: inbox
                                 title: October
                 "400":
-                    description: 'bad_request: The notebook is the trash, or after is not a note or a separator of the notebook'
+                    description: 'bad_request: The notebook is the trash, or after is not a note or a separator of the notebook, or is a pinned note but the last'
                     content:
                         application/vnd.goa.error:
                             schema:
@@ -4877,7 +4877,7 @@ paths:
             tags:
                 - notes
             summary: move_separator notes
-            description: Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.
+            description: Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them.
             operationId: notes#move_separator
             parameters:
                 - name: id
@@ -4915,7 +4915,7 @@ paths:
                                 notebook: inbox
                                 title: October
                 "400":
-                    description: 'bad_request: after is not a note or another separator of the notebook'
+                    description: 'bad_request: after is not a note or another separator of the notebook, or is a pinned note but the last'
                     content:
                         application/vnd.goa.error:
                             schema:

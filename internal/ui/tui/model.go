@@ -879,6 +879,12 @@ func (m *Model) moveNote(delta int) tea.Cmd {
 	if m.sel < 0 || m.sel >= len(m.items) || j < 0 || j >= len(m.items) {
 		return nil
 	}
+	// Pinned notes come first and move only among themselves, and the others
+	// only among the others, as the server takes them.
+	if pinned(m.items[m.sel]) != pinned(m.items[j]) {
+		m.setStatus(statusWarn, "status.reorderPinned")
+		return nil
+	}
 	id := m.items[m.sel].ID
 	// Down: after the next note. Up: after the note above the previous one,
 	// or first.
@@ -896,6 +902,10 @@ func (m *Model) moveNote(delta int) tea.Cmd {
 		return movedMsg{err: err}
 	}
 }
+
+// pinned reports whether note n has the pin mark, which puts it first in
+// the lists of its notebook.
+func pinned(n *gennotes.NoteSummary) bool { return slices.Contains(n.Marks, "pin") }
 
 // defaultNotebook is the notebook for a new note: the selected one, or the
 // inbox when all notes or the trash are shown.

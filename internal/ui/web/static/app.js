@@ -346,6 +346,25 @@ function listItems(notes, separators, total) {
   return items;
 }
 
+// Pinned notes, those with the pin mark, come first in the lists of their
+// notebook, as the server orders them, above the other notes and the
+// separators. They move only among themselves, and the others only among
+// the others, so that a move never pins or unpins a note.
+const PIN = "pin";
+const isPinned = (n) => !!n?.marks?.includes(PIN);
+
+// crossesPins reports whether row id of items, the rows of a list in the
+// manual order, put right after row after (null for first) would go to the
+// other side of the pinned notes.
+function crossesPins(items, id, after) {
+  const others = items.filter((it) => it.id !== id);
+  let pinned = 0;
+  while (pinned < others.length && isPinned(others[pinned].note)) pinned++;
+  const pos = after ? others.findIndex((it) => it.id === after) + 1 : 0;
+  const me = items.find((it) => it.id === id);
+  return isPinned(me?.note) ? pos > pinned : pos < pinned;
+}
+
 // partialCell reports whether the cell key of notebook id holds only some of
 // its notes: a cell of the archive of a notebook not there, with the notes
 // put there on their own. Its notes cannot be reordered, nor separators put
@@ -927,6 +946,7 @@ function renderBody(el, body, ranges) {
   el.innerHTML = clean;
   renderMath(el);
   renderDiagrams(el);
+  colorDiffs(el);
   if (!ranges || !ranges.length) return;
   // The markers in text become <mark> elements.
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -956,6 +976,38 @@ function renderBody(el, body, ranges) {
     }
     flush();
     node.replaceWith(frag);
+  }
+}
+
+// DIFF_LANGS are the languages of the code blocks colored as diffs.
+const DIFF_LANGS = ["diff", "patch"];
+
+// diffLineClass returns the class of a line of a diff: hunk for the head of a
+// hunk (@@), file for the heads of a file, add and del for the lines added
+// and deleted, and none for the others.
+function diffLineClass(line) {
+  if (line.startsWith("@@")) return "hunk";
+  if (/^(diff |index |--- |\+\+\+ )/.test(line)) return "file";
+  if (line.startsWith("+")) return "add";
+  if (line.startsWith("-")) return "del";
+  return "";
+}
+
+// colorDiffs puts each line of the diff code blocks in root into a span with
+// the class of the line. The text stays as it is, with the markers of the
+// highlights, which become <mark> elements after this.
+function colorDiffs(root) {
+  for (const code of root.querySelectorAll("pre > code")) {
+    const lang = /(?:^|\s)language-(\S+)/.exec(code.className)?.[1];
+    if (!DIFF_LANGS.includes(lang?.toLowerCase())) continue;
+    const lines = code.textContent.replace(/\n$/, "").split("\n");
+    code.classList.add("diff");
+    code.replaceChildren(...lines.map((line) => {
+      const cls = diffLineClass(line.replace(/\uE000|\uE001/g, ""));
+      // Each line ends with its newline, so that the text copied from the
+      // block reads as the source does.
+      return el("span", cls ? "line " + cls : "line", line + "\n");
+    }));
   }
 }
 
@@ -2164,6 +2216,10 @@ function moveSelected(delta) {
   // Down: after the next row. Up: after the row above the previous one, or
   // first.
   const after = delta > 0 ? items[j].id : (items[j - 1]?.id ?? null);
+  if (crossesPins(items, state.selected, after)) {
+    showToast(t("reorderPinned"));
+    return;
+  }
   moveNote(state.selected, after);
 }
 
@@ -2214,9 +2270,14 @@ function enableDrag(li, reorder, list) {
     if (!dragID || list.some((it) => it.id === dragID)) return null;
     return notesInto(listOf(rowID(li)).nb);
   };
+  // A note dropped on the other side of the pinned notes goes in by its
+  // order, as it does not pin or unpin.
   const into = (e) => {
     const { reorder } = listOf(rowID(li));
-    return reorder && !draggedNotes() ? dropAfter(li, e, list) : null;
+    if (!reorder || draggedNotes()) return null;
+    const at = dropAfter(li, e, list);
+    const n = findListed(dragID);
+    return crossesPins([...list, { id: dragID, note: n }], dragID, at.after) ? null : at;
   };
   li.addEventListener("dragover", (e) => {
     if (foreign()) {
@@ -2238,9 +2299,11 @@ function enableDrag(li, reorder, list) {
     // As for the notebooks: a drop effect that the move of dragstart does not
     // allow drops nothing, and browsers differ in the one they take by default.
     e.dataTransfer.dropEffect = "move";
-    const { below } = dropAfter(li, e, list);
-    li.classList.toggle("drop-below", below);
-    li.classList.toggle("drop-above", !below);
+    const { after, below } = dropAfter(li, e, list);
+    // Across the pinned notes it is taken, to say why nothing moves.
+    const across = crossesPins(list, dragID, after);
+    li.classList.toggle("drop-below", below && !across);
+    li.classList.toggle("drop-above", !below && !across);
   });
   li.addEventListener("dragleave", () => li.classList.remove("drop-above", "drop-below", "drop-into"));
   li.addEventListener("drop", (e) => {
@@ -2262,6 +2325,11 @@ function enableDrag(li, reorder, list) {
     e.preventDefault();
     const id = dragID;
     const { after } = dropAfter(li, e, list);
+    if (crossesPins(list, id, after)) {
+      li.classList.remove("drop-above", "drop-below");
+      showToast(t("reorderPinned"));
+      return;
+    }
     const sep = list.find((it) => it.id === id)?.sep;
     if (sep) moveSeparator(sep, after);
     else moveNote(id, after);
@@ -2304,8 +2372,11 @@ function notesInto(nb) {
     const many = draggedNotes();
     if (many) return moveNotesTo(many, nb);
     const all = state.notes.length >= state.total;
-    const last = listItems(state.notes, state.separators, state.total).at(-1)?.id ?? null;
-    moveNoteTo(dragID, nb, canReorder() && all ? last : undefined);
+    const items = listItems(state.notes, state.separators, state.total);
+    const last = items.at(-1)?.id ?? null;
+    // A pinned note goes among the pinned notes, by its order.
+    const pinned = isPinned(findListed(dragID)) && !isPinned(items.at(-1)?.note);
+    moveNoteTo(dragID, nb, canReorder() && all && !pinned ? last : undefined);
   });
 }
 
@@ -2411,7 +2482,7 @@ function subNotebookRows() {
     const reorder = !trashed && !partialCell(key, sub.id) && (sub.sort || "order") === "order";
     const cls = depth ? "in-sub deep" : "in-sub";
     const items = listItems(s.notes, s.separators, s.total);
-    const rows = items.map((it) => it.sep ? separatorRow(it.sep, reorder, items, cls) : noteRow(it.note, sub.sort || "order", reorder, items, cls));
+    const rows = items.map((it) => it.sep ? separatorRow(it.sep, reorder, items, cls) : noteRow(it.note, sub.sort || "order", reorder, items, [cls, pinEnd(items, it)].filter(Boolean).join(" ")));
     if (s.notes.length < s.total) {
       const more = button(t("loadMore", { rest: s.total - s.notes.length }), () => {
         s.want = s.notes.length + LIST_PAGE;
@@ -2432,7 +2503,7 @@ function renderNotes() {
   const ul = $("notes");
   ul.replaceChildren(...subNotebookRows());
   const items = listItems(state.notes, state.separators, state.total);
-  for (const it of items) ul.append(it.sep ? separatorRow(it.sep, canReorder(), items, "") : noteRow(it.note, currentSort(), canReorder(), items, ""));
+  for (const it of items) ul.append(it.sep ? separatorRow(it.sep, canReorder(), items, "") : noteRow(it.note, currentSort(), canReorder(), items, pinEnd(items, it)));
   if (!searching() && state.notes.length < state.total) {
     const more = button(t("loadMore", { rest: state.total - state.notes.length }), () => {
       state.want = state.notes.length + LIST_PAGE;
@@ -2441,6 +2512,20 @@ function renderNotes() {
     ul.append(el("li", "more-row", more));
   }
 }
+
+// pinEnd returns the class of row it of items, the rows of a list, that ends
+// the pinned notes with a line: the last pinned note of a notebook's list,
+// with rows after it.
+function pinEnd(items, it) {
+  if (!isPinned(it.note) || !pinsList()) return "";
+  const next = items[items.indexOf(it) + 1];
+  return next && !isPinned(next.note) ? "pin-end" : "";
+}
+
+// pinsList reports whether the list shown puts the pinned notes first, as the
+// server does for a notebook (see index.pins): not all the notes, a tag, a
+// search, the trash or the archive.
+const pinsList = () => !!state.notebook && state.notebook !== "trash" && !state.tag && !searching() && !state.archive;
 
 // noteRow returns the row of note n in the list, shown in sort; with reorder,
 // it can be dragged within list, the rows it is shown with.
@@ -3029,7 +3114,8 @@ function openMarkMenu(n, at, e) {
   };
   const sep = () => m.append(Object.assign(el("div", "menu-sep"), { role: "separator" }));
   // From the list in the manual order, a separator can go above the note.
-  if (inList && notes.length === 1 && findListed(n.id) && listOf(n.id).reorder) {
+  // Separators go below the pinned notes.
+  if (inList && notes.length === 1 && findListed(n.id) && listOf(n.id).reorder && !isPinned(n)) {
     sep();
     item(t("separatorInsertAbove"), () => insertSeparatorAbove(n));
   }
@@ -4045,6 +4131,14 @@ function addCodeFolds(body, id) {
     pre.replaceWith(fold);
     const bar = el("summary", "", kindSVG("chevron"), el("span", "code-lines", label));
     if (lang) bar.insertBefore(el("span", "code-lang", lang), bar.lastChild);
+    // A click on the copy button copies the code and leaves the block as it is.
+    const copy = button(kindSVG("copy"), (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      copyCode(pre.textContent.replace(/\n$/, ""), lang);
+    }, { title: t("copyCodeTitle"), cls: "code-copy" });
+    copy.setAttribute("aria-label", t("copyCodeTitle"));
+    bar.append(copy);
     fold.append(bar, pre);
     fold.addEventListener("toggle", () => {
       const set = codeFolds.get(id) || new Set();
@@ -4060,6 +4154,18 @@ function addCodeFolds(body, id) {
 function unfold(node) {
   const fold = node.closest("details.code-fold");
   if (fold) fold.open = true;
+}
+
+// copyCode copies the text of a code block of the note in the preview to the
+// clipboard; lang is the language of the block, if any.
+async function copyCode(text, lang) {
+  try {
+    await writeClipboard(text);
+  } catch (e) {
+    alert(t("copyFailed", { error: e.message }));
+    return;
+  }
+  showToast(lang ? t("copiedCodeLang", { lang }) : t("copiedCode"));
 }
 
 // copySection copies a section of the note in the preview to the clipboard.
@@ -7379,6 +7485,28 @@ $("logout").addEventListener("click", async () => {
   location.reload();
 });
 
+// showSafeMode tells, above the panes, that the server runs in the safe mode
+// without the settings file, which has an error, so that it is fixed, with a
+// button to restart the server once it is: the mark beside the status needs
+// the settings, which cannot be read then.
+function showSafeMode() {
+  const err = document.documentElement.dataset.settingsError;
+  if (!err) return;
+  $("safe-mode-error").textContent = err;
+  $("safe-mode").hidden = false;
+  const b = $("safe-mode-restart");
+  b.addEventListener("click", async () => {
+    if (!confirm(t("statsRestartConfirm")) || !leaveEditor()) return;
+    b.disabled = true;
+    try {
+      await restartServer();
+    } catch (e) {
+      b.disabled = false;
+      alert(t("statsRestartFailed", { error: e.message }));
+    }
+  });
+}
+
 // Start
 
 (async () => {
@@ -7393,6 +7521,7 @@ $("logout").addEventListener("click", async () => {
   } catch (_) { /* an older server: no passkeys */ }
   showAuthState();
   showVersion();
+  showSafeMode();
   const reg = location.hash.match(/^#register\/([\w-]+)$/);
   if (reg) {
     history.replaceState(null, "", location.pathname + location.search);

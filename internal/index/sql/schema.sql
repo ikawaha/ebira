@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS notes (
 	zenn_slug  TEXT NOT NULL DEFAULT '', -- slug of the article of Zenn the note was written as (store.Note.Zenn)
 	zenn_published INTEGER NOT NULL DEFAULT 0, -- 1 when that article is published, not a draft
 	zenn_changed INTEGER NOT NULL DEFAULT 0, -- 1 when the note changed since it was written to Zenn last
+	pinned     INTEGER NOT NULL DEFAULT 0, -- 1 for a note with the pin mark (store.MarkPin), first in the lists of its notebook
 	file_mtime INTEGER NOT NULL, -- used by Sync to skip unchanged files
 	file_size  INTEGER NOT NULL
 );

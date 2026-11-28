@@ -1078,11 +1078,11 @@ func notesUsage() {
 	fmt.Fprintln(os.Stderr, `    trash-notes: Move notes to the trash at once, such as several chosen in a list. The notes are checked first: when one does not exist or is in the trash already, none is moved.`)
 	fmt.Fprintln(os.Stderr, `    search: Search notes. The search mode (like, bigram, trigram, en, English words with their stems, or ja, Japanese morphological analysis) is set by the server configuration.`)
 	fmt.Fprintln(os.Stderr, `    restore: Move a note from the trash back to the notebook it was in.`)
-	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
-	fmt.Fprintln(os.Stderr, `    create-separator: Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.`)
+	fmt.Fprintln(os.Stderr, `    move: Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. A pinned note (with the pin mark) moves only among the pinned notes, which come first, and another note only among the others; first is the first of them. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
+	fmt.Fprintln(os.Stderr, `    create-separator: Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them. Separators are kept in the _separators.yaml file of the notebook.`)
 	fmt.Fprintln(os.Stderr, `    update-separator: Replace the heading, the date and the color of a separator; an omitted one is taken away.`)
 	fmt.Fprintln(os.Stderr, `    delete-separator: Remove a separator. It does not go to the trash.`)
-	fmt.Fprintln(os.Stderr, `    move-separator: Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.`)
+	fmt.Fprintln(os.Stderr, `    move-separator: Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them.`)
 	fmt.Fprintln(os.Stderr, `    notebooks: List notebooks with their note counts: inbox first, then the others by order and name, trash last.`)
 	fmt.Fprintln(os.Stderr, `    tags: List the tags of the notes with their note counts, by name (case-insensitive, full-width and half-width forms alike).`)
 	fmt.Fprintln(os.Stderr, `    marks: List the marks a note can have, with the names the user gave them, which say what they mean. The names are kept in the settings of the notes, so every machine shows the same.`)
@@ -1346,7 +1346,7 @@ func notesMoveUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
+	fmt.Fprintln(os.Stderr, `Put a note right after another note or a separator of the same notebook in the manual order (sort order), or first when after is omitted. A pinned note (with the pin mark) moves only among the pinned notes, which come first, and another note only among the others; first is the first of them. Only the moved note is written, with its new order; updated_at is kept, as the content does not change.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
@@ -1367,7 +1367,7 @@ func notesCreateSeparatorUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators are kept in the _separators.yaml file of the notebook.`)
+	fmt.Fprintln(os.Stderr, `Put a new separator between the notes of a notebook in the manual order, right after a note or a separator, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them. Separators are kept in the _separators.yaml file of the notebook.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
@@ -1432,7 +1432,7 @@ func notesMoveSeparatorUsage() {
 
 	// Description
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted.`)
+	fmt.Fprintln(os.Stderr, `Put a separator right after a note or another separator of its notebook in the manual order, or first when after is omitted. Separators go below the pinned notes, and first is the first place below them.`)
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)

@@ -421,6 +421,8 @@ dialog.mark-names { width: min(380px, calc(100vw - 32px)); }
 .list li.sub-notebook.nested.open, .list li.in-sub.deep { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px); }
 /* The last row of an opened notebook ends its rule with a line across the
    bottom and a gap under it, so that the next opened notebook starts anew. */
+/* The pinned notes come first, above a line. */
+.list li.pin-end { border-bottom: 2px solid var(--fg-muted); }
 .list li.sub-notebook.cell-end, .list li.in-sub.cell-end { box-shadow: inset 4px 0 0 var(--sub-line), inset 0 -2px 0 var(--sub-line); margin-bottom: 8px; }
 .list li.sub-notebook.nested.deep-end, .list li.in-sub.deep.deep-end { background-image: linear-gradient(to right, transparent 20px, var(--sub-line) 20px, var(--sub-line) 24px, transparent 24px), linear-gradient(var(--sub-line), var(--sub-line)); background-size: 100% 100%, calc(100% - 20px) 2px; background-position: 0 0, 20px 100%; background-repeat: no-repeat; }
 .list li.in-sub:hover { background-color: var(--bg-hover); }
@@ -558,6 +560,15 @@ a.zenn-article:hover { color: var(--accent); }
 .body code { background: var(--code-bg); padding: 1px 4px; border-radius: var(--r-sm); font: var(--fs-sm)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .body pre { background: var(--code-bg); padding: 12px; border-radius: var(--r-lg); overflow-x: auto; }
 .body pre code { padding: 0; background: none; }
+/* A diff code block (colorDiffs): the lines added and deleted on green and
+   red across the block, the heads of hunks in the accent and the heads of
+   files bold. */
+.body pre code.diff { display: inline-block; min-width: 100%; }
+.body pre code.diff .line { display: block; margin: 0 -12px; padding: 0 12px; }
+.body pre code.diff .line.add { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.body pre code.diff .line.del { background: color-mix(in srgb, var(--ng) 14%, transparent); }
+.body pre code.diff .line.hunk { color: var(--accent); }
+.body pre code.diff .line.file { font-weight: 600; }
 /* A bar above each code block folds and unfolds it (addCodeFolds). */
 .body .code-fold { margin: 1em 0 0; }
 .body .code-fold > summary { display: flex; align-items: center; gap: 8px; padding: 2px 8px; border-radius: var(--r-lg); background: var(--code-bg); color: var(--fg-muted); font-size: var(--fs-xs); cursor: pointer; list-style: none; user-select: none; }
@@ -569,6 +580,11 @@ a.zenn-article:hover { color: var(--accent); }
 /* With the id, over the margin of pre in preview.css; the space below is the
    one of pre there. */
 #preview .body .code-fold > pre { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+.body .code-fold > summary .code-copy { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: auto; padding: 0; border: none; border-radius: var(--r-sm); background: none; color: var(--fg-muted); opacity: 0; cursor: pointer; }
+.body .code-fold > summary .code-copy svg { width: 14px; height: 14px; transform: none; }
+.body .code-fold:hover > summary .code-copy, .body .code-fold > summary .code-copy:focus-visible { opacity: 1; }
+.body .code-fold > summary .code-copy:hover { color: var(--fg); background: var(--bg-active); }
+@media (hover: none) { .body .code-fold > summary .code-copy { opacity: 0.4; } }
 .body .code-lang { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .body .code-lang + .code-lines::before { content: "·"; margin-right: 8px; }
 /* In a heading, code is sized after the heading, not after the body text. */
@@ -649,6 +665,12 @@ a.zenn-article:hover { color: var(--accent); }
   :root:not([data-theme="light"]) .tok-propertyName, :root:not([data-theme="light"]) .tok-labelName, :root:not([data-theme="light"]) .tok-macroName { color: #a3aef0; }
 }
 .editor-preview { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-md); padding: 0 16px; }
+/* The server runs in the safe mode, without the settings file (showSafeMode). */
+.safe-mode { display: flex; align-items: center; gap: 12px; background: var(--banner-bg); padding: 8px 16px; font-size: var(--fs-sm); border-bottom: 1px solid var(--border); }
+.safe-mode-text { flex: 1; min-width: 0; }
+.safe-mode button { flex: none; }
+.safe-mode[hidden] { display: none; }
+.safe-mode code { display: block; margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--fs-xs)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .banner { background: var(--banner-bg); border-radius: var(--r-md); padding: 8px 12px; font-size: var(--fs-xs); }
 
 /* Assistant: a column on the right with the questions, the answers and a box

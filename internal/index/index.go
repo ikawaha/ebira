@@ -211,7 +211,7 @@ func (ix *Index) Mode() Mode { return ix.mode }
 
 // schemaVersion is stored as the database's user_version. When it differs,
 // all tables are dropped and rebuilt from the YAML files by the next Sync.
-const schemaVersion = 13 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived; 11: no archive in the inbox; 12: notes.zenn_slug, zenn_published; 13: notes.zenn_changed
+const schemaVersion = 14 // 3: notes.seq, contentless full-text tables; 4: notes.trashed_notebook; 5: notes.sort_key, title_key; 6: notes.created_by; 7: notes.import_hash; 8: notes.marks; 9: times in milliseconds; 10: notes.archived; 11: no archive in the inbox; 12: notes.zenn_slug, zenn_published; 13: notes.zenn_changed; 14: notes.pinned
 
 func (ix *Index) migrate(ctx context.Context) error {
 	var v int
@@ -353,14 +353,14 @@ func (ix *Index) Upsert(ctx context.Context, n *store.Note, f store.File) error 
 	// An update keeps the note's seq, and so its rowid in the full-text tables.
 	var seq int64
 	if err := tx.QueryRowContext(ctx, `
-INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, archived, import_hash, zenn_slug, zenn_published, zenn_changed, file_mtime, file_size)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO notes (id, notebook, trashed_notebook, title, tags, marks, body, created_at, updated_at, sort_key, title_key, created_by, archived, import_hash, zenn_slug, zenn_published, zenn_changed, pinned, file_mtime, file_size)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (id) DO UPDATE SET
 	notebook = excluded.notebook, trashed_notebook = excluded.trashed_notebook, title = excluded.title, tags = excluded.tags, marks = excluded.marks, body = excluded.body,
 	created_at = excluded.created_at, updated_at = excluded.updated_at, sort_key = excluded.sort_key, title_key = excluded.title_key,
-	created_by = excluded.created_by, archived = excluded.archived, import_hash = excluded.import_hash, zenn_slug = excluded.zenn_slug, zenn_published = excluded.zenn_published, zenn_changed = excluded.zenn_changed, file_mtime = excluded.file_mtime, file_size = excluded.file_size
+	created_by = excluded.created_by, archived = excluded.archived, import_hash = excluded.import_hash, zenn_slug = excluded.zenn_slug, zenn_published = excluded.zenn_published, zenn_changed = excluded.zenn_changed, pinned = excluded.pinned, file_mtime = excluded.file_mtime, file_size = excluded.file_size
 RETURNING seq`,
-		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.InArchive(), n.ImportHash, zennSlug, zennPublished, zennChanged, f.ModTime.UnixNano(), f.Size,
+		n.ID, n.Notebook, n.TrashedNotebook, n.Title, string(tags), string(marks), n.Body, formatTime(n.CreatedAt), formatTime(n.UpdatedAt), n.SortKey(), titleKey(n.Title), n.CreatedBy, n.InArchive(), n.ImportHash, zennSlug, zennPublished, zennChanged, n.Pinned(), f.ModTime.UnixNano(), f.Size,
 	).Scan(&seq); err != nil {
 		return err
 	}
@@ -667,20 +667,31 @@ func (ix *Index) Tags(ctx context.Context, notebook string, a Archive, exclude .
 const summaryColumns = `n.id, n.notebook, n.trashed_notebook, n.title, n.tags, n.marks, n.created_at, n.updated_at, n.created_by, n.archived, n.zenn_slug, n.zenn_published, n.zenn_changed`
 
 // orderBy returns the ORDER BY clause of a list in the order sort (one of
-// store.Sorts; empty for store.SortOrder). The ID breaks ties, so that the
-// order is stable.
-func orderBy(sort string) (string, error) {
+// store.Sorts; empty for store.SortOrder), with the pinned notes first if pin
+// is true. The ID breaks ties, so that the order is stable.
+func orderBy(sort string, pin bool) (string, error) {
+	first := ` ORDER BY `
+	if pin {
+		first += `n.pinned DESC, `
+	}
 	switch sort {
 	case "", store.SortOrder:
-		return ` ORDER BY n.sort_key DESC, n.id`, nil
+		return first + `n.sort_key DESC, n.id`, nil
 	case store.SortCreated:
-		return ` ORDER BY n.created_at DESC, n.id`, nil
+		return first + `n.created_at DESC, n.id`, nil
 	case store.SortUpdated:
-		return ` ORDER BY n.updated_at DESC, n.id`, nil
+		return first + `n.updated_at DESC, n.id`, nil
 	case store.SortTitle:
-		return ` ORDER BY n.title_key, n.id`, nil
+		return first + `n.title_key, n.id`, nil
 	}
 	return "", fmt.Errorf("unknown sort %q", sort)
+}
+
+// pins reports whether a list of notebook (all if empty) with tag, taken by
+// a, puts the pinned notes first: those of a notebook do, but not all the
+// notes, those of a tag, the trash or the archive.
+func pins(notebook, tag string, a Archive) bool {
+	return notebook != "" && notebook != store.Trash && tag == "" && a.Mode != ArchiveOnly
 }
 
 // titleKey returns the key of title for sorting by title: NFKC, so that
@@ -695,14 +706,16 @@ func (ix *Index) List(ctx context.Context, notebook, tag, sort string, a Archive
 
 // Filter is List of the notes matching q as Search finds them, kept in the
 // order of the list; an empty q lists them all. Unlike Search, a notebook
-// does not take in its sub notebooks, and matches are not highlighted.
+// does not take in its sub notebooks, and matches are not highlighted. The
+// pinned notes of a notebook come first (see pins).
 func (ix *Index) Filter(ctx context.Context, q, notebook, tag, sort string, a Archive, limit, offset int, exclude ...string) ([]*Summary, int, error) {
 	filter, fargs, a, err := ix.filterCond(ctx, q, a)
 	if err != nil {
 		return nil, 0, err
 	}
+	pin := pins(notebook, tag, a)
 	cond, args := a.and(notebookCond(notebook, exclude))
-	res, total, err := ix.list(ctx, cond, args, filter, fargs, tag, sort, limit, offset)
+	res, total, err := ix.list(ctx, cond, args, filter, fargs, tag, sort, pin, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -735,7 +748,7 @@ func (ix *Index) FilterTrashedNotebook(ctx context.Context, q, nb, tag, sort str
 	if err != nil {
 		return nil, 0, err
 	}
-	res, total, err := ix.list(ctx, `n.notebook = ? AND n.trashed_notebook = ?`, []any{store.Trash, nb}, filter, fargs, tag, sort, limit, offset)
+	res, total, err := ix.list(ctx, `n.notebook = ? AND n.trashed_notebook = ?`, []any{store.Trash, nb}, filter, fargs, tag, sort, false, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -770,8 +783,8 @@ func (ix *Index) Matching(ctx context.Context, q, notebook string, a Archive) (m
 	return res, rows.Err()
 }
 
-func (ix *Index) list(ctx context.Context, cond string, args []any, filter string, fargs []any, tag, sort string, limit, offset int) ([]*Summary, int, error) {
-	order, err := orderBy(sort)
+func (ix *Index) list(ctx context.Context, cond string, args []any, filter string, fargs []any, tag, sort string, pin bool, limit, offset int) ([]*Summary, int, error) {
+	order, err := orderBy(sort, pin)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -794,17 +807,24 @@ func (ix *Index) list(ctx context.Context, cond string, args []any, filter strin
 	return res, total, nil
 }
 
-// SortKey is a note's key in the manual order (store.Note.SortKey).
+// SortKey is a note's key in the manual order (store.Note.SortKey), and
+// whether the note is pinned (store.Note.Pinned).
 type SortKey struct {
-	ID  string
-	Key int64
+	ID     string
+	Key    int64
+	Pinned bool
 }
 
 // SortKeys returns the keys of the notes in notebook (the notes deleted on
-// their own for the trash) in the manual order, highest first.
+// their own for the trash) in the manual order, highest first, the pinned
+// notes first unless in the trash.
 func (ix *Index) SortKeys(ctx context.Context, notebook string) ([]SortKey, error) {
 	cond, args := notebookCond(notebook, nil)
-	rows, err := ix.db.QueryContext(ctx, `SELECT n.id, n.sort_key FROM notes n WHERE `+cond+` ORDER BY n.sort_key DESC, n.id`, args...)
+	order, err := orderBy(store.SortOrder, notebook != store.Trash)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := ix.db.QueryContext(ctx, `SELECT n.id, n.sort_key, n.pinned FROM notes n WHERE `+cond+order, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -812,7 +832,7 @@ func (ix *Index) SortKeys(ctx context.Context, notebook string) ([]SortKey, erro
 	var res []SortKey
 	for rows.Next() {
 		var k SortKey
-		if err := rows.Scan(&k.ID, &k.Key); err != nil {
+		if err := rows.Scan(&k.ID, &k.Key, &k.Pinned); err != nil {
 			return nil, err
 		}
 		res = append(res, k)

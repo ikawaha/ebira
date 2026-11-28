@@ -106,7 +106,15 @@ var defaultFlags = map[string]func(config.Config) (string, bool){
 func applyDefaults(fs *flag.FlagSet, dir string) error {
 	d, warnings, err := config.LoadDefaults(dir)
 	if err != nil {
-		return err
+		if !config.Safe() {
+			return safeHint(err)
+		}
+		// The safe mode goes on without the defaults.
+		if notesSettingsError == nil {
+			notesSettingsError = err
+			fmt.Fprintf(os.Stderr, "safe mode: the settings shared with the notes are not used: %v\n", err)
+		}
+		return nil
 	}
 	for _, w := range warnings {
 		slog.Warn(w)

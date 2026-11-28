@@ -14,6 +14,11 @@
   #intro { margin: 0 0 14px; }
   #intro:empty { display: none; }
   .actions { display: flex; justify-content: flex-end; gap: 8px; }
+  #broken { display: flex; gap: 8px; align-items: center; margin: 0 0 14px; }
+  #broken[hidden] { display: none; }
+  /* The error of the settings file is longer than most problems. */
+  form:has(#broken:not([hidden])) #problem { max-height: 120px; }
+  #broken-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .7; direction: rtl; text-align: left; }
 </style>
 </head>
 <body>
@@ -42,6 +47,11 @@
   <label for="addr" data-t="Server address">{{t "Server address"}}</label>
   <div class="row"><input id="addr" value="{{.Addr}}" spellcheck="false"></div>
   <p id="problem">{{.Problem}}</p>
+  <div id="broken" {{if not .Broken}}hidden{{end}}>
+    <span id="broken-file" title="{{.Broken}}">{{.Broken}}</span>
+    <button type="button" id="open-file" data-t="Open File">{{t "Open File"}}</button>
+    <button type="button" id="safe" data-t="Start in Safe Mode">{{t "Start in Safe Mode"}}</button>
+  </div>
   <div class="actions">
     <button type="button" id="cancel" data-t="Cancel">{{t "Cancel"}}</button>
     <button type="submit" data-t="Apply">{{t "Apply"}}</button>
@@ -62,11 +72,20 @@
   function askKeep(text, dir) {
     if (confirm(tr(text).replace("{dir}", dir))) apply(true);
   }
-  function apply(keep) {
+  // showBroken shows the buttons for the settings file of ebira at path,
+  // which has an error: to open it, and to start the server in safe mode.
+  function showBroken(path) {
+    byId("broken-file").textContent = path;
+    byId("broken-file").title = path;
+    byId("broken").hidden = false;
+  }
+  function apply(keep, verb = "apply") {
     showProblem("");
-    post("apply:" + JSON.stringify({ notes: byId("notes").value.trim(), addr: byId("addr").value.trim(), lang: byId("lang")?.value ?? "", search: byId("search")?.value ?? "", keep }));
+    post(verb + ":" + JSON.stringify({ notes: byId("notes").value.trim(), addr: byId("addr").value.trim(), lang: byId("lang")?.value ?? "", search: byId("search")?.value ?? "", keep }));
   }
   byId("choose").onclick = () => post("choose");
+  byId("open-file").onclick = () => post("openSettingsFile");
+  byId("safe").onclick = () => apply(false, "safe");
   // The search mode follows the language until it is chosen.
   let searchChosen = false;
   byId("search")?.addEventListener("change", () => { searchChosen = true; });

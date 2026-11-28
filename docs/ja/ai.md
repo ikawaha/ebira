@@ -204,6 +204,8 @@ openai_key_command: rbw get "OpenAI API key"
 op run --env-file=.env -- ebira server restart
 ```
 
+設定の `provider` に知らない名前を書いたときや、選んだ `provider` のキーが無いときは、アシスタントだけが止まり、ほかはそのまま使えます。止まった理由はこの欄に出ます。
+
 ## AI にノートを示す
 
 プレビューの題名の後ろの鎖の印（か `Y`）で、ノートの URL か Markdown のリンクをコピーできます。URL の `#note/` の後ろがノートの ID で、AI はその ID でノートを読めます。

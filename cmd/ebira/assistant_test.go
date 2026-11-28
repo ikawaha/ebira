@@ -99,28 +99,28 @@ func TestLazyAssistant(t *testing.T) {
 	}
 }
 
-func TestNewAssistantProvider(t *testing.T) {
-	if _, _, err := newAssistant(context.Background(), nil, "claude", ""); err == nil {
-		t.Error("unknown provider: no error")
-	}
-}
-
-// TestNewAssistantWithoutKey starts the server with a provider chosen and no
-// key for it, as the settings of the desktop app may (issue #162): the
-// assistant tells what it needs, rather than the server failing to start.
-func TestNewAssistantWithoutKey(t *testing.T) {
+// TestNewAssistantMistake checks that a mistake in the settings of the
+// assistant, as a provider unknown or chosen without its key, as the
+// settings of the desktop app may (issue #162), turns it off telling why,
+// instead of stopping the server.
+func TestNewAssistantMistake(t *testing.T) {
 	for _, names := range keyEnvNames {
 		for _, n := range names {
 			t.Setenv(n, "")
 		}
 	}
 	t.Setenv("EBIRA_CONFIG", t.TempDir()+"/config.yaml")
-	a, _, err := newAssistant(context.Background(), nil, "openai", "gpt-x")
-	if err != nil {
-		t.Fatalf("the server would not start: %v", err)
-	}
-	s, err := a.Status(context.Background(), &genassistant.StatusPayload{})
-	if err != nil || s.Available || !strings.Contains(*s.Reason, "openai_key_command") {
-		t.Errorf("status = %+v, %v", s, err)
+	for provider, want := range map[string]string{
+		"nope":      `unknown model provider "nope"`,
+		"anthropic": "ANTHROPIC_API_KEY",
+		"gemini":    "GEMINI_API_KEY",
+		"openai":    "openai_key_command",
+		"":          "not configured",
+	} {
+		a, _ := newAssistant(context.Background(), nil, provider, "")
+		s, err := a.Status(context.Background(), &genassistant.StatusPayload{})
+		if err != nil || s.Available || s.Reason == nil || !strings.Contains(*s.Reason, want) {
+			t.Errorf("provider %q: status = %+v, %v, want the reason to contain %q", provider, s, err, want)
+		}
 	}
 }

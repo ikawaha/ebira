@@ -448,11 +448,11 @@ func (s *Notes) moveNote(ctx context.Context, p *gennotes.MovePayload) (*gennote
 		return nil, err
 	}
 	items = slices.DeleteFunc(items, func(k index.SortKey) bool { return k.ID == n.ID })
-	pos, err := afterPos(items, deref(p.After), n.Notebook)
+	group, pos, err := placeIn(items, deref(p.After), n.Notebook, n.Pinned())
 	if err != nil {
 		return nil, err
 	}
-	if err := s.applyKeys(ctx, n.Notebook, seps, place(items, pos, n.ID, n.SortKey()), false); err != nil {
+	if err := s.applyKeys(ctx, n.Notebook, seps, place(group, pos, n.ID, n.SortKey()), false); err != nil {
 		return nil, err
 	}
 	if n, err = s.load(p.ID, nil); err != nil {
@@ -462,7 +462,8 @@ func (s *Notes) moveNote(ctx context.Context, p *gennotes.MovePayload) (*gennote
 }
 
 // manualOrder returns the notes and the separators of notebook nb in the
-// manual order, highest first, and the separators as read.
+// manual order, highest first, the pinned notes first, and the separators as
+// read.
 func (s *Notes) manualOrder(ctx context.Context, nb string) ([]index.SortKey, []store.Separator, error) {
 	keys, err := s.index.SortKeys(ctx, nb)
 	if err != nil {
@@ -476,6 +477,12 @@ func (s *Notes) manualOrder(ctx context.Context, nb string) ([]index.SortKey, []
 		keys = append(keys, index.SortKey{ID: sep.ID, Key: sep.Order})
 	}
 	slices.SortStableFunc(keys, func(a, b index.SortKey) int {
+		if a.Pinned != b.Pinned {
+			if a.Pinned {
+				return -1
+			}
+			return 1
+		}
 		if c := cmp.Compare(b.Key, a.Key); c != 0 {
 			return c
 		}
@@ -495,6 +502,37 @@ func afterPos(items []index.SortKey, after, nb string) (int, error) {
 		return 0, gennotes.MakeBadRequest(fmt.Errorf("%s is not another note or a separator of notebook %s", after, nb))
 	}
 	return i + 1, nil
+}
+
+// placeIn returns the group of items, which are in the manual order, that an
+// item pinned or not goes among, and the index in it of an item put after the
+// item with ID after: first in the group for none. The pinned notes are a
+// group, first, and the other notes and the separators are the other: an item
+// moves only within its group, so that its key is between those of its
+// neighbors there.
+func placeIn(items []index.SortKey, after, nb string, pinned bool) ([]index.SortKey, int, error) {
+	n := 0 // the pinned notes
+	for n < len(items) && items[n].Pinned {
+		n++
+	}
+	group, start := items[n:], n
+	if pinned {
+		group, start = items[:n], 0
+	}
+	if after == "" {
+		return group, 0, nil
+	}
+	pos, err := afterPos(items, after, nb)
+	if err != nil {
+		return nil, 0, err
+	}
+	if pos < start || pos > start+len(group) {
+		if pinned {
+			return nil, 0, gennotes.MakeBadRequest(errors.New("a pinned note goes only among the pinned notes"))
+		}
+		return nil, 0, gennotes.MakeBadRequest(errors.New("only pinned notes go among the pinned notes"))
+	}
+	return group, pos - start, nil
 }
 
 // place returns the keys of the manual order to set for item id, now with
